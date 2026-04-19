@@ -25,8 +25,11 @@ O projeto utiliza uma arquitetura baseada em TypeScript para garantir segurança
 O projeto utiliza um modelo de Monorepo para facilitar a gestão do código:
 
 helpa-ufal/
+
 ├── frontend/     # Interface do usuário (React)
+
 ├── backend/      # API e lógica de negócio (Node.js)
+
 └── README.md     # Documentação geral do projeto
 
 ## Como Executar o Projeto
@@ -59,6 +62,7 @@ A estrutura inicial da base de dados contempla as seguintes entidades:
 ## Gestão Ágil
 
 O desenvolvimento é gerido através de Metodologias Ágeis (Scrum), utilizando o GitHub Projects para o acompanhamento de Sprints e Issues.
+https://github.com/users/LirielG/projects/3
 
 ## Equipe - UFAL Arapiraca
 
