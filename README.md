@@ -79,7 +79,7 @@ https://github.com/users/LirielG/projects/3
 - MAIKY ARAUJO BRITO
 
 -----------------------------------
-##Guia de Contribuição
+## Guia de Contribuição
 
 ### 🛠️ Fluxo de Versionamento Git - Projeto Helpa
 
