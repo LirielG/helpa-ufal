@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserType {
+  STUDENT
+  TEACHER
+  EXTERNAL
+}
+
+enum ActivityType {
+  EXTENSION
+  EVENT
+}
+
+enum ActivityFormat {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+enum ActivityStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  userType     UserType
+  course       String?
+  isManager    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student     Student?
+  teacher     Teacher?
+  external    External?
+  activities  Activity[]
+  enrollments Enrollment[]
+}
+
+model Student {
+  userId           String   @id
+  registrationCode String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model Teacher {
+  userId           String   @id
+  registrationCode String
+  cndb             String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model External {
+  userId      String   @id
+  institution String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  addressLine String
+  zipCode     String
+  city        String
+  state       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activities Activity[]
+}
+
+model Activity {
+  id          String         @id @default(uuid())
+  authorId    String
+  title       String
+  description String
+  area        String
+  type        ActivityType
+  format      ActivityFormat
+  url         String?
+  startDate   DateTime
+  endDate     DateTime
+  workload    Int
+  slots       Int
+  status      ActivityStatus
+  addressId   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  author      User         @relation(fields: [authorId], references: [id], onUpdate: Cascade)
+  address     Address?     @relation(fields: [addressId], references: [id], onUpdate: Cascade)
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id                  String           @id @default(uuid())
+  userId              String
+  activityId          String
+  status              EnrollmentStatus
+  attendanceConfirmed Boolean          @default(false)
+  isModerator         Boolean          @default(false)
+  enrolledAt          DateTime         @default(now())
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  activity    Activity     @relation(fields: [activityId], references: [id], onUpdate: Cascade)
+  certificate Certificate?
+
+  @@unique([userId, activityId])
+}
+
+model Certificate {
+  id             String   @id @default(uuid())
+  enrollmentId   String   @unique
+  validationCode String   @unique
+  fileUrl        String
+  issuedAt       DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onUpdate: Cascade)
+}
