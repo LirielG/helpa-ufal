@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { HelpCircle } from "lucide-react";
 
 interface TooltipProps {
@@ -7,58 +7,42 @@ interface TooltipProps {
 
 export function Tooltip({ content }: TooltipProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen && buttonRef.current && tooltipRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-      const top = buttonRect.bottom + 12;
-      const left = buttonRect.left + buttonRect.width / 2 - tooltipRect.width / 2;
-
-      setPosition({ top, left });
-    }
-  }, [isOpen]);
 
   return (
-    <div className="relative">
+    <div className="relative inline-flex">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="size-6 rounded-full bg-white border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition"
+        className="size-5 rounded-full bg-[#0B2B58] flex items-center justify-center hover:opacity-90 transition"
       >
-        <HelpCircle className="size-4 text-gray-400" />
+        <HelpCircle className="size-3.5 text-white" />
       </button>
 
       {isOpen && (
-        <div
-          ref={tooltipRef}
-          className="fixed z-50 bg-slate-900 text-white rounded-lg p-4 shadow-lg max-w-xs"
-          style={{
-            top: position.top,
-            left: position.left,
-            transform: "translateX(-50%)",
-          }}
-        >
-          <div className="flex gap-3">
-            <div className="size-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-              <span className="text-slate-900 font-bold text-sm">?</span>
-            </div>
-            <p className="text-sm leading-relaxed">{content}</p>
-          </div>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-slate-900"></div>
-        </div>
-      )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Fechar informação"
+            className="absolute inset-0 cursor-default bg-transparent"
+            onClick={() => setIsOpen(false)}
+          />
 
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+          <div className="relative w-full max-w-[650px] overflow-hidden rounded-[28px] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
+            <div className="h-[72px] bg-[#0B2B58] px-6 flex items-start pt-5">
+              <div className="size-9 rounded-full border-2 border-white flex items-center justify-center">
+                <span className="text-white text-base font-semibold leading-none">?</span>
+              </div>
+            </div>
+
+            <div className="px-10 py-10 text-center">
+              <p className="text-[24px] leading-[1.32] font-normal text-[#1A1A1A] tracking-[-0.01em]">
+                {content}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

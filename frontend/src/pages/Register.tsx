@@ -8,6 +8,8 @@ import {
   Mail,
   Lock,
   Building2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Input, Button, Select, Alert, Tooltip, Layout } from "../components";
 import { useAuth, useFormErrors } from "../hooks";
@@ -191,7 +193,7 @@ export function Register() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-[760px] mx-auto">
         <button
           onClick={() => setSelectedType(null)}
           className="mb-6 text-gray-600 hover:text-gray-900 transition font-medium"
@@ -202,7 +204,7 @@ export function Register() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center gap-4 mb-8">
             <div
-              className={`size-16 ${
+              className={`size-14 ${
                 config.color === "blue"
                   ? "bg-blue-100"
                   : config.color === "green"
@@ -211,7 +213,7 @@ export function Register() {
               } rounded-full flex items-center justify-center`}
             >
               <Icon
-                className={`size-8 ${
+                className={`size-7 ${
                   config.color === "blue"
                     ? "text-blue-600"
                     : config.color === "green"
@@ -221,8 +223,7 @@ export function Register() {
               />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{config.title}</h1>
-              <p className="text-gray-600">Preencha os dados abaixo para criar sua conta</p>
+              <h1 className="text-2xl font-semibold text-gray-900">{config.title}</h1>
             </div>
           </div>
 
@@ -232,9 +233,9 @@ export function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Nome Completo"
+              label="Nome completo"
               type="text"
               name="name"
               value={formData.name}
@@ -245,7 +246,7 @@ export function Register() {
             />
 
             <Input
-              label="E-mail"
+              label="Email"
               type="email"
               name="email"
               value={formData.email}
@@ -273,75 +274,183 @@ export function Register() {
                   ]}
                 />
 
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-2">CNDB</label>
-                    <input
-                      type="text"
-                      name="cndbNumber"
-                      value={formData.cndbNumber}
-                      onChange={handleChange}
-                      placeholder="Ex: Ciência da Computação"
-                      className={`w-full px-4 py-3 border ${
-                        errors.cndbNumber
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
-                      } rounded-lg outline-none focus:ring-2 transition`}
-                    />
-                    {errors.cndbNumber && (
-                      <p className="text-red-500 text-sm mt-1">{errors.cndbNumber}</p>
-                    )}
+                <div>
+                  <div className="flex items-center gap-1 mb-2">
+                    <label className="block text-sm font-medium">CNDB</label>
+                    <Tooltip content="A CNDB é a Carteira Nacional Docente do Brasil, documento oficial do Ministério da Educação (MEC) que identifica e valoriza professores da educação básica e superior (pública ou privada) em todo o país. Ela facilita a comprovação do vínculo profissional, garantindo benefícios, descontos culturais e reconhecimento formal da profissão" />
                   </div>
-                  <Tooltip content="A CNDB é a Carteira Nacional Docente do Brasil, documento oficial do Ministério da Educação (MEC) que identifica e valoriza professores da educação básica e superior (pública ou privada) em todo o país. Ela facilita a comprovação do vínculo profissional, garantindo benefícios, descontos culturais e reconhecimento formal da profissão" />
+                  <input
+                    type="text"
+                    name="cndbNumber"
+                    value={formData.cndbNumber}
+                    onChange={handleChange}
+                    placeholder="Ex.: Ciência da Computação"
+                    className={`w-full px-4 py-2.5 border ${
+                      errors.cndbNumber
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } rounded-lg outline-none focus:ring-2 transition text-sm`}
+                  />
+                  {errors.cndbNumber && (
+                    <p className="text-red-500 text-sm mt-1">{errors.cndbNumber}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-4 items-start">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Senha</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          placeholder="Digite sua senha"
+                          className={`w-full pl-12 pr-12 py-3 border ${
+                            errors.password
+                              ? "border-red-300 focus:ring-red-500"
+                              : "border-gray-300 focus:ring-blue-500"
+                          } rounded-lg outline-none focus:ring-2 transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((current) => !current)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-4" />
+                          ) : (
+                            <Eye className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                      {errors.password && (
+                        <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Confirmar senha</label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="Digite a senha novamente"
+                          className={`w-full pl-12 pr-12 py-3 border ${
+                            errors.confirmPassword
+                              ? "border-red-300 focus:ring-red-500"
+                              : "border-gray-300 focus:ring-blue-500"
+                          } rounded-lg outline-none focus:ring-2 transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((current) => !current)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-4" />
+                          ) : (
+                            <Eye className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && (
+                        <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-1 text-sm text-gray-500">
+                    <p className="mb-2 text-gray-700">A senha deve conter:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Pelo menos 8 caracteres</li>
+                      <li>Uma letra maiúscula</li>
+                      <li>Uma letra minúscula</li>
+                      <li>Um caracter especial (Ex: @,$,*,_)</li>
+                    </ul>
+                  </div>
                 </div>
               </>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Digite sua senha"
-                    className={`w-full pl-12 pr-4 py-3 border ${
-                      errors.password
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    } rounded-lg outline-none focus:ring-2 transition`}
-                  />
+            {selectedType !== "teacher" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Digite sua senha"
+                      className={`w-full pl-12 pr-12 py-3 border ${
+                        errors.password
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      } rounded-lg outline-none focus:ring-2 transition`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                  )}
                 </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Confirmar Senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirme sua senha"
-                    className={`w-full pl-12 pr-4 py-3 border ${
-                      errors.confirmPassword
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    } rounded-lg outline-none focus:ring-2 transition`}
-                  />
+                <div>
+                  <label className="block text-sm font-medium mb-2">Confirmar senha</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Confirme sua senha"
+                      className={`w-full pl-12 pr-12 py-3 border ${
+                        errors.confirmPassword
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      } rounded-lg outline-none focus:ring-2 transition`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                  )}
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-                )}
               </div>
-            </div>
+            )}
 
             <label className="flex items-center gap-2">
               <input
@@ -353,8 +462,8 @@ export function Register() {
               <span className="text-sm text-gray-600">Ver senhas</span>
             </label>
 
-            <Button type="submit" size="lg" isLoading={isLoading}>
-              Criar Conta
+            <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
+              Criar conta
             </Button>
           </form>
 
