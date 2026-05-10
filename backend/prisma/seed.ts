@@ -1,8 +1,7 @@
-import { PrismaClient, UserType } from "@prisma/client";
+import { UserType } from "@prisma/client";
 import bcryptjs from "bcryptjs";
 import { env } from "../src/config/env.js";
-
-const prisma = new PrismaClient();
+import { prisma } from "../src/database/prisma.js";
 
 async function main() {
   const {
