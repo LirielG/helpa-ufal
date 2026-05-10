@@ -1,6 +1,6 @@
 import type { PrismaClient, User } from "@prisma/client";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
-import prisma from "@/database/prisma.js";
+import { prisma } from "@/database/prisma.js";
 
 type Props = {
   prisma?: PrismaClient;
