@@ -27,6 +27,7 @@ enum ActivityStatus {
   OPEN
   IN_PROGRESS
   COMPLETED
+  CANCELLED
 }
 
 enum EnrollmentStatus {
