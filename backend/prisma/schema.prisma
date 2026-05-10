@@ -90,30 +90,37 @@ model Address {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  activities Activity[]
+  activities ActivityDetails[]
 }
 
 model Activity {
-  id          String         @id @default(uuid())
-  authorId    String
-  title       String
+  id        String         @id @default(uuid())
+  authorId  String
+  title     String
+  type      ActivityType
+  startDate DateTime
+  endDate   DateTime
+  slots     Int
+  status    ActivityStatus
+
+  author      User             @relation(fields: [authorId], references: [id], onUpdate: Cascade)
+  details     ActivityDetails?
+  enrollments Enrollment[]
+}
+
+model ActivityDetails {
+  activityId  String         @id
   description String
   area        String
-  type        ActivityType
   format      ActivityFormat
   url         String?
-  startDate   DateTime
-  endDate     DateTime
   workload    Int
-  slots       Int
-  status      ActivityStatus
   addressId   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  author      User         @relation(fields: [authorId], references: [id], onUpdate: Cascade)
-  address     Address?     @relation(fields: [addressId], references: [id], onUpdate: Cascade)
-  enrollments Enrollment[]
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  address  Address? @relation(fields: [addressId], references: [id], onUpdate: Cascade)
 }
 
 model Enrollment {
