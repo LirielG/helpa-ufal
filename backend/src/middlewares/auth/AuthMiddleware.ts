@@ -40,7 +40,7 @@ class AuthMiddleware implements IAuthMiddleware {
 
       if (!user) return next();
 
-      if (userTypes && !userTypes.includes(user.userType))
+      if (userTypes && userTypes !== "all" && !userTypes.includes(user.userType))
         throw new CustomError(403, "User type not allowed.");
 
       if (manager && !user.isManager)

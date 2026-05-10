@@ -7,6 +7,6 @@ export type AuthenticatedUser = {
 };
 
 export type AuthorizeOptions = {
-  userTypes?: UserType[];
+  userTypes?: UserType[] | "all";
   manager?: boolean;
 };
