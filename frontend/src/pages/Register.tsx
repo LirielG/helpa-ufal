@@ -12,8 +12,10 @@ import {
   EyeOff,
 } from "lucide-react";
 import { Input, Button, Select, Alert, Tooltip, Layout } from "../components";
-import { useAuth, useFormErrors } from "../hooks";
-import { validateRegisterForm } from "../validators";
+import { useAuth } from "../hooks";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, Controller } from "react-hook-form";
+import { RegisterSchema } from "../validators/auth";
 import type { UserType, RegisterRequest } from "../types";
 
 interface TypeConfig {
@@ -22,23 +24,24 @@ interface TypeConfig {
   title: string;
 }
 
+const defaultFields = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  institution: "",
+  cndbNumber: "",
+  course: "",
+  enrollment: "",
+};
+
+type RegisterFields = typeof defaultFields & { userType: UserType };
+
 export function Register() {
   const navigate = useNavigate();
-  const { register, isLoading, error: authError } = useAuth();
-  const { errors, setErrorsFromArray, clearError, clearAllErrors } = useFormErrors();
-
+  const { register: registerUser, isLoading, error: authError } = useAuth();
   const [selectedType, setSelectedType] = useState<UserType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    institution: "",
-    cndbNumber: "",
-    course: "",
-    enrollment: "",
-  });
 
   const typeConfig: Record<UserType, TypeConfig> = {
     student: {
@@ -58,60 +61,34 @@ export function Register() {
     },
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    clearError(name);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    reset,
+  } = useForm<RegisterFields>({
+    resolver: zodResolver(RegisterSchema),
+    defaultValues: { ...defaultFields, userType: selectedType ?? "student" },
+    mode: "onSubmit"
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearAllErrors();
-
-    if (!selectedType) {
-      alert("Selecione um tipo de perfil");
-      return;
-    }
-
-    const validationErrors = validateRegisterForm({
-      ...formData,
-      userType: selectedType,
-    });
-
-    if (validationErrors.length > 0) {
-      setErrorsFromArray(validationErrors);
-      return;
-    }
-
-    const requestData: RegisterRequest = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      type: selectedType,
+  const onSubmit = async (data: RegisterFields) => {
+    // RHF já garante os campos obrigatórios
+    const payload: RegisterRequest = {
+      ...data,
+      type: selectedType as UserType,
     };
-
-    if (selectedType === "student") {
-      requestData.institution = formData.institution;
-      requestData.course = formData.course;
-      requestData.enrollment = formData.enrollment;
-    }
-
-    if (selectedType === "teacher") {
-      requestData.institution = formData.institution;
-      requestData.cndbNumber = formData.cndbNumber;
-    }
-
-    const success = await register(requestData);
-
+    const success = await registerUser(payload);
     if (success) {
       navigate("/dashboard");
     }
+  };
+
+  // Troca o tipo de perfil, limpando o form
+  const selectProfile = (type: UserType) => {
+    setSelectedType(type);
+    reset({ ...defaultFields, userType: type });
   };
 
   if (!selectedType) {
@@ -129,11 +106,10 @@ export function Register() {
             {(["teacher", "external"] as const).map((type) => {
               const config = typeConfig[type];
               const Icon = config.icon;
-
               return (
                 <button
                   key={type}
-                  onClick={() => setSelectedType(type)}
+                  onClick={() => selectProfile(type)}
                   className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl hover:scale-105 transition-all duration-300 group"
                 >
                   <div
@@ -190,7 +166,6 @@ export function Register() {
 
   const config = typeConfig[selectedType];
   const Icon = config.icon;
-
   return (
     <Layout>
       <div className="max-w-[760px] mx-auto">
@@ -233,230 +208,171 @@ export function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input
               label="Nome completo"
               type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
               placeholder="Digite seu nome completo"
               icon={<User className="size-5" />}
-              error={errors.name}
+              error={errors.name?.message}
+              {...register("name")}
             />
 
             <Input
               label="Email"
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
               placeholder="seu.email@exemplo.com"
               icon={<Mail className="size-5" />}
-              error={errors.email}
+              error={errors.email?.message}
+              {...register("email")}
             />
 
             {selectedType === "teacher" && (
               <>
-                <Select
-                  label="Instituição"
+                <Controller
+                  control={control}
                   name="institution"
-                  value={formData.institution}
-                  onChange={handleChange}
-                  icon={<Building2 className="size-5" />}
-                  error={errors.institution}
-                  options={[
-                    { value: "", label: "Selecione sua instituição" },
-                    { value: "UFAL", label: "UFAL" },
-                    { value: "UFRN", label: "UFRN" },
-                    { value: "UFPB", label: "UFPB" },
-                    { value: "UFERSA", label: "UFERSA" },
-                  ]}
-                />
-
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <label className="block text-sm font-medium">CNDB</label>
-                    <Tooltip content="A CNDB é a Carteira Nacional Docente do Brasil, documento oficial do Ministério da Educação (MEC) que identifica e valoriza professores da educação básica e superior (pública ou privada) em todo o país. Ela facilita a comprovação do vínculo profissional, garantindo benefícios, descontos culturais e reconhecimento formal da profissão" />
-                  </div>
-                  <input
-                    type="text"
-                    name="cndbNumber"
-                    value={formData.cndbNumber}
-                    onChange={handleChange}
-                    placeholder="Ex.: Ciência da Computação"
-                    className={`w-full px-4 py-2.5 border ${
-                      errors.cndbNumber
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    } rounded-lg outline-none focus:ring-2 transition text-sm`}
-                  />
-                  {errors.cndbNumber && (
-                    <p className="text-red-500 text-sm mt-1">{errors.cndbNumber}</p>
+                  render={({ field }) => (
+                    <Select
+                      label="Instituição"
+                      icon={<Building2 className="size-5" />}
+                      error={errors.institution?.message}
+                      options={[
+                        { value: "", label: "Selecione sua instituição" },
+                        { value: "UFAL", label: "UFAL" },
+                        { value: "UFRN", label: "UFRN" },
+                        { value: "UFPB", label: "UFPB" },
+                        { value: "UFERSA", label: "UFERSA" },
+                      ]}
+                      {...field}
+                    />
                   )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-4 items-start">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Senha</label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          placeholder="Digite sua senha"
-                          className={`w-full pl-12 pr-12 py-3 border ${
-                            errors.password
-                              ? "border-red-300 focus:ring-red-500"
-                              : "border-gray-300 focus:ring-blue-500"
-                          } rounded-lg outline-none focus:ring-2 transition`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((current) => !current)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="size-4" />
-                          ) : (
-                            <Eye className="size-4" />
-                          )}
-                        </button>
-                      </div>
-                      {errors.password && (
-                        <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Confirmar senha</label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleChange}
-                          placeholder="Digite a senha novamente"
-                          className={`w-full pl-12 pr-12 py-3 border ${
-                            errors.confirmPassword
-                              ? "border-red-300 focus:ring-red-500"
-                              : "border-gray-300 focus:ring-blue-500"
-                          } rounded-lg outline-none focus:ring-2 transition`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((current) => !current)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="size-4" />
-                          ) : (
-                            <Eye className="size-4" />
-                          )}
-                        </button>
-                      </div>
-                      {errors.confirmPassword && (
-                        <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-1 text-sm text-gray-500">
-                    <p className="mb-2 text-gray-700">A senha deve conter:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Pelo menos 8 caracteres</li>
-                      <li>Uma letra maiúscula</li>
-                      <li>Uma letra minúscula</li>
-                      <li>Um caracter especial (Ex: @,$,*,_)</li>
-                    </ul>
-                  </div>
-                </div>
+                />
+                <Controller
+                  control={control}
+                  name="cndbNumber"
+                  render={({ field }) => (
+                    <Input
+                      label="CNDB"
+                      placeholder="Número CNDB (carteira docente)"
+                      error={errors.cndbNumber?.message}
+                      {...field}
+                    />
+                  )}
+                />
               </>
             )}
 
-            {selectedType !== "teacher" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Senha</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Digite sua senha"
-                      className={`w-full pl-12 pr-12 py-3 border ${
-                        errors.password
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
-                      } rounded-lg outline-none focus:ring-2 transition`}
+            {selectedType === "student" && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Controller
+                  control={control}
+                  name="institution"
+                  render={({ field }) => (
+                    <Select
+                      label="Instituição"
+                      icon={<Building2 className="size-5" />}
+                      error={errors.institution?.message}
+                      options={[
+                        { value: "", label: "Selecione sua instituição" },
+                        { value: "UFAL", label: "UFAL" },
+                        { value: "UFRN", label: "UFRN" },
+                        { value: "UFPB", label: "UFPB" },
+                        { value: "UFERSA", label: "UFERSA" },
+                      ]}
+                      {...field}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((current) => !current)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="size-4" />
-                      ) : (
-                        <Eye className="size-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-red-500 text-sm mt-1">{errors.password}</p>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Confirmar senha</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="Confirme sua senha"
-                      className={`w-full pl-12 pr-12 py-3 border ${
-                        errors.confirmPassword
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
-                      } rounded-lg outline-none focus:ring-2 transition`}
+                />
+                <Controller
+                  control={control}
+                  name="course"
+                  render={({ field }) => (
+                    <Input
+                      label="Curso"
+                      placeholder="Ex.: Ciência da Computação"
+                      error={errors.course?.message}
+                      {...field}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((current) => !current)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="size-4" />
-                      ) : (
-                        <Eye className="size-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
                   )}
-                </div>
+                />
+                <Controller
+                  control={control}
+                  name="enrollment"
+                  render={({ field }) => (
+                    <Input
+                      label="Matrícula"
+                      placeholder="Número de matrícula"
+                      error={errors.enrollment?.message}
+                      {...field}
+                    />
+                  )}
+                />
               </div>
             )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Digite sua senha"
+                    className={`w-full pl-12 pr-12 py-3 border ${
+                      errors.password
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } rounded-lg outline-none focus:ring-2 transition`}
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(current => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Confirmar senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Digite a senha novamente"
+                    className={`w-full pl-12 pr-12 py-3 border ${
+                      errors.confirmPassword
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
+                    } rounded-lg outline-none focus:ring-2 transition`}
+                    {...register("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(current => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+            </div>
 
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={showPassword}
-                onChange={(e) => setShowPassword(e.target.checked)}
+                onChange={e => setShowPassword(e.target.checked)}
                 className="size-4 rounded border-gray-300 cursor-pointer"
               />
               <span className="text-sm text-gray-600">Ver senhas</span>

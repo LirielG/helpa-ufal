@@ -2,44 +2,33 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Input, Button, Alert, Layout } from "../components";
-import { useAuth, useFormErrors } from "../hooks";
-import { validateLoginForm } from "../validators";
+import { useAuth } from "../hooks";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { LoginSchema } from "../validators/auth";
+
+type LoginFields = {
+  email: string;
+  password: string;
+};
 
 export function Login() {
   const navigate = useNavigate();
   const { login, isLoading, error: authError } = useAuth();
-  const { errors, setErrorsFromArray, clearError, clearAllErrors } = useFormErrors();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    clearError(name);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFields>({
+    resolver: zodResolver(LoginSchema),
+    mode: "onSubmit"
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearAllErrors();
-
-    const validationErrors = validateLoginForm(formData.email, formData.password);
-
-    if (validationErrors.length > 0) {
-      setErrorsFromArray(validationErrors);
-      return;
-    }
-
-    const success = await login(formData);
-
+  const onSubmit = async (data: LoginFields) => {
+    const success = await login(data);
     if (success) {
       navigate("/dashboard");
     }
@@ -63,16 +52,14 @@ export function Login() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <Input
                 label="Usuário"
                 type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
                 placeholder="seu.email@exemplo.com"
                 icon={<Mail className="size-5" />}
-                error={errors.email}
+                error={errors.email?.message}
+                {...register("email")}
               />
 
               <div>
@@ -83,15 +70,13 @@ export function Login() {
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
                     placeholder="Digite sua senha"
                     className={`w-full pl-12 pr-12 py-3 border ${
                       errors.password
                         ? "border-red-300 focus:ring-red-500"
                         : "border-gray-300 focus:ring-blue-500"
                     } rounded-lg outline-none focus:ring-2 transition`}
+                    {...register("password")}
                   />
                   <button
                     type="button"
@@ -103,7 +88,7 @@ export function Login() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
                 )}
               </div>
 

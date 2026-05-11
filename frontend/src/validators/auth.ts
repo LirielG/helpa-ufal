@@ -1,70 +1,83 @@
+import { z } from "zod";
+
 export interface ValidationError {
   field: string;
   message: string;
 }
 
-export const validateEmail = (email: string): string | null => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email) return "E-mail é obrigatório";
-  if (!emailRegex.test(email)) return "E-mail inválido";
-  return null;
-};
+// ---- ZOD SCHEMAS ----
 
-export const validatePassword = (password: string): string | null => {
-  if (!password) return "Senha é obrigatória";
-  if (password.length < 6) return "Senha deve ter no mínimo 6 caracteres";
-  if (password.length > 128) return "Senha deve ter no máximo 128 caracteres";
-  return null;
-};
+export const LoginSchema = z.object({
+  email: z
+    .string({ required_error: "E-mail é obrigatório" })
+    .min(1, "E-mail é obrigatório")
+    .email("E-mail inválido"),
+  password: z
+    .string({ required_error: "Senha é obrigatória" })
+    .min(8, "Senha deve ter no mínimo 8 caracteres")
+    .max(128, "Senha deve ter no máximo 128 caracteres")
+    .regex(/[A-Z]/, "A senha deve ter pelo menos 1 letra maiúscula")
+    .regex(/[a-z]/, "A senha deve ter pelo menos 1 letra minúscula")
+    .regex(/[^A-Za-z0-9]/, "A senha deve ter pelo menos 1 caractere especial")
+});
 
-export const validateName = (name: string): string | null => {
-  if (!name) return "Nome é obrigatório";
-  if (name.length < 3) return "Nome deve ter no mínimo 3 caracteres";
-  if (name.length > 255) return "Nome deve ter no máximo 255 caracteres";
-  return null;
-};
+export const RegisterSchema = z.object({
+  name: z
+    .string({ required_error: "Nome é obrigatório" })
+    .min(3, "Nome deve ter no mínimo 3 caracteres")
+    .max(255, "Nome deve ter no máximo 255 caracteres"),
+  email: z
+    .string({ required_error: "E-mail é obrigatório" })
+    .email("E-mail inválido"),
+  password: z
+    .string({ required_error: "Senha é obrigatória" })
+    .min(8, "Senha deve ter no mínimo 8 caracteres")
+    .max(128, "Senha deve ter no máximo 128 caracteres")
+    .regex(/[A-Z]/, "A senha deve ter pelo menos 1 letra maiúscula")
+    .regex(/[a-z]/, "A senha deve ter pelo menos 1 letra minúscula")
+    .regex(/[^A-Za-z0-9]/, "A senha deve ter pelo menos 1 caractere especial"),
+  confirmPassword: z
+    .string({ required_error: "Confirmação de senha é obrigatória" }),
+  userType: z.enum(["student", "teacher", "external"], {
+    required_error: "Tipo de usuário é obrigatório"
+  }),
+  institution: z.string().optional(), // obrigatório para student/teacher, validamos em refinamento
+  cndbNumber: z.string().optional(),  // obrigatório teacher
+  course: z.string().optional(),      // obrigatório student
+  enrollment: z.string().optional(),  // obrigatório student
+}).refine((data) => data.password === data.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "As senhas não correspondem"
+}).superRefine((data, ctx) => {
+  if (data.userType === "student") {
+    if (!data.institution) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["institution"], message: "Instituição é obrigatória" });
+    if (!data.course) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["course"], message: "Curso é obrigatório" });
+    if (!data.enrollment) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["enrollment"], message: "Matrícula é obrigatória" });
+  }
+  if (data.userType === "teacher") {
+    if (!data.institution) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["institution"], message: "Instituição é obrigatória" });
+    if (!data.cndbNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cndbNumber"], message: "CNDB é obrigatório" });
+  }
+});
 
-export const validatePasswordConfirmation = (
-  password: string,
-  confirmPassword: string
-): string | null => {
-  if (password !== confirmPassword) return "As senhas não correspondem";
-  return null;
-};
+// ---- UTILS PARA TRANSFORMAR ERROS ZOD PARA ValidationError ----
 
-export const validateInstitution = (institution: string): string | null => {
-  if (!institution) return "Instituição é obrigatória";
-  return null;
-};
+export function zodToValidationErrors(zodErr: z.ZodError): ValidationError[] {
+  return zodErr.errors.map((err) => ({
+    field: err.path[0]?.toString() || "form",
+    message: err.message,
+  }));
+}
 
-export const validateCourse = (course: string): string | null => {
-  if (!course) return "Curso é obrigatório";
-  return null;
-};
+// ---- VALIDATORS NOVOS (wrapper para retrocompatibilidade) ----
 
-export const validateEnrollment = (enrollment: string): string | null => {
-  if (!enrollment) return "Matrícula é obrigatória";
-  return null;
-};
+export function validateLoginForm(email: string, password: string): ValidationError[] {
+  const result = LoginSchema.safeParse({ email, password });
+  if (result.success) return [];
+  return zodToValidationErrors(result.error);
+}
 
-export const validateCNDB = (cndb: string): string | null => {
-  if (!cndb) return "CNDB é obrigatório";
-  return null;
-};
-
-export const validateLoginForm = (email: string, password: string) => {
-  const errors: ValidationError[] = [];
-
-  const emailError = validateEmail(email);
-  if (emailError) errors.push({ field: "email", message: emailError });
-
-  const passwordError = validatePassword(password);
-  if (passwordError) errors.push({ field: "password", message: passwordError });
-
-  return errors;
-};
-
-export const validateRegisterForm = (formData: {
+export function validateRegisterForm(formData: {
   name: string;
   email: string;
   password: string;
@@ -74,47 +87,8 @@ export const validateRegisterForm = (formData: {
   course?: string;
   enrollment?: string;
   userType: string;
-}) => {
-  const errors: ValidationError[] = [];
-
-  const nameError = validateName(formData.name);
-  if (nameError) errors.push({ field: "name", message: nameError });
-
-  const emailError = validateEmail(formData.email);
-  if (emailError) errors.push({ field: "email", message: emailError });
-
-  const passwordError = validatePassword(formData.password);
-  if (passwordError) errors.push({ field: "password", message: passwordError });
-
-  const confirmError = validatePasswordConfirmation(
-    formData.password,
-    formData.confirmPassword
-  );
-  if (confirmError)
-    errors.push({ field: "confirmPassword", message: confirmError });
-
-  if (formData.userType === "student") {
-    const institutionError = validateInstitution(formData.institution || "");
-    if (institutionError)
-      errors.push({ field: "institution", message: institutionError });
-
-    const courseError = validateCourse(formData.course || "");
-    if (courseError) errors.push({ field: "course", message: courseError });
-
-    const enrollmentError = validateEnrollment(formData.enrollment || "");
-    if (enrollmentError)
-      errors.push({ field: "enrollment", message: enrollmentError });
-  }
-
-  if (formData.userType === "teacher") {
-    const institutionError = validateInstitution(formData.institution || "");
-    if (institutionError)
-      errors.push({ field: "institution", message: institutionError });
-
-    const cndbError = validateCNDB(formData.cndbNumber || "");
-    if (cndbError)
-      errors.push({ field: "cndbNumber", message: cndbError });
-  }
-
-  return errors;
-};
+}): ValidationError[] {
+  const result = RegisterSchema.safeParse(formData);
+  if (result.success) return [];
+  return zodToValidationErrors(result.error);
+}
