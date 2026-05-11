@@ -1,6 +1,7 @@
 import type { PrismaClient, User, Student, Teacher, External } from "@prisma/client";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { prisma } from "@/database/prisma.js";
+import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
 
 type Props = {
   prisma?: PrismaClient;
@@ -17,28 +18,45 @@ class UserRepository implements IUserRepository {
     return this._prisma.user.findUnique({ where: { email } });
   }
 
-  public async create(
-    data: Omit<User, "id" | "createdAt" | "updatedAt">,
-  ): Promise<User> {
-    return this._prisma.user.create({ data });
-  }
+  public async createWithSubtype(data: RegisterInput & { passwordHash: string; }): Promise<User> {
+    return this._prisma.$transaction(
+      async (tx: PrismaClient) => {
+        const user = await tx.user.create({
+          data: {
+            fullName: data.fullName,
+            email:    data.email,
+            passwordHash: data.passwordHash,
+            userType:     data.userType,
+            course:       data.course,
+            isManager:    false
+          }
+        })
 
-  public async createStudent(
-    data: Omit<Student, "createdAt" | "updatedAt">,
-  ): Promise<Student> {
-    return this._prisma.student.create({ data });
-  }
+        switch(data.userType){
+          case "STUDENT":
+            await tx.student.create({
+              data: {
+                userId: user.id,
+                registrationCode: data.registrationCode
+              }
+            });
+            break;
 
-  public async createTeacher(
-    data: Omit<Teacher, "createdAt" | "updatedAt">,
-  ): Promise<Teacher> {
-    return this._prisma.teacher.create({ data });
-  }
+          case "TEACHER":
+            await tx.teacher.create({
+              data: {
+                userId: user.id,
+                registrationCode: data.registrationCode,
+                cndb: data.cndb
+              }
+            });
+            break;
+        }
 
-  public async createExternal(
-    data: Omit<External, "createdAt" | "updatedAt">,
-  ): Promise<External> {
-    return this._prisma.external.create({ data });
+        return user;
+
+      }
+    )
   }
 
 }
