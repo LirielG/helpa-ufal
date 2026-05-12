@@ -1,13 +1,10 @@
 import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
-import type { User, Student, Teacher, External } from "@prisma/client";
+import type { User } from "@prisma/client";
 
 export interface IUserRepository {
-
-  findByEmail(
-    email: string
-  ): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
 
   createWithSubtype(
-    data: RegisterInput & {passwordHash: string}
+    data: RegisterInput & { passwordHash: string },
   ): Promise<User>;
 }
