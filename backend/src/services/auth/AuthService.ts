@@ -5,7 +5,7 @@ import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { signJwt } from "@/utils/jwt.js";
 import type { Login } from "@/schemas/auth/AuthSchemas.js";
-import type { AuthenticatedUser } from "@/types/auth.js";
+import type { AuthenticatedUser, LoginUser } from "@/types/auth.js";
 
 type Props = {
   userRepository?: IUserRepository;
@@ -18,9 +18,7 @@ class AuthService implements IAuthService {
     this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
-  public async login(
-    data: Login,
-  ): Promise<{ token: string; user: AuthenticatedUser }> {
+  public async login(data: Login): Promise<{ token: string; user: LoginUser }> {
     const user = await this._userRepository.findByEmail(data.email);
 
     if (!user) {
@@ -42,9 +40,19 @@ class AuthService implements IAuthService {
       isManager: user.isManager,
     };
 
+    const loginUser: LoginUser = {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      userType: user.userType,
+      isManager: user.isManager,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
     const token = signJwt(authenticatedUser);
 
-    return { token, user: authenticatedUser };
+    return { token, user: loginUser };
   }
 }
 

@@ -1,6 +1,6 @@
 import type { Login } from "@/schemas/auth/AuthSchemas.js";
-import type { AuthenticatedUser } from "@/types/auth.js";
+import type { LoginUser } from "@/types/auth.js";
 
 export interface IAuthService {
-  login(data: Login): Promise<{ token: string; user: AuthenticatedUser }>;
+  login(data: Login): Promise<{ token: string; user: LoginUser }>;
 }
