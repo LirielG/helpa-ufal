@@ -102,8 +102,8 @@ export function Register() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(["teacher", "external"] as const).map((type) => {
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {( ["teacher", "student", "external"] as const).map((type) => {
               const config = typeConfig[type];
               const Icon = config.icon;
               return (
@@ -123,18 +123,20 @@ export function Register() {
                       className={`size-10 ${
                         config.color === "green"
                           ? "text-green-600 group-hover:text-white"
+                          : config.color === "blue"
+                          ? "text-blue-600 group-hover:text-white"
                           : "text-purple-600 group-hover:text-white"
                       } transition`}
                     />
                   </div>
                   <h3 className="text-2xl font-semibold mb-3 text-gray-900">
-                    {type === "teacher"
-                      ? "Docente"
-                      : "Público Externo"}
+                    {type === "teacher" ? "Docente" : type === "student" ? "Estudante" : "Público Externo"}
                   </h3>
                   <p className="text-gray-600 mb-6">
                     {type === "teacher"
                       ? "Professor ou pesquisador criando e gerenciando ações de extensão."
+                      : type === "student"
+                      ? "Estudante universitário interessado em participar das ações."
                       : "Membro da comunidade interessado em participar das ações."}
                   </p>
                   <div
@@ -233,17 +235,11 @@ export function Register() {
                   control={control}
                   name="institution"
                   render={({ field }) => (
-                    <Select
+                    <Input
                       label="Instituição"
+                      placeholder="Nome da instituição"
                       icon={<Building2 className="size-5" />}
                       error={errors.institution?.message}
-                      options={[
-                        { value: "", label: "Selecione sua instituição" },
-                        { value: "UFAL", label: "UFAL" },
-                        { value: "UFRN", label: "UFRN" },
-                        { value: "UFPB", label: "UFPB" },
-                        { value: "UFERSA", label: "UFERSA" },
-                      ]}
                       {...field}
                     />
                   )}
@@ -260,30 +256,23 @@ export function Register() {
                     />
                   )}
                 />
-              </>
-            )}
-
-            {selectedType === "student" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Controller
                   control={control}
-                  name="institution"
+                  name="enrollment"
                   render={({ field }) => (
-                    <Select
-                      label="Instituição"
-                      icon={<Building2 className="size-5" />}
-                      error={errors.institution?.message}
-                      options={[
-                        { value: "", label: "Selecione sua instituição" },
-                        { value: "UFAL", label: "UFAL" },
-                        { value: "UFRN", label: "UFRN" },
-                        { value: "UFPB", label: "UFPB" },
-                        { value: "UFERSA", label: "UFERSA" },
-                      ]}
+                    <Input
+                      label="Código de registro"
+                      placeholder="Número de registro"
+                      error={errors.enrollment?.message}
                       {...field}
                     />
                   )}
                 />
+              </>
+            )}
+
+            {selectedType === "student" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Controller
                   control={control}
                   name="course"
@@ -301,9 +290,38 @@ export function Register() {
                   name="enrollment"
                   render={({ field }) => (
                     <Input
-                      label="Matrícula"
+                      label="Código de matrícula"
                       placeholder="Número de matrícula"
                       error={errors.enrollment?.message}
+                      {...field}
+                    />
+                  )}
+                />
+              </div>
+            )}
+
+            {selectedType === "external" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Controller
+                  control={control}
+                  name="course"
+                  render={({ field }) => (
+                    <Input
+                      label="Curso (opcional)"
+                      placeholder="Ex.: Administração"
+                      error={errors.course?.message}
+                      {...field}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="institution"
+                  render={({ field }) => (
+                    <Input
+                      label="Instituição (opcional)"
+                      placeholder="Nome da instituição"
+                      error={errors.institution?.message}
                       {...field}
                     />
                   )}

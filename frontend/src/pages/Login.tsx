@@ -6,6 +6,7 @@ import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { LoginSchema } from "../validators/auth";
+import helpaBlueLogo from "../assets/helpa-logo-blue.svg";
 
 type LoginFields = {
   email: string;
@@ -39,9 +40,9 @@ export function Login() {
       <div className="flex items-center justify-center">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="size-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-sm">H</span>
+            <div className="flex items-center gap-2 mb-8">
+                <div className="shrink-0">
+                <img src={helpaBlueLogo} alt="helpa" className="h-8 md:h-10 w-auto" />
               </div>
               <h1 className="text-2xl font-semibold text-gray-900">Bem vindo</h1>
             </div>
