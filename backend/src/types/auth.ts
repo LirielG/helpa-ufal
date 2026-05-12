@@ -1,4 +1,4 @@
-export type UserType = "STUDENT" | "TEACHER" | "EXTERNAL";
+export type UserType = "STUDENT" | "TEACHER";
 
 export type AuthenticatedUser = {
   id: string;
