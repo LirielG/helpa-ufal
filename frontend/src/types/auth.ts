@@ -1,4 +1,4 @@
-export type UserType = "student" | "teacher" | "external";
+export type UserType = "student" | "teacher";
 
 export interface LoginRequest {
   email: string;

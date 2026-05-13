@@ -42,16 +42,6 @@ export const RegisterSchema = z.discriminatedUnion("userType", [
     enrollment: z.string({ required_error: "Código de registro é obrigatório" }).min(1, "Código de registro é obrigatório"),
     cndbNumber: z.string({ required_error: "CNDB é obrigatório" }).min(1, "CNDB é obrigatório"),
   }),
-
-  z.object({
-    userType: z.literal("external"),
-    name: z.string({ required_error: "Nome é obrigatório" }).min(1, "Nome é obrigatório"),
-    email: z.string({ required_error: "E-mail é obrigatório" }).email("E-mail inválido"),
-    password: z.string({ required_error: "Senha é obrigatória" }).min(8, "Senha deve ter no mínimo 8 caracteres"),
-    confirmPassword: z.string({ required_error: "Confirmação de senha é obrigatória" }),
-    course: z.string().optional(),
-    institution: z.string().optional(),
-  }),
 ]).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não correspondem",
   path: ["confirmPassword"],
