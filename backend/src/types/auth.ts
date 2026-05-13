@@ -6,7 +6,7 @@ export type AuthenticatedUser = {
   isManager: boolean;
 };
 
-export type LoginUser = {
+export type UserResponse = {
   id: string;
   fullName: string;
   email: string;

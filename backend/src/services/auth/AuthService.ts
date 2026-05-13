@@ -4,8 +4,8 @@ import type { IAuthService } from "@/services/auth/IAuthService.js";
 import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { signJwt } from "@/utils/jwt.js";
-import type { Login } from "@/schemas/auth/AuthSchemas.js";
-import type { AuthenticatedUser, LoginUser } from "@/types/auth.js";
+import type { Login, RegisterInput } from "@/schemas/auth/AuthSchemas.js";
+import type { AuthenticatedUser, UserResponse } from "@/types/auth.js";
 
 type Props = {
   userRepository?: IUserRepository;
@@ -18,7 +18,9 @@ class AuthService implements IAuthService {
     this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
-  public async login(data: Login): Promise<{ token: string; user: LoginUser }> {
+  public async login(
+    data: Login,
+  ): Promise<{ token: string; user: UserResponse }> {
     const user = await this._userRepository.findByEmail(data.email);
 
     if (!user) {
@@ -40,7 +42,7 @@ class AuthService implements IAuthService {
       isManager: user.isManager,
     };
 
-    const loginUser: LoginUser = {
+    const loginUser: UserResponse = {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
@@ -53,6 +55,43 @@ class AuthService implements IAuthService {
     const token = signJwt(authenticatedUser);
 
     return { token, user: loginUser };
+  }
+
+  public async register(
+    data: RegisterInput,
+  ): Promise<{ token: string; user: UserResponse }> {
+    const existingUser = await this._userRepository.findByEmail(data.email);
+
+    if (existingUser) {
+      throw new CustomError(409, "Email already in use.");
+    }
+
+    const passwordHash = await bcryptjs.hash(data.password, 12);
+
+    const newUser = await this._userRepository.createWithSubtype({
+      ...data,
+      passwordHash,
+    });
+
+    const userResponse: UserResponse = {
+      id: newUser.id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      userType: newUser.userType,
+      isManager: newUser.isManager,
+      createdAt: newUser.createdAt,
+      updatedAt: newUser.updatedAt,
+    };
+
+    const authenticatedUser: AuthenticatedUser = {
+      id: newUser.id,
+      userType: newUser.userType,
+      isManager: newUser.isManager,
+    };
+
+    const token = signJwt(authenticatedUser);
+
+    return { token, user: userResponse };
   }
 }
 
