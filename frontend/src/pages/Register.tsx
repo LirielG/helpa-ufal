@@ -6,7 +6,6 @@ import {
   GraduationCap,
   Users as UsersIcon,
   Mail,
-  Lock,
   Building2,
   Eye,
   EyeOff,
@@ -215,7 +214,6 @@ export function Register() {
               label="Nome completo"
               type="text"
               placeholder="Digite seu nome completo"
-              icon={<User className="size-5" />}
               error={errors.name?.message}
               {...register("name")}
             />
@@ -224,7 +222,6 @@ export function Register() {
               label="Email"
               type="email"
               placeholder="seu.email@exemplo.com"
-              icon={<Mail className="size-5" />}
               error={errors.email?.message}
               {...register("email")}
             />
@@ -238,7 +235,6 @@ export function Register() {
                     <Input
                       label="Instituição"
                       placeholder="Nome da instituição"
-                      icon={<Building2 className="size-5" />}
                       error={errors.institution?.message}
                       {...field}
                     />
@@ -250,20 +246,11 @@ export function Register() {
                   render={({ field }) => (
                     <Input
                       label="CNDB"
-                      placeholder="Número CNDB (carteira docente)"
+                      placeholder="Ex.: Ciência da Computação"
                       error={errors.cndbNumber?.message}
-                      {...field}
-                    />
-                  )}
-                />
-                <Controller
-                  control={control}
-                  name="enrollment"
-                  render={({ field }) => (
-                    <Input
-                      label="Código de registro"
-                      placeholder="Número de registro"
-                      error={errors.enrollment?.message}
+                      labelIcon={
+                        <Tooltip content="A CNDB é a Carteira Nacional Docente do Brasil, documento oficial do Ministério da Educação (MEC) que identifica e valoriza professores da educação básica e superior (pública ou privada) em todo o país. Ela facilita a comprovação do vínculo profissional, garantindo benefícios, descontos culturais e reconhecimento formal da profissão" />
+                      }
                       {...field}
                     />
                   )}
@@ -331,70 +318,85 @@ export function Register() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Digite sua senha"
-                    className={`w-full pl-12 pr-12 py-3 border ${
-                      errors.password
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    } rounded-lg outline-none focus:ring-2 transition`}
-                    {...register("password")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(current => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Senha</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Digite sua senha"
+                      className={`w-full px-4 py-3 border ${
+                        errors.password
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      } rounded-lg outline-none focus:ring-2 transition pr-12`}
+                      {...register("password")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(current => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                  )}
                 </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-                )}
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-2">Confirmar senha</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Digite a senha novamente"
+                      className={`w-full px-4 py-3 border ${
+                        errors.confirmPassword
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-blue-500"
+                      } rounded-lg outline-none focus:ring-2 transition pr-12`}
+                      {...register("confirmPassword")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(current => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Confirmar senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Digite a senha novamente"
-                    className={`w-full pl-12 pr-12 py-3 border ${
-                      errors.confirmPassword
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    } rounded-lg outline-none focus:ring-2 transition`}
-                    {...register("confirmPassword")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(current => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                  </button>
+
+              <div className="bg-gray-50 rounded-lg p-4 flex items-start">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">A senha deve conter:</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Pelo menos 8 caracteres</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Uma letra maiúscula</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Uma letra minúscula</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Um caractere especial (Ex: @, $, *, _)</span>
+                    </li>
+                  </ul>
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
-                )}
               </div>
             </div>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showPassword}
-                onChange={e => setShowPassword(e.target.checked)}
-                className="size-4 rounded border-gray-300 cursor-pointer"
-              />
-              <span className="text-sm text-gray-600">Ver senhas</span>
-            </label>
 
             <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
               Criar conta
@@ -402,10 +404,14 @@ export function Register() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Já tem uma conta?{" "}
-              <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                Fazer login
+            <p className="text-gray-600 text-sm">
+              Ao criar uma conta você concorda com nossos{" "}
+              <Link to="#" className="text-blue-600 hover:text-blue-700 font-medium">
+                Termos de uso
+              </Link>
+              {" "}e{" "}
+              <Link to="#" className="text-blue-600 hover:text-blue-700 font-medium">
+                Política de Privacidade
               </Link>
             </p>
           </div>

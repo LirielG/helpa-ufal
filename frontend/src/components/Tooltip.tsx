@@ -29,15 +29,15 @@ export function Tooltip({ content }: TooltipProps) {
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="relative w-full max-w-[650px] overflow-hidden rounded-[28px] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
-            <div className="h-[72px] bg-[#0B2B58] px-6 flex items-start pt-5">
-              <div className="size-9 rounded-full border-2 border-white flex items-center justify-center">
-                <span className="text-white text-base font-semibold leading-none">?</span>
+          <div className="relative w-full max-w-[500px] overflow-hidden rounded-[28px] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
+            <div className="h-[60px] bg-[#0B2B58] px-6 flex items-start pt-4">
+              <div className="size-8 rounded-full border-2 border-white flex items-center justify-center">
+                <span className="text-white text-sm font-semibold leading-none">?</span>
               </div>
             </div>
 
-            <div className="px-10 py-10 text-center">
-              <p className="text-[24px] leading-[1.32] font-normal text-[#1A1A1A] tracking-[-0.01em]">
+            <div className="px-8 py-8 text-center">
+              <p className="text-[20px] leading-[1.32] font-normal text-[#1A1A1A] tracking-[-0.01em]">
                 {content}
               </p>
             </div>
