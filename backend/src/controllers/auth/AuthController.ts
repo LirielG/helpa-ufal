@@ -41,6 +41,16 @@ class AuthController implements IAuthController {
 
     res.status(201).json(result);
   }
+
+  public async logout(req: Request, res: Response): Promise<void> {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    
+    res.status(204).send();
+  }
 }
 
 export default AuthController;
