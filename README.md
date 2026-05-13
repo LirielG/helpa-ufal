@@ -1,5 +1,5 @@
 
-# Helpa - Hub de Extensão e Atividades Acadêmicas
+# Helpa - Hub Estudantil de Laços, Participação e Ação
 
 O Helpa é uma plataforma de gestão de atividades de extensão e voluntariado desenvolvida para a comunidade acadêmica da UFAL - Campus Arapiraca. O sistema visa centralizar a oferta de vagas em projetos, facilitar a inscrição de estudantes e automatizar a contabilização de horas complementares.
 
