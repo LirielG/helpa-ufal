@@ -30,17 +30,17 @@ class AuthController implements IAuthController {
   }
 
   public async register(req: Request, res: Response): Promise<void> {
-  const data = RegisterSchema.parse(req.body);
-  const result = await this._authService.register(data);
+    const data = RegisterSchema.parse(req.body);
+    const result = await this._authService.register(data);
 
-  res.cookie("token", result.token, { // makes sense hold cookies here?
-    httpOnly: true,
-    secure:   env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
 
-  res.status(201).json(result);
-}
+    res.status(201).json(result);
+  }
 }
 
 export default AuthController;
