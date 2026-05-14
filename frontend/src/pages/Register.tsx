@@ -5,7 +5,6 @@ import {
   User,
   GraduationCap,
   Mail,
-  Building2,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -27,7 +26,6 @@ const defaultFields = {
   email: "",
   password: "",
   confirmPassword: "",
-  institution: "",
   cndbNumber: "",
   course: "",
   enrollment: "",
@@ -45,7 +43,7 @@ export function Register() {
     student: {
       color: "blue",
       icon: GraduationCap,
-      title: "Cadastro de Aluno",
+      title: "Cadastro de Estudante",
     },
     teacher: {
       color: "green",
@@ -218,18 +216,34 @@ export function Register() {
 
             {selectedType === "teacher" && (
               <>
-                <Controller
-                  control={control}
-                  name="institution"
-                  render={({ field }) => (
-                    <Input
-                      label="Instituição"
-                      placeholder="Nome da instituição"
-                      error={errors.institution?.message}
-                      {...field}
-                    />
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Controller
+                    control={control}
+                    name="course"
+                    render={({ field }) => (
+                      <Input
+                        label="Curso"
+                        placeholder="Ex.: Ciência da Computação"
+                        error={errors.course?.message}
+                        {...field}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="enrollment"
+                    render={({ field }) => (
+                      <Input
+                        label="Número de Matrícula"
+                        placeholder="Número de matrícula"
+                        error={errors.enrollment?.message}
+                        {...field}
+                      />
+                    )}
+                  />
+                </div>
+
                 <Controller
                   control={control}
                   name="cndbNumber"
