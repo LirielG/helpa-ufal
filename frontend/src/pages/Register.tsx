@@ -142,7 +142,7 @@ export function Register() {
 
           <div className="text-center mt-8">
             <p className="text-gray-600">
-              Já possiu uma conta no helpa?{" "}
+              Já possui uma conta no helpa?{" "}
               <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
                 Entrar
               </Link>
