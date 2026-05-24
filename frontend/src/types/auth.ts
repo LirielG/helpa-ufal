@@ -1,4 +1,4 @@
-export type UserType = "student" | "teacher";
+export type UserType = "STUDENT" | "TEACHER";
 
 export interface LoginRequest {
   email: string;
@@ -13,20 +13,22 @@ export interface LoginResponse {
 export interface User {
   id: string;
   email: string;
-  name: string;
-  type: UserType;
+  fullName: string;
+  userType: UserType;
+  isManager: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface RegisterRequest {
-  name: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
-  type: UserType;
-  cndbNumber?: string;
-  course?: string;
-  enrollment?: string;
+  userType: UserType;
+  course: string;
+  registrationCode: string;
+  cndb?: string;
 }
 
 export interface RegisterResponse {

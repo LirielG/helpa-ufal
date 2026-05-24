@@ -20,7 +20,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses =
-      "rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
+      "rounded-lg font-medium transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
       primary: "bg-blue-600 hover:bg-blue-700 text-white",
