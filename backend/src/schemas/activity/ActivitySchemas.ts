@@ -1,13 +1,22 @@
 import { z } from "zod";
 import { ActivityType, ActivityFormat, ActivityStatus, CampusLocation } from "@prisma/client";
 
+
+const BrazilianStates = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+  "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+] as const;
+
 const AddressSchema = z.object({
-  addressLine: z.string().min(1),
-  district:    z.string().min(1),
-  zipCode:     z.string().min(1),
-  city:        z.string().min(1),
-  state:       z.string().min(1),
-});
+  addressLine: z.string().trim().min(1),
+  district:    z.string().trim().min(1),
+  zipCode:     z.string().trim().regex(/^\d{8}$/, "zipCode must contain exactly 8 digits."),
+  city:        z.string().trim().min(1),
+  state:       z.enum(BrazilianStates, {
+    message: "state must be a valid Brazilian state abbreviation (e.g. AL, SP, RJ).",
+  }),
+});``
 
 const BaseActivitySchema = z.object({
   title:        z.string().min(1),
@@ -16,10 +25,10 @@ const BaseActivitySchema = z.object({
   startDate:    z.coerce.date(),
   endDate:      z.coerce.date(),
   slots:        z.number().int().min(1),
-  description:  z.string().min(1),
-  area:         z.string().min(1),
+  description:  z.string().trim().min(1),
+  area:         z.string().trim().min(1),
   workloadHours: z.number().int().min(1),
-  url:          z.string().url().optional(),
+  url:          z.url().optional(),
 });
 
 export const CreateActivitySchema = z.discriminatedUnion("format", [
