@@ -15,22 +15,26 @@ export const swaggerDocument: OpenAPIV3.Document = {
       },
     },
     schemas: {
-      AuthenticatedUser: {
+      UserResponse: {
         type: "object",
         properties: {
           id:        { type: "string", format: "uuid" },
-          userType:  { type: "string", enum: ["STUDENT", "TEACHER", "EXTERNAL"] },
+          fullName:  { type: "string" },
+          email:     { type: "string", format: "email" },
+          userType:  { type: "string", enum: ["STUDENT", "TEACHER"] },
           isManager: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
         },
       },
       AuthResponse: {
         type: "object",
         properties: {
           token: { type: "string" },
-          user:  { $ref: "#/components/schemas/AuthenticatedUser" },
+          user:  { $ref: "#/components/schemas/UserResponse" },
         },
       },
-      Activity: {
+      ActivityResponse: {
         type: "object",
         properties: {
           id:        { type: "string", format: "uuid" },
@@ -138,19 +142,6 @@ export const swaggerDocument: OpenAPIV3.Document = {
                       course:           { type: "string" },
                     },
                   },
-                  {
-                    title: "EXTERNAL",
-                    type: "object",
-                    required: ["userType", "fullName", "email", "password"],
-                    properties: {
-                      userType:    { type: "string", enum: ["EXTERNAL"] },
-                      fullName:    { type: "string" },
-                      email:       { type: "string", format: "email" },
-                      password:    { type: "string", minLength: 8 },
-                      institution: { type: "string" },
-                      course:      { type: "string" },
-                    },
-                  },
                 ],
               },
             },
@@ -161,7 +152,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
             description: "Registered successfully.",
             content: { "application/json": { schema: { $ref: "#/components/schemas/AuthResponse" } } },
           },
-          400: { description: "Validation error.",    content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          400: { description: "Validation error.",     content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
           409: { description: "Email already in use.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
           500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
         },
@@ -199,9 +190,9 @@ export const swaggerDocument: OpenAPIV3.Document = {
                         properties: {
                           addressLine: { type: "string" },
                           district:    { type: "string" },
-                          zipCode:     { type: "string" },
+                          zipCode:     { type: "string", pattern: "^\\d{8}$" },
                           city:        { type: "string" },
-                          state:       { type: "string" },
+                          state:       { type: "string", enum: ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] },
                         },
                       },
                     },
@@ -246,9 +237,9 @@ export const swaggerDocument: OpenAPIV3.Document = {
                         properties: {
                           addressLine: { type: "string" },
                           district:    { type: "string" },
-                          zipCode:     { type: "string" },
+                          zipCode:     { type: "string", pattern: "^\\d{8}$" },
                           city:        { type: "string" },
-                          state:       { type: "string" },
+                          state:       { type: "string", enum: ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] },
                         },
                       },
                     },
@@ -261,7 +252,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
         responses: {
           201: {
             description: "Activity created successfully.",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/Activity" } } },
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ActivityResponse" } } },
           },
           400: { description: "Validation error.",      content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
           401: { description: "Unauthenticated.",       content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
