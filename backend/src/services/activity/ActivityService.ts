@@ -4,6 +4,8 @@ import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
+import { activityResponse } from "@/types/activity.js";
+import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
 
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
@@ -25,45 +27,62 @@ class ActivityService implements IActivityService {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<Activity> {
+  ): Promise<activityResponse> {
     
     const now = new Date();
+    const durationDays =
+      (data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24);
+    const daysUntilStart =
+      (data.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    const durationHours = durationDays * 24;
+    
+    const dateErrors = [];
 
     if (data.startDate <= now) {
-      throw new CustomError(400, "startDate must be in the future.");
+      dateErrors.push({
+        "field": "startDate",
+        "message": "startDate must be in the future.",
+      } as ValidationErrorItem )
     }
 
     if (data.endDate <= data.startDate) {
-      throw new CustomError(400, "endDate must be after startDate.");
+      dateErrors.push({
+        "field": "endDate",
+        "message": "endDate must be after startDate.",
+      } as ValidationErrorItem )
     }
 
-    const durationDays =
-      (data.endDate.getTime() - data.startDate.getTime()) / (1000 * 60 * 60 * 24);
 
     if (durationDays > MAX_ACTIVITY_DURATION_DAYS) {
-      throw new CustomError(400, `Activity duration cannot exceed ${MAX_ACTIVITY_DURATION_DAYS} days.`);
+      dateErrors.push({
+        "field": "endDate",
+        "message": `Activity duration cannot exceed ${MAX_ACTIVITY_DURATION_DAYS} days.`,
+      } as ValidationErrorItem )
     }
 
-    const daysUntilStart =
-      (data.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
     if (daysUntilStart > MAX_FUTURE_START_DAYS) {
-      throw new CustomError(400, `startDate cannot be more than ${MAX_FUTURE_START_DAYS} days in the future.`);
+      dateErrors.push({
+        "field": "startDate",
+        "message": `startDate cannot be more than ${MAX_FUTURE_START_DAYS} days in the future.`,
+      } as ValidationErrorItem )
     }
 
-    const durationHours = durationDays * 24;
+    if (dateErrors.length > 0) throw new ValidationError(dateErrors);
 
-    if (data.workloadHours > durationHours) {
-      throw new CustomError(400, "workloadHours cannot exceed the total duration of the activity.");
-    }
+    const capacityErrors = [];
 
-    if (data.workloadHours > MAX_WORKLOAD_HOURS) {
-      throw new CustomError(400, `workloadHours cannot exceed ${MAX_WORKLOAD_HOURS}.`);
-    }
+    if (data.workloadHours > durationHours)
+    capacityErrors.push({ field: "workloadHours", message: "workloadHours cannot exceed the total duration of the activity." });
 
-    if (data.slots > MAX_SLOTS) {
-      throw new CustomError(400, `slots cannot exceed ${MAX_SLOTS}.`);
-    }
+    if (data.workloadHours > MAX_WORKLOAD_HOURS)
+    capacityErrors.push({ field: "workloadHours", message: `workloadHours cannot exceed ${MAX_WORKLOAD_HOURS}.` });
+
+    if (data.slots > MAX_SLOTS)
+    capacityErrors.push({ field: "slots", message: `slots cannot exceed ${MAX_SLOTS}.` });
+
+    if (capacityErrors.length > 0) throw new ValidationError(capacityErrors);
+
 
     if (data.format === "IN_PERSON" && !data.address) {
       throw new CustomError(400, "IN_PERSON activities require an address.");
@@ -76,9 +95,22 @@ class ActivityService implements IActivityService {
     if (data.format === "HYBRID" && !data.url) {
       throw new CustomError(400, "HYBRID activities require a url.");
     }
+    
+    const newActivity = await this._activityRepository.create(authorId, data);
 
-
-    return this._activityRepository.create(authorId, data);
+    const activityResponse: activityResponse = {
+      "id": newActivity.id,
+      "authorId": newActivity.authorId,
+      "title": newActivity.title,
+      "type": newActivity.type,
+      "campus": newActivity.campus,
+      "startDate": newActivity.startDate,
+      "endDate": newActivity.endDate,
+      "slots": newActivity.slots,
+      "status": newActivity.status,
+    }
+    
+    return activityResponse;
   }
 }
 
