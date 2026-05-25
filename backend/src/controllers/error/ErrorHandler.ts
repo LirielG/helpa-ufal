@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import CustomError from "@/models/error/CustomError.js";
+import ValidationError from "@/models/error/ValidationError.js";
 import { env } from "@/config/env.js";
 
 class ErrorHandler {
@@ -15,8 +16,32 @@ class ErrorHandler {
       return;
     }
 
-    const messages = err.issues.map((e) => e.message);
-    res.status(400).json({ message: messages });
+    res.status(400).json({
+      status:  400,
+      message: "Validation error.",
+      errors:  err.issues.map((e) => ({
+        field:   e.path.join("."),
+        message: e.message,
+      })),
+    });
+  }
+
+  public validationErrorHandler(
+    err: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (!(err instanceof ValidationError)) {
+      next(err);
+      return;
+    }
+
+    res.status(400).json({
+      status:  400,
+      message: err.message,
+      errors:  err.errors,
+    });
   }
 
   public defaultHandler(
@@ -26,7 +51,10 @@ class ErrorHandler {
     _next: NextFunction,
   ): void {
     if (err instanceof CustomError) {
-      res.status(err.statusCode).json({ message: err.message });
+      res.status(err.statusCode).json({
+        status:  err.statusCode,
+        message: err.message,
+      });
       return;
     }
 
@@ -35,7 +63,11 @@ class ErrorHandler {
         ? err.stack
         : undefined;
 
-    res.status(500).json({ message: "Internal server error.", stack });
+    res.status(500).json({
+      status:  500,
+      message: "Internal server error.",
+      stack,
+    });
   }
 }
 
