@@ -1,56 +1,12 @@
-import { useState } from "react";
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "../types";
-import { authService } from "../services";
+import { useAuthStore } from "../stores/authStore";
 
 export const useAuth = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const login = async (data: LoginRequest): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response: LoginResponse = await authService.login(data);
-      authService.setToken(response.token);
-      authService.setUser(response.user);
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao fazer login";
-      setError(message);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (data: RegisterRequest): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response: RegisterResponse = await authService.register(data);
-      authService.setToken(response.token);
-      authService.setUser(response.user);
-      return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao criar conta";
-      setError(message);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    setIsLoading(true);
-    try {
-      await authService.logout();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const isAuthenticated = authService.isAuthenticated();
-  const user = authService.getUser();
+  const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
+  const logout = useAuthStore((state) => state.logout);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const error = useAuthStore((state) => state.error);
+  const user = useAuthStore((state) => state.user);
 
   return {
     login,
@@ -58,7 +14,7 @@ export const useAuth = () => {
     logout,
     isLoading,
     error,
-    isAuthenticated,
+    isAuthenticated: !!user,
     user,
   };
 };
