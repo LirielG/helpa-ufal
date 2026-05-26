@@ -12,7 +12,7 @@ const activityController: IActivityController = new ActivityController();
 const authMiddleware:     IAuthMiddleware      = new AuthMiddleware();
 
 router.post(
-  "/activity",
+  "/activities",
   authMiddleware.auth(),
   (req, res, next) => activityController.create(req, res).catch(next),
 );
