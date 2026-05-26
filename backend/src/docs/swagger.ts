@@ -259,6 +259,174 @@ export const swaggerDocument: OpenAPIV3.Document = {
           500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
         },
       },
+      get: {
+        tags:    ["Activities"],
+        summary: "List activities",
+        description: "Returns a paginated list of activities. When `search` is provided, all other filters are ignored. Results are ordered by `startDate` ascending.",
+        parameters: [
+          // Pagination
+          {
+            name:        "page",
+            in:          "query",
+            required:    false,
+            description: "Page number (default: 1)",
+            schema:      { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name:        "limit",
+            in:          "query",
+            required:    false,
+            description: "Items per page (default: 20, max: 100)",
+            schema:      { type: "integer", minimum: 1, maximum: 100, default: 20 },
+          },
+
+          // Free text — mutually exclusive with filters below
+          {
+            name:        "search",
+            in:          "query",
+            required:    false,
+            description: "Free text search on activity title. When provided, all other filters (status, type, campus, format, startAfter, endBefore) are ignored.",
+            schema:      { type: "string" },
+          },
+
+          // Filters
+          {
+            name:        "status",
+            in:          "query",
+            required:    false,
+            description: "Filter by activity status. Ignored when `search` is present.",
+            schema:      { type: "string", enum: ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] },
+          },
+          {
+            name:        "type",
+            in:          "query",
+            required:    false,
+            description: "Filter by activity type. Ignored when `search` is present.",
+            schema:      { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
+          },
+          {
+            name:        "campus",
+            in:          "query",
+            required:    false,
+            description: "Filter by campus. Ignored when `search` is present.",
+            schema:      { type: "string", enum: ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] },
+          },
+          {
+            name:        "format",
+            in:          "query",
+            required:    false,
+            description: "Filter by activity format. Ignored when `search` is present.",
+            schema:      { type: "string", enum: ["IN_PERSON", "ONLINE", "HYBRID"] },
+          },
+          {
+            name:        "startAfter",
+            in:          "query",
+            required:    false,
+            description: "Return only activities starting after this date (ISO 8601). Ignored when `search` is present.",
+            schema:      { type: "string", format: "date-time" },
+          },
+          {
+            name:        "endBefore",
+            in:          "query",
+            required:    false,
+            description: "Return only activities ending before this date (ISO 8601). Ignored when `search` is present.",
+            schema:      { type: "string", format: "date-time" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Paginated list of activities.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type:  "array",
+                      items: { $ref: "#/components/schemas/ActivityResponse" },
+                    },
+                    meta: {
+                      type: "object",
+                      properties: {
+                        total:       { type: "integer", description: "Total number of matching activities." },
+                        page:        { type: "integer" },
+                        limit:       { type: "integer" },
+                        totalPages:  { type: "integer" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Validation error.",      content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+    },
+    "/activities/{id}": {
+      get: {
+        tags:        ["Activities"],
+        summary:     "Get activity by ID",
+        description: "Returns the full data of an activity, including details and address if available.",
+        parameters: [
+          {
+            name:        "id",
+            in:          "path",
+            required:    true,
+            description: "Activity UUID",
+            schema:      { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Full activity data.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    id:        { type: "string", format: "uuid" },
+                    authorId:  { type: "string", format: "uuid" },
+                    title:     { type: "string" },
+                    type:      { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
+                    campus:    { type: "string", enum: ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] },
+                    startDate: { type: "string", format: "date-time" },
+                    endDate:   { type: "string", format: "date-time" },
+                    slots:     { type: "integer" },
+                    status:    { type: "string", enum: ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] },
+                    details: {
+                      nullable: true,
+                      type: "object",
+                      properties: {
+                        description:   { type: "string" },
+                        area:          { type: "string" },
+                        format:        { type: "string", enum: ["IN_PERSON", "ONLINE", "HYBRID"] },
+                        url:           { type: "string", format: "uri", nullable: true },
+                        workloadHours: { type: "integer" },
+                        address: {
+                          nullable: true,
+                          type: "object",
+                          properties: {
+                            id:          { type: "string", format: "uuid" },
+                            addressLine: { type: "string" },
+                            district:    { type: "string" },
+                            zipCode:     { type: "string" },
+                            city:        { type: "string" },
+                            state:       { type: "string" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: "Activity not found.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
     },
   },
 };
