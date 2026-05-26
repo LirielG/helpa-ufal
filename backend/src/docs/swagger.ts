@@ -48,6 +48,39 @@ export const swaggerDocument: OpenAPIV3.Document = {
           status:    { type: "string", enum: ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] },
         },
       },
+      ActivityFullResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/ActivityResponse" },
+          {
+            type: "object",
+            properties: {
+              details: {
+                nullable: true,
+                type: "object",
+                properties: {
+                  description:   { type: "string" },
+                  area:          { type: "string" },
+                  format:        { type: "string", enum: ["IN_PERSON", "ONLINE", "HYBRID"] },
+                  url:           { type: "string", format: "uri", nullable: true },
+                  workloadHours: { type: "integer" },
+                  address: {
+                    nullable: true,
+                    type: "object",
+                    properties: {
+                      id:          { type: "string", format: "uuid" },
+                      addressLine: { type: "string" },
+                      district:    { type: "string" },
+                      zipCode:     { type: "string" },
+                      city:        { type: "string" },
+                      state:       { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
       ValidationError: {
         type: "object",
         properties: {

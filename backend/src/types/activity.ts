@@ -6,14 +6,38 @@ export type CampusLocation = "MACEIO" | "ARAPIRACA" | "PALMEIRA" | "PENEDO" | "R
 
 export type ActivityStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
-export type activityResponse = {
-  "id": string,
-  "authorId": string,
-  "title": string,
-  "type": ActivityType,
-  "campus": CampusLocation,
-  "startDate": Date,
-  "endDate": Date,
-  "slots": number,
-  "status": ActivityStatus
+export type ActivityFormat = "IN_PERSON" | "ONLINE" | "HYBRID";
+
+export type ActivityResponse = {
+  "id":         string,
+  "authorId":   string,
+  "title":      string,
+  "type":       ActivityType,
+  "campus":     CampusLocation,
+  "startDate":  Date,
+  "endDate":    Date,
+  "slots":      number,
+  "status":     ActivityStatus
 }
+
+export type AddressResponse = {
+  id:           string;
+  addressLine:  string;
+  district:     string;
+  zipCode:      string;
+  city:         string;
+  state:        string;
+};
+
+export type ActivityDetailsResponse = {
+  description:   string;
+  area:          string;
+  format:        ActivityFormat;
+  url:           string | null;
+  workloadHours: number;
+  address:       AddressResponse | null;
+};
+
+export type ActivityFullResponse = ActivityResponse & {
+  details: ActivityDetailsResponse | null;
+};
