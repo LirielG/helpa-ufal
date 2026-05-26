@@ -2,10 +2,12 @@ import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import type { IListActivitiesFilters, IListActivitiesResponse } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import { activityResponse } from "@/types/activity.js";
 import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
+
 
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
@@ -111,6 +113,80 @@ class ActivityService implements IActivityService {
     }
     
     return activityResponse;
+  }
+
+  public async list(
+    filters: IListActivitiesFilters,
+    usuarioId?: string
+  ): Promise<IListActivitiesResponse> {
+
+    const pageRaw = filters.page ?? "1";
+    const limitRaw = filters.limit ?? "10";
+
+    const pageNum = parseInt(pageRaw, 10);
+    const limitNum = parseInt(limitRaw, 10);
+
+    const paginationErrors = [];
+
+    if(isNaN(pageNum) || pageNum < 1){
+      paginationErrors.push({
+        field: "page",
+        message: "page must be a positive integer.",
+      } as ValidationErrorItem)
+    }
+
+    if (isNaN(limitNum) || limitNum < 1){
+      paginationErrors.push({
+        field: "limit",
+        message: "limit must be a positive integer.",
+      } as ValidationErrorItem)
+    } else if (limitNum > 50){
+      paginationErrors.push({
+        field: "limit",
+        message:"limit can not exceed 50."
+      } as ValidationErrorItem)
+    }
+
+    if(paginationErrors.length > 0){
+      throw new ValidationError(paginationErrors);
+    }
+
+    // filtros
+    const tiposValidos = ["curso", "evento", "projeto"];
+    const formatosValidos = ["IN_PERSON", "ONLINE", "HYBRID"];
+    const statusValidos   = ["OPEN", "CLOSED", "FINISHED"];
+
+    const filterErrors = [];
+
+    if (filters.tipo && !tiposValidos.includes(filters.tipo)) {
+      filterErrors.push({
+        field: "tipo",
+        message: `tipo must be one of the following: ${tiposValidos.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    if (filters.formato && !formatosValidos.includes(filters.formato)) {
+      filterErrors.push({
+        field: "formato",
+        message: `formato must be one of the following: ${formatosValidos.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    if (filters.status && !statusValidos.includes(filters.status)) {
+      filterErrors.push({
+        field: "status",
+        message: `status must be one of the following: ${statusValidos.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    if (filterErrors.length > 0) {
+      throw new ValidationError(filterErrors);
+    }
+    //TODO: adicionar validação order orderBy
+    return { // TODO: reescrever typescript temporario
+      activities: [],
+      total: 0
+    };
   }
 }
 
