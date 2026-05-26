@@ -1,48 +1,59 @@
-import { useNavigate } from "react-router";
-import { Button, Layout } from "../components";
-import { useAuth } from "../hooks";
+import { useState, useMemo } from "react";
+import { DashboardShell } from "../features/dashboard/components/DashboardShell";
+import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
+import { HeroBanner } from "../features/dashboard/components/HeroBanner";
+import { FilterBar } from "../features/dashboard/components/FilterBar";
+import { ActionGrid } from "../features/dashboard/components/ActionGrid";
+import { Footer } from "../components/Footer";
+import bgDashboard from "../assets/bg.svg"; 
+import { MOCK_ACTIONS } from "../features/dashboard/constants";
+import type { FilterOptions } from "../features/dashboard/types";
 
 export function Dashboard() {
-  const navigate = useNavigate();
-  const { user, logout, isLoading } = useAuth();
+  const [filters, setFilters] = useState<FilterOptions>({
+    area: "all",
+    actionType: "all",
+    availability: "all",
+  });
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
+  const handleFilterChange = (key: keyof FilterOptions, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const filteredActions = useMemo(() => {
+    return MOCK_ACTIONS.filter((action) => {
+      if (filters.availability !== "all" && action.status !== filters.availability) {
+        return false;
+      }
+      if (filters.actionType !== "all" && action.type !== filters.actionType) {
+        return false;
+      }
+      return true;
+    });
+  }, [filters]);
+
+  const dashboardBackgroundStyle = {
+    backgroundImage: `url(${bgDashboard})`,
+    backgroundPosition: "top center",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: "cover",
   };
 
   return (
-    <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10">
-          <div className="mb-8">
-            <p className="text-sm font-medium text-blue-600 uppercase tracking-[0.2em] mb-3">
-              Área autenticada
-            </p>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Bem-vindo, {user?.fullName ?? "usuário"}
-            </h1>
-            <p className="text-gray-600">
-              Sua sessão está ativa via cookie e o estado visual está sendo controlado pelo zustand.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="rounded-xl border border-gray-200 p-4">
-              <span className="block text-sm text-gray-500 mb-1">E-mail</span>
-              <span className="font-medium text-gray-900">{user?.email ?? "-"}</span>
-            </div>
-            <div className="rounded-xl border border-gray-200 p-4">
-              <span className="block text-sm text-gray-500 mb-1">Tipo de usuário</span>
-              <span className="font-medium text-gray-900">{user?.userType ?? "-"}</span>
-            </div>
-          </div>
-
-          <Button type="button" variant="navy" size="lg" isLoading={isLoading} onClick={handleLogout}>
-            Sair
-          </Button>
+    <DashboardShell
+      header={<DashboardHeader />}
+      footer={<Footer />} 
+    >
+      <HeroBanner />
+      
+      <div className="w-full bg-white" style={dashboardBackgroundStyle}>
+        
+        <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+          <FilterBar filters={filters} onFilterChange={handleFilterChange} />
+          <ActionGrid actions={filteredActions} />
         </div>
+
       </div>
-    </Layout>
+    </DashboardShell>
   );
 }
