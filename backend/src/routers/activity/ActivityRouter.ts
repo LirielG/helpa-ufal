@@ -17,4 +17,9 @@ router.post(
   (req, res, next) => activityController.create(req, res).catch(next),
 );
 
+router.get(
+  '/activities',
+  (req, res, next) => activityController.list(req, res).catch(next),
+);
+
 export default router;

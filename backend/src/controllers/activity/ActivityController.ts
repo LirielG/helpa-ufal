@@ -24,6 +24,27 @@ class ActivityController implements IActivityController {
 
     res.status(201).json(activity);
   }
+
+  public async list(req: Request, res: Response): Promise<void>{
+    const tipo    = req.query.tipo;
+    const formato = req.query.formato;
+    const status  = req.query.status;
+    const search  = req.query.search;
+    const page    = req.query.page;
+    const limit   = req.query.limit;
+    const orderBy = req.query.orderBy;
+    const order   = req.query.order; 
+
+    const usuarioId = req.user?.id;
+
+    // TODO: implementar validações no service e as queries cm prisma 
+
+
+    res.status(200).json({ //mock *temporário* para teste
+      message: "Rota de listagem acessada com sucesso",
+      filters: { tipo, formato, status, search, page, limit, orderBy, order }
+    });
+  }
 }
 
 export default ActivityController;
