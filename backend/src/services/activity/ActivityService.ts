@@ -5,7 +5,7 @@ import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js"
 import type { IListActivitiesFilters, IListActivitiesResponse } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
-import { activityResponse } from "@/types/activity.js";
+import { ActivityResponse } from "@/types/activity.js";
 import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
 
 
@@ -29,7 +29,7 @@ class ActivityService implements IActivityService {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<activityResponse> {
+  ): Promise<ActivityResponse> {
     
     const now = new Date();
     const durationDays =
@@ -100,7 +100,7 @@ class ActivityService implements IActivityService {
     
     const newActivity = await this._activityRepository.create(authorId, data);
 
-    const activityResponse: activityResponse = {
+    const activityResponse: ActivityResponse = {
       "id": newActivity.id,
       "authorId": newActivity.authorId,
       "title": newActivity.title,
@@ -152,41 +152,76 @@ class ActivityService implements IActivityService {
     }
 
     // filtros
-    const tiposValidos = ["curso", "evento", "projeto"];
-    const formatosValidos = ["IN_PERSON", "ONLINE", "HYBRID"];
-    const statusValidos   = ["OPEN", "CLOSED", "FINISHED"];
-
     const filterErrors = [];
 
-    if (filters.tipo && !tiposValidos.includes(filters.tipo)) {
+    const validTypes     = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
+    const validFormats   = ["IN_PERSON", "ONLINE", "HYBRID"];
+    const validStatuses  = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+
+
+    if (filters.type && !validTypes.includes(filters.type)) {
       filterErrors.push({
         field: "tipo",
-        message: `tipo must be one of the following: ${tiposValidos.join(", ")}.`,
+        message: `tipo must be one of the following: ${validTypes.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
-    if (filters.formato && !formatosValidos.includes(filters.formato)) {
+    if (filters.format && !validFormats.includes(filters.format)) {
       filterErrors.push({
         field: "formato",
-        message: `formato must be one of the following: ${formatosValidos.join(", ")}.`,
+        message: `formato must be one of the following: ${validFormats.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
-    if (filters.status && !statusValidos.includes(filters.status)) {
+    if (filters.status && !validStatuses.includes(filters.status)) {
       filterErrors.push({
         field: "status",
-        message: `status must be one of the following: ${statusValidos.join(", ")}.`,
+        message: `status must be one of the following: ${validStatuses.join(", ")}.`,
       } as ValidationErrorItem);
+    }
+
+    const validOrders = ["asc", "desc"];
+    const validSortFields = ["start_date", "created_at"];
+
+    if(filters.order && !validOrders.includes(filters.order)){
+      filterErrors.push({
+        field: "order",
+        message: `order must be one of the following: ${validOrders.join(",")}.`,
+      } as ValidationErrorItem)
+    }
+
+    if(filters.orderBy && !validSortFields.includes(filters.orderBy)){
+      filterErrors.push({
+        field: "orderBy",
+        message: `orderBy must be one of the following: ${validSortFields.join(",")}.`,
+      } as ValidationErrorItem)
     }
 
     if (filterErrors.length > 0) {
       throw new ValidationError(filterErrors);
     }
-    //TODO: adicionar validação order orderBy
-    return { // TODO: reescrever typescript temporario
-      activities: [],
-      total: 0
-    };
+
+    let sortField = "createdAt";
+
+    if (filters.orderBy === "data_inicio") {
+      sortField = "startDate";
+    } else if (filters.orderBy === "created_at") {
+      sortField = "createdAt";
+    }
+
+    const result = await this._activityRepository.list({
+      type: filters.type,
+      format: filters.format,
+      status: filters.status,
+      search: filters.search,
+      campus: filters.campus,
+      page: pageNum,                 
+      limit: limitNum,               
+      orderBy: sortField,            
+      order: filters.order ?? "desc"
+    });
+    
+    return result;
   }
 }
 
