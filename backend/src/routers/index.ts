@@ -1,12 +1,10 @@
 import express from "express";
 import AuthRouter from "@/routers/auth/AuthRouter.js";
-import { ActivityController } from '../controllers/ActivityController.js';
+import ActivityRouter from "@/routers/activity/ActivityRouter.js";
 
 const router = express.Router();
 
 router.use("/auth", AuthRouter);
-
-const activityController = new ActivityController();
-router.get('/acoes', activityController.list);
+router.use("/", ActivityRouter)
 
 export default router;

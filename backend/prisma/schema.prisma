@@ -13,7 +13,10 @@ enum UserType {
 
 enum ActivityType {
   EXTENSION
+  COURSE
   EVENT
+  LECTURE
+  OTHER
 }
 
 enum ActivityFormat {
@@ -35,6 +38,17 @@ enum EnrollmentStatus {
   REJECTED
 }
 
+enum CampusLocation {
+  MACEIO         
+  ARAPIRACA      
+  PALMEIRA       
+  PENEDO         
+  RIO_LARGO      
+  DELMIRO_GOUVEIA
+  SANTANA_IPANEMA
+}
+
+
 model User {
   id           String   @id @default(uuid())
   fullName     String
@@ -53,7 +67,7 @@ model User {
 
 model Student {
   userId           String   @id
-  registrationCode String
+  registrationCode String   @unique
   course           String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -63,8 +77,8 @@ model Student {
 
 model Teacher {
   userId           String   @id
-  registrationCode String
-  cndb             String
+  registrationCode String   @unique
+  cndb             String   @unique
   course           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -75,6 +89,7 @@ model Teacher {
 model Address {
   id          String   @id @default(uuid())
   addressLine String
+  district    String
   zipCode     String
   city        String
   state       String
@@ -85,16 +100,24 @@ model Address {
 }
 
 model Activity {
-  id        String         @id @default(uuid())
+  id        String          @id @default(uuid())
   authorId  String
   title     String
   type      ActivityType
+  campus    CampusLocation
   startDate DateTime
   endDate   DateTime
-  slots     Int
-  status    ActivityStatus
+  slots     Int             @default(1)
+  status    ActivityStatus  @default(OPEN)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
-  author      User             @relation(fields: [authorId], references: [id], onUpdate: Cascade)
+  @@index([status])
+  @@index([type])
+  @@index([authorId])
+  @@index([startDate, endDate])
+
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   details     ActivityDetails?
   enrollments Enrollment[]
 }
@@ -105,13 +128,15 @@ model ActivityDetails {
   area        String
   format      ActivityFormat
   url         String?
-  workload    Int
+  workloadHours    Int
   addressId   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  @@map("activity_details")
+
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  address  Address? @relation(fields: [addressId], references: [id], onUpdate: Cascade)
+  address  Address? @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 }
 
 model Enrollment {
@@ -124,6 +149,9 @@ model Enrollment {
   enrolledAt          DateTime         @default(now())
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([activityId])
 
   user        User         @relation(fields: [userId], references: [id], onUpdate: Cascade)
   activity    Activity     @relation(fields: [activityId], references: [id], onUpdate: Cascade)
