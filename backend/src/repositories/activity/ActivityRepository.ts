@@ -1,7 +1,8 @@
 import type { PrismaClient, Activity } from "@prisma/client";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
-import { prisma } from "@/database/prisma.js";
+import { prisma } from "@/database/prisma.js";    
+import { ActivityFullResponse } from "@/types/activity.js";
 
 type Props = {
   prisma?: PrismaClient;
@@ -55,6 +56,50 @@ class ActivityRepository implements IActivityRepository {
 
       return activity;
     });
+  }
+
+  public async findById(id: string): Promise<ActivityFullResponse | null> {
+    const result = await this._prisma.activity.findUnique({
+      where:   { id },
+      include: {
+        details: {
+          include: { address: true },
+        },
+      },
+    });
+
+    if (!result) return null;
+
+    return {
+      id:        result.id,
+      authorId:  result.authorId,
+      title:     result.title,
+      type:      result.type,
+      campus:    result.campus,
+      startDate: result.startDate,
+      endDate:   result.endDate,
+      slots:     result.slots,
+      status:    result.status,
+      details:   result.details
+        ? {
+            description:   result.details.description,
+            area:          result.details.area,
+            format:        result.details.format,
+            url:           result.details.url ?? null,
+            workloadHours: result.details.workloadHours,
+            address:       result.details.address
+              ? {
+                  id:          result.details.address.id,
+                  addressLine: result.details.address.addressLine,
+                  district:    result.details.address.district,
+                  zipCode:     result.details.address.zipCode,
+                  city:        result.details.address.city,
+                  state:       result.details.address.state,
+                }
+              : null,
+          }
+        : null,
+    };
   }
 }
 
