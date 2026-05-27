@@ -17,10 +17,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className = "",
       ...props
     },
-    ref
+    ref,
   ) => {
     const baseClasses =
-      "rounded-lg font-medium transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+      "rounded-lg font-medium transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none";
 
     const variants = {
       primary: "bg-blue-600 hover:bg-blue-700 text-white",
@@ -45,7 +45,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading ? "Carregando..." : children}
       </button>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";
