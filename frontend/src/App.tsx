@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
-import { Login, Register, Dashboard } from "./pages";
+import { Login, Register, Dashboard, ActionDetail } from "./pages";
 import { PublicRoute } from "./routes/PublicRoute";
 //import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { useAuthStore } from "./stores/authStore";
@@ -35,6 +35,14 @@ export default function App() {
           element={
             <PublicRoute>
               <Dashboard />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/activity/:id"
+          element={
+            <PublicRoute>
+              <ActionDetail />
             </PublicRoute>
           }
         />
