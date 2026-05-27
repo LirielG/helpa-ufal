@@ -2,7 +2,11 @@ import { Search, Plus, LogOut } from "lucide-react";
 import { useNavigate } from "react-router";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  onOpenRegister: () => void;
+}
+
+export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -29,7 +33,7 @@ export function DashboardHeader() {
           </div>
 
           <div className="flex items-center gap-5">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            <button onClick={onOpenRegister} className="flex items-center gap-2 px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
               <Plus className="size-5" />
               <span className="hidden sm:inline">Criar uma ação</span>
             </button>

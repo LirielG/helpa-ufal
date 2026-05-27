@@ -4,12 +4,15 @@ import { DashboardHeader } from "../features/dashboard/components/DashboardHeade
 import { HeroBanner } from "../features/dashboard/components/HeroBanner";
 import { FilterBar } from "../features/dashboard/components/FilterBar";
 import { ActionGrid } from "../features/dashboard/components/ActionGrid";
+import { ActionRegister } from "../features/dashboard/components/ActionRegister/ActionForm";
 import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg"; 
 import { MOCK_ACTIONS } from "../features/dashboard/constants";
 import type { FilterOptions } from "../features/dashboard/types";
 
 export function Dashboard() {
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+
   const [filters, setFilters] = useState<FilterOptions>({
     area: "all",
     actionType: "all",
@@ -41,8 +44,8 @@ export function Dashboard() {
 
   return (
     <DashboardShell
-      header={<DashboardHeader />}
-      footer={<Footer />} 
+      header={<DashboardHeader onOpenRegister={() => setIsRegisterOpen(true)} />}
+      footer={<Footer />}
     >
       <HeroBanner />
       
@@ -54,6 +57,10 @@ export function Dashboard() {
         </div>
 
       </div>
+      <ActionRegister 
+        isOpen={isRegisterOpen} 
+        onClose={() => setIsRegisterOpen(false)} 
+      />
     </DashboardShell>
   );
 }
