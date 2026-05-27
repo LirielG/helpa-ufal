@@ -11,6 +11,11 @@ export const MOCK_ACTIONS: Action[] = [
     spots: 30,
     type: "oficina",
     status: "available",
+    workload: 0,
+    format: "",
+    cep: 0,
+    city: "",
+    state: "",
   },
   {
     id: "2",
@@ -22,6 +27,11 @@ export const MOCK_ACTIONS: Action[] = [
     spots: 15,
     type: "oficina",
     status: "full",
+    workload: 0,
+    format: "",
+    cep: 0,
+    city: "",
+    state: "",
   },
   {
     id: "3",
@@ -33,6 +43,11 @@ export const MOCK_ACTIONS: Action[] = [
     spots: 30,
     type: "oficina",
     status: "available",
+    workload: 0,
+    format: "",
+    cep: 0,
+    city: "",
+    state: "",
   },
   {
     id: "4",
@@ -44,6 +59,11 @@ export const MOCK_ACTIONS: Action[] = [
     spots: 30,
     type: "oficina",
     status: "available",
+    workload: 0,
+    format: "",
+    cep: 0,
+    city: "",
+    state: "",
   },
 ];
 
@@ -69,3 +89,25 @@ export const FILTER_OPTIONS = {
     { value: "full", label: "Vagas Esgotadas" },
   ],
 };
+
+export const ACTION_AREAS = [
+  { value: "robotica", label: "Robótica" },
+  { value: "educacao", label: "Educação" },
+  { value: "saude", label: "Saúde" },
+  { value: "meio_ambiente", label: "Meio Ambiente" },
+  { value: "arquitetura", label: "Arquitetura" }
+];
+
+export const ACTION_TYPES = [
+  { value: "oficina", label: "Oficina" },
+  { value: "palestra", label: "Palestra" },
+  { value: "evento", label: "Evento" },
+  { value: "servico", label: "Serviço" },
+  { value: "minicurso", label: "Minicurso" },
+]
+
+export const ACTION_FORMATS = [
+  { value: "presencial", label: "Presencial" },
+  {value: "remoto", label: "Remoto" },
+  {value: "hibrido", label: "Híbrido"}
+]
