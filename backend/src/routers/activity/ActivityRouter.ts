@@ -22,4 +22,9 @@ router.get(
   (req, res, next) => activityController.list(req, res).catch(next),
 );
 
+router.get(
+  "/activities/:id",
+  (req, res, next) => activityController.findById(req, res).catch(next),
+);
+
 export default router;
