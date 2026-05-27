@@ -1,5 +1,5 @@
 import type { PrismaClient, Activity } from "@prisma/client";
-import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IActivityRepository, IRepositoryListActivitiesFilters, IRepositoryListActivitiesResponse } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { prisma } from "@/database/prisma.js";    
 import { ActivityFullResponse } from "@/types/activity.js";
@@ -99,6 +99,55 @@ class ActivityRepository implements IActivityRepository {
               : null,
           }
         : null,
+    };
+  }
+  
+  public async list(
+    filters: IRepositoryListActivitiesFilters
+  ): Promise<IRepositoryListActivitiesResponse> {
+    const {type, format, status, search, campus, page, limit, orderBy, order} = filters;
+
+    const whereClause: any = {};
+
+    if(type)whereClause.type = type;
+    if(status)whereClause.status = status;
+    if(campus)whereClause.campus = campus;
+
+    if(format){
+      whereClause.details = {
+        format: format,
+      };
+    }
+
+    if(search){
+      whereClause.title = {
+        contains: search,
+        mode: "insensitive",
+      };
+    }
+
+    const skipRows = (page - 1) * limit;
+
+    const[activities, total] = await this._prisma.$transaction([
+      this._prisma.activity.findMany({
+        where: whereClause,
+        skip: skipRows,
+        take: limit,
+        orderBy:{
+          [orderBy]: order,
+        },
+        include: {
+          details: true,
+        },
+      }),
+      this._prisma.activity.count({
+        where: whereClause,
+      }),
+    ]);
+
+    return {
+      activities,
+      total,
     };
   }
 }
