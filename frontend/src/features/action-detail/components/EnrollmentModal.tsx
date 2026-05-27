@@ -70,6 +70,7 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
               <Button
                 variant="navy"
                 size="lg"
+                rounded
                 onClick={handleBackToFeed}
                 className="flex items-center justify-center gap-2 mt-2"
               >
@@ -140,10 +141,11 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
                 Certifique-se de estar disponível nas datas e horários
                 informados.
               </div>
-              <div className="flex gap-3 w-full">
+              <div className="flex gap-16 w-full">
                 <Button
                   variant="danger"
                   size="md"
+                  rounded
                   className="flex-1"
                   disabled={step === "loading"}
                   onClick={onClose}
@@ -153,11 +155,12 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
                 <Button
                   variant="navy"
                   size="md"
+                  rounded
                   className="flex-1"
                   isLoading={step === "loading"}
                   onClick={handleConfirm}
                 >
-                  ✓ Confirmar inscrição
+                  ✓ Confirmar
                 </Button>
               </div>
             </>
