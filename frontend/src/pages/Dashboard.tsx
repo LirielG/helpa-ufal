@@ -4,7 +4,7 @@ import { DashboardHeader } from "../features/dashboard/components/DashboardHeade
 import { HeroBanner } from "../features/dashboard/components/HeroBanner";
 import { FilterBar } from "../features/dashboard/components/FilterBar";
 import { ActionGrid } from "../features/dashboard/components/ActionGrid";
-import { ActionRegister } from "../features/dashboard/components/ActionRegister/ActionForm";
+import { ActionRegister } from "../features/dashboard/components/ActionForm";
 import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg"; 
 import { MOCK_ACTIONS } from "../features/dashboard/constants";

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import helpaBlueLogo from "../../../../assets/helpa-logo-blue.svg";
-import type { Action, ActionStatus, ActionType } from "../../types";
-import { ACTION_AREAS, ACTION_TYPES, ACTION_FORMATS } from "../../constants";
+import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
+import type { Action, ActionStatus, ActionType } from "../types";
+import { ACTION_AREAS, ACTION_TYPES, ACTION_FORMATS } from "../constants";
 import { ImagePlus, X, ArrowRight, ArrowLeft, Check, Eye } from "lucide-react";
 
 interface ActionRegisterProps {
