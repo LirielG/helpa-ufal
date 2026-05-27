@@ -82,7 +82,7 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm">
       <div className="bg-[#E0E0E0] rounded-2xl w-full max-w-4xl p-4 flex gap-4 relative shadow-2xl m-4">
         
-        <div className="w-1/3 bg-[#002147EB] rounded-xl py-6 text-white flex flex-col justify-between relative overflow-hidden min-h-[450px]">
+        <div className="w-1/3 bg-[#002147CC] rounded-xl py-6 text-white flex flex-col justify-between relative overflow-hidden min-h-[450px]">
           <div className="flex flex-col gap-8 z-10">
             <span className="text-sm font-semibold tracking-wide px-[28px] pt-[40px] block">
               Vamos criar uma ação?
@@ -111,8 +111,8 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
             </div>
           </div>
 
-          <div className="flex-1 flex items-center justify-center opacity-10 pointer-events-none my-4">
-            <img src={helpaBlueLogo} alt="helpa" className="h-40 w-auto object-contain select-none" />
+          <div className="flex-1 flex items-center justify-center opacity-20 pointer-events-none my-4" >
+            <img src={helpaBlueLogo} alt="helpa" className="h-60 w-auto object-contain select-none" />
           </div>
         </div>
 
