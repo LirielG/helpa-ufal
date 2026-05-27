@@ -5,7 +5,7 @@ import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js"
 import type { IListActivitiesFilters, IListActivitiesResponse } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
-import { ActivityResponse } from "@/types/activity.js";
+import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
 
 
@@ -222,6 +222,22 @@ class ActivityService implements IActivityService {
     });
     
     return result;
+  }
+
+  public async findById(id: string): Promise<ActivityFullResponse> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidRegex.test(id)) {
+      throw new ValidationError([{ field: "id", message: "id must be a valid UUID." }]);
+    }
+
+    const activity = await this._activityRepository.findById(id);
+
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    return activity;
   }
 }
 
