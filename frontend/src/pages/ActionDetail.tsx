@@ -12,6 +12,7 @@ import { ActionInfoCard } from "../features/action-detail/components/ActionInfoC
 import { EnrollmentModal } from "../features/action-detail/components/EnrollmentModal";
 import { getActionById } from "../features/action-detail/services";
 import { useAuth } from "../hooks/useAuth";
+import bgDashboard from "../assets/bg.svg";
 import type { ActionDetail as ActionDetailType } from "../features/action-detail/types";
 
 export function ActionDetail() {
@@ -68,7 +69,15 @@ export function ActionDetail() {
             shortDescription={action.shortDescription}
             onBack={() => navigate(-1)}
           />
-          <div className="bg-white flex-1">
+          <div
+            className="bg-white flex-1"
+            style={{
+              backgroundImage: `url(${bgDashboard})`,
+              backgroundPosition: "top center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "cover",
+            }}
+          >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
