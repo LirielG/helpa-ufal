@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import ActivityService from "@/services/activity/ActivityService.js";
-import type { IActivityService } from "@/services/activity/IActivityService.js";
+import type { IActivityService, IListActivitiesFilters } from "@/services/activity/IActivityService.js";
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
 import { CreateActivitySchema } from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
@@ -26,26 +26,16 @@ class ActivityController implements IActivityController {
   }
 
   public async list(req: Request, res: Response): Promise<void>{
-    const tipo    = req.query.tipo;
-    const formato = req.query.formato;
-    const status  = req.query.status;
-    const search  = req.query.search;
-    const page    = req.query.page;
-    const limit   = req.query.limit;
-    const orderBy = req.query.orderBy;
-    const order   = req.query.order; 
+    const userId = req.user?.id;
 
-    const usuarioId = req.user?.id;
+    const filters = req.query as unknown as IListActivitiesFilters;
 
-    // TODO: implementar validações no service e as queries cm prisma 
+    const result = await this._activityService.list(filters, userId);
 
-
-    res.status(200).json({ //mock *temporário* para teste
-      message: "Rota de listagem acessada com sucesso",
-      filters: { tipo, formato, status, search, page, limit, orderBy, order }
-    });
+    res.status(200).json(result);
   }
 
+  
   public async findById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
 
