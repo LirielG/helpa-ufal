@@ -45,6 +45,17 @@ class ActivityController implements IActivityController {
       filters: { tipo, formato, status, search, page, limit, orderBy, order }
     });
   }
+
+  public async findById(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    if (!id || Array.isArray(id)) {
+      throw new CustomError(400, "Invalid id parameter.");
+    }
+
+    const activity = await this._activityService.findById(id);
+    res.status(200).json(activity);
+  }
 }
 
 export default ActivityController;
