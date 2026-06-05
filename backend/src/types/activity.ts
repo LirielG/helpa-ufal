@@ -17,6 +17,7 @@ export type ActivityResponse = {
   "startDate":  Date,
   "endDate":    Date,
   "slots":      number,
+  availableSlots: number;
   "status":     ActivityStatus
 }
 

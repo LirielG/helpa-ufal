@@ -109,6 +109,7 @@ class ActivityService implements IActivityService {
       "startDate": newActivity.startDate,
       "endDate": newActivity.endDate,
       "slots": newActivity.slots,
+      availableSlots: newActivity.slots,
       "status": newActivity.status,
     }
     
