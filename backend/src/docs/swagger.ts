@@ -130,7 +130,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
           id:         { type: "string", format: "uuid" },
           activityId: { type: "string", format: "uuid" },
           userId:     { type: "string", format: "uuid" },
-          reason:     { type: "string", enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"] },
+          category:     { type: "string", enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"] },
           createdAt:  { type: "string", format: "date-time" },
         },
       },
@@ -738,15 +738,15 @@ export const swaggerDocument: OpenAPIV3.Document = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["reason"],
+                required: ["category"],
                 properties: {
-                  reason: {
+                  category: {
                     type: "string",
                     enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"],
                   },
                 },
               },
-              example: { reason: "MISINFORMATION" },
+              example: { category: "MISINFORMATION" },
             },
           },
         },
