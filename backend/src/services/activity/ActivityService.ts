@@ -2,10 +2,12 @@ import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import type { IListActivitiesFilters, IListActivitiesResponse } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
-import { activityResponse } from "@/types/activity.js";
+import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
+
 
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
@@ -27,7 +29,7 @@ class ActivityService implements IActivityService {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<activityResponse> {
+  ): Promise<ActivityResponse> {
     
     const now = new Date();
     const durationDays =
@@ -98,7 +100,7 @@ class ActivityService implements IActivityService {
     
     const newActivity = await this._activityRepository.create(authorId, data);
 
-    const activityResponse: activityResponse = {
+    const activityResponse: ActivityResponse = {
       "id": newActivity.id,
       "authorId": newActivity.authorId,
       "title": newActivity.title,
@@ -107,10 +109,136 @@ class ActivityService implements IActivityService {
       "startDate": newActivity.startDate,
       "endDate": newActivity.endDate,
       "slots": newActivity.slots,
+      availableSlots: newActivity.slots,
       "status": newActivity.status,
     }
     
     return activityResponse;
+  }
+
+  public async list(
+    filters: IListActivitiesFilters,
+    usuarioId?: string
+  ): Promise<IListActivitiesResponse> {
+
+    const pageRaw = filters.page ?? "1";
+    const limitRaw = filters.limit ?? "10";
+
+    const pageNum = parseInt(pageRaw, 10);
+    const limitNum = parseInt(limitRaw, 10);
+
+    const paginationErrors = [];
+
+    if(isNaN(pageNum) || pageNum < 1){
+      paginationErrors.push({
+        field: "page",
+        message: "page must be a positive integer.",
+      } as ValidationErrorItem)
+    }
+
+    if (isNaN(limitNum) || limitNum < 1){
+      paginationErrors.push({
+        field: "limit",
+        message: "limit must be a positive integer.",
+      } as ValidationErrorItem)
+    } else if (limitNum > 50){
+      paginationErrors.push({
+        field: "limit",
+        message:"limit can not exceed 50."
+      } as ValidationErrorItem)
+    }
+
+    if(paginationErrors.length > 0){
+      throw new ValidationError(paginationErrors);
+    }
+
+    // filtros
+    const filterErrors = [];
+
+    const validTypes     = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
+    const validFormats   = ["IN_PERSON", "ONLINE", "HYBRID"];
+    const validStatuses  = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+
+
+    if (filters.type && !validTypes.includes(filters.type)) {
+      filterErrors.push({
+        field: "tipo",
+        message: `tipo must be one of the following: ${validTypes.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    if (filters.format && !validFormats.includes(filters.format)) {
+      filterErrors.push({
+        field: "formato",
+        message: `formato must be one of the following: ${validFormats.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    if (filters.status && !validStatuses.includes(filters.status)) {
+      filterErrors.push({
+        field: "status",
+        message: `status must be one of the following: ${validStatuses.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
+    const validOrders = ["asc", "desc"];
+    const validSortFields = ["start_date", "created_at"];
+
+    if(filters.order && !validOrders.includes(filters.order)){
+      filterErrors.push({
+        field: "order",
+        message: `order must be one of the following: ${validOrders.join(",")}.`,
+      } as ValidationErrorItem)
+    }
+
+    if(filters.orderBy && !validSortFields.includes(filters.orderBy)){
+      filterErrors.push({
+        field: "orderBy",
+        message: `orderBy must be one of the following: ${validSortFields.join(",")}.`,
+      } as ValidationErrorItem)
+    }
+
+    if (filterErrors.length > 0) {
+      throw new ValidationError(filterErrors);
+    }
+
+    let sortField = "createdAt";
+
+    if (filters.orderBy === "data_inicio") {
+      sortField = "startDate";
+    } else if (filters.orderBy === "created_at") {
+      sortField = "createdAt";
+    }
+
+    const result = await this._activityRepository.list({
+      type: filters.type,
+      format: filters.format,
+      status: filters.status,
+      search: filters.search,
+      campus: filters.campus,
+      page: pageNum,                 
+      limit: limitNum,               
+      orderBy: sortField,            
+      order: filters.order ?? "desc"
+    });
+    
+    return result;
+  }
+
+  public async findById(id: string): Promise<ActivityFullResponse> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidRegex.test(id)) {
+      throw new ValidationError([{ field: "id", message: "id must be a valid UUID." }]);
+    }
+
+    const activity = await this._activityRepository.findById(id);
+
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    return activity;
   }
 }
 

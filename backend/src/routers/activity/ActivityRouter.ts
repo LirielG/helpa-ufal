@@ -12,9 +12,19 @@ const activityController: IActivityController = new ActivityController();
 const authMiddleware:     IAuthMiddleware      = new AuthMiddleware();
 
 router.post(
-  "/activity",
+  "/activities",
   authMiddleware.auth(),
   (req, res, next) => activityController.create(req, res).catch(next),
+);
+
+router.get(
+  '/activities',
+  (req, res, next) => activityController.list(req, res).catch(next),
+);
+
+router.get(
+  "/activities/:id",
+  (req, res, next) => activityController.findById(req, res).catch(next),
 );
 
 export default router;
