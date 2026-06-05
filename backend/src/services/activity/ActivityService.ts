@@ -7,7 +7,7 @@ import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 import ValidationError, { ValidationErrorItem } from "@/models/error/ValidationError.js";
-
+import { isValidUUID } from "@/utils/uuid.js";
 
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
@@ -226,9 +226,8 @@ class ActivityService implements IActivityService {
   }
 
   public async findById(id: string): Promise<ActivityFullResponse> {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    if (!uuidRegex.test(id)) {
+    if (!isValidUUID(id)) {
       throw new ValidationError([{ field: "id", message: "id must be a valid UUID." }]);
     }
 
