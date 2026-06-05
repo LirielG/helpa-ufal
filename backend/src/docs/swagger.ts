@@ -14,6 +14,16 @@ export const swaggerDocument: OpenAPIV3.Document = {
         name: "token",
       },
     },
+    responses: {
+      Conflict: {
+        description: "Conflict.",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
+      },
+    },
     schemas: {
       UserResponse: {
         type: "object",
@@ -85,6 +95,44 @@ export const swaggerDocument: OpenAPIV3.Document = {
             },
           },
         ],
+      },
+      UpdateActivityRequest: {
+        description: "Partial update of an activity. At least one field must be provided. Fields discriminated by format — address is required for IN_PERSON and HYBRID; url is required for ONLINE and HYBRID.",
+        type: "object",
+        properties: {
+          title:        { type: "string" },
+          type:         { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
+          campus:       { type: "string", enum: ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] },
+          startDate:    { type: "string", format: "date-time" },
+          endDate:      { type: "string", format: "date-time" },
+          slots:        { type: "integer", minimum: 1, description: "Cannot be reduced below the current number of approved enrollments." },
+          description:  { type: "string" },
+          area:         { type: "string" },
+          format:       { type: "string", enum: ["IN_PERSON", "ONLINE", "HYBRID"] },
+          workloadHours:{ type: "integer", minimum: 1 },
+          url:          { type: "string", format: "uri", nullable: true },
+          address: {
+            nullable: true,
+            type: "object",
+            properties: {
+              addressLine: { type: "string" },
+              district:    { type: "string" },
+              zipCode:     { type: "string", pattern: "^\\d{8}$" },
+              city:        { type: "string" },
+              state:       { type: "string", enum: ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] },
+            },
+          },
+        },
+      },
+      ActivityReportResponse: {
+        type: "object",
+        properties: {
+          id:         { type: "string", format: "uuid" },
+          activityId: { type: "string", format: "uuid" },
+          userId:     { type: "string", format: "uuid" },
+          reason:     { type: "string", enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"] },
+          createdAt:  { type: "string", format: "date-time" },
+        },
       },
       ValidationError: {
         type: "object",
@@ -484,6 +532,238 @@ export const swaggerDocument: OpenAPIV3.Document = {
             },
           },
           404: { description: "Activity not found.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+      patch: {
+        tags: ["Activities"],
+        summary: "Update an activity",
+        description: "Partially updates an activity. Only the author or a manager can perform this operation. Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated. At least one field must be provided.",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "Activity UUID",
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateActivityRequest" },
+              example: {
+                title: "Oficina de Introdução à Programação — Turma 2",
+                slots: 50,
+                format: "HYBRID",
+                url: "https://meet.example.com/turma2",
+                address: {
+                  addressLine: "Av. Manoel Severino Barbosa, s/n",
+                  district: "Bom Sucesso",
+                  zipCode: "57309005",
+                  city: "Arapiraca",
+                  state: "AL",
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Activity updated successfully.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ActivityFullResponse" },
+              },
+            },
+          },
+          400: { description: "Validation error or empty body.", content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          401: { description: "Unauthenticated.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          403: { description: "Forbidden. Requester is not the author or a manager.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Activity not found or deleted.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          409: { description: "Activity cannot be updated (status COMPLETED or CANCELLED).", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+      delete: {
+        tags: ["Activities"],
+        summary: "Delete an activity (coming soon)",
+        description: "⚠️ **Not yet implemented.** Performs a soft delete on the activity by setting `deletedAt`. The record is preserved in the database but excluded from all listings and lookups. Only the author or a manager can delete an activity.",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "Activity UUID",
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          204: { description: "Activity soft-deleted successfully. No content returned." },
+          401: { description: "Unauthenticated.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          403: { description: "Forbidden.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Activity not found or already deleted.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+    },
+    "/activities/{id}/status": {
+      patch: {
+        tags: ["Activities"],
+        summary: "Transition activity status",
+        description: [
+          "Transitions an activity through its lifecycle. Status is treated as a business state with controlled transitions, not a free-update field.",
+          "",
+          "**Allowed transitions:**",
+          "- `OPEN => IN_PROGRESS | CANCELLED`",
+          "- `IN_PROGRESS => COMPLETED | CANCELLED`",
+          "",
+          "`COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.",
+          "",
+          "Only the activity author or a manager can perform transitions.",
+        ].join("\n"),
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "Activity UUID",
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                additionalProperties: false,
+                properties: {
+                  status: {
+                    type: "string",
+                    enum: ["IN_PROGRESS", "COMPLETED", "CANCELLED"],
+                    description: "Target status. Must be a valid transition from the current status.",
+                  },
+                },
+              },
+              example: { status: "IN_PROGRESS" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Status transitioned successfully.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ActivityResponse" },
+                example: {
+                  id: "a1b2c3d4-0000-4000-8000-000000000001",
+                  authorId: "a1b2c3d4-0000-4000-8000-000000000099",
+                  title: "Oficina de Introdução à Programação",
+                  type: "COURSE",
+                  campus: "ARAPIRACA",
+                  startDate: "2026-08-01T08:00:00.000Z",
+                  endDate: "2026-08-15T12:00:00.000Z",
+                  slots: 40,
+                  availableSlots: 27,
+                  status: "IN_PROGRESS",
+                },
+              },
+            },
+          },
+          400: {
+            description: "Validation error: invalid UUID, missing `status`, or extra fields in body.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } },
+          },
+          401: {
+            description: "Unauthenticated.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          403: {
+            description: "Forbidden. Requester is not the author or a manager.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          404: {
+            description: "Activity not found",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+          409: {
+            description: "Invalid transition. Either the target status is not reachable from the current one, or the activity is in a terminal state.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+                examples: {
+                  terminal: {
+                    summary: "Activity is in a terminal state",
+                    value: { status: 409, message: "Activity is already CANCELLED and cannot be transitioned." },
+                  },
+                  invalid_transition: {
+                    summary: "Invalid transition from current status",
+                    value: { status: 409, message: "Cannot transition from OPEN to COMPLETED." },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: "Internal server error.",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+          },
+        },
+      },
+    },
+    "/activities/{id}/reports": {
+      post: {
+        tags: ["Activities"],
+        summary: "Report an activity",
+        description: "Registers a report against an activity. Any authenticated user can report, except the activity's own author. Each user can only report a given activity once.",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            description: "Activity UUID",
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["reason"],
+                properties: {
+                  reason: {
+                    type: "string",
+                    enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"],
+                  },
+                },
+              },
+              example: { reason: "MISINFORMATION" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Report registered successfully.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ActivityReportResponse" },
+              },
+            },
+          },
+          400: { description: "Validation error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          401: { description: "Unauthenticated.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          403: { description: "Forbidden. The activity author cannot report their own activity.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          404: { description: "Activity not found or deleted.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          409: { $ref: "#/components/responses/Conflict" },
           500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
         },
       },
