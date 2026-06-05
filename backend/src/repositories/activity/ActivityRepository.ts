@@ -59,14 +59,22 @@ class ActivityRepository implements IActivityRepository {
   }
 
   public async findById(id: string): Promise<ActivityFullResponse | null> {
-    const result = await this._prisma.activity.findUnique({
-      where:   { id },
-      include: {
-        details: {
-          include: { address: true },
+    const [result, approvedCount] = await this._prisma.$transaction([
+      this._prisma.activity.findUnique({
+        where: { id },
+        include: {
+          details: {
+            include: { address: true },
+          },
         },
-      },
-    });
+      }),
+      this._prisma.enrollment.count({
+        where: {
+          activityId: id,
+          status: "APPROVED",
+        },
+      }),
+    ]);
 
     if (!result) return null;
 
@@ -79,6 +87,7 @@ class ActivityRepository implements IActivityRepository {
       startDate: result.startDate,
       endDate:   result.endDate,
       slots:     result.slots,
+      availableSlots: Math.max(0, result.slots - approvedCount),
       status:    result.status,
       details:   result.details
         ? {
@@ -128,22 +137,31 @@ class ActivityRepository implements IActivityRepository {
 
     const skipRows = (page - 1) * limit;
 
-    const[activities, total] = await this._prisma.$transaction([
+    const [rawActivities, total] = await this._prisma.$transaction([
       this._prisma.activity.findMany({
         where: whereClause,
         skip: skipRows,
         take: limit,
-        orderBy:{
-          [orderBy]: order,
-        },
+        orderBy: { [orderBy]: order },
         include: {
           details: true,
+          _count: {                              // NOVO
+            select: {
+              enrollments: {
+                where: { status: "APPROVED" },
+              },
+            },
+          },
         },
       }),
-      this._prisma.activity.count({
-        where: whereClause,
-      }),
+      this._prisma.activity.count({ where: whereClause }),
     ]);
+
+    const activities = rawActivities.map((a) => ({
+      ...a,
+      availableSlots: Math.max(0, a.slots - a._count.enrollments),
+      _count: undefined,
+    }));
 
     return {
       activities,
