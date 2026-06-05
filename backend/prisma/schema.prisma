@@ -48,6 +48,14 @@ enum CampusLocation {
   SANTANA_IPANEMA
 }
 
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE_CONTENT
+  MISINFORMATION
+  DUPLICATE
+  OTHER
+}
+
 
 model User {
   id           String   @id @default(uuid())
@@ -63,6 +71,9 @@ model User {
   teacher     Teacher?
   activities  Activity[]
   enrollments Enrollment[]
+
+  reports          ActivityReport[] @relation("ActivityReporter")
+  resolvedReports  ActivityReport[] @relation("ReportResolver")
 }
 
 model Student {
@@ -120,6 +131,7 @@ model Activity {
   author      User             @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   details     ActivityDetails?
   enrollments Enrollment[]
+  activityReports ActivityReport[]
 }
 
 model ActivityDetails {
@@ -170,4 +182,21 @@ model Certificate {
   updatedAt      DateTime @updatedAt
 
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onUpdate: Cascade)
+}
+
+model ActivityReport {
+  id           String       @id @default(uuid())
+  activityId   String
+  userId       String?
+  category     ReportReason
+  description  String?
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User?    @relation("ActivityReporter", fields: [userId], references: [id], onDelete: SetNull)
+  resolvedBy User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, activityId])
 }
