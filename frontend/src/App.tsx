@@ -33,9 +33,17 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <PublicRoute>
               <Dashboard />
-            </ProtectedRoute>
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/activity/:id"
+          element={
+            <PublicRoute>
+              <ActionDetail />
+            </PublicRoute>
           }
         />
         <Route path="/" element={<HomeRedirect />} />

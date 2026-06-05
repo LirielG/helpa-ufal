@@ -1,6 +1,8 @@
 export { Input } from "./Input";
 export { Button } from "./Button";
 export { Select } from "./Select";
+export { Textarea } from "./Textarea";
+export { Checkbox } from "./Checkbox";
 export { Alert } from "./Alert";
 export { Tooltip } from "./Tooltip";
 export { Navbar } from "./Navbar";
