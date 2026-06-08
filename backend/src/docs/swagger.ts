@@ -1,4 +1,5 @@
 import type { OpenAPIV3 } from "openapi-types";
+import { nullable } from "zod";
 
 export const swaggerDocument: OpenAPIV3.Document = {
   openapi: "3.0.0",
@@ -97,7 +98,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
         ],
       },
       UpdateActivityRequest: {
-        description: "Partial update of an activity. At least one field must be provided. Fields discriminated by format — address is required for IN_PERSON and HYBRID; url is required for ONLINE and HYBRID.",
+        description: "Partial update of an activity. At least one field must be provided. Fields discriminated by format; address is required for IN_PERSON and HYBRID; url is required for ONLINE and HYBRID.",
         type: "object",
         properties: {
           title:        { type: "string" },
@@ -129,8 +130,9 @@ export const swaggerDocument: OpenAPIV3.Document = {
         properties: {
           id:         { type: "string", format: "uuid" },
           activityId: { type: "string", format: "uuid" },
-          userId:     { type: "string", format: "uuid" },
-          reason:     { type: "string", enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"] },
+          userId:     { type: "string", format: "uuid", nullable: true},
+          category:     { type: "string", enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"] },
+          description: { type: "string", nullable: true },  
           createdAt:  { type: "string", format: "date-time" },
         },
       },
@@ -738,15 +740,21 @@ export const swaggerDocument: OpenAPIV3.Document = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["reason"],
+                required: ["category"],
                 properties: {
-                  reason: {
+                  category: {
                     type: "string",
                     enum: ["SPAM", "INAPPROPRIATE_CONTENT", "MISINFORMATION", "DUPLICATE", "OTHER"],
                   },
+                  description: {                                    
+                    type: "string",
+                    nullable: true,
+                    maxLength: 500,
+                    description: "Optional free-text description explaining the report.",
+                  },
                 },
               },
-              example: { reason: "MISINFORMATION" },
+              example: { category: "MISINFORMATION", description: "The address provided is incorrect." },
             },
           },
         },
