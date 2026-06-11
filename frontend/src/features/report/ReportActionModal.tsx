@@ -4,7 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X } from "lucide-react";
 import { Button, Checkbox, Textarea } from "../../components";
-import { REPORT_REASONS, type ReportReasonValue } from "./constants/reportReasons";
+import {
+  REPORT_REASONS,
+  type ReportReasonValue,
+} from "./constants/reportReasons";
 import { reportSchema, type ReportFormValues } from "./schemas/reportSchema";
 
 type ReportActionModalProps = {
@@ -20,7 +23,9 @@ export function ReportActionModal({
   onClose,
   onSubmit,
 }: ReportActionModalProps) {
-  const [selectedReasons, setSelectedReasons] = useState<ReportReasonValue[]>([]);
+  const [selectedReasons, setSelectedReasons] = useState<ReportReasonValue[]>(
+    [],
+  );
   const rootRef = useRef<HTMLDivElement | null>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -52,7 +57,8 @@ export function ReportActionModal({
       return;
     }
 
-    previousActiveElement.current = document.activeElement as HTMLElement | null;
+    previousActiveElement.current =
+      document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -66,7 +72,7 @@ export function ReportActionModal({
 
     requestAnimationFrame(() => {
       const firstFocusable = rootRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
       firstFocusable?.focus();
     });
@@ -76,7 +82,7 @@ export function ReportActionModal({
       window.removeEventListener("keydown", handleKeyDown);
       previousActiveElement.current?.focus?.();
     };
-  }, [open, reset]);
+  }, [open, reset, onClose]);
 
   const submitForm = async (data: ReportFormValues) => {
     await onSubmit(data);
@@ -123,7 +129,9 @@ export function ReportActionModal({
         <form onSubmit={handleSubmit(submitForm)}>
           <div className="px-6 py-6">
             <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-900">Qual o motivo da denúncia?</p>
+              <p className="text-sm font-medium text-gray-900">
+                Qual o motivo da denúncia?
+              </p>
 
               <div className="space-y-2">
                 {REPORT_REASONS.map((reason) => (
@@ -135,11 +143,16 @@ export function ReportActionModal({
                       checked={reasons.includes(reason.value)}
                       onChange={() => {
                         const next = selectedReasons.includes(reason.value)
-                          ? selectedReasons.filter((item) => item !== reason.value)
+                          ? selectedReasons.filter(
+                              (item) => item !== reason.value,
+                            )
                           : [...selectedReasons, reason.value];
 
                         setSelectedReasons(next);
-                        setValue("reasons", next, { shouldValidate: true, shouldDirty: true });
+                        setValue("reasons", next, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        });
                       }}
                       label={reason.label}
                     />
@@ -148,7 +161,9 @@ export function ReportActionModal({
               </div>
 
               {hasValidationError ? (
-                <p className="text-sm text-red-500">{errors.reasons?.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.reasons?.message}
+                </p>
               ) : null}
             </div>
 
@@ -188,6 +203,6 @@ export function ReportActionModal({
         </form>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
