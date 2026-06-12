@@ -5,5 +5,6 @@ export interface IActivityController {
   // prox metodos
   list(req: Request, res: Response): Promise<void>;
   findById(req: Request, res: Response): Promise<void>;
+  updateStatus(req: Request, res: Response): Promise<void>;
 
 }

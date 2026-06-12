@@ -1,4 +1,4 @@
-import type { PrismaClient, Activity } from "@prisma/client";
+import type { PrismaClient, Activity, ActivityStatus} from "@prisma/client";
 import type { IActivityRepository, IRepositoryListActivitiesFilters, IRepositoryListActivitiesResponse } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { prisma } from "@/database/prisma.js";    
@@ -168,6 +168,29 @@ class ActivityRepository implements IActivityRepository {
       total,
     };
   }
-}
 
+  public async updateStatus(id: string, status: ActivityStatus): Promise<Activity> {
+    return this._prisma.activity.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
+  public async findUserById(id: string): Promise<{ isManager: boolean } | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: { isManager: true },
+    });
+  }
+
+  public async countApprovedEnrollments(activityId: string): Promise<number> {
+    return this._prisma.enrollment.count({
+      where: {
+        activityId,
+        status: "APPROVED",
+      },
+    });
+  }
+  
+}
 export default ActivityRepository;

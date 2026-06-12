@@ -52,3 +52,22 @@ export const CreateActivitySchema = z.discriminatedUnion("format", [
 );
 
 export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
+
+export const UpdateActivityStatusSchema = z.object({
+  status: z.enum(["IN_PROGRESS", "COMPLETED", "CANCELLED"]),
+}).strict();
+
+export type UpdateActivityStatusInput = z.infer<typeof UpdateActivityStatusSchema>;
+
+export type ActivityStatusType = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export const allowedTransitions: Record<ActivityStatusType, ActivityStatusType[]> = {
+  OPEN: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+export function isValidTransition(current: string, target: string): boolean {
+  return allowedTransitions[current as ActivityStatusType]?.includes(target as ActivityStatusType) ?? false;
+}
