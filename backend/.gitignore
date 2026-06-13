@@ -55,4 +55,4 @@ node_modules/
 dist/
 
 # Prisma
-/src/generated/prisma
+/src/generated/prismacookies.txt
