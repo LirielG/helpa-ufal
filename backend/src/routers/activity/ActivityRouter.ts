@@ -27,6 +27,12 @@ router.get(
   (req, res, next) => activityController.findById(req, res).catch(next),
 );
 
+router.patch(
+  "/activities/:id",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.update(req, res).catch(next),
+);
+
 router.post(
   "/activities/:id/reports",
   authMiddleware.auth({ userTypes: "all" }),
