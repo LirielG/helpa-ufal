@@ -46,6 +46,28 @@ class ActivityController implements IActivityController {
     const activity = await this._activityService.findById(id);
     res.status(200).json(activity);
   }
+
+  public async update(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    const { id } = req.params;
+
+    if (!id || Array.isArray(id)) {
+      throw new CustomError(400, "Invalid id parameter.");
+    }
+    
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      throw new CustomError(400, "Invalid id parameter. Must be a valid UUID.");
+    }
+
+    const data = UpdateActivitySchema.parse(req.body);
+
+    const updatedActivity = await this._activityService.update(id, req.user.id, data);
+
+    
+    res.status(200).json(updatedActivity);
+  }
 }
 
 export default ActivityController;
