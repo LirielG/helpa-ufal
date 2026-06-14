@@ -52,3 +52,66 @@ export const CreateActivitySchema = z.discriminatedUnion("format", [
 );
 
 export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
+
+const UpdateActivityBaseSchema = z.object({
+  title:         z.string().min(1),
+  type:          z.enum(ActivityType),
+  campus:        z.enum(CampusLocation),
+  startDate:     z.coerce.date(),
+  endDate:       z.coerce.date(),
+  slots:         z.number().int().min(1),
+  description:   z.string().trim().min(1),
+  area:          z.string().trim().min(1),
+  workloadHours: z.number().int().min(1),
+  format:        z.enum(["IN_PERSON", "ONLINE", "HYBRID"]),
+  url:           z.string().url().nullable().optional(),
+  address:       AddressSchema.nullable().optional(),
+}).partial();
+
+export const UpdateActivitySchema = UpdateActivityBaseSchema.refine(
+  (data) => Object.keys(data).length > 0,
+  { message: "Body cannot be empty. At least one field must be provided.", path: [] }
+).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
+    }
+    return true;
+  },
+  { message: "startDate must be before endDate.", path: ["startDate"] }
+).superRefine((data, ctx) => {
+  if (data.format === "IN_PERSON" && !data.address) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Address is required when format is IN_PERSON.",
+      path: ["address"],
+    });
+  }
+
+  if (data.format === "ONLINE" && !data.url) {
+    ctx.addIssue({
+      code: "custom",
+      message: "URL is required when format is ONLINE.",
+      path: ["url"],
+    });
+  }
+
+  if (data.format === "HYBRID") {
+    if (!data.url) {
+      ctx.addIssue({
+        code: "custom",
+        message: "URL is required when format is HYBRID.",
+        path: ["url"],
+      });
+    }
+    if (!data.address) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Address is required when format is HYBRID.",
+        path: ["address"],
+      });
+    }
+  }
+});
+
+export type UpdateActivityInput = z.infer<typeof UpdateActivitySchema>;
