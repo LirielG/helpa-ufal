@@ -7,7 +7,7 @@ export interface IActivityService {
   // prox metodos
   list(filters: IListActivitiesFilters, usuarioId?: string): Promise<IListActivitiesResponse>; // id opcional caso usuario esteja logado
   findById(id: string): Promise<ActivityFullResponse>;
-  update(id: string, userId: string, data: UpdateActivityInput): Promise<ActivityFullResponse>;
+  update(id: string, user: { id: string; isManager: boolean }, data: UpdateActivityInput): Promise<ActivityFullResponse>;
 }
 
 export interface IListActivitiesFilters{
