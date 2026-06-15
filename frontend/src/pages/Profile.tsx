@@ -7,6 +7,7 @@ import { Alert } from "../components/Alert";
 import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { ProfileTabs } from "../features/profile/components/ProfileTabs";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
+import {CertificatesList } from "../features/profile/components/CertificatesList";
 import { getProfile, updateProfile } from "../features/profile/services";
 import type { ProfileTab } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
@@ -117,7 +118,7 @@ export function Profile() {
                   )}
 
                   {activeTab === "certificates" && (
-                    <p className="text-gray-500">Certificados em breve.</p>
+                    <CertificatesList />
                   )}
 
                   {activeTab === "actions" && (
