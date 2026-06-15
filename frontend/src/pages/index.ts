@@ -2,3 +2,4 @@ export { Login } from "./Login";
 export { Register } from "./Register";
 export { Dashboard } from "./Dashboard";
 export { ActionDetail } from "./ActionDetail";
+export { Profile } from "./Profile";
