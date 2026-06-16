@@ -21,7 +21,7 @@ export function ProfileTabs({ activeTab, onChange }: ProfileTabsProps) {
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`text-left px-4 py-3.5 rounded-xl font-semibold transition cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-xl font-semibold transition cursor-pointer ${
               isActive
                 ? "bg-[#072C59] text-white"
                 : "text-gray-700 hover:bg-gray-100"

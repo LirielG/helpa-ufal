@@ -7,7 +7,8 @@ import { Alert } from "../components/Alert";
 import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { ProfileTabs } from "../features/profile/components/ProfileTabs";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
-import {CertificatesList } from "../features/profile/components/CertificatesList";
+import { CertificatesList } from "../features/profile/components/CertificatesList";
+import { ActionsList } from "../features/profile/components/ActionsList";
 import { getProfile, updateProfile } from "../features/profile/services";
 import type { ProfileTab } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
@@ -83,7 +84,7 @@ export function Profile() {
           backgroundSize: "cover",
         }}
       >
-        <div className="w-full max-w-5xl mx-auto px-4 py-8">
+        <div className="w-full max-w-7xl mx-auto px-4 py-8">
           {isLoading && (
             <div className="flex items-center justify-center min-h-[40vh]">
               <p className="text-gray-500 text-lg">Carregando...</p>
@@ -117,13 +118,9 @@ export function Profile() {
                     />
                   )}
 
-                  {activeTab === "certificates" && (
-                    <CertificatesList />
-                  )}
+                  {activeTab === "certificates" && <CertificatesList />}
 
-                  {activeTab === "actions" && (
-                    <p className="text-gray-500">Ações em breve.</p>
-                  )}
+                  {activeTab === "actions" && <ActionsList />}
                 </div>
               </div>
             </div>
