@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ActivityType, ActivityFormat, ActivityStatus, CampusLocation } from "@prisma/client";
+import { ActivityType, ActivityFormat, CampusLocation } from "@prisma/client";
+import { ActivityStatus } from "@/types/activity.js";
 
 
 const BrazilianStates = [
@@ -51,23 +52,19 @@ export const CreateActivitySchema = z.discriminatedUnion("format", [
   { message: "startDate must be before endDate.", path: ["startDate"] }, // não tenho certeza se deixo esse tratamento aqui
 );
 
-export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
-
 export const UpdateActivityStatusSchema = z.object({
   status: z.enum(["IN_PROGRESS", "COMPLETED", "CANCELLED"]),
 }).strict();
 
 export type UpdateActivityStatusInput = z.infer<typeof UpdateActivityStatusSchema>;
 
-export type ActivityStatusType = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-
-export const allowedTransitions: Record<ActivityStatusType, ActivityStatusType[]> = {
+export const allowedTransitions: Record<ActivityStatus, ActivityStatus[]> = {
   OPEN: ['IN_PROGRESS', 'CANCELLED'],
   IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [],
   CANCELLED: [],
 };
 
-export function isValidTransition(current: string, target: string): boolean {
-  return allowedTransitions[current as ActivityStatusType]?.includes(target as ActivityStatusType) ?? false;
+export function isValidTransition(current: ActivityStatus, target: ActivityStatus): boolean {
+  return allowedTransitions[current]?.includes(target) ?? false;
 }
