@@ -20,7 +20,8 @@ const mockCertificates: Certificate[] = [
     completionDate: "14/03/2026",
     emissionDate: "19/03/2026",
     code: "CERT-2026-001",
-    imageUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "2",
@@ -30,7 +31,8 @@ const mockCertificates: Certificate[] = [
     completionDate: "19/02/2026",
     emissionDate: "24/02/2026",
     code: "CERT-2026-002",
-    imageUrl: "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=400&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&w=400&q=80",
   },
   {
     id: "3",
@@ -40,7 +42,19 @@ const mockCertificates: Certificate[] = [
     completionDate: "09/01/2026",
     emissionDate: "14/01/2026",
     code: "CERT-2026-003",
-    imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80",
+    imageUrl:
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    id: "4",
+    actionTitle: "Projeto de Reflorestamento Urbano",
+    institution: "UFPE",
+    hours: 18,
+    completionDate: "22/11/2025",
+    emissionDate: "27/11/2025",
+    code: "CERT-2026-004",
+    imageUrl:
+      "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=400&q=80",
   },
 ];
 
@@ -57,13 +71,12 @@ export function CertificatesList() {
     <div className="space-y-6">
       <h3 className="text-xl font-bold text-gray-800">Meus Certificados</h3>
 
-      <div className="w-full max-w-[680px] lg:max-w-[720px] mx-auto overflow-hidden">
-        <div className="w-full flex items-start gap-6 overflow-x-auto pb-4 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-          {mockCertificates.map((cert) => (
-            <div
-              key={cert.id}
-              className="flex-none w-[280px] min-h-[380px] bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between transition-all hover:shadow-md mb-2"
-            >
+      <div className="w-full flex items-start gap-6 overflow-x-auto pb-4 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        {mockCertificates.map((cert) => (
+          <div
+            key={cert.id}
+            className="flex-none w-[280px] min-h-[380px] bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between transition-all hover:shadow-md mb-2"
+          >
             <div className="relative h-32 bg-gray-100 flex-none">
               <img
                 src={cert.imageUrl}
@@ -98,7 +111,7 @@ export function CertificatesList() {
                     onClick={() => handleView(cert.id)}
                     className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-[#000E1D] bg-[#CCE8FF] hover:bg-[#b3dcfc] rounded-xl transition-colors cursor-pointer"
                   >
-                  <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-3.5 h-3.5" />
                     Visualizar
                   </button>
                   <button
@@ -116,8 +129,7 @@ export function CertificatesList() {
               </div>
             </div>
           </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );

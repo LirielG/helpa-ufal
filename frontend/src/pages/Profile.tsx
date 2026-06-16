@@ -99,7 +99,7 @@ export function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 items-start">
               <ProfileTabs activeTab={activeTab} onChange={setActiveTab} />
 
-              <div className="space-y-6">
+              <div className="space-y-6 min-w-0">
                 <ProfileCard user={profile} />
 
                 <div className="bg-white rounded-2xl shadow-sm p-6">
