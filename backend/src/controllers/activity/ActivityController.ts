@@ -4,6 +4,7 @@ import type { IActivityService, IListActivitiesFilters } from "@/services/activi
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
 import { CreateActivitySchema, UpdateActivityStatusSchema } from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
+import { isValidUUID } from "@/utils/uuid.js";
 
 
 type Props = {
@@ -57,10 +58,8 @@ class ActivityController implements IActivityController {
         throw new CustomError(400, "Invalid id parameter.");
     }
 
-    // Validar UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
-        throw new CustomError(400, "Invalid UUID format.");
+    if (!isValidUUID(id)) {
+    throw new CustomError(400, "Invalid UUID format."); 
     }
 
     const data = UpdateActivityStatusSchema.parse(req.body);
