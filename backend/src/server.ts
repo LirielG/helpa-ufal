@@ -7,8 +7,6 @@ import errorHandler from "@/controllers/error/ErrorHandler.js";
 
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "@/docs/swagger.js";
-import activityRoutes from "./routers/activity/ActivityRouter.js";
-
 
 const app = express();
 
@@ -29,7 +27,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(errorHandler.zodErrorHandler.bind(errorHandler));
 app.use(errorHandler.validationErrorHandler.bind(errorHandler));
 app.use(errorHandler.defaultHandler.bind(errorHandler));
-app.use("/activities", activityRoutes);
+
 
 app.listen(env.PORT, () => {
   console.log(`Server running on port ${env.PORT}`);
