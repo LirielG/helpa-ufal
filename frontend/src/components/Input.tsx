@@ -13,9 +13,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <div>
         {label && (
           <div className="flex items-center gap-2 mb-2">
-            <label className="block text-sm font-medium">
-              {label}
-            </label>
+            <label className="block text-sm font-medium">{label}</label>
             {labelIcon}
           </div>
         )}
@@ -28,15 +26,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={`w-full ${icon ? "pl-12" : "px-4"} py-3 border ${
-              error ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-            } rounded-lg outline-none focus:ring-2 transition ${className}`}
+              error
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            } rounded-lg outline-none focus:ring-2 transition disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${className}`}
             {...props}
           />
         </div>
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = "Input";
