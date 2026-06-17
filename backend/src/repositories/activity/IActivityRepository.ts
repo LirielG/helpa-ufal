@@ -10,6 +10,11 @@ export interface IActivityRepository {
   list(
     filters: IRepositoryListActivitiesFilters,
   ): Promise<IRepositoryListActivitiesResponse>;
+
+  updateStatus(id: string, status: string): Promise<Activity>;
+  findUserById(id: string): Promise<{ isManager: boolean } | null>;
+  countApprovedEnrollments(activityId: string): Promise<number>;
+  
 }
 
 export interface IRepositoryListActivitiesFilters {
