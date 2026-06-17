@@ -1,37 +1,14 @@
 import { useMemo } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
+import { PASSWORD_REQUIREMENTS } from "../constants/passwordRequirements";
 
 type Props = {
   password: string;
 };
 
-const REQS = [
-  {
-    id: "len",
-    label: "Pelo menos 8 caracteres",
-    test: (s: string) => s.length >= 8,
-  },
-  {
-    id: "upper",
-    label: "Uma letra maiúscula",
-    test: (s: string) => /[A-Z]/.test(s),
-  },
-  {
-    id: "lower",
-    label: "Uma letra minúscula",
-    test: (s: string) => /[a-z]/.test(s),
-  },
-  { id: "digit", label: "Um número", test: (s: string) => /[0-9]/.test(s) },
-  {
-    id: "symbol",
-    label: "Um caractere especial (Ex: @, $, *, _)",
-    test: (s: string) => /[^A-Za-z0-9]/.test(s),
-  },
-];
-
 export function PasswordGuidelines({ password }: Props) {
   const results = useMemo(() => {
-    return REQS.map((r) => ({
+    return PASSWORD_REQUIREMENTS.map((r) => ({
       id: r.id,
       label: r.label,
       ok: r.test(password),

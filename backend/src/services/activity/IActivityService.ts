@@ -1,6 +1,6 @@
 import type { Activity } from "@prisma/client";
 import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
-import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
+import { ActivityFullResponse, ActivityResponse, ActivityStatus } from "@/types/activity.js";
 
 export interface IActivityService {
   create(authorId: string, data: CreateActivityInput): Promise<ActivityResponse>;
@@ -8,6 +8,7 @@ export interface IActivityService {
   list(filters: IListActivitiesFilters, usuarioId?: string): Promise<IListActivitiesResponse>; // id opcional caso usuario esteja logado
   findById(id: string): Promise<ActivityFullResponse>;
   update(id: string, user: { id: string; isManager: boolean }, data: UpdateActivityInput): Promise<ActivityFullResponse>;
+  updateStatus(activityId: string, newStatus: ActivityStatus, userId: string): Promise<ActivityResponse>;
 }
 
 export interface IListActivitiesFilters{

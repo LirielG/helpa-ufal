@@ -2,8 +2,10 @@ import type { Request, Response } from "express";
 import ActivityService from "@/services/activity/ActivityService.js";
 import type { IActivityService, IListActivitiesFilters } from "@/services/activity/IActivityService.js";
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
-import { CreateActivitySchema, UpdateActivitySchema } from "@/schemas/activity/ActivitySchemas.js";
+import { CreateActivitySchema, UpdateActivitySchema, UpdateActivityStatusSchema } from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
+import { isValidUUID } from "@/utils/uuid.js";
+
 
 type Props = {
   activityService?: IActivityService;
@@ -34,7 +36,6 @@ class ActivityController implements IActivityController {
 
     res.status(200).json(result);
   }
-
   
   public async findById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
@@ -47,7 +48,8 @@ class ActivityController implements IActivityController {
     res.status(200).json(activity);
   }
 
-  public async update(req: Request, res: Response): Promise<void> {
+
+ public async update(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { id } = req.params;
@@ -72,6 +74,33 @@ class ActivityController implements IActivityController {
     
     res.status(200).json(updatedActivity);
   }
+
+
+  public async updateStatus(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    const { id } = req.params;
+
+    // Verificar se id é string (não array)
+    if (Array.isArray(id)) {
+        throw new CustomError(400, "Invalid id parameter.");
+    }
+
+    if (!isValidUUID(id)) {
+    throw new CustomError(400, "Invalid UUID format."); 
+    }
+
+    const data = UpdateActivityStatusSchema.parse(req.body);
+    
+    const updatedActivity = await this._activityService.updateStatus(
+        id,
+        data.status,
+        req.user.id
+    );
+
+    res.status(200).json(updatedActivity);
+}
+
 }
 
 export default ActivityController;

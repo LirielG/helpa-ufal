@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ActivityType, ActivityFormat, ActivityStatus, CampusLocation } from "@prisma/client";
+import { ActivityType, ActivityFormat, CampusLocation } from "@prisma/client";
+import { ActivityStatus } from "@/types/activity.js";
 
 
 const BrazilianStates = [
@@ -115,3 +116,20 @@ export const UpdateActivitySchema = UpdateActivityBaseSchema.refine(
 });
 
 export type UpdateActivityInput = z.infer<typeof UpdateActivitySchema>;
+
+export const UpdateActivityStatusSchema = z.object({
+  status: z.enum(["IN_PROGRESS", "COMPLETED", "CANCELLED"]),
+}).strict();
+
+export type UpdateActivityStatusInput = z.infer<typeof UpdateActivityStatusSchema>;
+
+export const allowedTransitions: Record<ActivityStatus, ActivityStatus[]> = {
+  OPEN: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+export function isValidTransition(current: ActivityStatus, target: ActivityStatus): boolean {
+  return allowedTransitions[current]?.includes(target) ?? false;
+}

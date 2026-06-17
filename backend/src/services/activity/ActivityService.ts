@@ -2,13 +2,13 @@ import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import { isValidTransition } from "@/schemas/activity/ActivitySchemas.js";
 import type {
   IListActivitiesFilters,
-  IListActivitiesResponse,
-} from "./IActivityService.js";
+  IListActivitiesResponse} from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
-import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
+import { ActivityFullResponse, ActivityResponse, ActivityStatus } from "@/types/activity.js";
 import ValidationError, {
   ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
@@ -231,7 +231,7 @@ class ActivityService implements IActivityService {
       orderBy: sortField,
       order: (filters.order ?? "desc") as "asc" | "desc",
     });
-
+    
     return result;
   }
 
@@ -359,6 +359,57 @@ class ActivityService implements IActivityService {
     const updatedActivity = await this._activityRepository.update(id, data, addressAction);
 
     return updatedActivity;
+  }
+  
+  public async updateStatus(
+    activityId: string,
+    newStatus: ActivityStatus,
+    userId: string
+  ): Promise<ActivityResponse> {
+    
+    const activity = await this._activityRepository.findById(activityId);
+    
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    
+    const user = await this._activityRepository.findUserById(userId);
+    const isAuthor = activity.authorId === userId;
+    const isManager = user?.isManager ?? false;
+
+    if (!isAuthor && !isManager) {
+      throw new CustomError(403, "Forbidden. Requester is not the author or a manager.");
+    }
+
+    const currentStatus = activity.status;
+    
+    if (!isValidTransition(currentStatus, newStatus)) {
+      throw new CustomError(409, `Cannot transition from ${currentStatus} to ${newStatus}.`);
+    }
+
+    if (currentStatus === 'COMPLETED' || currentStatus === 'CANCELLED') {
+      throw new CustomError(409, `Activity is already ${currentStatus} and cannot be transitioned.`);
+    }
+
+    const updated = await this._activityRepository.updateStatus(activityId, newStatus as any);
+
+    const approvedCount = await this._activityRepository.countApprovedEnrollments(activityId);
+    
+    const activityResponse: ActivityResponse = {
+      id: updated.id,
+      authorId: updated.authorId,
+      title: updated.title,
+      type: updated.type,
+      campus: updated.campus,
+      startDate: updated.startDate,
+      endDate: updated.endDate,
+      slots: updated.slots,
+      availableSlots: Math.max(0, updated.slots - approvedCount),
+      status: updated.status,
+    };
+
+    return activityResponse;
   }
 }
 

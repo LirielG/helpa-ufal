@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
-import { Login, Register, Dashboard, ActionDetail } from "./pages";
+import { Login, Register, Dashboard, ActionDetail, Profile, EditAction } from "./pages";
 import { PublicRoute } from "./routes/PublicRoute";
 import { useAuthStore } from "./stores/authStore";
 
@@ -42,6 +42,24 @@ export default function App() {
           element={
             <PublicRoute>
               <ActionDetail />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/activity/:id/edit"
+          element={
+            <PublicRoute>
+              <EditAction />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <PublicRoute>
+              <Profile />
             </PublicRoute>
           }
         />

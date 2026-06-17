@@ -16,6 +16,11 @@ export interface IActivityRepository {
     data: UpdateActivityInput,
     addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE"
   ): Promise<ActivityFullResponse>;
+
+  updateStatus(id: string, status: string): Promise<Activity>;
+  findUserById(id: string): Promise<{ isManager: boolean } | null>;
+  countApprovedEnrollments(activityId: string): Promise<number>;
+  
 }
 
 export interface IRepositoryListActivitiesFilters {

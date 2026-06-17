@@ -39,4 +39,9 @@ router.post(
   (req, res, next) => activityReportController.createReport(req, res).catch(next),
 );
 
+router.patch(
+  "/activities/:id/status",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.updateStatus(req, res).catch(next),
+);
 export default router;
