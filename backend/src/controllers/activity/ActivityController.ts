@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import ActivityService from "@/services/activity/ActivityService.js";
 import type { IActivityService, IListActivitiesFilters } from "@/services/activity/IActivityService.js";
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
-import { CreateActivitySchema, UpdateActivityStatusSchema } from "@/schemas/activity/ActivitySchemas.js";
+import { CreateActivitySchema, UpdateActivitySchema, UpdateActivityStatusSchema } from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 
@@ -48,6 +48,34 @@ class ActivityController implements IActivityController {
     res.status(200).json(activity);
   }
 
+
+ public async update(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    const { id } = req.params;
+
+    if (!id || Array.isArray(id)) {
+      throw new CustomError(400, "Invalid id parameter.");
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !uuidRegex.test(id)) {
+      throw new CustomError(400, "Invalid id parameter. Must be a valid UUID.");
+    }
+
+    const data = UpdateActivitySchema.parse(req.body);
+
+    const updatedActivity = await this._activityService.update(
+      id, 
+      { id: req.user.id, isManager: !!req.user.isManager }, 
+      data
+    );
+
+    
+    res.status(200).json(updatedActivity);
+  }
+
+
   public async updateStatus(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
@@ -72,6 +100,7 @@ class ActivityController implements IActivityController {
 
     res.status(200).json(updatedActivity);
 }
+
 }
 
 export default ActivityController;

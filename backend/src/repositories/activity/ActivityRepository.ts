@@ -1,6 +1,6 @@
 import type { PrismaClient, Activity, ActivityStatus} from "@prisma/client";
 import type { IActivityRepository, IRepositoryListActivitiesFilters, IRepositoryListActivitiesResponse } from "@/repositories/activity/IActivityRepository.js";
-import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { prisma } from "@/database/prisma.js";    
 import { ActivityFullResponse } from "@/types/activity.js";
 
@@ -167,6 +167,88 @@ class ActivityRepository implements IActivityRepository {
       activities,
       total,
     };
+  }
+
+  public async update(
+    id: string,
+    data: UpdateActivityInput,
+    addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE"
+  ): Promise<ActivityFullResponse> {
+    return await this._prisma.$transaction(async (tx) => {
+      
+      const activityData = {
+        title: data.title,
+        type: data.type,
+        campus: data.campus,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        slots: data.slots,
+      };
+
+      const detailsData = {
+        description: data.description,
+        area: data.area,
+        format: data.format,
+        url: data.url,
+        workloadHours: data.workloadHours,
+      };
+
+      let addressUpdateQuery = {};
+
+      if (addressAction === "DELETE") {
+        addressUpdateQuery = {
+          address: {
+            delete: true, 
+          },
+        };
+      } else if (addressAction === "CREATE" && data.address) {
+        addressUpdateQuery = {
+          address: {
+            create: {
+              addressLine: data.address.addressLine,
+              district: data.address.district,
+              zipCode: data.address.zipCode,
+              city: data.address.city,
+              state: data.address.state,
+            },
+          },
+        };
+      } else if (addressAction === "UPDATE" && data.address) {
+        addressUpdateQuery = {
+          address: {
+            update: {
+              addressLine: data.address.addressLine,
+              district: data.address.district,
+              zipCode: data.address.zipCode,
+              city: data.address.city,
+              state: data.address.state,
+            },
+          },
+        };
+      }
+
+      const updated = await tx.activity.update({
+        where: { id },
+        data: {
+          ...activityData,
+          details: {
+            update: {
+              ...detailsData,
+              ...addressUpdateQuery,
+            },
+          },
+        },
+        include: {
+          details: {
+            include: {
+              address: true,
+            },
+          },
+        },
+      });
+
+      return updated as unknown as ActivityFullResponse;
+    });
   }
 
   public async updateStatus(id: string, status: ActivityStatus): Promise<Activity> {
