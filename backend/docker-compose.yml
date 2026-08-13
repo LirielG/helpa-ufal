@@ -12,5 +12,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  postgres-test:
+    image: postgres:16
+    container_name: helpa-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: helpa_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
 volumes:
   postgres_data:

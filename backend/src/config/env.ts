@@ -1,5 +1,11 @@
 import { z } from "zod";
-import "dotenv/config";
+import dotenv from "dotenv";
+
+if (process.env["NODE_ENV"]) {
+  dotenv.config({ path: `.env.${process.env["NODE_ENV"]}`, quiet: true });
+}
+
+dotenv.config({ path: ".env", quiet: true });
 
 const EnvSchema = z.object({
   NODE_ENV: z
