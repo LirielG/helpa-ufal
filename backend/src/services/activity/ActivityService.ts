@@ -3,6 +3,7 @@ import type { IActivityRepository } from "@/repositories/activity/IActivityRepos
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { isValidTransition } from "@/schemas/activity/ActivitySchemas.js";
+import type { ActivityStatus } from "@/types/activity.js";
 import type {
   IListActivitiesFilters,
   IListActivitiesResponse} from "./IActivityService.js";
@@ -273,7 +274,7 @@ class ActivityService implements IActivityService {
 
     const currentStatus = activity.status;
     
-    if (!isValidTransition(currentStatus, newStatus)) {
+    if (!isValidTransition(currentStatus as ActivityStatus, newStatus as ActivityStatus)) {
       throw new CustomError(409, `Cannot transition from ${currentStatus} to ${newStatus}.`);
     }
 
