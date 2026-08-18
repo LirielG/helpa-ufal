@@ -61,7 +61,7 @@ class ActivityRepository implements IActivityRepository {
   public async findById(id: string): Promise<ActivityFullResponse | null> {
     const [result, approvedCount] = await this._prisma.$transaction([
       this._prisma.activity.findUnique({
-        where: { id },
+        where: { id, deletedAt: null },
         include: {
           details: {
             include: { address: true },
@@ -116,7 +116,7 @@ class ActivityRepository implements IActivityRepository {
   ): Promise<IRepositoryListActivitiesResponse> {
     const {type, format, status, search, campus, page, limit, orderBy, order} = filters;
 
-    const whereClause: any = {};
+    const whereClause: any = { deletedAt: null };
 
     if(type)whereClause.type = type;
     if(status)whereClause.status = status;
