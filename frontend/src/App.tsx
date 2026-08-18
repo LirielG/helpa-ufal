@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
-import { Login, Register, Dashboard } from "./pages";
+import { Login, Register, Dashboard, ActionDetail, Profile, EditAction } from "./pages";
 import { PublicRoute } from "./routes/PublicRoute";
-import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { useAuthStore } from "./stores/authStore";
 
 function HomeRedirect() {
@@ -43,6 +42,24 @@ export default function App() {
           element={
             <PublicRoute>
               <ActionDetail />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/activity/:id/edit"
+          element={
+            <PublicRoute>
+              <EditAction />
+            </PublicRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <PublicRoute>
+              <Profile />
             </PublicRoute>
           }
         />

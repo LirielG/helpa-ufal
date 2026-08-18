@@ -27,10 +27,21 @@ router.get(
   (req, res, next) => activityController.findById(req, res).catch(next),
 );
 
+router.patch(
+  "/activities/:id",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.update(req, res).catch(next),
+);
+
 router.post(
   "/activities/:id/reports",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => activityReportController.createReport(req, res).catch(next),
 );
 
+router.patch(
+  "/activities/:id/status",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.updateStatus(req, res).catch(next),
+);
 export default router;

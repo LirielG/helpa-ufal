@@ -17,7 +17,7 @@ export function DashboardShell({
     <div className="min-h-screen flex flex-col bg-gray-50" style={containerStyle}>
       {header && <header>{header}</header>}
 
-      <main className="flex-1 flex flex-col w-full">
+      <main className="flex flex-col w-full">
         {children}
       </main>
 
