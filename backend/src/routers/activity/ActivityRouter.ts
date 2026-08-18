@@ -44,4 +44,11 @@ router.patch(
   authMiddleware.auth(),
   (req, res, next) => activityController.updateStatus(req, res).catch(next),
 );
+
+router.delete(
+  "/activities/:id/enroll",
+  authMiddleware.auth({ userTypes: "all" }),
+  (req, res, next) => activityController.cancelEnrollment(req, res).catch(next),
+);
+
 export default router;

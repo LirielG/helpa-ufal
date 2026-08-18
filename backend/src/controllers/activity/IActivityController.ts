@@ -7,5 +7,5 @@ export interface IActivityController {
   findById(req: Request, res: Response): Promise<void>;
   update(req: Request, res: Response): Promise<void>;
   updateStatus(req: Request, res: Response): Promise<void>;
-
+  cancelEnrollment(req: Request, res: Response): Promise<void>;
 }

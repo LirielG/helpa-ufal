@@ -99,8 +99,25 @@ class ActivityController implements IActivityController {
     );
 
     res.status(200).json(updatedActivity);
-}
+  }
 
+  public async cancelEnrollment(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    const { id } = req.params;
+
+    if (!id || Array.isArray(id)) {
+      throw new CustomError(400, "Invalid id parameter.");
+    }
+
+    if (!isValidUUID(id)) {
+      throw new CustomError(400, "Invalid UUID format.");
+    }
+
+    await this._activityService.cancelEnrollment(id, req.user.id);
+
+    res.status(204).send();
+  }
 }
 
 export default ActivityController;

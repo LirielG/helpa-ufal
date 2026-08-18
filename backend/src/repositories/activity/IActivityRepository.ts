@@ -1,4 +1,4 @@
-import type { Activity } from "@prisma/client";
+import type { Activity, Enrollment } from "@prisma/client";
 import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 
@@ -20,7 +20,8 @@ export interface IActivityRepository {
   updateStatus(id: string, status: string): Promise<Activity>;
   findUserById(id: string): Promise<{ isManager: boolean } | null>;
   countApprovedEnrollments(activityId: string): Promise<number>;
-  
+  findEnrollment(userId: string, activityId: string): Promise<Enrollment | null>;
+  deleteEnrollment(userId: string, activityId: string): Promise<void>;
 }
 
 export interface IRepositoryListActivitiesFilters {

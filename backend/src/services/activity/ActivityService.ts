@@ -411,6 +411,36 @@ class ActivityService implements IActivityService {
 
     return activityResponse;
   }
+
+  public async cancelEnrollment(activityId: string, userId: string): Promise<void> {
+    if (!isValidUUID(activityId)) {
+      throw new CustomError(400, "Invalid UUID format.");
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    if (activity.status === "COMPLETED" || activity.status === "CANCELLED") {
+      throw new CustomError(400, "Cannot cancel enrollment in an activity that is completed or cancelled.");
+    }
+
+    if (activity.endDate <= new Date()) {
+      throw new CustomError(400, "Cannot cancel enrollment in an activity that has already ended.");
+    }
+
+    const enrollment = await this._activityRepository.findEnrollment(userId, activityId);
+    if (!enrollment) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    if (enrollment.attendanceConfirmed) {
+      throw new CustomError(400, "Cannot cancel enrollment after attendance has been confirmed.");
+    }
+
+    await this._activityRepository.deleteEnrollment(userId, activityId);
+  }
 }
 
 export default ActivityService;
