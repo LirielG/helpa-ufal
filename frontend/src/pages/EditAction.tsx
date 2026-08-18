@@ -15,18 +15,26 @@ import {
   SpotsField,
   ResponsibleCard,
 } from "../features/action-edit/components";
-import { ActionEditSchema, type ActionEditSchemaType } from "../features/action-edit/validators";
+import {
+  ActionEditSchema,
+  type ActionEditSchemaType,
+} from "../features/action-edit/validators";
 import { getActionById } from "../features/action-detail/services";
 import { updateAction } from "../features/action-edit/services";
-import { toInputDate, fromInputDate, categoryToActionType } from "../features/action-edit/utils";
+import {
+  toInputDate,
+  fromInputDate,
+  categoryToActionType,
+} from "../features/action-edit/utils";
 
 export function EditAction() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
 
-  const [isLoadingAction, setIsLoadingAction] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
+  const [loadFailed, setLoadFailed] = useState(false);
+  const notFound = !id || loadFailed;
 
   const {
     register,
@@ -39,11 +47,7 @@ export function EditAction() {
   });
 
   useEffect(() => {
-    if (!id) {
-      setNotFound(true);
-      setIsLoadingAction(false);
-      return;
-    }
+    if (!id) return;
 
     let isMounted = true;
 
@@ -53,7 +57,7 @@ export function EditAction() {
       if (!isMounted) return;
 
       if (!action) {
-        setNotFound(true);
+        setLoadFailed(true);
         setIsLoadingAction(false);
         return;
       }
@@ -124,70 +128,73 @@ export function EditAction() {
       footer={<Footer />}
       containerStyle={{ backgroundColor: "#E0F6F6" }}
     >
-        <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-6 md:px-10 md:pt-10 md:pb-6"
-          >
-            <TitleField registration={register("title")} error={errors.title?.message} />
+      <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-6 md:px-10 md:pt-10 md:pb-6"
+        >
+          <TitleField
+            registration={register("title")}
+            error={errors.title?.message}
+          />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-              <div className="lg:col-span-2">
-                <DescriptionField
-                  registration={register("description")}
-                  error={errors.description?.message}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+            <div className="lg:col-span-2">
+              <DescriptionField
+                registration={register("description")}
+                error={errors.description?.message}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <DateField
+                  label="Data de início"
+                  registration={register("startDate")}
+                  error={errors.startDate?.message}
+                />
+                <DateField
+                  label="Data de encerramento"
+                  registration={register("endDate")}
+                  error={errors.endDate?.message}
                 />
               </div>
 
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <DateField
-                    label="Data de início"
-                    registration={register("startDate")}
-                    error={errors.startDate?.message}
-                  />
-                  <DateField
-                    label="Data de encerramento"
-                    registration={register("endDate")}
-                    error={errors.endDate?.message}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <ActionTypeField
+                  registration={register("type")}
+                  error={errors.type?.message}
+                />
+                <SpotsField
+                  registration={register("spots")}
+                  error={errors.spots?.message}
+                />
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <ActionTypeField
-                    registration={register("type")}
-                    error={errors.type?.message}
-                  />
-                  <SpotsField
-                    registration={register("spots")}
-                    error={errors.spots?.message}
-                  />
-                </div>
+              <ResponsibleCard responsible={responsible} />
 
-                <ResponsibleCard responsible={responsible} />
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => navigate(-1)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant="navy"
-                    isLoading={isSubmitting}
-                  >
-                    Salvar alterações
-                  </Button>
-                </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => navigate(-1)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="navy"
+                  isLoading={isSubmitting}
+                >
+                  Salvar alterações
+                </Button>
               </div>
             </div>
-          </form>
-        </div>
+          </div>
+        </form>
+      </div>
     </DashboardShell>
   );
 }
