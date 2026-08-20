@@ -1,9 +1,10 @@
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { config } from "@/config";
 import { makeUser } from "./factories";
 
-const API = config.apiUrl;
+/** Base URL every handler is built from. Exported so a test can override one. */
+export const API = config.apiUrl;
 
 /**
  * Happy-path handlers for every endpoint the app calls today, so a test that
@@ -32,4 +33,4 @@ export const handlers = [
 
 export const server = setupServer(...handlers);
 
-export { http, HttpResponse };
+export { delay, http, HttpResponse };
