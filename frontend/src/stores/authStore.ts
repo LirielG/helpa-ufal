@@ -25,6 +25,9 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await authService.login(data);
+          
+          localStorage.setItem("token", response.token);
+          
           set({ user: response.user });
           return true;
         } catch (error) {
@@ -40,6 +43,9 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await authService.register(data);
+          
+          localStorage.setItem("token", response.token);
+          
           set({ user: response.user });
           return true;
         } catch (error) {
@@ -55,6 +61,9 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           await authService.logout();
+          
+          localStorage.removeItem("token");
+          
           set({ user: null });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Erro ao fazer logout";
