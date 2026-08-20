@@ -24,10 +24,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await authService.login(data);
-          
-          localStorage.setItem("token", response.token);
-          
+          const response = await authService.login(data);          
           set({ user: response.user });
           return true;
         } catch (error) {
@@ -42,10 +39,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await authService.register(data);
-          
-          localStorage.setItem("token", response.token);
-          
+          const response = await authService.register(data);          
           set({ user: response.user });
           return true;
         } catch (error) {
@@ -60,10 +54,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          await authService.logout();
-          
-          localStorage.removeItem("token");
-          
+          await authService.logout();          
           set({ user: null });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Erro ao fazer logout";
