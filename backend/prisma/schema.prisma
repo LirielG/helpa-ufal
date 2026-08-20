@@ -200,3 +200,20 @@ model ActivityReport {
 
   @@unique([userId, activityId])
 }
+
+model SigaaActivity {
+  id             String        @id @default(uuid())
+  sigaaId        String        @unique
+  title          String
+  type           String
+  normalizedType ActivityType  @default(EXTENSION)
+  department     String?
+  isActive       Boolean       @default(true)
+  lastSeenAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([isActive])
+  @@index([normalizedType])
+  @@map("sigaa_activities")
+}
