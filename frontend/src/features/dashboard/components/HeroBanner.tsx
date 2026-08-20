@@ -4,28 +4,32 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const CAROUSEL_SLIDES = [
   {
     id: 1,
-    image: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=500&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=500&fit=crop",
     title: "Oficina de Programação",
     description: "Aprenda desenvolvimento web com profissionais experientes",
     date: "24/05/2026",
   },
   {
     id: 2,
-    image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&h=500&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&h=500&fit=crop",
     title: "Aulas de Reforço Escolar",
     description: "Apoio educacional para estudantes da comunidade",
     date: "25/05/2026",
   },
   {
     id: 3,
-    image: "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=1200&h=500&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=1200&h=500&fit=crop",
     title: "Ação Ambiental",
     description: "Projeto de sustentabilidade e preservação ambiental",
     date: "26/05/2026",
   },
   {
     id: 4,
-    image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=1200&h=500&fit=crop",
+    image:
+      "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=1200&h=500&fit=crop",
     title: "Saúde na Comunidade",
     description: "Atendimento e orientação em saúde preventiva",
     date: "27/05/2026",
@@ -38,7 +42,7 @@ export function HeroBanner() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
-    }, 5000); 
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -48,7 +52,9 @@ export function HeroBanner() {
   };
 
   const goToPrevious = () => {
-    setCurrentSlide((prev) => (prev - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length);
+    setCurrentSlide(
+      (prev) => (prev - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length,
+    );
   };
 
   const goToNext = () => {
@@ -61,6 +67,7 @@ export function HeroBanner() {
         {CAROUSEL_SLIDES.map((slide, index) => (
           <div
             key={slide.id}
+            aria-hidden={index !== currentSlide}
             className={`absolute inset-0 transition-opacity duration-700 ${
               index === currentSlide ? "opacity-100" : "opacity-0"
             }`}
@@ -77,8 +84,12 @@ export function HeroBanner() {
             <div className="relative h-full flex items-center">
               <div className="container mx-auto px-4">
                 <div className="max-w-2xl text-white space-y-4">
-                  <h2 className="text-4xl md:text-5xl font-bold">{slide.title}</h2>
-                  <p className="text-lg md:text-xl text-gray-200">{slide.description}</p>
+                  <h2 className="text-4xl md:text-5xl font-bold">
+                    {slide.title}
+                  </h2>
+                  <p className="text-lg md:text-xl text-gray-200">
+                    {slide.description}
+                  </p>
                   <div className="flex items-center gap-4">
                     <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">
                       {slide.date}
@@ -115,6 +126,7 @@ export function HeroBanner() {
           <button
             key={index}
             onClick={() => goToSlide(index)}
+            aria-current={index === currentSlide}
             className={`size-2.5 rounded-full transition-all ${
               index === currentSlide
                 ? "bg-white w-8"
