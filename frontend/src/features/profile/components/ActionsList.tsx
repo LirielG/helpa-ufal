@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ActivityStatus } from "../types";
-import { MOCK_ACTIVITIES } from "../constants";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
+import { fetchUserActivities } from "../services"; 
 
 const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
   { id: "enrolled", label: "Atividades Inscritas" },
@@ -13,13 +13,32 @@ const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
 
 export function ActionsList() {
   const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
+  const [activities, setActivities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const activities = MOCK_ACTIVITIES.filter(
-    (activity) => activity.status === activeSubTab,
-  );
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetchUserActivities(activeSubTab);
+        
+        const dataList = response.data || response;
+        setActivities(Array.isArray(dataList) ? dataList : []);
+        
+      } catch (err) {
+        setError("Não foi possível carregar as atividades. Tente novamente.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadActivities();
+  }, [activeSubTab]);
 
   const handleEdit = (id: string) => {
-    // TODO: navigate to edit action page (to be implemented)
     console.log(`Editar atividade ${id}`);
   };
 
@@ -47,34 +66,46 @@ export function ActionsList() {
         })}
       </nav>
 
-      {activities.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">
-          Nenhuma atividade encontrada.
-        </p>
-      ) : (
-        <div
-          className={
-            isManaged
-              ? "flex flex-col gap-4"
-              : "grid grid-cols-1 md:grid-cols-2 gap-4"
-          }
-        >
-          {activities.map((activity) => {
-            if (activity.status === "completed") {
-              return <CompletedCard key={activity.id} activity={activity} />;
-            }
-            if (activity.status === "managed") {
-              return (
-                <ManagedCard
-                  key={activity.id}
-                  activity={activity}
-                  onEdit={handleEdit}
-                />
-              );
-            }
-            return <EnrolledCard key={activity.id} activity={activity} />;
-          })}
-        </div>
+      {isLoading && (
+        <p className="text-gray-500 text-center py-8">Carregando atividades...</p>
+      )}
+
+      {!isLoading && error && (
+        <p className="text-red-500 text-center py-8">{error}</p>
+      )}
+
+      {!isLoading && !error && (
+        <>
+          {activities.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">
+              Nenhuma atividade encontrada.
+            </p>
+          ) : (
+            <div
+              className={
+                isManaged
+                  ? "flex flex-col gap-4"
+                  : "grid grid-cols-1 md:grid-cols-2 gap-4"
+              }
+            >
+              {activities.map((activity) => {
+                if (activeSubTab === "completed") {
+                  return <CompletedCard key={activity.id} activity={activity} />;
+                }
+                if (activeSubTab === "managed") {
+                  return (
+                    <ManagedCard
+                      key={activity.id}
+                      activity={activity}
+                      onEdit={handleEdit}
+                    />
+                  );
+                }
+                return <EnrolledCard key={activity.id} activity={activity} />;
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
