@@ -4,11 +4,11 @@ import { ActivityFullResponse, ActivityResponse, ActivityStatus } from "@/types/
 
 export interface IActivityService {
   create(authorId: string, data: CreateActivityInput): Promise<ActivityResponse>;
-  // prox metodos
   list(filters: IListActivitiesFilters, usuarioId?: string): Promise<IListActivitiesResponse>; // id opcional caso usuario esteja logado
   findById(id: string): Promise<ActivityFullResponse>;
   update(id: string, user: { id: string; isManager: boolean }, data: UpdateActivityInput): Promise<ActivityFullResponse>;
   updateStatus(activityId: string, newStatus: ActivityStatus, userId: string): Promise<ActivityResponse>;
+  delete( id: string, user: { id: string; isManager: boolean } ): Promise<void>;
 }
 
 export interface IListActivitiesFilters{
