@@ -274,5 +274,13 @@ class ActivityRepository implements IActivityRepository {
     });
   }
   
+  public async softDelete(id: string): Promise<boolean> {
+    const result = await this._prisma.activity.updateMany({
+      where: { id, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+
+    return result.count > 0;
+  }
 }
 export default ActivityRepository;
