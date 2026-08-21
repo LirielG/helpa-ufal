@@ -18,7 +18,15 @@ describe("PasswordGuidelines", () => {
   it("marks every requirement as unmet for an empty password", () => {
     render(<PasswordGuidelines password="" />);
 
-    expect(screen.getByText("Pelo menos 8 caracteres")).toHaveClass("text-gray-600");
+    for (const label of [
+      "Pelo menos 8 caracteres",
+      "Uma letra maiúscula",
+      "Uma letra minúscula",
+      "Um número",
+      "Um caractere especial (Ex: @, $, *, _)",
+    ]) {
+      expect(screen.getByText(label)).toHaveClass("text-gray-600");
+    }
   });
 
   it("marks a requirement as met once satisfied", () => {
