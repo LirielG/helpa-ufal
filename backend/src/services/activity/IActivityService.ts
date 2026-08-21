@@ -8,7 +8,7 @@ export interface IActivityService {
   findById(id: string): Promise<ActivityFullResponse>;
   update(id: string, user: { id: string; isManager: boolean }, data: UpdateActivityInput): Promise<ActivityFullResponse>;
   updateStatus(activityId: string, newStatus: ActivityStatus, userId: string): Promise<ActivityResponse>;
-  delete( id: string, user: { id: string; isManager: boolean } ): Promise<void>;
+  delete(id: string, userId: string): Promise<void>
 }
 
 export interface IListActivitiesFilters{

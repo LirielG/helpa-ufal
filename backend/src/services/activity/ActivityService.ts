@@ -411,6 +411,27 @@ class ActivityService implements IActivityService {
 
     return activityResponse;
   }
+
+  public async delete(id: string, userId: string): Promise<void> {
+    const activity = await this._activityRepository.findById(id);
+
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const user = await this._activityRepository.findUserById(userId);
+    const isAuthor = activity.authorId === userId;
+    const isManager = user?.isManager ?? false;
+
+    if (!isAuthor && !isManager) {
+      throw new CustomError(
+        403,
+        "You do not have permission to delete this activity.",
+      );
+    }
+
+    await this._activityRepository.softDelete(id);
+  }
 }
 
 export default ActivityService;
