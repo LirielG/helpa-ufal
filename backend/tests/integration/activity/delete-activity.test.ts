@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"; // globals não está ativo: import explícito
+import { describe, it, expect } from "vitest"; // globals are disabled: explicit import
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { app } from "@/app.js";
@@ -7,7 +7,7 @@ import { createStudent, createTeacher, createManager, createActivity } from "../
 import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
 
 describe("DELETE /activities/:id", () => {
-  it("retorna 204, preenche deletedAt e mantém a linha no banco", async () => {
+  it("returns 204, fills deletedAt and keeps the row in the database", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -16,13 +16,13 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(author.token))
       .expect(204);
 
-    // Consulta direta ao banco (bypassa a API): prova o "soft" do soft delete.
+    // Direct database query (bypasses the API): proves the "soft" in soft delete.
     const row = await prisma.activity.findUnique({ where: { id: activity.id } });
     expect(row).not.toBeNull();
     expect(row!.deletedAt).toBeInstanceOf(Date);
   });
 
-  it("torna a atividade invisível para as rotas de leitura (2.5.1)", async () => {
+  it("makes the activity invisible to the read endpoints (2.5.1)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -38,7 +38,7 @@ describe("DELETE /activities/:id", () => {
     expect(ids).not.toContain(activity.id);
   });
 
-  it("retorna 404 na segunda exclusão e preserva o deletedAt original", async () => {
+  it("returns 404 on a second deletion and preserves the original deletedAt", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -58,7 +58,7 @@ describe("DELETE /activities/:id", () => {
     expect(second!.deletedAt).toEqual(first!.deletedAt);
   });
 
-  it("retorna 403 quando o solicitante não é autor nem gestor", async () => {
+  it("returns 403 when the requester is neither the author nor a manager", async () => {
     const author = await createTeacher();
     const other = await createStudent();
     const activity = await createActivity(author.user.id);
@@ -69,10 +69,28 @@ describe("DELETE /activities/:id", () => {
       .expect(403);
 
     const row = await prisma.activity.findUnique({ where: { id: activity.id } });
-    expect(row!.deletedAt).toBeNull(); // nada foi tocado
+    expect(row!.deletedAt).toBeNull(); // nothing was touched
   });
 
-  it("retorna 204 quando um gestor deleta atividade de outro autor", async () => {
+  it("returns 403 when the token belongs to a user that no longer exists", async () => {
+    // End-to-end ghost user: the token is still cryptographically valid,
+    // but the account was removed — it must not authorize anything.
+    const author = await createTeacher();
+    const ghost = await createStudent();
+    const activity = await createActivity(author.user.id);
+
+    await prisma.user.delete({ where: { id: ghost.user.id } }); // cascades the Student row
+
+    await request(app)
+      .delete(`/activities/${activity.id}`)
+      .set(...authHeader(ghost.token))
+      .expect(403);
+
+    const row = await prisma.activity.findUnique({ where: { id: activity.id } });
+    expect(row!.deletedAt).toBeNull();
+  });
+
+  it("returns 204 when a manager deletes another author's activity", async () => {
     const author = await createTeacher();
     const manager = await createManager();
     const activity = await createActivity(author.user.id);
@@ -83,7 +101,7 @@ describe("DELETE /activities/:id", () => {
       .expect(204);
   });
 
-  it("retorna 401 sem token e com token inválido", async () => {
+  it("returns 401 with no token and with an invalid token", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -95,7 +113,7 @@ describe("DELETE /activities/:id", () => {
       .expect(401);
   });
 
-  it("retorna 400 para id que não é UUID", async () => {
+  it("returns 400 for an id that is not a UUID", async () => {
     const author = await createTeacher();
 
     await request(app)
@@ -104,7 +122,7 @@ describe("DELETE /activities/:id", () => {
       .expect(400);
   });
 
-  it("retorna 404 para UUID válido de atividade inexistente", async () => {
+  it("returns 404 for a valid UUID of a nonexistent activity", async () => {
     const author = await createTeacher();
 
     await request(app)
@@ -113,13 +131,13 @@ describe("DELETE /activities/:id", () => {
       .expect(404);
   });
 
-  it("preserva inscrições vinculadas após o soft delete (histórico intacto)", async () => {
-    // US 2.5: deletar não pode destruir históricode inscrições/presenças/certificados.
+  it("preserves linked enrollments after the soft delete (history intact)", async () => {
+    // US 2.5: deleting must not destroy enrollment/attendance/certificate history.
     const author = await createTeacher();
     const student = await createStudent();
     const activity = await createActivity(author.user.id);
 
-    // Como não há criação de Enrollments, cria direto via Prisma
+    // No Enrollment factory yet: create it directly via Prisma.
     const enrollment = await prisma.enrollment.create({
       data: { userId: student.user.id, activityId: activity.id, status: "APPROVED" },
     });
@@ -134,10 +152,10 @@ describe("DELETE /activities/:id", () => {
     expect(preserved!.status).toBe("APPROVED");
   });
 
-  it("preserva denúncias vinculadas após o soft delete", async () => {
-    // ActivityReport tem onDelete: Cascade — só dispararia em delete FÍSICO.
-    // Este teste é o guardião: se alguém trocar softDelete por delete físico,
-    // o report some e o teste quebra.
+  it("preserves linked reports after the soft delete", async () => {
+    // ActivityReport has onDelete: Cascade — it would only fire on a PHYSICAL
+    // delete. This test is the watchdog: if someone replaces softDelete with a
+    // physical delete, the report disappears and this test screams.
     const author = await createTeacher();
     const reporter = await createStudent();
     const activity = await createActivity(author.user.id);
@@ -147,7 +165,7 @@ describe("DELETE /activities/:id", () => {
         activityId: activity.id,
         userId: reporter.user.id,
         category: "SPAM",
-        description: "Report de teste.",
+        description: "Test report.",
       },
     });
 
@@ -160,9 +178,9 @@ describe("DELETE /activities/:id", () => {
     expect(preserved).not.toBeNull();
   });
 
-  it("aceita autenticação via cookie (mesmo resultado que Bearer)", async () => {
-    // O middleware aceita cookie OU header [15]. Se um dia o suporte a
-    // cookie quebrar, o frontend (que usa cookie com credentials) perde o delete.
+  it("accepts cookie authentication (same result as Bearer)", async () => {
+    // The middleware accepts cookie OR header. If cookie support ever breaks,
+    // the frontend (which uses cookies with credentials) loses the delete.
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -172,9 +190,9 @@ describe("DELETE /activities/:id", () => {
       .expect(204);
   });
 
-  it("o autor estudante também consegue deletar a própria atividade", async () => {
-    // A US 2.5 diz "criador da ação" — aluno OU docente. O teste de gestor
-    // usa TEACHER; este garante que STUDENT autor não é bloqueado por engano.
+  it("a student author can also delete their own activity", async () => {
+    // US 2.5 says "the activity creator" — student OR teacher. The manager
+    // test uses TEACHER; this one ensures a STUDENT author is not wrongly blocked.
     const author = await createStudent();
     const activity = await createActivity(author.user.id);
 
@@ -184,10 +202,10 @@ describe("DELETE /activities/:id", () => {
       .expect(204);
   });
 
-  it("não afeta outras atividades do mesmo autor", async () => {
+  it("does not affect other activities from the same author", async () => {
     const author = await createTeacher();
-    const target = await createActivity(author.user.id, { title: "Vai ser deletada" });
-    const survivor = await createActivity(author.user.id, { title: "Deve sobreviver" });
+    const target = await createActivity(author.user.id, { title: "Will be deleted" });
+    const survivor = await createActivity(author.user.id, { title: "Must survive" });
 
     await request(app)
       .delete(`/activities/${target.id}`)
@@ -200,7 +218,7 @@ describe("DELETE /activities/:id", () => {
     expect(ids).not.toContain(target.id);
   });
 
-  it("204 retorna corpo vazio, conforme o contrato", async () => {
+  it("returns an empty body on 204, per the contract", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
 
@@ -209,6 +227,6 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(author.token))
       .expect(204);
 
-    expect(response.text).toBe(""); // Bruno: 204 sem body [26]
+    expect(response.text).toBe(""); // Bruno: 204 with no body
   });
 });
