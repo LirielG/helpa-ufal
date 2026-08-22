@@ -22,8 +22,9 @@ async function expectHttpError(
   try {
     await promise;
   } catch (error) {
+    console.log(error);
     expect(error).toBeInstanceOf(CustomError);
-    expect((error as CustomError & { status: number }).status).toBe(status);
+    expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
     return;
   }
   throw new Error(`Esperava CustomError com status ${status}, mas nada foi lançado.`);

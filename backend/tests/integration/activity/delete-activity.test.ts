@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import { createStudent, createTeacher, createManager, createActivity } from "../../helpers/factories.js";
-import { authHeader, invalidToken } from "../../helpers/auth.js";
+import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
 
 describe("DELETE /activities/:id", () => {
   it("retorna 204, preenche deletedAt e mantém a linha no banco", async () => {
