@@ -45,23 +45,17 @@ class EnrollmentService implements IEnrollmentService {
       ]);
     }
 
-    // Contrato: "Activity not found or soft-deleted" → 404. Como o findById
-    // já filtra deletedAt no where, null cobre os dois casos — sem expor
-    // a lixeira pela API.
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    // Contrato: apenas OPEN aceita inscrição.
-    // IN_PROGRESS/COMPLETED/CANCELLED (ciclo de vida) → 409.
     if (activity.status !== "OPEN") {
       throw new CustomError(409, "Activity is not open for enrollment.");
     }
 
-    // Passamos `slots` (total) e não `availableSlots`: o count confiável é
-    // refeito dentro da transação, após o lock — o valor lido aqui estaria
-    // sujeito a corrida. Duplicidade e capacidade são decididas no repository.
+    // We pass `slots` (total): the reliable count is recalculated within the transaction,
+    // after the lock
     const enrollment = await this._enrollmentRepository.enroll(
       userId,
       activityId,
@@ -80,9 +74,6 @@ class EnrollmentService implements IEnrollmentService {
       ]);
     }
 
-    // Contrato DELETE: 404 "Activity not found." (inclusive soft-deletada,
-    // filtrada pelo findById) vem antes de procurar a inscrição — mesma
-    // ordem de validação do POST.
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
@@ -111,10 +102,7 @@ class EnrollmentService implements IEnrollmentService {
     };
   }
 
-  // Contrato: "light hybrid authentication" — token válido E usuário ainda
-  // existente. O AuthMiddleware só valida o JWT; a checagem de existência
-  // fica no service, seguindo o precedente de updateStatus/delete do
-  // ActivityService. Quando User ganhar flag de "ativo", basta estender aqui.
+  // Token valid and user still exists
   private async assertUserExists(userId: string): Promise<void> {
     const user = await this._activityRepository.findUserById(userId);
     if (!user) {

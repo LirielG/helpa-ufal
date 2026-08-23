@@ -86,17 +86,13 @@ class EnrollmentRepository implements IEnrollmentRepository {
           throw error;
         }
       },
-      { isolationLevel: "Serializable" },
     );
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    // Transição atômica: o status vai no WHERE — dois cancelamentos
-    // concorrentes resultam em um sucesso e um 404, sem janela de corrida.
-    // Aceita APPROVED e PENDING (desistência de pedido pendente, futuro fluxo
-    // de aprovação). O escopo (userId, activityId) torna cancelar inscrição
-    // alheia indistinguível de inscrição inexistente (contrato: 404 sem
-    // vazar dados de terceiros).
+    // Atomic transition: two concurrent cancellations result in one success 
+    // and one 404, with no race window. 
+    // Accepts APPROVED and PENDING
     const result = await this._prisma.enrollment.updateMany({
       where: { userId, activityId, status: { in: ["APPROVED", "PENDING"] } },
       data: { status: "CANCELLED" },
