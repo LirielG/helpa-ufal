@@ -30,11 +30,11 @@ export function ProfileCard({ user }: ProfileCardProps) {
                 {user.course}
               </span>
             )}
-            {user.institution && (
+            {/*{user.institution && (
               <span className="p-2 rounded-lg bg-[#ADF7F9]/40 text-[#00A4A8] text-xs font-semibold">
                 {user.institution}
               </span>
-            )}
+            )}*/}
           </div>
         </div>
       </div>

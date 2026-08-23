@@ -9,6 +9,7 @@ import { ProfileTabs } from "../features/profile/components/ProfileTabs";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
 import { CertificatesList } from "../features/profile/components/CertificatesList";
 import { ActionsList } from "../features/profile/components/ActionsList";
+//import { getProfile, updateProfile } from "../services/profile";
 import { getProfile, updateProfile } from "../features/profile/services";
 import type { ProfileTab } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
@@ -38,6 +39,10 @@ export function Profile() {
       return;
     }
 
+    /*getProfile()
+      .then((data) => setProfile(data))
+      .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
+      .finally(() => setIsLoading(false));*/
     getProfile(currentUser)
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
@@ -52,6 +57,8 @@ export function Profile() {
     setSaveSuccess(false);
 
     try {
+                                     //CONFERIR DPS O (DATA)
+      //const updated = await updateProfile(data);
       const updated = await updateProfile(profile, data);
       setProfile(updated);
       setUser(updated);

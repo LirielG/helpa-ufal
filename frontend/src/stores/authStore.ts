@@ -5,6 +5,7 @@ import type { LoginRequest, RegisterRequest, User } from "../types";
 
 type AuthStore = {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   error: string | null;
   login: (data: LoginRequest) => Promise<boolean>;
@@ -18,6 +19,7 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isLoading: false,
       error: null,
       login: async (data) => {
@@ -25,7 +27,7 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await authService.login(data);
-          set({ user: response.user });
+          set({ user: response.user, token: response.token });
           return true;
         } catch (error) {
           const message = error instanceof Error ? error.message : "Erro ao fazer login";
@@ -40,7 +42,7 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const response = await authService.register(data);
-          set({ user: response.user });
+          set({ user: response.user, token: response.token });
           return true;
         } catch (error) {
           const message = error instanceof Error ? error.message : "Erro ao criar conta";
@@ -55,7 +57,7 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           await authService.logout();
-          set({ user: null });
+          set({ user: null, token: null });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Erro ao fazer logout";
           set({ error: message });
@@ -69,7 +71,7 @@ export const useAuthStore = create<AuthStore>()(
     {
       name: "helpa-auth",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({ user: state.user, token: state.token }),
     },
   ),
 );
