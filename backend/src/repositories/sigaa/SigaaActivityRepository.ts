@@ -1,6 +1,6 @@
 import type { PrismaClient, SigaaActivity, Prisma } from "@prisma/client";
 import type { ISigaaActivityRepository, SigaaRepoFilters } from "./ISigaaActivityRepository.js";
-import type { IScrapedSigaaActivity } from "@/types/sigaa.js";
+import type { ScrapedSigaaActivity } from "@/types/sigaa.js";
 import { prisma } from "@/database/prisma.js";
 
 type Props = {
@@ -23,7 +23,7 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
   }
 
   public async upsertMany(
-    activities: IScrapedSigaaActivity[],
+    activities: ScrapedSigaaActivity[],
     syncTimestamp: Date
   ): Promise<void> {
     if (activities.length === 0) return;

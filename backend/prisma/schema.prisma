@@ -216,5 +216,6 @@ model SigaaActivity {
 
   @@index([isActive])
   @@index([type])
+  @@index([normalizedType])
   @@map("sigaa_activities")
 }

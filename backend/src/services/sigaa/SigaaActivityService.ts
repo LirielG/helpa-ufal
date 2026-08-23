@@ -1,15 +1,11 @@
 import type { ISigaaActivityService } from "./ISigaaActivityService.js";
 import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
 import type { ISigaaSyncService } from "./ISigaaSyncService.js";
-import type { SigaaActivityFilters, SigaaListResponse } from "@/types/sigaa.js";
+import { SIGAA_TYPES, type SigaaActivityFilters, type SigaaListResponse } from "@/types/sigaa.js";
 import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 import SigaaSyncService from "./SigaaSyncService.js";
 import ValidationError, { type ValidationErrorItem } from "@/models/error/ValidationError.js";
 
-const VALID_SIGAA_TYPES = [
-  "EVENTO", "CURSO", "PRODUTO",
-  "PROGRAMA", "PROJETO", "PRESTAÇÃO DE SERVIÇOS",
-];
 const VALID_ORDER_BY = ["title", "lastSeenAt"];
 const VALID_ORDERS = ["asc", "desc"];
 
@@ -53,6 +49,7 @@ export class SigaaActivityService implements ISigaaActivityService {
         sigaaId: a.sigaaId,
         title: a.title,
         type: a.type,
+        normalizedType: a.normalizedType,
         department: a.department,
         lastSeenAt: a.lastSeenAt,
       })),
@@ -69,8 +66,8 @@ export class SigaaActivityService implements ISigaaActivityService {
   private validateFilters(filters: SigaaActivityFilters): void {
     const errors: ValidationErrorItem[] = [];
 
-    if (filters.type && !VALID_SIGAA_TYPES.includes(filters.type)) {
-      errors.push({ field: "type", message: `type must be one of: ${VALID_SIGAA_TYPES.join(", ")}` });
+    if (filters.type && !SIGAA_TYPES.includes(filters.type as typeof SIGAA_TYPES[number])) {
+      errors.push({ field: "type", message: `type must be one of: ${SIGAA_TYPES.join(", ")}` });
     }
     if (filters.orderBy && !VALID_ORDER_BY.includes(filters.orderBy)) {
       errors.push({ field: "orderBy", message: `orderBy must be one of: ${VALID_ORDER_BY.join(", ")}` });

@@ -11,19 +11,20 @@ export const SIGAA_TYPES = [
 
 export type SigaaRawType = (typeof SIGAA_TYPES)[number];
 
-export interface IScrapedSigaaActivity {
+export type ScrapedSigaaActivity = {
   sigaaId: string;
   title: string;
   type: string;
   normalizedType: ActivityType;
   department: string | null;
-}
+};
 
 export type SigaaActivityResponse = {
   id: string;
   sigaaId: string;
   title: string;
   type: string;
+  normalizedType: string;
   department: string | null;
   lastSeenAt: Date;
 };

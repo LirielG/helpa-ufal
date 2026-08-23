@@ -4,7 +4,8 @@ import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivi
 import SigaaScraperService from "./SigaaScraperService.js";
 import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 
-const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 horas
+const DEFAULT_CACHE_TTL_MS =
+  (Number(process.env.SIGAA_CACHE_TTL_HOURS) || 12) * 60 * 60 * 1000;
 
 type Props = {
   scraperService?: ISigaaScraperService;
@@ -33,7 +34,7 @@ export class SigaaSyncService implements ISigaaSyncService {
       if (latestLastSeenAt) {
         const ageMs = Date.now() - latestLastSeenAt.getTime();
         if (ageMs < this._cacheTtlMs) {
-          // Cache ainda está válido, não precisa raspar novamente
+          // Cache is still valid, no need to scrape again
           return;
         }
       }
@@ -42,12 +43,12 @@ export class SigaaSyncService implements ISigaaSyncService {
       await this.forceSync();
     } catch (error) {
       console.error("[SigaaSyncService] Error during syncIfNeeded:", error);
-      // Degradação suave: não quebra a aplicação para servir os dados existentes
+      // Graceful degradation: don't break the application to serve existing data
     }
   }
 
   public async forceSync(): Promise<void> {
-    // Se já houver uma sincronização em andamento, aguarda a mesma Promise
+    // If a sync is already in progress, wait for the same Promise
     if (this._inFlightSync) {
       return this._inFlightSync;
     }

@@ -4,10 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { Agent, fetch as undiciFetch } from "undici";
 import type { ISigaaScraperService } from "./ISigaaScraperService.js";
-import type { IScrapedSigaaActivity } from "@/types/sigaa.js";
+import type { ScrapedSigaaActivity } from "@/types/sigaa.js";
 import type { ActivityType } from "@/types/activity.js";
 
 export const SIGAA_PUBLIC_SEARCH_URL =
+  process.env.SIGAA_BASE_URL ??
   "https://sigaa.sig.ufal.br/sigaa/public/extensao/consulta_extensao.jsf";
 
 const USER_AGENT =
@@ -37,10 +38,10 @@ export class SigaaScraperService implements ISigaaScraperService {
     this._timeoutMs = timeoutMs;
   }
 
-  public async scrapeCurrentYearActivities(): Promise<IScrapedSigaaActivity[]> {
+  public async scrapeCurrentYearActivities(): Promise<ScrapedSigaaActivity[]> {
     const currentYear = new Date().getFullYear();
 
-    // 1. GET inicial para obter sessão/cookies e ViewState
+    // 1. Initial GET to obtain session/cookies and ViewState
     const initialResponse = await undiciFetch(this._searchUrl, {
       method: "GET",
       headers: {
@@ -74,7 +75,7 @@ export class SigaaScraperService implements ISigaaScraperService {
       throw new Error("Unable to extract javax.faces.ViewState from SIGAA page.");
     }
 
-    // 2. POST com os parâmetros validados do JSF
+    // 2. POST with validated JSF parameters
     const formParams = new URLSearchParams();
     formParams.append("formBuscaAtividade", "formBuscaAtividade");
     formParams.append("formBuscaAtividade:selectBuscaAno", "on");
@@ -108,9 +109,9 @@ export class SigaaScraperService implements ISigaaScraperService {
     return this.parseActivitiesHtml(resultHtml);
   }
 
-  public parseActivitiesHtml(html: string): IScrapedSigaaActivity[] {
+  public parseActivitiesHtml(html: string): ScrapedSigaaActivity[] {
     const $ = cheerio.load(html);
-    const activities: IScrapedSigaaActivity[] = [];
+    const activities: ScrapedSigaaActivity[] = [];
 
     const rows = $("tr.linhaPar, tr.linhaImpar");
 
@@ -118,7 +119,7 @@ export class SigaaScraperService implements ISigaaScraperService {
       const tds = $(element).find("td");
       if (tds.length < 3) return;
 
-      // Remove tags <script> embutidas dentro das células
+      // Remove embedded <script> tags from cells
       $(tds[0]).find("script").remove();
 
       const titleAnchor = $(tds[0]).find("a");
