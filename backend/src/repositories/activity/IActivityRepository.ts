@@ -4,7 +4,7 @@ import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 
 export interface IActivityRepository {
   create(authorId: string, data: CreateActivityInput): Promise<Activity>;
-  // prox metodos
+  
   findById(id: string): Promise<ActivityFullResponse | null>;
 
   list(
@@ -20,6 +20,7 @@ export interface IActivityRepository {
   updateStatus(id: string, status: string): Promise<Activity>;
   findUserById(id: string): Promise<{ isManager: boolean } | null>;
   countApprovedEnrollments(activityId: string): Promise<number>;
+  softDelete(id: string): Promise<boolean>;
   
 }
 
