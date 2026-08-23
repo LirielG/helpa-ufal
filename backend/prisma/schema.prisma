@@ -36,6 +36,7 @@ enum EnrollmentStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
 }
 
 enum CampusLocation {
