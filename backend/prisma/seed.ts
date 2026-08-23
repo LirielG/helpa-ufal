@@ -24,7 +24,6 @@ async function main() {
 
   const passwordHash = await bcryptjs.hash(adminPassword, 12);
 
-  // 1. Cria ou atualiza usuário Administrador (Professor Gestor)
   const user = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
@@ -54,7 +53,6 @@ async function main() {
 
   console.log(`✓ Admin user seeded: ${adminEmail}`);
 
-  // 2. Endereços para atividades presenciais
   const addressArapiraca = await prisma.address.upsert({
     where: { id: "00000000-0000-4000-a000-000000000001" },
     update: {},
@@ -81,7 +79,6 @@ async function main() {
     },
   });
 
-  // 3. Ações Nativas (Activity + ActivityDetails)
   const nativeActivities = [
     {
       id: "00000000-0000-4000-8000-000000000001",

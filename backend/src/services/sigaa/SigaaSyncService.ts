@@ -64,7 +64,6 @@ export class SigaaSyncService implements ISigaaSyncService {
         }
       } catch (error) {
         console.error("[SigaaSyncService] Error during forceSync:", error);
-        // Preserva os dados antigos no banco e registra o erro
       } finally {
         this._inFlightSync = null;
       }
