@@ -122,6 +122,7 @@ model Activity {
   status    ActivityStatus  @default(OPEN)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
+  deletedAt DateTime?       
 
   @@index([status])
   @@index([type])

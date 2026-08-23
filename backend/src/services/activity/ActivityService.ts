@@ -262,7 +262,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const isAuthor = activity.authorId === user.id;
+    const isAuthor = activity.authorId === user.id; // Alvo futuro: permite autor/gestor fantasma, pois não consulta usuário no banco
     if (!isAuthor && !user.isManager) {
       throw new CustomError(403, "You do not have permission to update this activity.");
     }
@@ -375,7 +375,7 @@ class ActivityService implements IActivityService {
 
     
     const user = await this._activityRepository.findUserById(userId);
-    const isAuthor = activity.authorId === userId;
+    const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
     const isManager = user?.isManager ?? false;
 
     if (!isAuthor && !isManager) {
@@ -410,6 +410,27 @@ class ActivityService implements IActivityService {
     };
 
     return activityResponse;
+  }
+
+  public async delete(id: string, userId: string): Promise<void> {
+    const activity = await this._activityRepository.findById(id);
+
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const user = await this._activityRepository.findUserById(userId);
+    const isAuthor = !!user && activity.authorId === userId;
+    const isManager = user?.isManager ?? false;
+
+    if (!isAuthor && !isManager) {
+      throw new CustomError(
+        403,
+        "You do not have permission to delete this activity.",
+      );
+    }
+
+    await this._activityRepository.softDelete(id);
   }
 }
 

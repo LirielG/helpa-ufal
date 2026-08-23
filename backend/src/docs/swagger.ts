@@ -719,6 +719,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
         ],
         responses: {
           204: { description: "Activity soft-deleted successfully. No content returned." },
+          400: { description: "Invalid id parameter. Must be a valid UUID.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
           401: { description: "Unauthenticated.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
           403: { description: "Forbidden.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
           404: { description: "Activity not found or already deleted.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
