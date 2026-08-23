@@ -1,5 +1,8 @@
 import * as cheerio from "cheerio";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { Agent, fetch as undiciFetch } from "undici";
 import type { ISigaaScraperService } from "./ISigaaScraperService.js";
 import type { IScrapedSigaaActivity } from "@/types/sigaa.js";
 import type { ActivityType } from "@/types/activity.js";
@@ -9,6 +12,21 @@ export const SIGAA_PUBLIC_SEARCH_URL =
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+function loadCaAgent(): Agent {
+  const caPath = path.resolve(process.cwd(), "src/config/certs/sigaa-ca-bundle.pem");
+  const caCert = fs.readFileSync(caPath, "utf8");
+  return new Agent({ connect: { ca: caCert, rejectUnauthorized: true } });
+}
+
+let _sigaaAgent: Agent | null = null;
+
+function getSigaaAgent(): Agent {
+  if (!_sigaaAgent) {
+    _sigaaAgent = loadCaAgent();
+  }
+  return _sigaaAgent;
+}
 
 export class SigaaScraperService implements ISigaaScraperService {
   private _searchUrl: string;
@@ -23,13 +41,14 @@ export class SigaaScraperService implements ISigaaScraperService {
     const currentYear = new Date().getFullYear();
 
     // 1. GET inicial para obter sessão/cookies e ViewState
-    const initialResponse = await fetch(this._searchUrl, {
+    const initialResponse = await undiciFetch(this._searchUrl, {
       method: "GET",
       headers: {
         "User-Agent": USER_AGENT,
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       signal: AbortSignal.timeout(this._timeoutMs),
+      dispatcher: getSigaaAgent(),
     });
 
     if (!initialResponse.ok) {
@@ -65,7 +84,7 @@ export class SigaaScraperService implements ISigaaScraperService {
     formParams.append("formBuscaAtividade:btBuscar", "Buscar");
     formParams.append("javax.faces.ViewState", viewState);
 
-    const postResponse = await fetch(this._searchUrl, {
+    const postResponse = await undiciFetch(this._searchUrl, {
       method: "POST",
       headers: {
         "User-Agent": USER_AGENT,
@@ -76,6 +95,7 @@ export class SigaaScraperService implements ISigaaScraperService {
       },
       body: formParams.toString(),
       signal: AbortSignal.timeout(this._timeoutMs),
+      dispatcher: getSigaaAgent(),
     });
 
     if (!postResponse.ok) {

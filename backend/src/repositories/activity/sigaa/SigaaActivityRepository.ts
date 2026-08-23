@@ -1,6 +1,6 @@
-import type { PrismaClient, SigaaActivity } from "@prisma/client";
-import type { ISigaaActivityRepository } from "./ISigaaActivityRepository.js";
-import type { IScrapedSigaaActivity, ISigaaActivityFilters } from "@/types/sigaa.js";
+import type { PrismaClient, SigaaActivity, Prisma } from "@prisma/client";
+import type { ISigaaActivityRepository, SigaaRepoFilters } from "./ISigaaActivityRepository.js";
+import type { IScrapedSigaaActivity } from "@/types/sigaa.js";
 import { prisma } from "@/database/prisma.js";
 
 type Props = {
@@ -28,7 +28,6 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
   ): Promise<void> {
     if (activities.length === 0) return;
 
-    // Executa upserts em lotes para performance e consistência
     const batchSize = 50;
     for (let i = 0; i < activities.length; i += batchSize) {
       const batch = activities.slice(i, i + batchSize);
@@ -73,39 +72,43 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
   }
 
   public async list(
-    filters: ISigaaActivityFilters
+    filters: SigaaRepoFilters
   ): Promise<{ activities: SigaaActivity[]; total: number }> {
-    const where: any = { isActive: true };
-
-    if (filters.type) {
-      where.normalizedType = filters.type;
-    }
+    const where: Prisma.SigaaActivityWhereInput = { isActive: true };
 
     if (filters.search) {
-      where.title = {
-        contains: filters.search,
-        mode: "insensitive",
-      };
+      where.title = { contains: filters.search, mode: "insensitive" };
+    }
+    if (filters.type) {
+      where.type = filters.type;
+    }
+    if (filters.department) {
+      where.department = filters.department;
     }
 
-    const page = filters.page && filters.page > 0 ? filters.page : 1;
-    const limit = filters.limit && filters.limit > 0 ? filters.limit : 10;
-    const skip = (page - 1) * limit;
-
-    const orderBy = filters.orderBy || "createdAt";
-    const order = filters.order === "asc" ? "asc" : "desc";
+    const skip = (filters.page - 1) * filters.limit;
 
     const [activities, total] = await Promise.all([
       this._prisma.sigaaActivity.findMany({
         where,
-        orderBy: { [orderBy]: order },
+        orderBy: { [filters.orderBy]: filters.order },
         skip,
-        take: limit,
+        take: filters.limit,
       }),
       this._prisma.sigaaActivity.count({ where }),
     ]);
 
     return { activities, total };
+  }
+
+  public async listDistinctDepartments(): Promise<string[]> {
+    const rows = await this._prisma.sigaaActivity.findMany({
+      where: { isActive: true, department: { not: null } },
+      distinct: ["department"],
+      select: { department: true },
+      orderBy: { department: "asc" },
+    });
+    return rows.map((r) => r.department!);
   }
 }
 

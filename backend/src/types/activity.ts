@@ -80,4 +80,4 @@ export interface IFeedResponse {
   total: number;
   page: number;
   limit: number;
-}
+}

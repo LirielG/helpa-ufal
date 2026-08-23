@@ -1,5 +1,4 @@
 import type { OpenAPIV3 } from "openapi-types";
-import { nullable } from "zod";
 
 export const swaggerDocument: OpenAPIV3.Document = {
   openapi: "3.0.0",
@@ -125,23 +124,15 @@ export const swaggerDocument: OpenAPIV3.Document = {
           },
         },
       },
-      FeedItemResponse: {
+      SigaaActivityResponse: {
         type: "object",
         properties: {
-          id:             { type: "string", format: "uuid" },
-          source:         { type: "string", enum: ["LOCAL", "SIGAA"] },
-          title:          { type: "string" },
-          type:           { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
-          status:         { type: "string", enum: ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"], nullable: true, description: "Present only for LOCAL items. Null for SIGAA items." },
-          authorId:       { type: "string", format: "uuid", nullable: true, description: "LOCAL only." },
-          campus:         { type: "string", nullable: true, description: "LOCAL only." },
-          startDate:      { type: "string", format: "date-time", nullable: true, description: "LOCAL only." },
-          endDate:        { type: "string", format: "date-time", nullable: true, description: "LOCAL only." },
-          slots:          { type: "integer", nullable: true, description: "LOCAL only." },
-          availableSlots: { type: "integer", nullable: true, description: "LOCAL only." },
-          url:            { type: "string", format: "uri", nullable: true, description: "SIGAA only. Points to the public SIGAA search page." },
-          department:     { type: "string", nullable: true, description: "SIGAA only." },
-          originalType:   { type: "string", nullable: true, description: "SIGAA only. Raw type string from SIGAA (e.g. CURSO, EVENTO)." },
+          id:         { type: "string", format: "uuid" },
+          sigaaId:    { type: "string" },
+          title:      { type: "string" },
+          type:       { type: "string", enum: ["EVENTO", "CURSO", "PRODUTO", "PROGRAMA", "PROJETO", "PRESTAÇÃO DE SERVIÇOS"] },
+          department: { type: "string", nullable: true },
+          lastSeenAt: { type: "string", format: "date-time" },
         },
       },
       ActivityReportResponse: {
@@ -502,76 +493,32 @@ export const swaggerDocument: OpenAPIV3.Document = {
         },
       },
     },
-    "/activities/feed": {
+    "/sigaa-activities": {
       get: {
-        tags:    ["Activities"],
-        summary: "Get unified activity feed",
-        description: [
-          "Returns a unified, paginated feed combining local activities and SIGAA activities.",
-          "",
-          "SIGAA items are excluded when a filter references a field SIGAA does not provide:",
-          "- `campus` → SIGAA excluded",
-          "- `format` → SIGAA excluded",
-          "- `status` (any value) → SIGAA excluded",
-          "",
-          "Sorting is applied per-source before interleaving.",
-        ].join("\n"),
+        tags:    ["SIGAA"],
+        summary: "List SIGAA extension activities",
+        description: "Returns paginated SIGAA activities. Syncs with SIGAA on demand (12h cache).",
         parameters: [
           {
-            name:        "source",
+            name:        "search",
             in:          "query",
             required:    false,
-            description: "Data source. `ALL` merges both sources interleaved.",
-            schema:      { type: "string", enum: ["LOCAL", "SIGAA", "ALL"], default: "ALL" },
+            description: "Partial, case-insensitive search on title.",
+            schema:      { type: "string" },
           },
           {
             name:        "type",
             in:          "query",
             required:    false,
-            description: "Filter by activity type.",
-            schema:      { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
+            description: "Exact match on SIGAA type.",
+            schema:      { type: "string", enum: ["EVENTO", "CURSO", "PRODUTO", "PROGRAMA", "PROJETO", "PRESTAÇÃO DE SERVIÇOS"] },
           },
           {
-            name:        "status",
+            name:        "department",
             in:          "query",
             required:    false,
-            description: "Filter by status. Excludes SIGAA results.",
-            schema:      { type: "string", enum: ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] },
-          },
-          {
-            name:        "format",
-            in:          "query",
-            required:    false,
-            description: "Filter by format. Excludes SIGAA results.",
-            schema:      { type: "string", enum: ["IN_PERSON", "ONLINE", "HYBRID"] },
-          },
-          {
-            name:        "campus",
-            in:          "query",
-            required:    false,
-            description: "Filter by campus. Excludes SIGAA results.",
-            schema:      { type: "string", enum: ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] },
-          },
-          {
-            name:        "search",
-            in:          "query",
-            required:    false,
-            description: "Free text search on activity title.",
+            description: "Exact match on department acronym. Use /sigaa-activities/departments for valid values.",
             schema:      { type: "string" },
-          },
-          {
-            name:        "orderBy",
-            in:          "query",
-            required:    false,
-            description: "Sort field.",
-            schema:      { type: "string", enum: ["title", "type", "createdAt"], default: "createdAt" },
-          },
-          {
-            name:        "order",
-            in:          "query",
-            required:    false,
-            description: "Sort direction.",
-            schema:      { type: "string", enum: ["asc", "desc"], default: "desc" },
           },
           {
             name:        "page",
@@ -587,10 +534,24 @@ export const swaggerDocument: OpenAPIV3.Document = {
             description: "Items per page.",
             schema:      { type: "integer", minimum: 1, maximum: 100, default: 10 },
           },
+          {
+            name:        "orderBy",
+            in:          "query",
+            required:    false,
+            description: "Sort field.",
+            schema:      { type: "string", enum: ["title", "lastSeenAt"], default: "lastSeenAt" },
+          },
+          {
+            name:        "order",
+            in:          "query",
+            required:    false,
+            description: "Sort direction.",
+            schema:      { type: "string", enum: ["asc", "desc"], default: "desc" },
+          },
         ],
         responses: {
           200: {
-            description: "Paginated feed.",
+            description: "Paginated SIGAA activities.",
             content: {
               "application/json": {
                 schema: {
@@ -598,7 +559,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
                   properties: {
                     items: {
                       type:  "array",
-                      items: { $ref: "#/components/schemas/FeedItemResponse" },
+                      items: { $ref: "#/components/schemas/SigaaActivityResponse" },
                     },
                     total: { type: "integer" },
                     page:  { type: "integer" },
@@ -609,6 +570,29 @@ export const swaggerDocument: OpenAPIV3.Document = {
             },
           },
           400: { description: "Validation error.",      content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+    },
+    "/sigaa-activities/departments": {
+      get: {
+        tags:    ["SIGAA"],
+        summary: "List distinct SIGAA departments",
+        description: "Returns a list of unique department acronyms from active SIGAA activities. Use to populate filter dropdowns.",
+        responses: {
+          200: {
+            description: "List of department acronyms.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    departments: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
           500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
         },
       },

@@ -5,13 +5,10 @@ import type { IActivityController } from "@/controllers/activity/IActivityContro
 import type { IAuthMiddleware } from "@/middlewares/auth/IAuthMiddleware.js";
 import ActivityReportController from "@/controllers/activityReport/AcitivtyReportController.js";
 import { IActivityReportController } from "@/controllers/activityReport/IActivityReportController.js";
-import FeedController from "@/controllers/activity/FeedController.js";
-import type { IFeedController } from "@/controllers/activity/IFeedController.js";
 
 const router = express.Router();
 const activityController: IActivityController = new ActivityController();
 const activityReportController: IActivityReportController = new ActivityReportController();
-const feedController: IFeedController = new FeedController();
 const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 
 router.post(
@@ -23,11 +20,6 @@ router.post(
 router.get(
   "/activities",
   (req, res, next) => activityController.list(req, res).catch(next),
-);
-
-router.get(
-  "/activities/feed",
-  (req, res, next) => feedController.getFeed(req, res).catch(next),
 );
 
 router.get(

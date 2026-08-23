@@ -214,6 +214,6 @@ model SigaaActivity {
   updatedAt      DateTime      @updatedAt
 
   @@index([isActive])
-  @@index([normalizedType])
+  @@index([type])
   @@map("sigaa_activities")
-}
+}
