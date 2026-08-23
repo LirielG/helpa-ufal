@@ -1,8 +1,8 @@
 import type { ISigaaActivityService } from "./ISigaaActivityService.js";
-import type { ISigaaActivityRepository } from "@/repositories/activity/sigaa/ISigaaActivityRepository.js";
+import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
 import type { ISigaaSyncService } from "./ISigaaSyncService.js";
 import type { SigaaActivityFilters, SigaaListResponse } from "@/types/sigaa.js";
-import SigaaActivityRepository from "@/repositories/activity/sigaa/SigaaActivityRepository.js";
+import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 import SigaaSyncService from "./SigaaSyncService.js";
 import ValidationError, { type ValidationErrorItem } from "@/models/error/ValidationError.js";
 

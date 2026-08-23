@@ -1,8 +1,8 @@
 import type { ISigaaSyncService } from "./ISigaaSyncService.js";
 import type { ISigaaScraperService } from "./ISigaaScraperService.js";
-import type { ISigaaActivityRepository } from "@/repositories/activity/sigaa/ISigaaActivityRepository.js";
+import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
 import SigaaScraperService from "./SigaaScraperService.js";
-import SigaaActivityRepository from "@/repositories/activity/sigaa/SigaaActivityRepository.js";
+import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 
 const DEFAULT_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 horas
 

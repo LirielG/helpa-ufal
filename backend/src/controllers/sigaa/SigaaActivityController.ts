@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import type { ISigaaActivityController } from "./ISigaaActivityController.js";
-import type { ISigaaActivityService } from "@/services/activity/sigaa/ISigaaActivityService.js";
+import type { ISigaaActivityService } from "@/services/sigaa/ISigaaActivityService.js";
 import type { SigaaActivityFilters } from "@/types/sigaa.js";
-import SigaaActivityService from "@/services/activity/sigaa/SigaaActivityService.js";
+import SigaaActivityService from "@/services/sigaa/SigaaActivityService.js";
 
 type Props = {
   sigaaActivityService?: ISigaaActivityService;
