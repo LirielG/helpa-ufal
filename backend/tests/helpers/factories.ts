@@ -8,11 +8,13 @@ import type {
   ActivityType,
   Address,
   CampusLocation,
+  Enrollment,
   User,
 } from "@prisma/client";
 import { prisma } from "@/database/prisma.js";
 import { signToken } from "./auth.js";
 import { daysFromNow } from "./dates.js";
+import { EnrollmentStatus } from "@/types/enrollment.js";
 
 export const DEFAULT_PASSWORD = "Senha@123";
 
@@ -185,4 +187,31 @@ export function anAddress(): Omit<Address, "id" | "createdAt" | "updatedAt"> {
     city: "Arapiraca",
     state: "AL",
   };
+}
+
+
+type EnrollmentOverrides = Partial<{
+  status: EnrollmentStatus;
+  attendanceConfirmed: boolean;
+  isModerator: boolean;
+  enrolledAt: Date;
+}>;
+
+/**
+ * Creates an Enrollment directly in the database, bypassing the service.
+ * Used to set up states the API doesn't expose (CANCELLED, PENDING).
+ */
+export async function createEnrollment(
+  userId: string,
+  activityId: string,
+  overrides: EnrollmentOverrides = {},
+): Promise<Enrollment> {
+  return prisma.enrollment.create({
+    data: {
+      userId,
+      activityId,
+      status: "APPROVED",
+      ...overrides,
+    },
+  });
 }
