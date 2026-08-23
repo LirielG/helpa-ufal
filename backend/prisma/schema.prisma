@@ -125,10 +125,8 @@ model Activity {
   updatedAt DateTime        @updatedAt
   deletedAt DateTime?       
 
-  @@index([status])
   @@index([type])
   @@index([authorId])
-  @@index([startDate, endDate])
 
   author      User             @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   details     ActivityDetails?
