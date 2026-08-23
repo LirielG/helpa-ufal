@@ -1,5 +1,4 @@
 import type { OpenAPIV3 } from "openapi-types";
-import { nullable } from "zod";
 
 export const swaggerDocument: OpenAPIV3.Document = {
   openapi: "3.0.0",
@@ -123,6 +122,18 @@ export const swaggerDocument: OpenAPIV3.Document = {
               state:       { type: "string", enum: ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"] },
             },
           },
+        },
+      },
+      SigaaActivityResponse: {
+        type: "object",
+        properties: {
+          id:         { type: "string", format: "uuid" },
+          sigaaId:    { type: "string" },
+          title:      { type: "string" },
+          type:           { type: "string", enum: ["EVENTO", "CURSO", "PRODUTO", "PROGRAMA", "PROJETO", "PRESTAÇÃO DE SERVIÇOS"] },
+          normalizedType: { type: "string", enum: ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] },
+          department:     { type: "string", nullable: true },
+          lastSeenAt: { type: "string", format: "date-time" },
         },
       },
       ActivityReportResponse: {
@@ -479,6 +490,110 @@ export const swaggerDocument: OpenAPIV3.Document = {
             },
           },
           400: { description: "Validation error.",      content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+    },
+    "/sigaa-activities": {
+      get: {
+        tags:    ["SIGAA"],
+        summary: "List SIGAA extension activities",
+        description: "Returns paginated SIGAA activities. Syncs with SIGAA on demand (12h cache).",
+        parameters: [
+          {
+            name:        "search",
+            in:          "query",
+            required:    false,
+            description: "Partial, case-insensitive search on title.",
+            schema:      { type: "string" },
+          },
+          {
+            name:        "type",
+            in:          "query",
+            required:    false,
+            description: "Exact match on SIGAA type.",
+            schema:      { type: "string", enum: ["EVENTO", "CURSO", "PRODUTO", "PROGRAMA", "PROJETO", "PRESTAÇÃO DE SERVIÇOS"] },
+          },
+          {
+            name:        "department",
+            in:          "query",
+            required:    false,
+            description: "Exact match on department acronym. Use /sigaa-activities/departments for valid values.",
+            schema:      { type: "string" },
+          },
+          {
+            name:        "page",
+            in:          "query",
+            required:    false,
+            description: "Page number.",
+            schema:      { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name:        "limit",
+            in:          "query",
+            required:    false,
+            description: "Items per page.",
+            schema:      { type: "integer", minimum: 1, maximum: 100, default: 10 },
+          },
+          {
+            name:        "orderBy",
+            in:          "query",
+            required:    false,
+            description: "Sort field.",
+            schema:      { type: "string", enum: ["title", "lastSeenAt"], default: "lastSeenAt" },
+          },
+          {
+            name:        "order",
+            in:          "query",
+            required:    false,
+            description: "Sort direction.",
+            schema:      { type: "string", enum: ["asc", "desc"], default: "desc" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Paginated SIGAA activities.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    items: {
+                      type:  "array",
+                      items: { $ref: "#/components/schemas/SigaaActivityResponse" },
+                    },
+                    total: { type: "integer" },
+                    page:  { type: "integer" },
+                    limit: { type: "integer" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Validation error.",      content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
+          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+        },
+      },
+    },
+    "/sigaa-activities/departments": {
+      get: {
+        tags:    ["SIGAA"],
+        summary: "List distinct SIGAA departments",
+        description: "Returns a list of unique department acronyms from active SIGAA activities. Use to populate filter dropdowns.",
+        responses: {
+          200: {
+            description: "List of department acronyms.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    departments: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
           500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
         },
       },
