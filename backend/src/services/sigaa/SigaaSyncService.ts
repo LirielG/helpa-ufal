@@ -39,7 +39,6 @@ export class SigaaSyncService implements ISigaaSyncService {
         }
       }
 
-      // Cache expirado ou tabela vazia -> sincroniza
       await this.forceSync();
     } catch (error) {
       console.error("[SigaaSyncService] Error during syncIfNeeded:", error);
