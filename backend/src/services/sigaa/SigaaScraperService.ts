@@ -14,9 +14,21 @@ export const SIGAA_PUBLIC_SEARCH_URL =
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+// SIGAA serves a broken TLS chain: the leaf (*.sig.ufal.br) is issued by
+// "RNP ICPEdu GR46 OV TLS CA 2025", but that intermediate is never sent. The
+// server ships an unrelated (and already expired) *.ufal.br chain instead, so
+// verification fails with UNABLE_TO_VERIFY_LEAF_SIGNATURE. Supplying the
+// missing intermediate lets us keep rejectUnauthorized enabled.
+//
+// The bundled intermediate expires on 2030-11-19. Once UFAL fixes the chain it
+// serves, this whole CA agent can be dropped in favour of the default fetch.
+const CA_BUNDLE_PATH = path.resolve(
+  import.meta.dirname,
+  "../../config/certs/sigaa-ca-bundle.pem",
+);
+
 function loadCaAgent(): Agent {
-  const caPath = path.resolve(process.cwd(), "src/config/certs/sigaa-ca-bundle.pem");
-  const caCert = fs.readFileSync(caPath, "utf8");
+  const caCert = fs.readFileSync(CA_BUNDLE_PATH, "utf8");
   return new Agent({ connect: { ca: caCert, rejectUnauthorized: true } });
 }
 
@@ -33,7 +45,10 @@ export class SigaaScraperService implements ISigaaScraperService {
   private _searchUrl: string;
   private _timeoutMs: number;
 
-  constructor(searchUrl: string = SIGAA_PUBLIC_SEARCH_URL, timeoutMs: number = 30_000) {
+  constructor(
+    searchUrl: string = SIGAA_PUBLIC_SEARCH_URL,
+    timeoutMs: number = 30_000,
+  ) {
     this._searchUrl = searchUrl;
     this._timeoutMs = timeoutMs;
   }
@@ -46,7 +61,8 @@ export class SigaaScraperService implements ISigaaScraperService {
       method: "GET",
       headers: {
         "User-Agent": USER_AGENT,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       signal: AbortSignal.timeout(this._timeoutMs),
       dispatcher: getSigaaAgent(),
@@ -54,7 +70,7 @@ export class SigaaScraperService implements ISigaaScraperService {
 
     if (!initialResponse.ok) {
       throw new Error(
-        `SIGAA GET request failed with status: ${initialResponse.status} ${initialResponse.statusText}`
+        `SIGAA GET request failed with status: ${initialResponse.status} ${initialResponse.statusText}`,
       );
     }
 
@@ -72,7 +88,9 @@ export class SigaaScraperService implements ISigaaScraperService {
 
     const viewState = $initial('input[name="javax.faces.ViewState"]').val();
     if (!viewState || typeof viewState !== "string") {
-      throw new Error("Unable to extract javax.faces.ViewState from SIGAA page.");
+      throw new Error(
+        "Unable to extract javax.faces.ViewState from SIGAA page.",
+      );
     }
 
     // 2. POST with validated JSF parameters
@@ -92,7 +110,8 @@ export class SigaaScraperService implements ISigaaScraperService {
         "Content-Type": "application/x-www-form-urlencoded",
         Cookie: cookies,
         Referer: this._searchUrl,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
       body: formParams.toString(),
       signal: AbortSignal.timeout(this._timeoutMs),
@@ -101,7 +120,7 @@ export class SigaaScraperService implements ISigaaScraperService {
 
     if (!postResponse.ok) {
       throw new Error(
-        `SIGAA POST search request failed with status: ${postResponse.status} ${postResponse.statusText}`
+        `SIGAA POST search request failed with status: ${postResponse.status} ${postResponse.statusText}`,
       );
     }
 
@@ -123,11 +142,15 @@ export class SigaaScraperService implements ISigaaScraperService {
       $(tds[0]).find("script").remove();
 
       const titleAnchor = $(tds[0]).find("a");
-      const title = (titleAnchor.text() || $(tds[0]).text()).replace(/\s+/g, " ").trim();
+      const title = (titleAnchor.text() || $(tds[0]).text())
+        .replace(/\s+/g, " ")
+        .trim();
       if (!title) return;
 
       const onclickAttr = titleAnchor.attr("onclick") || "";
-      const idMatch = onclickAttr.match(/'idAtividadeExtensaoSelecionada'\s*:\s*'(\d+)'/);
+      const idMatch = onclickAttr.match(
+        /'idAtividadeExtensaoSelecionada'\s*:\s*'(\d+)'/,
+      );
 
       const rawType = $(tds[1]).text().replace(/\s+/g, " ").trim();
       const department = $(tds[2]).text().replace(/\s+/g, " ").trim() || null;
