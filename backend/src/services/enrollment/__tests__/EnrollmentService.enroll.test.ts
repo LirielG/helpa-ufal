@@ -4,6 +4,7 @@ import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmen
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
+import { expectHttpError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const ACTIVITY_ID = "f26559ac-d672-4252-a9a4-d6fe6583d8ec";
@@ -67,21 +68,21 @@ function mockRepositories(
 
 // Extracts and asserts the expected error: type + HTTP status (+ message,
 // since error messages are part of the API contract).
-async function expectHttpError(
-  promise: Promise<unknown>,
-  status: number,
-  message?: string,
-): Promise<void> {
-  try {
-    await promise;
-  } catch (error) {
-    expect(error).toBeInstanceOf(CustomError);
-    expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
-    if (message) expect((error as CustomError).message).toBe(message);
-    return;
-  }
-  throw new Error(`Expected a CustomError with status ${status}, but nothing was thrown.`);
-}
+// async function expectHttpError(
+//   promise: Promise<unknown>,
+//   status: number,
+//   message?: string,
+// ): Promise<void> {
+//   try {
+//     await promise;
+//   } catch (error) {
+//     expect(error).toBeInstanceOf(CustomError);
+//     expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
+//     if (message) expect((error as CustomError).message).toBe(message);
+//     return;
+//   }
+//   throw new Error(`Expected a CustomError with status ${status}, but nothing was thrown.`);
+// }
 
 describe("EnrollmentService.enroll", () => {
   // ---------- Authentication (contract: 401 before existence/business rules) ----------
