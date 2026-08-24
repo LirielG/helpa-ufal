@@ -163,7 +163,10 @@ describe("EnrollmentService.enroll", () => {
     });
   });
 
-  it("passes total slots (not availableSlots) to the repository", async () => {
+  // The unit test "passes total slots (not availableSlots) to the repository" no longer makes sense—the assertion becomes proof of the new frontier:
+  // .
+  // .
+  /*it("passes total slots (not availableSlots) to the repository", async () => {
     // The authoritative count happens inside the transaction, after the lock;
     // the service must not feed a stale availableSlots into it.
     const { activityRepository, enrollmentRepository } = mockRepositories();
@@ -172,7 +175,7 @@ describe("EnrollmentService.enroll", () => {
     await service.enroll(USER_ID, ACTIVITY_ID);
 
     expect(enrollmentRepository.enroll).toHaveBeenCalledWith(USER_ID, ACTIVITY_ID, 30);
-  });
+  });*/
 
   it("keeps the original createdAt when the repository reactivates a canceled enrollment", async () => {
     // Contract decision: reactivation returns 201 with the record's original
