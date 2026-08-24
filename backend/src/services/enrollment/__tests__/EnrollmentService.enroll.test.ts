@@ -66,23 +66,6 @@ function mockRepositories(
   return { activityRepository, enrollmentRepository };
 }
 
-// Extracts and asserts the expected error: type + HTTP status (+ message,
-// since error messages are part of the API contract).
-// async function expectHttpError(
-//   promise: Promise<unknown>,
-//   status: number,
-//   message?: string,
-// ): Promise<void> {
-//   try {
-//     await promise;
-//   } catch (error) {
-//     expect(error).toBeInstanceOf(CustomError);
-//     expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
-//     if (message) expect((error as CustomError).message).toBe(message);
-//     return;
-//   }
-//   throw new Error(`Expected a CustomError with status ${status}, but nothing was thrown.`);
-// }
 
 describe("EnrollmentService.enroll", () => {
   // ---------- Authentication (contract: 401 before existence/business rules) ----------
@@ -164,19 +147,6 @@ describe("EnrollmentService.enroll", () => {
     });
   });
 
-  // The unit test "passes total slots (not availableSlots) to the repository" no longer makes sense—the assertion becomes proof of the new frontier:
-  // .
-  // .
-  /*it("passes total slots (not availableSlots) to the repository", async () => {
-    // The authoritative count happens inside the transaction, after the lock;
-    // the service must not feed a stale availableSlots into it.
-    const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
-
-    await service.enroll(USER_ID, ACTIVITY_ID);
-
-    expect(enrollmentRepository.enroll).toHaveBeenCalledWith(USER_ID, ACTIVITY_ID, 30);
-  });*/
 
   it("keeps the original createdAt when the repository reactivates a canceled enrollment", async () => {
     // Contract decision: reactivation returns 201 with the record's original

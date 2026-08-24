@@ -54,8 +54,7 @@ class EnrollmentService implements IEnrollmentService {
       throw new CustomError(409, "Activity is not open for enrollment.");
     }
 
-    // We pass `slots` (total): the reliable count is recalculated within the transaction,
-    // after the lock
+
     const enrollment = await this._enrollmentRepository.enroll(userId, activityId);
 
     return this.toEnrollResponse(enrollment);
