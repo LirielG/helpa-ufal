@@ -8,7 +8,7 @@ export interface IEnrollmentRepository {
   findByUserAndActivity(userId: string, activityId: string): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
-  enroll(userId: string, activityId: string, slots: number): Promise<Enrollment>;
+  enroll(userId: string, activityId: string): Promise<Enrollment>;
 
   /* Atomic transition {APPROVED, PENDING} -> CANCELLED (soft delete) */
   cancel(userId: string, activityId: string): Promise<void>;

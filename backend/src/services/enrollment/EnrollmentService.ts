@@ -56,11 +56,7 @@ class EnrollmentService implements IEnrollmentService {
 
     // We pass `slots` (total): the reliable count is recalculated within the transaction,
     // after the lock
-    const enrollment = await this._enrollmentRepository.enroll(
-      userId,
-      activityId,
-      activity.slots,
-    );
+    const enrollment = await this._enrollmentRepository.enroll(userId, activityId);
 
     return this.toEnrollResponse(enrollment);
   }

@@ -29,64 +29,61 @@ class EnrollmentRepository implements IEnrollmentRepository {
     });
   }
 
-  public async enroll(
-    userId: string,
-    activityId: string,
-    slots: number,
-  ): Promise<Enrollment> {
-    return this._prisma.$transaction(
-      async (tx) => {
-        // Lock BEFORE any read: serializes concurrent registrations
-        // in this activity and makes the count below reliable.
-        await lockActivityForCapacity(tx, activityId);
+  public async enroll(userId: string, activityId: string): Promise<Enrollment> {
+    return this._prisma.$transaction(async (tx) => {
+      // Lock BEFORE any read, and `slots` read UNDER the lock.
+      const activity = await lockActivityForCapacity(tx, activityId);
+      if (!activity) {
+        throw new CustomError(404, "Activity not found.");
+      }
 
-        const existing = await tx.enrollment.findUnique({
-          where: { userId_activityId: { userId, activityId } },
+      const existing = await tx.enrollment.findUnique({
+        where: { userId_activityId: { userId, activityId } },
+      });
+
+      if (existing && existing.status !== "CANCELLED") {
+        throw new CustomError(409, "User is already enrolled in this activity.");
+      }
+
+      const approvedCount = await tx.enrollment.count({
+        where: { activityId, status: "APPROVED" },
+      });
+
+      if (approvedCount >= activity.slots) {
+        throw new CustomError(409, "No available slots for this activity.");
+      }
+
+      if (existing) {
+        return tx.enrollment.update({
+          where: { id: existing.id },
+          data: {
+            status: ENROLLMENT_INITIAL_STATUS,
+            enrolledAt: new Date(),
+            attendanceConfirmed: false,
+          },
         });
+      }
 
-        if (existing && existing.status !== "CANCELLED") {
+      try {
+        return await tx.enrollment.create({
+          data: {
+            userId,
+            activityId,
+            status: ENROLLMENT_INITIAL_STATUS,
+          },
+        });
+      } catch (error) {
+        // Defense-in-depth against execution outside of the lock 
+        // (e.g., another transaction that did not go through lockActivityForCapacity).
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
           throw new CustomError(409, "User is already enrolled in this activity.");
         }
-
-        const approvedCount = await tx.enrollment.count({
-          where: { activityId, status: "APPROVED" },
-        });
-
-        if (approvedCount >= slots) {
-          throw new CustomError(409, "No available slots for this activity.");
-        }
-
-        if (existing) {
-          return tx.enrollment.update({
-            where: { id: existing.id },
-            data: {
-              status: ENROLLMENT_INITIAL_STATUS,
-              enrolledAt: new Date(),
-              attendanceConfirmed: false,
-            },
-          });
-        }
-
-        try {
-          return await tx.enrollment.create({
-            data: {
-              userId,
-              activityId,
-              status: ENROLLMENT_INITIAL_STATUS,
-            },
-          });
-        } catch (error) {
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === "P2002"
-          ) {
-            throw new CustomError(409, "User is already enrolled in this activity.");
-          }
-
-          throw error;
-        }
-      },
-    );
+        throw error;
+      }
+    });
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
