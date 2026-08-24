@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
+import { expectHttpError } from "@/utils/tests.js";
 
 function mockRepository(
   overrides: Partial<IActivityRepository> = {},
@@ -14,20 +15,6 @@ function mockRepository(
   } as unknown as IActivityRepository;
 }
 
-// Extracts and asserts the expected error: type + HTTP status.
-async function expectHttpError(
-  promise: Promise<unknown>,
-  status: number,
-): Promise<void> {
-  try {
-    await promise;
-  } catch (error) {
-    expect(error).toBeInstanceOf(CustomError);
-    expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
-    return;
-  }
-  throw new Error(`Expected a CustomError with status ${status}, but nothing was thrown.`);
-}
 
 describe("ActivityService.delete", () => {
   // ---------- Missing/deleted activity ----------
