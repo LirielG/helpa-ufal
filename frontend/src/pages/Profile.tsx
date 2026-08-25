@@ -18,7 +18,7 @@ import bgDashboard from "../assets/bg.svg";
 
 export function Profile() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
 
   const [profile, setProfile] = useState<User | null>(null);
@@ -31,18 +31,16 @@ export function Profile() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // ProtectedRoute keeps a signed-out visitor from ever reaching this screen,
+  // so the guard below only exists to narrow `User | null`.
   useEffect(() => {
-    const currentUser = useAuthStore.getState().user;
-    if (!currentUser) {
-      navigate("/login");
-      return;
-    }
+    if (!user) return;
 
-    getProfile(currentUser)
+    getProfile(user)
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
-  }, [navigate]);
+  }, [user]);
 
   const handleSubmit = async (data: UpdateProfileRequest) => {
     if (!profile) return;
@@ -67,7 +65,6 @@ export function Profile() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
   };
 
   return (
