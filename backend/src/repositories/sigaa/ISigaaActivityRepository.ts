@@ -13,8 +13,14 @@ export type SigaaRepoFilters = {
 
 export interface ISigaaActivityRepository {
   getLatestLastSeenAt(): Promise<Date | null>;
-  upsertMany(activities: ScrapedSigaaActivity[], syncTimestamp: Date): Promise<void>;
+  upsertMany(
+    activities: ScrapedSigaaActivity[],
+    syncTimestamp: Date,
+  ): Promise<void>;
   markInactiveBefore(syncTimestamp: Date): Promise<number>;
-  list(filters: SigaaRepoFilters): Promise<{ activities: SigaaActivity[]; total: number }>;
+  list(
+    filters: SigaaRepoFilters,
+  ): Promise<{ activities: SigaaActivity[]; total: number }>;
+  listDistinctTypes(): Promise<string[]>;
   listDistinctDepartments(): Promise<string[]>;
 }
