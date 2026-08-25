@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { Mail } from "lucide-react";
 import { Button, Alert } from "../components";
 import { useAuth } from "../hooks";
@@ -18,7 +17,6 @@ type LoginFields = {
 };
 
 export function Login() {
-  const navigate = useNavigate();
   const { login, isLoading, error: authError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -28,14 +26,11 @@ export function Login() {
     formState: { errors },
   } = useForm<LoginFields>({
     resolver: zodResolver(LoginSchema),
-    mode: "onSubmit"
+    mode: "onSubmit",
   });
 
   const onSubmit = async (data: LoginFields) => {
-    const success = await login(data);
-    if (success) {
-      navigate("/dashboard");
-    }
+    await login(data);
   };
 
   return (
@@ -43,12 +38,22 @@ export function Login() {
       header={
         <div className="flex items-center gap-2">
           <div className="shrink-0">
-            <img src={helpaBlueLogo} alt="helpa" className="h-8 md:h-10 w-auto" />
+            <img
+              src={helpaBlueLogo}
+              alt="helpa"
+              className="h-8 md:h-10 w-auto"
+            />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Bem vindo</h1>
         </div>
       }
-      footer={<AuthFooterLink prefix="Não tem uma conta?" linkText="Criar conta" to="/register" />}
+      footer={
+        <AuthFooterLink
+          prefix="Não tem uma conta?"
+          linkText="Criar conta"
+          to="/register"
+        />
+      }
     >
       {authError && (
         <div className="mb-6">

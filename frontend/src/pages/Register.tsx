@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { z } from "zod";
 import { Button, Alert, Tooltip } from "../components";
 import { useAuth } from "../hooks";
@@ -29,7 +28,6 @@ const defaultFields = {
 type RegisterFields = z.infer<typeof RegisterSchema>;
 
 export function Register() {
-  const navigate = useNavigate();
   const { register: registerUser, isLoading, error: authError } = useAuth();
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -42,8 +40,11 @@ export function Register() {
     reset,
   } = useForm<RegisterFields>({
     resolver: zodResolver(RegisterSchema),
-    defaultValues: { ...defaultFields, userType: selectedType ?? "student" } as RegisterFields,
-    mode: "onSubmit"
+    defaultValues: {
+      ...defaultFields,
+      userType: selectedType ?? "student",
+    } as RegisterFields,
+    mode: "onSubmit",
   });
 
   const onSubmit = async (data: RegisterFields) => {
@@ -57,10 +58,7 @@ export function Register() {
       registrationCode: data.registrationCode,
       ...(data.userType === "teacher" ? { cndb: data.cndb } : {}),
     };
-    const success = await registerUser(payload);
-    if (success) {
-      navigate("/dashboard");
-    }
+    await registerUser(payload);
   };
 
   const selectProfile = (type: ProfileType) => {
@@ -74,13 +72,21 @@ export function Register() {
         maxWidthClassName="max-w-4xl"
         header={
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4 text-gray-900">Criar conta no helpa</h1>
+            <h1 className="text-4xl font-bold mb-4 text-gray-900">
+              Criar conta no helpa
+            </h1>
             <p className="text-xl text-gray-600">
               Escolha o tipo de perfil que melhor se adequa a você!
             </p>
           </div>
         }
-        footer={<AuthFooterLink prefix="Já possui uma conta no helpa?" linkText="Entrar" to="/login" />}
+        footer={
+          <AuthFooterLink
+            prefix="Já possui uma conta no helpa?"
+            linkText="Entrar"
+            to="/login"
+          />
+        }
       >
         <ProfileSelector selectedType={selectedType} onSelect={selectProfile} />
       </AuthShell>
@@ -88,7 +94,9 @@ export function Register() {
   }
 
   const cndbError = (errors as { cndb?: { message?: string } }).cndb?.message;
-  const selectedProfile = PROFILE_OPTIONS.find((option) => option.type === selectedType);
+  const selectedProfile = PROFILE_OPTIONS.find(
+    (option) => option.type === selectedType,
+  );
   return (
     <AuthShell
       maxWidthClassName="max-w-[760px]"
@@ -100,7 +108,13 @@ export function Register() {
           ← Voltar para a Seleção de Cadastro
         </button>
       }
-      footer={<AuthFooterLink prefix="Já possui uma conta no helpa?" linkText="Entrar" to="/login" />}
+      footer={
+        <AuthFooterLink
+          prefix="Já possui uma conta no helpa?"
+          linkText="Entrar"
+          to="/login"
+        />
+      }
     >
       <div className="flex items-center gap-4 mb-8">
         <div
@@ -110,7 +124,9 @@ export function Register() {
         >
           <span
             className={`font-semibold text-xl ${
-              selectedProfile?.color === "green" ? "text-green-600" : "text-blue-600"
+              selectedProfile?.color === "green"
+                ? "text-green-600"
+                : "text-blue-600"
             }`}
           >
             {selectedProfile?.title?.[0] ?? "?"}
@@ -118,7 +134,9 @@ export function Register() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            {selectedProfile?.title ? `Cadastro de ${selectedProfile.title}` : "Cadastro"}
+            {selectedProfile?.title
+              ? `Cadastro de ${selectedProfile.title}`
+              : "Cadastro"}
           </h1>
         </div>
       </div>
@@ -183,7 +201,6 @@ export function Register() {
               onTogglePassword={() => setShowPassword((current) => !current)}
             />
 
-
             <div className="mt-4">
               <PasswordField
                 label="Confirmar senha"
@@ -196,7 +213,7 @@ export function Register() {
             </div>
           </div>
 
-          <PasswordGuidelines password={watch('password') ?? ''} />
+          <PasswordGuidelines password={watch("password") ?? ""} />
         </div>
 
         <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
