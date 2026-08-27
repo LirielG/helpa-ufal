@@ -206,39 +206,56 @@ export const swaggerDocument: OpenAPIV3.Document = {
     },
     "/auth/register": {
       post: {
-        tags:    ["Auth"],
+        tags: ["Auth"],
         summary: "Register a new user",
+        description:
+          "Creates a new user account (STUDENT or TEACHER). This endpoint only creates the account: it does NOT authenticate the user — the response body contains no token and no session cookie (Set-Cookie) is sent. To authenticate, use POST /auth/login.",
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
+                // INALTERADO — o payload de entrada não é afetado pela refatoração.
                 oneOf: [
                   {
                     title: "STUDENT",
                     type: "object",
-                    required: ["userType", "fullName", "email", "password", "course", "registrationCode"],
+                    required: [
+                      "userType",
+                      "fullName",
+                      "email",
+                      "password",
+                      "course",
+                      "registrationCode",
+                    ],
                     properties: {
-                      userType:         { type: "string", enum: ["STUDENT"] },
-                      fullName:         { type: "string" },
-                      email:            { type: "string", format: "email" },
-                      password:         { type: "string", minLength: 8 },
-                      course:           { type: "string" },
+                      userType: { type: "string", enum: ["STUDENT"] },
+                      fullName: { type: "string" },
+                      email: { type: "string", format: "email" },
+                      password: { type: "string", minLength: 8 },
+                      course: { type: "string" },
                       registrationCode: { type: "string" },
                     },
                   },
                   {
                     title: "TEACHER",
                     type: "object",
-                    required: ["userType", "fullName", "email", "password", "registrationCode", "cndb"],
+                    required: [
+                      "userType",
+                      "fullName",
+                      "email",
+                      "password",
+                      "registrationCode",
+                      "cndb",
+                    ],
                     properties: {
-                      userType:         { type: "string", enum: ["TEACHER"] },
-                      fullName:         { type: "string" },
-                      email:            { type: "string", format: "email" },
-                      password:         { type: "string", minLength: 8 },
+                      userType: { type: "string", enum: ["TEACHER"] },
+                      fullName: { type: "string" },
+                      email: { type: "string", format: "email" },
+                      password: { type: "string", minLength: 8 },
                       registrationCode: { type: "string" },
-                      cndb:             { type: "string" },
-                      course:           { type: "string" },
+                      cndb: { type: "string" },
+                      course: { type: "string" },
                     },
                   },
                 ],
@@ -249,11 +266,51 @@ export const swaggerDocument: OpenAPIV3.Document = {
         responses: {
           201: {
             description: "Registered successfully.",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/AuthResponse" } } },
+            content: {
+              "application/json": {
+                // ALTERADO — era: { $ref: "#/components/schemas/AuthResponse" }
+                // O corpo agora é o próprio usuário criado (UserResponse),
+                // sem envelope { token, user }.
+                schema: { $ref: "#/components/schemas/UserResponse" },
+                // NOVO — exemplo concreto do novo contrato, alinhado ao
+                // exemplo do Bruno (facilita o frontend e o Swagger UI).
+                example: {
+                  id: "3f8a1c2e-4b5d-4e6f-8a9b-0c1d2e3f4a5b",
+                  fullName: "Gabryel Adriano Borges de Souza",
+                  email: "user@email.com",
+                  userType: "STUDENT",
+                  isManager: false,
+                  createdAt: "2026-08-26T22:00:00.000Z",
+                  updatedAt: "2026-08-26T22:00:00.000Z",
+                },
+              },
+            },
           },
-          400: { description: "Validation error.",     content: { "application/json": { schema: { $ref: "#/components/schemas/ValidationError" } } } },
-          409: { description: "Email already in use.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
-          500: { description: "Internal server error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+          // 400, 409 e 500 INALTERADOS — a semântica dos erros não muda.
+          400: {
+            description: "Validation error.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ValidationError" },
+              },
+            },
+          },
+          409: {
+            description: "Email already in use.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          500: {
+            description: "Internal server error.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
         },
       },
     },
