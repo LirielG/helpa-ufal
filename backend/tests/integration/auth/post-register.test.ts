@@ -5,14 +5,8 @@ import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import { authHeader } from "../../helpers/auth.js";
 
-// Route contract: docs/Register-a-new-user.yml (Bruno) + swagger.ts.
-// Refatoração: o cadastro apenas cria a conta — sem token no corpo e sem
-// Set-Cookie. Autenticação acontece exclusivamente em POST /auth/login.
-
 const REGISTER_URL = "/auth/register";
 const LOGIN_URL = "/auth/login";
-// Sonda de autenticação: sem credenciais → 401; autenticado com atividade
-// inexistente → 404 (mesmo padrão de post-enroll.test.ts).
 const probeUrl = () => `/activities/${randomUUID()}/enroll`;
 
 function unique(prefix: string): string {
@@ -52,8 +46,6 @@ describe("POST /auth/register", () => {
     const response = await request(app).post(REGISTER_URL).send(payload);
 
     expect(response.status).toBe(201);
-    // Contrato novo: o corpo É o UserResponse. O toEqual exato reprova
-    // qualquer campo extra (token, passwordHash) ou envelope { user }.
     expect(response.body).toEqual({
       id: expect.any(String),
       fullName: payload.fullName,
@@ -75,7 +67,7 @@ describe("POST /auth/register", () => {
   });
 
   it("creates a TEACHER without course (optional) and persists the subtype", async () => {
-    const payload = aTeacherPayload(); // sem "course": opcional para TEACHER
+    const payload = aTeacherPayload();
 
     const response = await request(app).post(REGISTER_URL).send(payload);
 
@@ -91,8 +83,6 @@ describe("POST /auth/register", () => {
   });
 
   it("does NOT send a Set-Cookie header", async () => {
-    // AC central da refatoração. Falha (Red) enquanto o controller chamar
-    // res.cookie("token", ...) — comportamento atual.
     const response = await request(app).post(REGISTER_URL).send(aStudentPayload());
 
     expect(response.status).toBe(201);
@@ -100,8 +90,6 @@ describe("POST /auth/register", () => {
   });
 
   it("leaves the client unauthenticated: protected route right after register → 401", async () => {
-    // O agente persiste cookies: se o register setasse o cookie de sessão,
-    // a sonda voltaria autenticada (404 de atividade inexistente, não 401).
     const agent = request.agent(app);
     await agent.post(REGISTER_URL).send(aStudentPayload()).expect(201);
 
@@ -111,7 +99,6 @@ describe("POST /auth/register", () => {
   });
 
   it("the created account can authenticate via login (register → login → protected)", async () => {
-    // Prova o AC "cadastro continua funcionando": o fluxo completo do usuário.
     const payload = aStudentPayload();
     await request(app).post(REGISTER_URL).send(payload).expect(201);
 
@@ -124,7 +111,7 @@ describe("POST /auth/register", () => {
       .post(probeUrl())
       .set(...authHeader(login.body.token));
 
-    expect(probe.status).toBe(404); // autenticado (não 401): conta funcional
+    expect(probe.status).toBe(404);
   });
 
   // ---------- 400 - Bad Request ----------
@@ -173,6 +160,16 @@ describe("POST /auth/register", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("rejects a STUDENT payload without course", async () => {
+  const incomplete: Record<string, unknown> = aStudentPayload();
+  delete incomplete.course;
+
+  const response = await request(app).post(REGISTER_URL).send(incomplete);
+
+  expect(response.status).toBe(400);
+  expect(response.body.message).toBe("Validation error.");
+});
 
   // ---------- 409 - Conflict ----------
 

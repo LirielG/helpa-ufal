@@ -4,10 +4,6 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
 
-// REGRESSÃO: o login não é tocado pela refatoração — estes testes passam hoje
-// e devem seguir verdes. Pin do contrato: 200 + Set-Cookie httpOnly + corpo
-// no envelope { token, user } (diferente do register, agora "achatado").
-
 const LOGIN_URL = "/auth/login";
 const probeUrl = () => `/activities/${randomUUID()}/enroll`;
 
@@ -42,8 +38,6 @@ describe("POST /auth/login", () => {
   });
 
   it("accepts the session cookie on protected routes (cookie path)", async () => {
-    // A suíte inteira usa Bearer; este é o único teste exercitando o caminho
-    // do cookie (cookie-parser → AuthMiddleware).
     const email = "aluno-cookie@ufal.br";
     await createStudent({ email });
     const agent = request.agent(app);
@@ -54,7 +48,7 @@ describe("POST /auth/login", () => {
 
     const probe = await agent.post(probeUrl());
 
-    expect(probe.status).toBe(404); // cookie aceito (não 401)
+    expect(probe.status).toBe(404);
   });
 
   it("returns 401 for an unknown email", async () => {
