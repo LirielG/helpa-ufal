@@ -156,7 +156,10 @@ model Enrollment {
   userId              String
   activityId          String
   status              EnrollmentStatus
-  attendanceConfirmed Boolean          @default(false)
+  /// Tri-state: null = nada dito | true = presente | false = faltou.
+  attendanceConfirmed Boolean?
+  /// Horas homologadas. Só significativo quando attendanceConfirmed = true.
+  confirmedWorkloadHours Int       @default(0)
   isModerator         Boolean          @default(false)
   enrolledAt          DateTime         @default(now())
   createdAt           DateTime         @default(now())
