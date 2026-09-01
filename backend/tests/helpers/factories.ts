@@ -9,6 +9,7 @@ import type {
   Address,
   CampusLocation,
   Enrollment,
+  SigaaActivity,
   User,
 } from "@prisma/client";
 import { prisma } from "@/database/prisma.js";
@@ -189,7 +190,6 @@ export function anAddress(): Omit<Address, "id" | "createdAt" | "updatedAt"> {
   };
 }
 
-
 type EnrollmentOverrides = Partial<{
   status: EnrollmentStatus;
   attendanceConfirmed: boolean | null;
@@ -197,6 +197,40 @@ type EnrollmentOverrides = Partial<{
   isModerator: boolean;
   enrolledAt: Date;
 }>;
+
+type SigaaActivityOverrides = Partial<
+  Pick<
+    SigaaActivity,
+    | "sigaaId"
+    | "title"
+    | "type"
+    | "normalizedType"
+    | "department"
+    | "isActive"
+    | "lastSeenAt"
+  >
+>;
+
+/**
+ * Creates a SigaaActivity directly in the database. There is no API to create
+ * one: in production the rows only ever come from the scraper.
+ */
+export async function createSigaaActivity(
+  overrides: SigaaActivityOverrides = {},
+): Promise<SigaaActivity> {
+  return prisma.sigaaActivity.create({
+    data: {
+      sigaaId: unique("sigaa"),
+      title: "Ação de Extensão de Teste",
+      type: "CURSO",
+      normalizedType: "COURSE",
+      department: "CEDU",
+      isActive: true,
+      lastSeenAt: new Date(),
+      ...overrides,
+    },
+  });
+}
 
 /**
  * Creates an Enrollment directly in the database, bypassing the service.

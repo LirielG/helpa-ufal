@@ -3,6 +3,7 @@ import type { ISigaaScraperService } from "./ISigaaScraperService.js";
 import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
 import SigaaScraperService from "./SigaaScraperService.js";
 import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
+import { env } from "@/config/env.js";
 
 const DEFAULT_CACHE_TTL_MS =
   (Number(process.env.SIGAA_CACHE_TTL_HOURS) || 12) * 60 * 60 * 1000;
@@ -11,12 +12,14 @@ type Props = {
   scraperService?: ISigaaScraperService;
   activityRepository?: ISigaaActivityRepository;
   cacheTtlMs?: number;
+  syncEnabled?: boolean;
 };
 
 export class SigaaSyncService implements ISigaaSyncService {
   private _scraperService: ISigaaScraperService;
   private _activityRepository: ISigaaActivityRepository;
   private _cacheTtlMs: number;
+  private _syncEnabled: boolean;
   private _inFlightSync: Promise<void> | null = null;
 
   constructor(props?: Props) {
@@ -24,9 +27,13 @@ export class SigaaSyncService implements ISigaaSyncService {
     this._activityRepository =
       props?.activityRepository ?? new SigaaActivityRepository();
     this._cacheTtlMs = props?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
+    this._syncEnabled = props?.syncEnabled ?? env.SIGAA_SYNC_ENABLED;
   }
 
   public async syncIfNeeded(): Promise<void> {
+    // Only the implicit sync obeys the switch: forceSync stays a force.
+    if (!this._syncEnabled) return;
+
     try {
       const latestLastSeenAt =
         await this._activityRepository.getLatestLastSeenAt();
@@ -55,7 +62,8 @@ export class SigaaSyncService implements ISigaaSyncService {
     this._inFlightSync = (async () => {
       try {
         const syncTimestamp = new Date();
-        const scraped = await this._scraperService.scrapeCurrentYearActivities();
+        const scraped =
+          await this._scraperService.scrapeCurrentYearActivities();
 
         if (scraped.length > 0) {
           await this._activityRepository.upsertMany(scraped, syncTimestamp);

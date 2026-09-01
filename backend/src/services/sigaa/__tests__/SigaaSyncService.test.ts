@@ -4,19 +4,24 @@ import type { ISigaaScraperService } from "../ISigaaScraperService.js";
 import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
 import type { SigaaActivity } from "@prisma/client";
 
-function mockScraper(overrides: Partial<ISigaaScraperService> = {}): ISigaaScraperService {
+function mockScraper(
+  overrides: Partial<ISigaaScraperService> = {},
+): ISigaaScraperService {
   return {
     scrapeCurrentYearActivities: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
 
-function mockRepository(overrides: Partial<ISigaaActivityRepository> = {}): ISigaaActivityRepository {
+function mockRepository(
+  overrides: Partial<ISigaaActivityRepository> = {},
+): ISigaaActivityRepository {
   return {
     getLatestLastSeenAt: vi.fn().mockResolvedValue(null),
     upsertMany: vi.fn().mockResolvedValue(undefined),
     markInactiveBefore: vi.fn().mockResolvedValue(0),
     list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+    listDistinctTypes: vi.fn().mockResolvedValue([]),
     listDistinctDepartments: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as ISigaaActivityRepository;
@@ -30,7 +35,9 @@ describe("SigaaSyncService", () => {
   describe("syncIfNeeded — failure handling", () => {
     it("does not throw when scraper fails with network error", async () => {
       const scraper = mockScraper({
-        scrapeCurrentYearActivities: vi.fn().mockRejectedValue(new Error("UNABLE_TO_VERIFY_LEAF_SIGNATURE")),
+        scrapeCurrentYearActivities: vi
+          .fn()
+          .mockRejectedValue(new Error("UNABLE_TO_VERIFY_LEAF_SIGNATURE")),
       });
       const repository = mockRepository();
       const syncService = new SigaaSyncService({
@@ -44,7 +51,9 @@ describe("SigaaSyncService", () => {
 
     it("does not throw when scraper fails with timeout", async () => {
       const scraper = mockScraper({
-        scrapeCurrentYearActivities: vi.fn().mockRejectedValue(new Error("The operation was aborted")),
+        scrapeCurrentYearActivities: vi
+          .fn()
+          .mockRejectedValue(new Error("The operation was aborted")),
       });
       const repository = mockRepository();
       const syncService = new SigaaSyncService({
@@ -58,7 +67,9 @@ describe("SigaaSyncService", () => {
 
     it("does not upsert when scraper fails", async () => {
       const scraper = mockScraper({
-        scrapeCurrentYearActivities: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
+        scrapeCurrentYearActivities: vi
+          .fn()
+          .mockRejectedValue(new Error("ECONNREFUSED")),
       });
       const repository = mockRepository();
       const syncService = new SigaaSyncService({
@@ -87,10 +98,14 @@ describe("SigaaSyncService", () => {
         },
       ];
       const scraper = mockScraper({
-        scrapeCurrentYearActivities: vi.fn().mockRejectedValue(new Error("fetch failed")),
+        scrapeCurrentYearActivities: vi
+          .fn()
+          .mockRejectedValue(new Error("fetch failed")),
       });
       const repository = mockRepository({
-        list: vi.fn().mockResolvedValue({ activities: existingActivities, total: 1 }),
+        list: vi
+          .fn()
+          .mockResolvedValue({ activities: existingActivities, total: 1 }),
       });
       const syncService = new SigaaSyncService({
         scraperService: scraper,
@@ -128,6 +143,39 @@ describe("SigaaSyncService", () => {
 
       await syncService.syncIfNeeded();
       expect(scraper.scrapeCurrentYearActivities).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("syncIfNeeded — sync disabled", () => {
+    it("does not scrape nor touch the repository when sync is disabled", async () => {
+      const scraper = mockScraper();
+      const repository = mockRepository();
+      const syncService = new SigaaSyncService({
+        scraperService: scraper,
+        activityRepository: repository,
+        cacheTtlMs: 0,
+        syncEnabled: false,
+      });
+
+      await expect(syncService.syncIfNeeded()).resolves.toBeUndefined();
+      expect(repository.getLatestLastSeenAt).not.toHaveBeenCalled();
+      expect(scraper.scrapeCurrentYearActivities).not.toHaveBeenCalled();
+    });
+
+    // The switch is deliberately scoped to syncIfNeeded: forceSync must keep
+    // meaning "force", so an explicit sync still runs with the flag off.
+    it("still scrapes on forceSync when sync is disabled", async () => {
+      const scraper = mockScraper();
+      const repository = mockRepository();
+      const syncService = new SigaaSyncService({
+        scraperService: scraper,
+        activityRepository: repository,
+        cacheTtlMs: 0,
+        syncEnabled: false,
+      });
+
+      await syncService.forceSync();
+      expect(scraper.scrapeCurrentYearActivities).toHaveBeenCalledTimes(1);
     });
   });
 
