@@ -1,11 +1,11 @@
--- 1. Novo campo
+-- 1. new field
 ALTER TABLE "Enrollment" ADD COLUMN "confirmedWorkloadHours" INTEGER NOT NULL DEFAULT 0;
 
--- 2. Afrouxa a coluna existente
+-- 2. Loosens the existing column
 ALTER TABLE "Enrollment" ALTER COLUMN "attendanceConfirmed" DROP NOT NULL;
 
--- 3. Converte o histórico: o `false` antigo significava "nada dito", não "faltou"
+-- 3.Converts history: the old `false` meant "nothing said," not "missing."
 UPDATE "Enrollment" SET "attendanceConfirmed" = NULL WHERE "attendanceConfirmed" = false;
 
--- 4. Remove o default: inscrição nova nasce com "nada dito"
+-- 4. Remove the default: a new registration starts with "nothing specified"
 ALTER TABLE "Enrollment" ALTER COLUMN "attendanceConfirmed" DROP DEFAULT;
