@@ -59,7 +59,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
           data: {
             status: ENROLLMENT_INITIAL_STATUS,
             enrolledAt: new Date(),
-            attendanceConfirmed: false,
+            attendanceConfirmed: null,     
+            confirmedWorkloadHours: 0,     
           },
         });
       }

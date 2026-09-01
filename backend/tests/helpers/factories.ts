@@ -192,7 +192,8 @@ export function anAddress(): Omit<Address, "id" | "createdAt" | "updatedAt"> {
 
 type EnrollmentOverrides = Partial<{
   status: EnrollmentStatus;
-  attendanceConfirmed: boolean;
+  attendanceConfirmed: boolean | null;
+  confirmedWorkloadHours: number;
   isModerator: boolean;
   enrolledAt: Date;
 }>;
