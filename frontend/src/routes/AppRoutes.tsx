@@ -7,11 +7,14 @@ import {
   Profile,
   EditAction,
 } from "../pages";
+import { useSessionExpiry } from "../hooks/useSessionExpiry";
 import { PublicRoute } from "./PublicRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { GuestRoute } from "./GuestRoute";
 
 export function AppRoutes() {
+  useSessionExpiry();
+
   return (
     <Routes>
       <Route
