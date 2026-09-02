@@ -57,42 +57,31 @@ class AuthService implements IAuthService {
     return { token, user: loginUser };
   }
 
-  public async register(
-    data: RegisterInput,
-  ): Promise<{ token: string; user: UserResponse }> {
-    const existingUser = await this._userRepository.findByEmail(data.email);
+  public async register(data: RegisterInput): Promise<UserResponse> {
+  const existingUser = await this._userRepository.findByEmail(data.email);
 
-    if (existingUser) {
-      throw new CustomError(409, "Email already in use.");
-    }
+  if (existingUser) {
+    throw new CustomError(409, "Email already in use.");
+  }
 
-    const passwordHash = await bcryptjs.hash(data.password, 12);
+  const passwordHash = await bcryptjs.hash(data.password, 12);
 
-    const newUser = await this._userRepository.createWithSubtype({
-      ...data,
-      passwordHash,
-    });
+  const newUser = await this._userRepository.createWithSubtype({
+    ...data,
+    passwordHash,
+  });
 
-    const userResponse: UserResponse = {
-      id: newUser.id,
-      fullName: newUser.fullName,
-      email: newUser.email,
-      userType: newUser.userType,
-      isManager: newUser.isManager,
-      createdAt: newUser.createdAt,
-      updatedAt: newUser.updatedAt,
-    };
+  const userResponse: UserResponse = {
+    id: newUser.id,
+    fullName: newUser.fullName,
+    email: newUser.email,
+    userType: newUser.userType,
+    isManager: newUser.isManager,
+    createdAt: newUser.createdAt,
+    updatedAt: newUser.updatedAt,
+  };
 
-    const authenticatedUser: AuthenticatedUser = {
-      id: newUser.id,
-      userType: newUser.userType,
-      isManager: newUser.isManager,
-    };
-
-    const token = signJwt(authenticatedUser);
-
-    return { token, user: userResponse };
+  return userResponse; 
   }
 }
-
-export default AuthService;
+  export default AuthService;
