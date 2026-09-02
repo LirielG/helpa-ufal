@@ -1,12 +1,19 @@
+// tests/integration/auth/post-logout.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
 
+// Route contract: POST /auth/logout — 204 e limpeza do cookie de sessão.
+
 const LOGOUT_URL = "/auth/logout";
 const LOGIN_URL = "/auth/login";
-const probeUrl = () => `/activities/${randomUUID()}/enroll`;
+
+// Sonda de autenticação — rota protegida EXISTENTE (ver post-register.test.ts
+// para o porquê de não usarmos /activities/:id/enroll).
+const probeUrl = () => `/activities/${randomUUID()}/reports`;
+const probeBody = { category: "SPAM" };
 
 describe("POST /auth/logout", () => {
   it("returns 204 and clears the session cookie", async () => {
@@ -28,7 +35,7 @@ describe("POST /auth/logout", () => {
     expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970/); // expirado no passado
 
     // O jar do agente descartou o cookie: a sonda volta desautenticada.
-    const probe = await agent.post(probeUrl());
+    const probe = await agent.post(probeUrl()).send(probeBody);
     expect(probe.status).toBe(401);
   });
 
