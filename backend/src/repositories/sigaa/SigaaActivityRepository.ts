@@ -1,5 +1,8 @@
 import type { PrismaClient, SigaaActivity, Prisma } from "@prisma/client";
-import type { ISigaaActivityRepository, SigaaRepoFilters } from "./ISigaaActivityRepository.js";
+import type {
+  ISigaaActivityRepository,
+  SigaaRepoFilters,
+} from "./ISigaaActivityRepository.js";
 import type { ScrapedSigaaActivity } from "@/types/sigaa.js";
 import { prisma } from "@/database/prisma.js";
 
@@ -24,7 +27,7 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
 
   public async upsertMany(
     activities: ScrapedSigaaActivity[],
-    syncTimestamp: Date
+    syncTimestamp: Date,
   ): Promise<void> {
     if (activities.length === 0) return;
 
@@ -52,8 +55,8 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
               isActive: true,
               lastSeenAt: syncTimestamp,
             },
-          })
-        )
+          }),
+        ),
       );
     }
   }
@@ -72,7 +75,7 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
   }
 
   public async list(
-    filters: SigaaRepoFilters
+    filters: SigaaRepoFilters,
   ): Promise<{ activities: SigaaActivity[]; total: number }> {
     const where: Prisma.SigaaActivityWhereInput = { isActive: true };
 
@@ -101,11 +104,19 @@ export class SigaaActivityRepository implements ISigaaActivityRepository {
     return { activities, total };
   }
 
+  public async listDistinctTypes(): Promise<string[]> {
+    const rows = await this._prisma.sigaaActivity.groupBy({
+      by: ["type"],
+      where: { isActive: true },
+      orderBy: { type: "asc" },
+    });
+    return rows.map((r) => r.type);
+  }
+
   public async listDistinctDepartments(): Promise<string[]> {
-    const rows = await this._prisma.sigaaActivity.findMany({
+    const rows = await this._prisma.sigaaActivity.groupBy({
+      by: ["department"],
       where: { isActive: true, department: { not: null } },
-      distinct: ["department"],
-      select: { department: true },
       orderBy: { department: "asc" },
     });
     return rows.map((r) => r.department!);

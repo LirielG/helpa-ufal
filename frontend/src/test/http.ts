@@ -29,6 +29,8 @@ export const handlers = [
     `${API}/auth/logout`,
     () => new HttpResponse(null, { status: 204 }),
   ),
+
+  http.get(`${API}/activities`, () => HttpResponse.json({ data: [] })),
 ];
 
 export const server = setupServer(...handlers);

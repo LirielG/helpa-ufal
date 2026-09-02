@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { makeLoginRequest, render, screen, signIn, userEvent } from "@/test";
+import {
+  API,
+  HttpResponse,
+  http,
+  makeLoginRequest,
+  render,
+  screen,
+  server,
+  signIn,
+  userEvent,
+} from "@/test";
+import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
 
 type TestUser = ReturnType<typeof userEvent.setup>;
@@ -99,6 +110,28 @@ describe("AppRoutes", () => {
       expect(
         await screen.findByText("Oficina de Programação"),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("expired session", () => {
+    // The screen itself does nothing about the 401: it just asks for its data
+    // and the HTTP client takes the user back to the login page.
+    it("sends the user to login when a request reports an expired session", async () => {
+      server.use(
+        http.get(
+          `${API}/activities`,
+          () => new HttpResponse(null, { status: 401 }),
+        ),
+      );
+      signIn();
+      const { user } = render(<AppRoutes />, { route: "/profile" });
+
+      await user.click(await screen.findByRole("button", { name: "Ações" }));
+
+      expect(
+        await screen.findByRole("button", { name: "Entrar" }),
+      ).toBeInTheDocument();
+      expect(useAuthStore.getState().user).toBeNull();
     });
   });
 
