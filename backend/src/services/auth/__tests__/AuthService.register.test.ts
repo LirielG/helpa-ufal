@@ -6,8 +6,8 @@ import type { User } from "@prisma/client";
 import { expectHttpError } from "@/utils/tests.js";
 import { signJwt } from "@/utils/jwt.js";
 
-// O register NÃO deve mais emitir JWT. Mockamos o módulo para provar que
-// signJwt não é chamado neste fluxo (o login, em outro arquivo, usa o real).
+// The register should NOT issue JWT anymore. We mock the module to prove that
+// signJwt is not called in this flow (the login, in another file, uses the real one).
 vi.mock("@/utils/jwt.js", () => ({ signJwt: vi.fn(() => "token-mockado") }));
 
 const STUDENT_INPUT: RegisterInput = {
@@ -51,7 +51,7 @@ function mockRepository(overrides: Partial<IUserRepository> = {}) {
 }
 
 describe("AuthService.register", () => {
-  // ---------- Contrato pós-refatoração: cadastro NÃO autentica ----------
+  // ---------- Post-refactoring contract: registration does NOT authenticate ----------
 
   it.each([STUDENT_INPUT, TEACHER_INPUT])(
     "creates the account and returns only the UserResponse ($userType)",
@@ -68,7 +68,7 @@ describe("AuthService.register", () => {
 
       const result = await service.register(input);
 
-      // Retorno "achatado": o resultado É o usuário — sem envelope { token, user }
+      // "Flattened" return: the result IS the user: no envelope { token, user }
       expect(result).toEqual({
         id: user.id,
         fullName: user.fullName,
@@ -84,7 +84,7 @@ describe("AuthService.register", () => {
   );
 
   it("does not sign any JWT during registration", async () => {
-    // Guarda da decisão da refatoração: emissão de token é exclusiva do login.
+    // Refactoring decision guard: token issuance is unique to the login.
     const userRepository = mockRepository();
     const service = new AuthService({ userRepository });
 
@@ -112,7 +112,7 @@ describe("AuthService.register", () => {
     expect(persisted.passwordHash).not.toBe(STUDENT_INPUT.password);
   });
 
-  // ---------- Regras de negócio ----------
+  // ---------- Business rules ----------
 
   it("throws 409 when the email is already in use", async () => {
     const userRepository = mockRepository({

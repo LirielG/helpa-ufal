@@ -58,30 +58,30 @@ class AuthService implements IAuthService {
   }
 
   public async register(data: RegisterInput): Promise<UserResponse> {
-  const existingUser = await this._userRepository.findByEmail(data.email);
+    const existingUser = await this._userRepository.findByEmail(data.email);
 
-  if (existingUser) {
-    throw new CustomError(409, "Email already in use.");
+    if (existingUser) {
+      throw new CustomError(409, "Email already in use.");
+    }
+
+    const passwordHash = await bcryptjs.hash(data.password, 12);
+
+    const newUser = await this._userRepository.createWithSubtype({
+      ...data,
+      passwordHash,
+    });
+
+    const userResponse: UserResponse = {
+      id: newUser.id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      userType: newUser.userType,
+      isManager: newUser.isManager,
+      createdAt: newUser.createdAt,
+      updatedAt: newUser.updatedAt,
+    };
+
+    return userResponse; 
+    }
   }
-
-  const passwordHash = await bcryptjs.hash(data.password, 12);
-
-  const newUser = await this._userRepository.createWithSubtype({
-    ...data,
-    passwordHash,
-  });
-
-  const userResponse: UserResponse = {
-    id: newUser.id,
-    fullName: newUser.fullName,
-    email: newUser.email,
-    userType: newUser.userType,
-    isManager: newUser.isManager,
-    createdAt: newUser.createdAt,
-    updatedAt: newUser.updatedAt,
-  };
-
-  return userResponse; 
-  }
-}
   export default AuthService;
