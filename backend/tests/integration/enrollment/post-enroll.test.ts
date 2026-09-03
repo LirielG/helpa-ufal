@@ -74,6 +74,7 @@ describe("POST /activities/:id/enroll", () => {
     expect(stored.status).toBe("APPROVED");
     expect(stored.attendanceConfirmed).toBeNull();   // era: toBe(false)
     expect(stored.confirmedWorkloadHours).toBe(0);   // novo
+    expect(stored.enrolledAt.getTime()).toBe(
       new Date("2026-01-01T00:00:00.000Z").getTime(),
     );
 
