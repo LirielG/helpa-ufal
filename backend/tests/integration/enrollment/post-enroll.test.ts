@@ -12,7 +12,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: docs/Create-Enrollment.yml (Bruno).
+// Route contract: Enroll/Enroll-in-an-activity.yml.
 // If the team flattens the route (POST /enroll), this helper is the only line to change.
 const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
 
@@ -254,16 +254,16 @@ describe("POST /activities/:id/enroll", () => {
 
   // ---------- 400 - Bad Request ----------
 
-  it("rejects a malformed activity id", async () => {
-    const student = await createStudent();
+  it("treats a malformed activity id as not found (D1)", async () => {
+  const student = await createStudent();
 
-    const response = await request(app)
-      .post(enrollUrl("not-a-uuid"))
-      .set(...authHeader(student.token));
+  const response = await request(app)
+    .post(enrollUrl("not-a-uuid"))
+    .set(...authHeader(student.token));
 
   expect(response.status).toBe(404);
   expect(response.body).toEqual({ status: 404, message: "Activity not found." });
-  });
+});
 
   // ---------- Concurrency ----------
 
