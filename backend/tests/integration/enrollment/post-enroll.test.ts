@@ -247,9 +247,8 @@ describe("POST /activities/:id/enroll", () => {
       .post(enrollUrl("not-a-uuid"))
       .set(...authHeader(student.token));
 
-    expect(response.status).toBe(400);
-    // Body depends on how ErrorHandler serializes ValidationError; document
-    // the exact shape in Bruno when the route lands (#83).
+  expect(response.status).toBe(404);
+  expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
 
   // ---------- Concurrency ----------
