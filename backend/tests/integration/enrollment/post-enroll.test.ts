@@ -101,6 +101,20 @@ describe("POST /activities/:id/enroll", () => {
     expect(detail.body.availableSlots).toBe(1);
   });
 
+  it("ignores any userId sent in the request body and enrolls the token's user", async () => {
+    const { activity } = await anOpenActivity();
+    const student = await createStudent();
+    const other = await createStudent();
+
+    const response = await request(app)
+      .post(enrollUrl(activity.id))
+      .set(...authHeader(student.token))
+      .send({ userId: other.user.id });
+
+    expect(response.status).toBe(201);
+    expect(response.body.userId).toBe(student.user.id);
+  });
+
   // ---------- 401 - Unauthorized ----------
 
   it("rejects requests without a token", async () => {
