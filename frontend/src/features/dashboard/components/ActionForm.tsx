@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
-import type { Action, ActionStatus, ActionType } from "../types";
 import { ACTION_AREAS, ACTION_TYPES, ACTION_FORMATS } from "../constants";
-import { ImagePlus, X, ArrowRight, ArrowLeft, Check, Eye } from "lucide-react";
-
+import { ImagePlus, X, ArrowRight, ArrowLeft, Check, Eye, Loader2 } from "lucide-react";
+import { api } from "../../../services/api";
 interface ActionRegisterProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void; 
 }
 
-export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
+export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterProps) {
   const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -32,32 +33,59 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
 
   if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (step === 1) {
       setStep(2);
+      return;
     } 
     
-    else {
-      const newAction: Omit<Action, "id"> = {
-        title: title,
-        description: description,
-        image: image,
-        location: location,
-        date: date,
-        workload: Number(workload),
-        format: format,
-        spots: Number(spots),
-        type: type as ActionType,
-        status: "available" as ActionStatus,
-        cep: Number(cep),
-        city: city,
-        state: state,
-        area: area || undefined,
+    setIsLoading(true);
+
+    try {
+      const typeMap: Record<string, string> = {
+        oficina: "COURSE",
+        minicurso: "COURSE",
+        palestra: "LECTURE",
+        evento: "EVENT",
+        servico: "EXTENSION"
       };
 
-      console.log("Enviando ação completa:", newAction);
+      const formatMap: Record<string, string> = {
+        presencial: "IN_PERSON",
+        remoto: "ONLINE",
+        hibrido: "HYBRID"
+      };
+
+      const cleanZipCode = cep.replace(/\D/g, "");
+
+      const payload = {
+        title,
+        description: description.trim() || "Descrição não informada.",
+        url: "https://arapiraca.ufal.br",
+        type: typeMap[type] || "OTHER",
+        campus: "ARAPIRACA",
+        startDate: new Date(`${date}T08:00:00Z`).toISOString(),
+        endDate: new Date(`${date}T18:00:00Z`).toISOString(),
+        slots: Number(spots),
+        area,
+        workloadHours: Number(workload),
+        format: formatMap[format] || "IN_PERSON",
+        
+        ...(format !== "remoto" && city && {
+          address: {
+            addressLine: location || "Não informado",
+            district: "Centro", 
+            zipCode: cleanZipCode || "00000000",
+            city,
+            state: state.toUpperCase(),
+          }
+        })
+      };
+
+      await api.post("/activities", payload);
+      
       setShowSuccessConfirm(true);
       
       setStep(1);
@@ -74,7 +102,14 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
       setCep("");
       setCity("");
       setState("");
-      onClose();
+
+      if (onSuccess) onSuccess();
+
+    } catch (error) {
+      console.error("Erro ao criar ação:", error);
+      alert("Não foi possível criar a ação. Verifique os dados e tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,7 +155,7 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
           <form onSubmit={handleNext} className="h-full flex flex-col justify-between gap-6">
             
             {step === 1 ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 overflow-y-auto pr-2 max-h-[60vh]">
                 <h2 className="text-2xl font-bold text-[#0A2540]">Dê um nome para a sua ação</h2>
                 
                 <div>
@@ -203,9 +238,20 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 overflow-y-auto pr-2 max-h-[60vh]">
                 <h2 className="text-2xl font-bold text-[#0A2540]">Conte-nos onde e quando será</h2>
                 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data da ação</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
+                    required
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Carga horária total</label>
@@ -214,6 +260,7 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                       value={workload}
                       onChange={(e) => setWorkload(e.target.value)}
                       placeholder="ex: 12"
+                      min="1"
                       className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
                       required
                     />
@@ -224,7 +271,8 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                       type="number"
                       value={spots}
                       onChange={(e) => setSpots(e.target.value)}
-                      placeholder="ex: 12"
+                      placeholder="ex: 30"
+                      min="1"
                       className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
                       required
                     />
@@ -256,7 +304,8 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="ex: Rua Dois, Bairro Jardim"
-                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
+                    disabled={format === "remoto"}
+                    className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600 disabled:opacity-50"
                   />
                 </div>
 
@@ -269,7 +318,8 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                       onChange={(e) => setCep(e.target.value)}
                       placeholder="00000-000"
                       maxLength={9}
-                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
+                      disabled={format === "remoto"}
+                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600 disabled:opacity-50"
                     />
                   </div>
                   <div className="col-span-5">
@@ -279,7 +329,8 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="ex: Bom Jesus"
-                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600"
+                      disabled={format === "remoto"}
+                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600 disabled:opacity-50"
                     />
                   </div>
                   <div className="col-span-3">
@@ -290,19 +341,20 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                       onChange={(e) => setState(e.target.value)}
                       placeholder="ex: AL"
                       maxLength={2}
-                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600 uppercase"
+                      disabled={format === "remoto"}
+                      className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B75BB] bg-white text-gray-600 uppercase disabled:opacity-50"
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="flex justify-between items-center mt-6 w-full">
-              
+            <div className="flex justify-between items-center mt-6 w-full pt-4 border-t border-gray-200">
               <button 
                 type="button" 
                 onClick={() => setShowCancelConfirm(true)}
-                className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-red-900 transition-colors shadow-sm"
+                disabled={isLoading}
+                className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-red-900 transition-colors shadow-sm disabled:opacity-50"
               >
                 <X className="size-3" /> Cancelar
               </button>
@@ -319,39 +371,37 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
                   <button 
                     type="button" 
                     onClick={() => setStep(1)}
-                    className="px-5 py-2 bg-[#002147] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-[#1B75BB] transition-colors shadow-sm"
+                    disabled={isLoading}
+                    className="px-5 py-2 bg-[#002147] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-[#1B75BB] transition-colors shadow-sm disabled:opacity-50"
                   >
                     <ArrowLeft className="size-3" /> Voltar
                   </button>
                   
                   <button 
                     type="submit"
-                    className="px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-green-800 transition-colors shadow-sm"
+                    disabled={isLoading}
+                    className="px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-green-800 transition-colors shadow-sm disabled:opacity-50"
                   >
-                    Criar ação <Check className="size-3.5 stroke-[3]" />
+                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Criar ação"}
+                    {!isLoading && <Check className="size-3.5 stroke-[3]" />}
                   </button>
                 </div>
               )}
-
             </div>
 
           </form>
         </div>
-
       </div>
 
       {showCancelConfirm && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex justify-center items-center z-55 rounded-2xl animate-fade-in">
           <div className="bg-[#FFF7F7] rounded-2xl w-full max-w-sm p-8 flex flex-col items-center justify-center text-center shadow-xl border border-gray-100 m-4">
-            
             <div className="bg-[#4A0E0E] text-white p-2 rounded-lg mb-4 flex items-center justify-center size-10">
               <X className="size-6 stroke-[3]" />
             </div>
-
             <h3 className="text-xl font-bold text-[#002147] leading-snug max-w-[200px] mb-6">
               Criação de ação cancelada
             </h3>
-
             <button
               type="button"
               onClick={() => {
@@ -363,7 +413,6 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
             >
               <ArrowLeft className="size-4" /> Voltar para feed
             </button>
-
           </div>
         </div>
       )}
@@ -371,40 +420,22 @@ export function ActionRegister({ isOpen, onClose }: ActionRegisterProps) {
       {showSuccessConfirm && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex justify-center items-center z-55 rounded-2xl">
           <div className="bg-[#FFF7F7] rounded-2xl w-full max-w-sm p-8 flex flex-col items-center justify-center text-center shadow-xl border border-gray-100 m-4">
-            
             <div className="bg-[#05442A] text-white p-2 rounded-lg mb-4 flex items-center justify-center size-10">
               <Check className="size-6 stroke-[3]" />
             </div>
-
             <h3 className="text-xl font-bold text-[#002147] leading-snug max-w-[240px] mb-6">
               Sua ação foi registrada com sucesso!
             </h3>
-
             <button
               type="button"
               onClick={() => {
                 setShowSuccessConfirm(false);
-                setStep(1);
-                setTitle("");
-                setDescription("");
-                setImage("");
-                setArea("");
-                setType("");
-                setDate("");
-                setWorkload("");
-                setSpots("");
-                setFormat("");
-                setLocation("");
-                setCep("");
-                setCity("");
-                setState("");
                 onClose();
               }}
               className="w-full bg-[#002147] text-white py-3 px-6 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#1B75BB] transition-colors shadow-md"
             >
-              <Eye className="size-4" /> Vizualizar no feed
+              <Eye className="size-4" /> Visualizar no feed
             </button>
-
           </div>
         </div>
       )}

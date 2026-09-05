@@ -1,31 +1,30 @@
-export type ActionStatus = "available" | "full" | "upcoming";
-
-export type ActionType = "oficina" | "palestra" | "evento" | "servico" | "minicurso";
-
-export type ActionArea = "robotica" | "educacao" | "saude" | "meio_ambiente" | "arquitetura";
-
-export type ActionFormat = "presencial" | "remoto" | "hibrido";
-
 export interface Action {
+  details: any;
   id: string;
+  authorId: string;
   title: string;
-  description: string;
-  image: string;
-  location: string;
-  date: string;
-  workload: number;
-  format: string;
-  spots: number;
-  cep: number;
-  city: string;
-  state: string;
-  type: ActionType;
-  status: ActionStatus;
-  area?: string;
+  type: string;
+  campus: string;
+  startDate: string;
+  endDate: string;
+  slots: number;
+  availableSlots: number;
+  status: string;
 }
 
 export interface FilterOptions {
   area: string;
   actionType: string;
   availability: string;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+  activities: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }

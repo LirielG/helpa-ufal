@@ -33,6 +33,20 @@ function InfoRow({
 }
 
 export function ActionInfoCard({ action }: ActionInfoCardProps) {
+  const formatDate = (isoString?: string) => {
+    if (!isoString) return "Data não definida";
+    return new Date(isoString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+  };
+
+  const formatTime = (isoString?: string) => {
+    if (!isoString) return "";
+    return new Date(isoString).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-5">Informações</h2>
@@ -40,19 +54,25 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
       <ul className="space-y-4">
         <InfoRow
           icon={<Building2 className="size-5 text-gray-400" />}
-          label="Instituição"
+          label="Campus / Instituição"
         >
           <span className="font-medium text-gray-900">
-            {action.institution}
+            {action.campus || "Não informado"}
           </span>
         </InfoRow>
 
         <InfoRow
           icon={<MapPin className="size-5 text-gray-400" />}
-          label="Local"
+          label="Local / Formato"
         >
-          <span className="font-medium text-gray-900">{action.city}</span>
-          <span className="text-gray-500 text-sm">{action.venue}</span>
+          <span className="font-medium text-gray-900">
+            {action.details?.address?.city
+              ? `${action.details.address.city} - ${action.details.address.state}`
+              : action.details?.format || "Não informado"}
+          </span>
+          <span className="text-gray-500 text-sm">
+            {action.details?.address?.addressLine || "Endereço não informado"}
+          </span>
         </InfoRow>
 
         <InfoRow
@@ -60,7 +80,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Período"
         >
           <span className="font-medium text-gray-900">
-            {action.startDate} - {action.endDate}
+            {formatDate(action.startDate)} a {formatDate(action.endDate)}
           </span>
         </InfoRow>
 
@@ -68,7 +88,9 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           icon={<Clock className="size-5 text-gray-400" />}
           label="Horário"
         >
-          <span className="font-medium text-gray-900">{action.schedule}</span>
+          <span className="font-medium text-gray-900">
+            {formatTime(action.startDate)} às {formatTime(action.endDate)}
+          </span>
         </InfoRow>
 
         <InfoRow
@@ -76,7 +98,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Carga Horária"
         >
           <span className="font-medium text-gray-900">
-            {action.workloadHours} horas
+            {action.details?.workloadHours || 0} horas
           </span>
         </InfoRow>
 
@@ -85,7 +107,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Vagas"
         >
           <span className="font-medium text-gray-900">
-            {action.slots}/{action.totalSlots} vagas
+            {action.availableSlots} disponíveis / {action.slots} no total
           </span>
         </InfoRow>
       </ul>
