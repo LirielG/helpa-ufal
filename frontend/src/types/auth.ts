@@ -44,10 +44,7 @@ export interface RegisterRequest {
   cndb?: string;
 }
 
-export interface RegisterResponse {
-  token: string;
-  user: User;
-}
+export type RegisterResponse = User;
 
 export interface AuthError {
   message: string;

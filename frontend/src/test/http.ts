@@ -19,10 +19,7 @@ export const handlers = [
   ),
 
   http.post(`${API}/auth/register`, () =>
-    HttpResponse.json(
-      { token: "test-token", user: makeUser() },
-      { status: 201 },
-    ),
+    HttpResponse.json(makeUser(), { status: 201 }),
   ),
 
   http.post(
