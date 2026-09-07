@@ -128,3 +128,59 @@ describe("ActivityService.delete", () => {
     await expect(service.delete("act-1", "author-1")).resolves.toBeUndefined();
   });
 });
+
+describe("ActivityService.list", () => {
+  it("maps start_date to startDate and passes it to repository.list", async () => {
+    const repository = mockRepository({
+      list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ orderBy: "start_date" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: "startDate",
+      }),
+    );
+  });
+
+  it("maps created_at to createdAt and passes it to repository.list", async () => {
+    const repository = mockRepository({
+      list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ orderBy: "created_at" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: "createdAt",
+      }),
+    );
+  });
+
+  it("throws a ValidationError with field 'type' when filter.type is invalid", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    try {
+      await service.list({ type: "INVALID_TYPE" as any });
+      expect.fail("Should have thrown ValidationError");
+    } catch (error: any) {
+      expect(error.errors[0].field).toBe("type");
+    }
+  });
+
+  it("throws a ValidationError with field 'format' when filter.format is invalid", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    try {
+      await service.list({ format: "INVALID_FORMAT" as any });
+      expect.fail("Should have thrown ValidationError");
+    } catch (error: any) {
+      expect(error.errors[0].field).toBe("format");
+    }
+  });
+});

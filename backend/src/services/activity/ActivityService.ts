@@ -129,111 +129,111 @@ class ActivityService implements IActivityService {
   }
 
   public async list(
-    filters: IListActivitiesFilters,
-    usuarioId?: string,
-  ): Promise<IListActivitiesResponse> {
-    const pageRaw = filters.page ?? "1";
-    const limitRaw = filters.limit ?? "10";
+      filters: IListActivitiesFilters,
+      usuarioId?: string,
+    ): Promise<IListActivitiesResponse> {
+      const pageRaw = filters.page ?? "1";
+      const limitRaw = filters.limit ?? "10";
 
-    const pageNum = parseInt(pageRaw, 10);
-    const limitNum = parseInt(limitRaw, 10);
+      const pageNum = parseInt(pageRaw, 10);
+      const limitNum = parseInt(limitRaw, 10);
 
-    const paginationErrors = [];
+      const paginationErrors = [];
 
-    if (isNaN(pageNum) || pageNum < 1) {
-      paginationErrors.push({
-        field: "page",
-        message: "page must be a positive integer.",
-      } as ValidationErrorItem);
+      if (isNaN(pageNum) || pageNum < 1) {
+        paginationErrors.push({
+          field: "page",
+          message: "page must be a positive integer.",
+        } as ValidationErrorItem);
+      }
+
+      if (isNaN(limitNum) || limitNum < 1) {
+        paginationErrors.push({
+          field: "limit",
+          message: "limit must be a positive integer.",
+        } as ValidationErrorItem);
+      } else if (limitNum > 50) {
+        paginationErrors.push({
+          field: "limit",
+          message: "limit can not exceed 50.",
+        } as ValidationErrorItem);
+      }
+
+      if (paginationErrors.length > 0) {
+        throw new ValidationError(paginationErrors);
+      }
+
+      // filtros
+      const filterErrors = [];
+
+      const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
+      const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
+      const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+
+      if (filters.type && !validTypes.includes(filters.type)) {
+        filterErrors.push({
+          field: "type",
+          message: `type must be one of the following: ${validTypes.join(", ")}.`,
+        } as ValidationErrorItem);
+      }
+
+      if (filters.format && !validFormats.includes(filters.format)) {
+        filterErrors.push({
+          field: "format",
+          message: `format must be one of the following: ${validFormats.join(", ")}.`,
+        } as ValidationErrorItem);
+      }
+
+      if (filters.status && !validStatuses.includes(filters.status)) {
+        filterErrors.push({
+          field: "status",
+          message: `status must be one of the following: ${validStatuses.join(", ")}.`,
+        } as ValidationErrorItem);
+      }
+
+      const validOrders = ["asc", "desc"];
+      const validSortFields = ["start_date", "created_at"];
+
+      if (filters.order && !validOrders.includes(filters.order)) {
+        filterErrors.push({
+          field: "order",
+          message: `order must be one of the following: ${validOrders.join(",")}.`,
+        } as ValidationErrorItem);
+      }
+
+      if (filters.orderBy && !validSortFields.includes(filters.orderBy)) {
+        filterErrors.push({
+          field: "orderBy",
+          message: `orderBy must be one of the following: ${validSortFields.join(",")}.`,
+        } as ValidationErrorItem);
+      }
+
+      if (filterErrors.length > 0) {
+        throw new ValidationError(filterErrors);
+      }
+
+      let sortField = "createdAt";
+
+      if (filters.orderBy === "start_date") {
+        sortField = "startDate";
+      } else if (filters.orderBy === "created_at") {
+        sortField = "createdAt";
+      }
+
+      const result = await this._activityRepository.list({
+        type: filters.type,
+        format: filters.format,
+        status: filters.status,
+        search: filters.search,
+        campus: filters.campus,
+        page: pageNum,
+        limit: limitNum,
+        orderBy: sortField,
+        order: (filters.order ?? "desc") as "asc" | "desc",
+      });
+      
+      return result;
     }
-
-    if (isNaN(limitNum) || limitNum < 1) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit must be a positive integer.",
-      } as ValidationErrorItem);
-    } else if (limitNum > 50) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit can not exceed 50.",
-      } as ValidationErrorItem);
-    }
-
-    if (paginationErrors.length > 0) {
-      throw new ValidationError(paginationErrors);
-    }
-
-    // filtros
-    const filterErrors = [];
-
-    const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
-    const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
-    const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
-
-    if (filters.type && !validTypes.includes(filters.type)) {
-      filterErrors.push({
-        field: "tipo",
-        message: `tipo must be one of the following: ${validTypes.join(", ")}.`,
-      } as ValidationErrorItem);
-    }
-
-    if (filters.format && !validFormats.includes(filters.format)) {
-      filterErrors.push({
-        field: "formato",
-        message: `formato must be one of the following: ${validFormats.join(", ")}.`,
-      } as ValidationErrorItem);
-    }
-
-    if (filters.status && !validStatuses.includes(filters.status)) {
-      filterErrors.push({
-        field: "status",
-        message: `status must be one of the following: ${validStatuses.join(", ")}.`,
-      } as ValidationErrorItem);
-    }
-
-    const validOrders = ["asc", "desc"];
-    const validSortFields = ["start_date", "created_at"];
-
-    if (filters.order && !validOrders.includes(filters.order)) {
-      filterErrors.push({
-        field: "order",
-        message: `order must be one of the following: ${validOrders.join(",")}.`,
-      } as ValidationErrorItem);
-    }
-
-    if (filters.orderBy && !validSortFields.includes(filters.orderBy)) {
-      filterErrors.push({
-        field: "orderBy",
-        message: `orderBy must be one of the following: ${validSortFields.join(",")}.`,
-      } as ValidationErrorItem);
-    }
-
-    if (filterErrors.length > 0) {
-      throw new ValidationError(filterErrors);
-    }
-
-    let sortField = "createdAt";
-
-    if (filters.orderBy === "data_inicio") {
-      sortField = "startDate";
-    } else if (filters.orderBy === "created_at") {
-      sortField = "createdAt";
-    }
-
-    const result = await this._activityRepository.list({
-      type: filters.type,
-      format: filters.format,
-      status: filters.status,
-      search: filters.search,
-      campus: filters.campus,
-      page: pageNum,
-      limit: limitNum,
-      orderBy: sortField,
-      order: (filters.order ?? "desc") as "asc" | "desc",
-    });
-    
-    return result;
-  }
 
   public async findById(id: string): Promise<ActivityFullResponse> {
     if (!isValidUUID(id)) {
