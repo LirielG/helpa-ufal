@@ -5,10 +5,13 @@ import type { IActivityController } from "@/controllers/activity/IActivityContro
 import type { IAuthMiddleware } from "@/middlewares/auth/IAuthMiddleware.js";
 import ActivityReportController from "@/controllers/activityReport/AcitivtyReportController.js";
 import { IActivityReportController } from "@/controllers/activityReport/IActivityReportController.js";
+import EnrollmentController from "@/controllers/enrollment/EnrollmentController.js";
+import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollmentController.js";
 
 const router = express.Router();
 const activityController: IActivityController = new ActivityController();
 const activityReportController: IActivityReportController = new ActivityReportController();
+const enrollmentController: IEnrollmentController = new EnrollmentController();
 const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 
 router.post(
@@ -37,6 +40,12 @@ router.post(
   "/activities/:id/reports",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => activityReportController.createReport(req, res).catch(next),
+);
+
+router.post(
+  "/activities/:id/enroll",
+  authMiddleware.auth(),
+  (req, res, next) => enrollmentController.enroll(req, res).catch(next),
 );
 
 router.patch(

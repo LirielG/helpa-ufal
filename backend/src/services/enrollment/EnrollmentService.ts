@@ -40,9 +40,7 @@ class EnrollmentService implements IEnrollmentService {
     await this.assertUserExists(userId);
 
     if (!isValidUUID(activityId)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
+      throw new CustomError(404, "Activity not found.")
     }
 
     const activity = await this._activityRepository.findById(activityId);

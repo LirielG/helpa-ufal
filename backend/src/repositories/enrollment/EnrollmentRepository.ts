@@ -58,7 +58,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
           where: { id: existing.id },
           data: {
             status: ENROLLMENT_INITIAL_STATUS,
-            enrolledAt: new Date(),
+            /* enrolledAt: new Date(), */
             attendanceConfirmed: null,     
             confirmedWorkloadHours: 0,     
           },
