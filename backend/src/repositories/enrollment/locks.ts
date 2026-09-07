@@ -14,9 +14,9 @@ import type { Prisma } from "@prisma/client";
 export async function lockActivityForCapacity(
   tx: Prisma.TransactionClient,
   activityId: string,
-): Promise<{ slots: number } | null> {
-  const rows = await tx.$queryRaw<{ slots: number }[]>`
-    SELECT slots
+): Promise<{ slots: number; status: string } | null> {
+  const rows = await tx.$queryRaw<{ slots: number; status: string }[]>`
+    SELECT slots, status
     FROM "Activity"
     WHERE id = ${activityId}
     FOR UPDATE

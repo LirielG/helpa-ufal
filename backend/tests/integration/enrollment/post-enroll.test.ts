@@ -59,6 +59,8 @@ describe("POST /activities/:id/enroll", () => {
       confirmedWorkloadHours: 8,        // novo
     });
 
+    const before = Date.now();
+
     const response = await request(app)
       .post(enrollUrl(activity.id))
       .set(...authHeader(student.token));
@@ -74,9 +76,10 @@ describe("POST /activities/:id/enroll", () => {
     expect(stored.status).toBe("APPROVED");
     expect(stored.attendanceConfirmed).toBeNull();   // era: toBe(false)
     expect(stored.confirmedWorkloadHours).toBe(0);   // novo
-    expect(stored.enrolledAt.getTime()).toBe(
-      new Date("2026-01-01T00:00:00.000Z").getTime(),
-    );
+    // Contract decision (opposite of createdAt): reactivating a cancelled
+    // enrollment DOES refresh enrolledAt to "now", so the record reappears
+    // at the top of the "Ações Inscritas" tab (sorted by enrolledAt desc).
+    expect(stored.enrolledAt.getTime()).toBeGreaterThanOrEqual(before);
 
     const rows = await prisma.enrollment.count({
       where: { userId: student.user.id, activityId: activity.id },
