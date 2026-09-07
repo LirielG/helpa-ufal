@@ -253,7 +253,7 @@ class ActivityService implements IActivityService {
 
   public async update(
     id: string,
-    user: { id: string; isManager: boolean },
+    userId: string,
     data: UpdateActivityInput,
   ): Promise<ActivityFullResponse> {
     const activity = await this._activityRepository.findById(id);
@@ -262,8 +262,11 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const isAuthor = activity.authorId === user.id; // Alvo futuro: permite autor/gestor fantasma, pois não consulta usuário no banco
-    if (!isAuthor && !user.isManager) {
+    const dbUser = await this._activityRepository.findUserById(userId);
+    const isAuthor = !!dbUser && activity.authorId === userId;
+    const isManager = dbUser?.isManager ?? false;
+
+    if (!isAuthor && !isManager) {
       throw new CustomError(403, "You do not have permission to update this activity.");
     }
 
