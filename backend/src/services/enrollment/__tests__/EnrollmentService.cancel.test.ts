@@ -64,14 +64,14 @@ describe("EnrollmentService.cancel", () => {
   // ---------- Input validation ----------
 
 
-  it("rejects a malformed activityId with 404 (Activity not found.)", async () => {
+it("rejects a malformed activityId with 400 (Invalid UUID format.)", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({ activityRepository, enrollmentRepository });
 
     await expectHttpError(
       service.cancel(USER_ID, "not-a-uuid"),
-      404,
-      "Activity not found.",
+      400,
+      "Invalid UUID format.",
     );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });

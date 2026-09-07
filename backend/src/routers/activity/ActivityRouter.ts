@@ -48,6 +48,12 @@ router.post(
   (req, res, next) => enrollmentController.enroll(req, res).catch(next),
 );
 
+router.delete(
+  "/activities/:id/enroll",
+  authMiddleware.auth(),
+  (req, res, next) => enrollmentController.cancel(req, res).catch(next),
+);
+
 router.patch(
   "/activities/:id/status",
   authMiddleware.auth(),
