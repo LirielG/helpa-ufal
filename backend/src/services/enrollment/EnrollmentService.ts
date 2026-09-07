@@ -64,14 +64,16 @@ class EnrollmentService implements IEnrollmentService {
     await this.assertUserExists(userId);
 
     if (!isValidUUID(activityId)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
+      throw new CustomError(404, "Activity not found.");
     }
 
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
+    }
+
+    if (activity.status !== "OPEN") {
+      throw new CustomError(409, "Activity is not open for cancellation.");
     }
 
     await this._enrollmentRepository.cancel(userId, activityId);

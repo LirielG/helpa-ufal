@@ -3,7 +3,6 @@ import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
 import { expectHttpError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -64,13 +63,16 @@ describe("EnrollmentService.cancel", () => {
 
   // ---------- Input validation ----------
 
-  it("rejects a malformed activityId with a ValidationError", async () => {
+
+  it("rejects a malformed activityId with 404 (Activity not found.)", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({ activityRepository, enrollmentRepository });
 
-    await expect(
+    await expectHttpError(
       service.cancel(USER_ID, "not-a-uuid"),
-    ).rejects.toBeInstanceOf(ValidationError);
+      404,
+      "Activity not found.",
+    );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
@@ -85,6 +87,25 @@ describe("EnrollmentService.cancel", () => {
     await expectHttpError(service.cancel(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
+
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
+    "throws 409 when the activity status is %s (not open for cancellation)",
+    async (status) => {
+      const { activityRepository, enrollmentRepository } = mockRepositories({
+        activity: {
+          findById: vi.fn().mockResolvedValue({ id: ACTIVITY_ID, status, slots: 30 }),
+        },
+      });
+      const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+
+      await expectHttpError(
+        service.cancel(USER_ID, ACTIVITY_ID),
+        409,
+        "Activity is not open for cancellation.",
+      );
+      expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
+    },
+  );
 
   // ---------- Repository rule (propagation) ----------
 
