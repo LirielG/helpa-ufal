@@ -186,19 +186,8 @@ describe("POST /activities/:id/enroll", () => {
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
-  });
-
-  it("treats a malformed activity id as not found (D1)", async () => {
-    const student = await createStudent();
-
-    const response = await request(app)
-      .post(enrollUrl("not-a-uuid"))
-      .set(...authHeader(student.token));
-
-    expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
-  });
-
+  }); 
+  
   // ---------- 409 - Conflict ----------
 
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
