@@ -21,11 +21,7 @@ import {
 } from "../features/action-edit/validators";
 import { getActionById } from "../features/action-detail/services";
 import { updateAction } from "../features/action-edit/services";
-import {
-  toInputDate,
-  fromInputDate,
-  categoryToActionType,
-} from "../features/action-edit/utils";
+import { toInputDate, fromInputDate } from "../utils";
 
 export function EditAction() {
   const navigate = useNavigate();
@@ -64,11 +60,11 @@ export function EditAction() {
 
       reset({
         title: action.title,
-        description: action.fullDescription,
+        description: action.details?.description ?? "",
         startDate: toInputDate(action.startDate),
         endDate: toInputDate(action.endDate),
-        type: categoryToActionType(action.category),
-        spots: action.totalSlots,
+        type: action.type,
+        spots: action.slots,
       });
 
       setIsLoadingAction(false);

@@ -5,16 +5,39 @@ import type { UserEvent } from "@testing-library/user-event";
 import { render, screen, http, HttpResponse, server } from "@/test";
 import { makeUser } from "@/test";
 import { config } from "@/config";
+import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
+import { GuestRoute } from "@/routes/GuestRoute";
+import { useAuthStore } from "@/stores/authStore";
+import { Login } from "../Login";
 import { Register } from "../Register";
 
 const REGISTER_URL = `${config.apiUrl}/auth/register`;
 
-/** Renders <Register/> at "/register" with a "/dashboard" route to land on after success. */
+/**
+ * Renders <Register/> at "/register" with the real login screen to land on
+ * after success, so the notice the sign-up hands over is asserted where the
+ * visitor actually reads it. `GuestRoute` wraps both because a sign-up must
+ * leave the visitor signed out.
+ */
 function renderRegisterPage() {
   return render(
     <Routes>
-      <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<p>Bem-vindo ao painel</p>} />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
     </Routes>,
     { route: "/register" },
   );
@@ -38,7 +61,10 @@ type FormOverrides = Partial<{
   cndb: string;
 }>;
 
-async function fillCommonFields(user: UserEvent, overrides: FormOverrides = {}) {
+async function fillCommonFields(
+  user: UserEvent,
+  overrides: FormOverrides = {},
+) {
   await user.type(
     screen.getByPlaceholderText("Digite seu nome completo"),
     overrides.name ?? "Jéssica Pereira da Silva",
@@ -73,8 +99,12 @@ describe("Register page", () => {
       expect(
         screen.getByRole("heading", { name: "Criar conta no helpa" }),
       ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /docente/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /estudante/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /docente/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /estudante/i }),
+      ).toBeInTheDocument();
       expect(
         screen.queryByPlaceholderText("Digite seu nome completo"),
       ).not.toBeInTheDocument();
@@ -113,7 +143,9 @@ describe("Register page", () => {
       );
 
       await user.click(
-        screen.getByRole("button", { name: /voltar para a seleção de cadastro/i }),
+        screen.getByRole("button", {
+          name: /voltar para a seleção de cadastro/i,
+        }),
       );
 
       expect(
@@ -121,7 +153,9 @@ describe("Register page", () => {
       ).toBeInTheDocument();
 
       await goToStudentForm(user);
-      expect(screen.getByPlaceholderText("Digite seu nome completo")).toHaveValue("");
+      expect(
+        screen.getByPlaceholderText("Digite seu nome completo"),
+      ).toHaveValue("");
     });
 
     it("toggling one password field's visibility also reveals the other", async () => {
@@ -132,7 +166,9 @@ describe("Register page", () => {
       await goToStudentForm(user);
 
       const passwordInput = screen.getByPlaceholderText("Digite sua senha");
-      const confirmInput = screen.getByPlaceholderText("Digite a senha novamente");
+      const confirmInput = screen.getByPlaceholderText(
+        "Digite a senha novamente",
+      );
       expect(passwordInput).toHaveAttribute("type", "password");
       expect(confirmInput).toHaveAttribute("type", "password");
 
@@ -205,15 +241,12 @@ describe("Register page", () => {
   });
 
   describe("submission", () => {
-    it("sends the expected payload for a student and redirects to /dashboard", async () => {
+    it("sends the expected payload for a student and redirects to /login", async () => {
       let capturedBody: unknown;
       server.use(
         http.post(REGISTER_URL, async ({ request }) => {
           capturedBody = await request.json();
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
@@ -222,7 +255,11 @@ describe("Register page", () => {
       await fillCommonFields(user);
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-      expect(await screen.findByText("Bem-vindo ao painel")).toBeInTheDocument();
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
+      // Creating an account must not sign the visitor in.
+      expect(useAuthStore.getState().user).toBeNull();
 
       expect(capturedBody).toMatchObject({
         fullName: "Jéssica Pereira da Silva",
@@ -239,23 +276,25 @@ describe("Register page", () => {
       server.use(
         http.post(REGISTER_URL, async ({ request }) => {
           capturedBody = await request.json();
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
       const { user } = renderRegisterPage();
       await goToTeacherForm(user);
-      await fillCommonFields(user, { name: "Eduardo Rocha", email: "eduardo@ufal.br" });
+      await fillCommonFields(user, {
+        name: "Eduardo Rocha",
+        email: "eduardo@ufal.br",
+      });
       await user.type(
         screen.getByPlaceholderText("Ex.: Número da carteira docente"),
         "CNDB-998877",
       );
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-      expect(await screen.findByText("Bem-vindo ao painel")).toBeInTheDocument();
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
 
       expect(capturedBody).toMatchObject({
         userType: "TEACHER",
@@ -266,7 +305,10 @@ describe("Register page", () => {
     it("shows the server error message and does not navigate away on failure", async () => {
       server.use(
         http.post(REGISTER_URL, () =>
-          HttpResponse.json({ message: "E-mail já cadastrado" }, { status: 409 }),
+          HttpResponse.json(
+            { message: "E-mail já cadastrado" },
+            { status: 409 },
+          ),
         ),
       );
 
@@ -275,18 +317,19 @@ describe("Register page", () => {
       await fillCommonFields(user);
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-      expect(await screen.findByText("E-mail já cadastrado")).toBeInTheDocument();
-      expect(screen.queryByText("Bem-vindo ao painel")).not.toBeInTheDocument();
+      expect(
+        await screen.findByText("E-mail já cadastrado"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(REGISTER_SUCCESS_MESSAGE),
+      ).not.toBeInTheDocument();
     });
 
     it("disables the submit button while the request is in flight", async () => {
       server.use(
         http.post(REGISTER_URL, async () => {
           await delay(50);
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
@@ -295,9 +338,13 @@ describe("Register page", () => {
       await fillCommonFields(user);
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-      expect(await screen.findByRole("button", { name: "Carregando..." })).toBeDisabled();
+      expect(
+        await screen.findByRole("button", { name: "Carregando..." }),
+      ).toBeDisabled();
 
-      expect(await screen.findByText("Bem-vindo ao painel")).toBeInTheDocument();
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
     });
   });
 });

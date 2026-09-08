@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatDate } from "../../../utils";
 import type { Action } from "../types";
 
 const FALLBACK_IMAGES = [
@@ -46,7 +47,7 @@ export function HeroBanner({ actions }: HeroBannerProps) {
     <div className="relative bg-gray-900 overflow-hidden">
       <div className="relative h-[400px] md:h-[500px]">
         {featuredActions.map((action, index) => {
-          const formattedDate = new Date(action.startDate).toLocaleDateString('pt-BR');
+          const formattedDate = formatDate(action.startDate);
           const imageUrl = FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 
           return (
@@ -73,9 +74,7 @@ export function HeroBanner({ actions }: HeroBannerProps) {
                       {action.title}
                     </h2>
                     <p className="text-lg md:text-xl text-gray-200 line-clamp-3">
-                      {typeof action.details === "object" && action.details && "description" in action.details
-                        ? String((action.details as { description?: string }).description || "Descrição não informada.")
-                        : "Descrição não informada."}
+                      {action.details?.description || "Descrição não informada."}
                     </p>
                     <div className="flex items-center gap-4">
                       <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">

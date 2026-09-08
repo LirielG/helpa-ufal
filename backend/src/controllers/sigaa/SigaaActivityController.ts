@@ -21,9 +21,9 @@ export class SigaaActivityController implements ISigaaActivityController {
     res.status(200).json(result);
   }
 
-  public async listDepartments(req: Request, res: Response): Promise<void> {
-    const departments = await this._service.listDepartments();
-    res.status(200).json({ departments });
+  public async listFilters(req: Request, res: Response): Promise<void> {
+    const options = await this._service.listFilterOptions();
+    res.status(200).json(options);
   }
 }
 

@@ -1,5 +1,6 @@
 import { MapPin, Calendar, Users } from "lucide-react";
 import { Link } from "react-router";
+import { formatDate } from "../../../utils";
 import type { Action } from "../types";
 
 interface ActionCardProps {
@@ -39,11 +40,6 @@ export function ActionCard({ action }: ActionCardProps) {
     className: "bg-gray-100 text-gray-800 border-gray-200",
   };
 
-  const formatDate = (isoString?: string) => {
-    if (!isoString) return "Data indefinida";
-    return new Date(isoString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
       <div className="relative h-48 overflow-hidden shrink-0">
@@ -56,13 +52,18 @@ export function ActionCard({ action }: ActionCardProps) {
 
       {/* Conteúdo */}
       <div className="p-4 flex flex-col flex-1 space-y-3">
-        <h3 className="text-lg font-bold text-gray-900 line-clamp-2" title={action.title}>
+        <h3
+          className="text-lg font-bold text-gray-900 line-clamp-2"
+          title={action.title}
+        >
           {action.title}
         </h3>
 
         <div className="flex items-start gap-2 text-sm text-gray-600">
           <MapPin className="size-4 shrink-0 mt-0.5 text-gray-400" />
-          <span className="line-clamp-1">{action.campus || "Campus não informado"}</span>
+          <span className="line-clamp-1">
+            {action.campus || "Campus não informado"}
+          </span>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -91,11 +92,13 @@ export function ActionCard({ action }: ActionCardProps) {
           className="mt-auto block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors"
           style={{ border: "1px solid #00579A", color: "#00579A" }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "#00579A";
+            (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
+              "#00579A";
             (e.currentTarget as HTMLAnchorElement).style.color = "#fff";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.backgroundColor = "transparent";
+            (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
+              "transparent";
             (e.currentTarget as HTMLAnchorElement).style.color = "#00579A";
           }}
         >

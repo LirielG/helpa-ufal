@@ -1,3 +1,8 @@
+import type {
+  Action,
+  ActionDetails as ActionListDetails,
+} from "../dashboard/types";
+
 export interface ActionAddress {
   id: string;
   addressLine: string;
@@ -7,25 +12,10 @@ export interface ActionAddress {
   state: string;
 }
 
-export interface ActionDetails {
-  description: string;
-  area: string;
-  format: string;
-  url?: string;
-  workloadHours: number;
-  address?: ActionAddress;
+export interface ActionDetails extends ActionListDetails {
+  address: ActionAddress | null;
 }
 
-export interface ActionDetail {
-  id: string;
-  authorId: string;
-  title: string;
-  type: string;
-  campus: string;
-  startDate: string;
-  endDate: string;
-  slots: number;
-  availableSlots: number;
-  status: string;
-  details: ActionDetails;
+export interface ActionDetail extends Action {
+  details: ActionDetails | null;
 }

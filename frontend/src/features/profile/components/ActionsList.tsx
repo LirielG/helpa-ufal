@@ -3,7 +3,7 @@ import type { ActivityStatus, UserActivity } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
-import { fetchUserActivities } from "../services"; 
+import { fetchUserActivities } from "../services";
 
 const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
   { id: "enrolled", label: "Atividades Inscritas" },
@@ -22,12 +22,8 @@ export function ActionsList() {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const response = await fetchUserActivities(activeSubTab);
-        
-        const dataList = response.data || response;
-        setActivities(Array.isArray(dataList) ? dataList : []);
-        
+
+        setActivities(await fetchUserActivities(activeSubTab));
       } catch {
         setError("Não foi possível carregar as atividades. Tente novamente.");
       } finally {
@@ -67,7 +63,9 @@ export function ActionsList() {
       </nav>
 
       {isLoading && (
-        <p className="text-gray-500 text-center py-8">Carregando atividades...</p>
+        <p className="text-gray-500 text-center py-8">
+          Carregando atividades...
+        </p>
       )}
 
       {!isLoading && error && (
@@ -90,7 +88,9 @@ export function ActionsList() {
             >
               {activities.map((activity) => {
                 if (activeSubTab === "completed") {
-                  return <CompletedCard key={activity.id} activity={activity} />;
+                  return (
+                    <CompletedCard key={activity.id} activity={activity} />
+                  );
                 }
                 if (activeSubTab === "managed") {
                   return (

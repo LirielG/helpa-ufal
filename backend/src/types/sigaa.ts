@@ -1,16 +1,5 @@
 import type { ActivityType } from "./activity.js";
 
-export const SIGAA_TYPES = [
-  "EVENTO",
-  "CURSO",
-  "PRODUTO",
-  "PROGRAMA",
-  "PROJETO",
-  "PRESTAÇÃO DE SERVIÇOS",
-] as const;
-
-export type SigaaRawType = (typeof SIGAA_TYPES)[number];
-
 export type ScrapedSigaaActivity = {
   sigaaId: string;
   title: string;
@@ -34,6 +23,11 @@ export type SigaaListResponse = {
   total: number;
   page: number;
   limit: number;
+};
+
+export type SigaaFilterOptions = {
+  types: string[];
+  departments: string[];
 };
 
 export type SigaaActivityFilters = {

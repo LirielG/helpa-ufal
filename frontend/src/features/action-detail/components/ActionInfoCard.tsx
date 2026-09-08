@@ -6,7 +6,12 @@ import {
   BookOpen,
   Users,
 } from "lucide-react";
+import {
+  ACTION_CAMPUS_LABELS,
+  ACTION_FORMAT_LABELS,
+} from "../../dashboard/constants";
 import type { ActionDetail } from "../types";
+import { formatDate, formatTime } from "../../../utils";
 
 interface ActionInfoCardProps {
   action: ActionDetail;
@@ -33,19 +38,7 @@ function InfoRow({
 }
 
 export function ActionInfoCard({ action }: ActionInfoCardProps) {
-  const formatDate = (isoString?: string) => {
-    if (!isoString) return "Data não definida";
-    return new Date(isoString).toLocaleDateString("pt-BR", { timeZone: "UTC" });
-  };
-
-  const formatTime = (isoString?: string) => {
-    if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    });
-  };
+  const format = action.details?.format;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -57,7 +50,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Campus / Instituição"
         >
           <span className="font-medium text-gray-900">
-            {action.campus || "Não informado"}
+            {ACTION_CAMPUS_LABELS[action.campus] ?? "Não informado"}
           </span>
         </InfoRow>
 
@@ -66,9 +59,11 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Local / Formato"
         >
           <span className="font-medium text-gray-900">
-            {action.details?.address?.city
+            {action.details?.address
               ? `${action.details.address.city} - ${action.details.address.state}`
-              : action.details?.format || "Não informado"}
+              : format
+                ? ACTION_FORMAT_LABELS[format]
+                : "Não informado"}
           </span>
           <span className="text-gray-500 text-sm">
             {action.details?.address?.addressLine || "Endereço não informado"}

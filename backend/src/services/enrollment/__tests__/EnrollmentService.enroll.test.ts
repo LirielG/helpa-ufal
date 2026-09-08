@@ -16,7 +16,8 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
     userId: USER_ID,
     activityId: ACTIVITY_ID,
     status: "APPROVED",
-    attendanceConfirmed: false,
+    attendanceConfirmed: null,       // era: false
+    confirmedWorkloadHours: 0,       // novo
     isModerator: false,
     enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     createdAt: new Date("2026-08-22T21:00:00.000Z"),

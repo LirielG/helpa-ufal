@@ -13,6 +13,7 @@ import {
   userEvent,
 } from "@/test";
 import type { LoginRequest } from "@/types";
+import { GuestRoute } from "@/routes/GuestRoute";
 import { Login } from "../Login";
 
 type TestUser = ReturnType<typeof userEvent.setup>;
@@ -20,11 +21,20 @@ type TestUser = ReturnType<typeof userEvent.setup>;
 /**
  * The destination route is part of the tree so the redirect is observed
  * through what ends up on screen, rather than by spying on `useNavigate`.
+ * `GuestRoute` is part of it too because it, not this screen, decides where a
+ * successful login lands.
  */
 function renderLoginWithDashboard() {
   return render(
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
       <Route path="/dashboard" element={<h1>Painel</h1>} />
     </Routes>,
     { route: "/login" },

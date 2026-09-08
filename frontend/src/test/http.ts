@@ -1,7 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { config } from "@/config";
-import { makeUser } from "./factories";
+import { makeAction, makeActionDetail, makeUser } from "./factories";
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -19,15 +19,20 @@ export const handlers = [
   ),
 
   http.post(`${API}/auth/register`, () =>
-    HttpResponse.json(
-      { token: "test-token", user: makeUser() },
-      { status: 201 },
-    ),
+    HttpResponse.json(makeUser(), { status: 201 }),
   ),
 
   http.post(
     `${API}/auth/logout`,
     () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  http.get(`${API}/activities`, () =>
+    HttpResponse.json({ activities: [makeAction()], total: 1 }),
+  ),
+
+  http.get(`${API}/activities/:id`, ({ params }) =>
+    HttpResponse.json(makeActionDetail({ id: String(params.id) })),
   ),
 ];
 

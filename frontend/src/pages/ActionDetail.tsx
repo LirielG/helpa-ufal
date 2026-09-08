@@ -71,7 +71,7 @@ export function ActionDetail() {
             bannerUrl="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200"
             category={action.details?.area || action.type}
             title={action.title}
-            shortDescription={action.details?.description}
+            shortDescription={action.details?.description ?? ""}
             onBack={() => navigate(-1)}
           />
           

@@ -16,6 +16,7 @@ const unitEnv = {
     "postgresql://user:pass@localhost:5432/unit-tests-never-connect",
   JWT_SECRET: "unit-test-secret-with-more-than-32-characters",
   JWT_EXPIRES_IN: "1h",
+  SIGAA_SYNC_ENABLED: "true",
 };
 
 export default defineConfig({

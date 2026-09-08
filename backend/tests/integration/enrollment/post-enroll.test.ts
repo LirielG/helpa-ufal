@@ -56,6 +56,7 @@ describe("POST /activities/:id/enroll", () => {
       status: "CANCELLED",
       enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
       attendanceConfirmed: true,
+      confirmedWorkloadHours: 8,        // novo
     });
 
     const response = await request(app)
@@ -71,8 +72,8 @@ describe("POST /activities/:id/enroll", () => {
       where: { id: canceled.id },
     });
     expect(stored.status).toBe("APPROVED");
-    expect(stored.attendanceConfirmed).toBe(false);
-    expect(stored.enrolledAt.getTime()).toBeGreaterThan(
+    expect(stored.attendanceConfirmed).toBeNull();   // era: toBe(false)
+    expect(stored.confirmedWorkloadHours).toBe(0);   // novo
       new Date("2026-01-01T00:00:00.000Z").getTime(),
     );
 

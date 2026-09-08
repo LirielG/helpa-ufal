@@ -1,7 +1,7 @@
 import { api } from "../../services";
 import type { UpdateProfileRequest, User } from "../../types";
 import { delay } from "../../utils";
-import type { ActivityStatus } from "./types";
+import type { ActivityStatus, UserActivity } from "./types";
 
 const MOCK_PROFILE_EXTRAS = {
   registrationCode: "2021000000",
@@ -33,7 +33,16 @@ export async function updateProfile(
   };
 }
 
-export async function fetchUserActivities(filter: ActivityStatus) {
-  const response = await api.get(`/activities?filter=${filter}&page=1&limit=20`);
-  return response;
+// The endpoint may answer with the array itself or wrapped in `data`; the feed
+// contract is settled in #120, so both shapes are tolerated for now.
+type ActivitiesResponse = UserActivity[] | { data?: UserActivity[] };
+
+export async function fetchUserActivities(
+  filter: ActivityStatus,
+): Promise<UserActivity[]> {
+  const response = await api.get<ActivitiesResponse>(
+    `/activities?filter=${filter}&page=1&limit=20`,
+  );
+
+  return Array.isArray(response) ? response : (response?.data ?? []);
 }

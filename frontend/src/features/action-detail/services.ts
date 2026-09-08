@@ -3,15 +3,14 @@ import type { ActionDetail } from "./types";
 
 export async function getActionById(id: string): Promise<ActionDetail | null> {
   try {
-    const response = await api.get(`/activities/${id}`);
-    return response as ActionDetail;
+    return await api.get<ActionDetail>(`/activities/${id}`);
   } catch (error) {
     console.error("Erro ao buscar detalhes da ação:", error);
-    return null; 
+    return null;
   }
 }
 
 export async function enrollInAction(actionId: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 1000));
-    void actionId;
+  void actionId;
 }
