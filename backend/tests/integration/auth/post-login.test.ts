@@ -1,22 +1,27 @@
-// tests/integration/auth/post-login.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import ms from "ms";
 import { app } from "@/app.js";
+import { env } from "@/config/env.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
+
 
 const LOGIN_URL = "/auth/login";
 const probeUrl = () => `/activities/${randomUUID()}/reports`;
 const probeBody = { category: "SPAM" };
+
 
 describe("POST /auth/login", () => {
   it("authenticates and returns the { token, user } envelope with a session cookie", async () => {
     const email = "aluno-login@ufal.br";
     const { user } = await createStudent({ email });
 
+
     const response = await request(app)
       .post(LOGIN_URL)
       .send({ email, password: DEFAULT_PASSWORD });
+
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -32,12 +37,34 @@ describe("POST /auth/login", () => {
       },
     });
 
+
     const setCookie = response.headers["set-cookie"];
     expect(setCookie).toBeDefined();
     const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
     expect(sessionCookie).toMatch(/^token=/);
     expect(sessionCookie).toMatch(/HttpOnly/i);
   });
+
+
+  it("sets Max-Age derived from JWT_EXPIRES_IN — cookie and token expire together", async () => {
+    const email = "aluno-maxage@ufal.br";
+    await createStudent({ email });
+
+
+    const response = await request(app)
+      .post(LOGIN_URL)
+      .send({ email, password: DEFAULT_PASSWORD });
+
+
+    expect(response.status).toBe(200);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
+    const expectedMaxAge = Math.floor(ms(env.JWT_EXPIRES_IN) / 1000);
+    expect(sessionCookie).toContain(`Max-Age=${expectedMaxAge}`);
+    expect(sessionCookie).toMatch(/SameSite=Strict/);
+  });
+
 
   it("accepts the session cookie on protected routes (cookie path)", async () => {
     const email = "aluno-cookie@ufal.br";
@@ -48,16 +75,20 @@ describe("POST /auth/login", () => {
       .send({ email, password: DEFAULT_PASSWORD })
       .expect(200);
 
+
     const probe = await agent.post(probeUrl()).send(probeBody);
+
 
     expect(probe.status).toBe(404);
     expect(probe.body).toMatchObject({ status: 404 });
   });
 
+
   it("returns 401 for an unknown email", async () => {
     const response = await request(app)
       .post(LOGIN_URL)
       .send({ email: "ninguem@ufal.br", password: DEFAULT_PASSWORD });
+
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
@@ -66,13 +97,16 @@ describe("POST /auth/login", () => {
     });
   });
 
+
   it("returns 401 for a wrong password (same message — no user enumeration)", async () => {
     const email = "aluno-401@ufal.br";
     await createStudent({ email });
 
+
     const response = await request(app)
       .post(LOGIN_URL)
       .send({ email, password: "SenhaErrada@1" });
+
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
