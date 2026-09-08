@@ -1,97 +1,83 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@/test";
-import { MOCK_ACTIONS } from "@/features/dashboard/constants";
-import type { Action } from "@/features/dashboard/types";
+import { render, screen } from "@/test";
+import { http, HttpResponse } from "msw";
+import { server } from "@/test"; 
 import { Dashboard } from "../Dashboard";
 
-/**
- * Titles of the action cards currently on screen. Cards are the only links
- * pointing at an action's detail page, which keeps the query clear of the
- * carousel headings and the footer links sharing the same page.
- */
-function getVisibleActionTitles(): string[] {
-  return screen
-    .queryAllByRole("link")
-    .filter((link) => link.getAttribute("href")?.startsWith("/activity/"))
-    .map((card) => within(card).getByRole("heading").textContent ?? "");
-}
-
-/** Expected titles, derived from the fixture so edits to it stay harmless. */
-function titlesMatching(predicate: (action: Action) => boolean): string[] {
-  return MOCK_ACTIONS.filter(predicate).map((action) => action.title);
-}
+const mockApiActivities = {
+  activities: [
+    {
+      id: "1",
+      title: "Oficina de React",
+      type: "COURSE",
+      status: "OPEN",
+      availableSlots: 10,
+      slots: 30,
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      details: {
+        description: "Aprenda React na prática.",
+        workloadHours: 4,
+        format: "Presencial"
+      }
+    }
+  ],
+  meta: { total: 1, page: 1, limit: 20 }
+};
 
 describe("Dashboard", () => {
-  it("lists every action when no filter is applied", () => {
+  it("exibe o estado de carregamento e depois a lista de ações (Lista Carregada)", async () => {
+    server.use(
+      http.get("*/activities", () => {
+        return HttpResponse.json(mockApiActivities);
+      })
+    );
+
     render(<Dashboard />);
 
-    expect(getVisibleActionTitles()).toEqual(titlesMatching(() => true));
+    expect(screen.getByText("Buscando ações...")).toBeInTheDocument();
+
+  const actionTitles = await screen.findAllByRole("heading", { name: "Oficina de React" });
+  expect(actionTitles[0]).toBeInTheDocument();
   });
 
-  it("keeps only the actions with open spots when that filter is chosen", async () => {
-    const { user } = render(<Dashboard />);
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
-      "available",
+  it("exibe mensagem de lista vazia quando a API não retorna ações (Lista Vazia)", async () => {
+    server.use(
+      http.get("*/activities", () => {
+        return HttpResponse.json({ activities: [], meta: { total: 0, page: 1, limit: 20 } });
+      })
     );
 
-    expect(getVisibleActionTitles()).toEqual(
-      titlesMatching((action) => action.status === "available"),
-    );
+    render(<Dashboard />);
+
+    const emptyMessage = await screen.findByText("Nenhuma ação encontrada com esses filtros.");
+    expect(emptyMessage).toBeInTheDocument();
   });
 
-  it("keeps only the actions without spots when that filter is chosen", async () => {
-    const { user } = render(<Dashboard />);
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
-      "full",
+  it("exibe a tarja de erro quando a requisição falha (Erro)", async () => {
+    server.use(
+      http.get("*/activities", () => {
+        return new HttpResponse(null, { status: 500 });
+      })
     );
 
-    expect(getVisibleActionTitles()).toEqual(
-      titlesMatching((action) => action.status === "full"),
-    );
+    render(<Dashboard />);
+
+    const errorMessage = await screen.findByText("Não foi possível carregar as ações. Tente novamente.");
+    expect(errorMessage).toBeInTheDocument();
   });
 
-  // No mock action is a "palestra", so this filter can only come back empty.
-  it("shows the empty state when no action matches the filter", async () => {
-    const { user } = render(<Dashboard />);
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por tipo de ação" }),
-      "palestra",
+  it("abre o formulário de criação de ação a partir do cabeçalho", async () => {
+    server.use(
+      http.get("*/activities", () => HttpResponse.json(mockApiActivities))
     );
-
-    expect(screen.getByText("Nenhuma ação encontrada")).toBeInTheDocument();
-    expect(getVisibleActionTitles()).toEqual([]);
-  });
-
-  it("narrows the list further as filters are combined", async () => {
-    const { user } = render(<Dashboard />);
-
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
-      "full",
-    );
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por tipo de ação" }),
-      "oficina",
-    );
-
-    expect(getVisibleActionTitles()).toEqual(
-      titlesMatching(
-        (action) => action.status === "full" && action.type === "oficina",
-      ),
-    );
-  });
-
-  it("opens the action creation form from the header", async () => {
+    
     const { user } = render(<Dashboard />);
 
     expect(screen.queryByText("Vamos criar uma ação?")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Criar uma ação" }));
+    const createBtn = await screen.findByRole("button", { name: "Criar uma ação" });
+    await user.click(createBtn);
 
     expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
   });

@@ -1,5 +1,5 @@
 export interface Action {
-  details: any;
+  details: unknown;
   id: string;
   authorId: string;
   title: string;

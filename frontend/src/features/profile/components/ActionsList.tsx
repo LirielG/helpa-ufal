@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { ActivityStatus } from "../types";
+import type { ActivityStatus, UserActivity } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
@@ -13,7 +13,7 @@ const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
 
 export function ActionsList() {
   const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export function ActionsList() {
         const dataList = response.data || response;
         setActivities(Array.isArray(dataList) ? dataList : []);
         
-      } catch (err) {
+      } catch {
         setError("Não foi possível carregar as atividades. Tente novamente.");
       } finally {
         setIsLoading(false);

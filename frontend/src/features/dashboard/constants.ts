@@ -1,5 +1,3 @@
-import type { Action } from "./types";
-
 export const FILTER_OPTIONS = {
   areas: [
     { value: "all", label: "Todas as áreas" },

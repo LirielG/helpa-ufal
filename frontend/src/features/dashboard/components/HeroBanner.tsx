@@ -73,7 +73,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
                       {action.title}
                     </h2>
                     <p className="text-lg md:text-xl text-gray-200 line-clamp-3">
-                      {action.details?.description || "Descrição não informada."}
+                      {typeof action.details === "object" && action.details && "description" in action.details
+                        ? String((action.details as { description?: string }).description || "Descrição não informada.")
+                        : "Descrição não informada."}
                     </p>
                     <div className="flex items-center gap-4">
                       <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">

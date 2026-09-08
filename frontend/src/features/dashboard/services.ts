@@ -2,13 +2,13 @@ import { api } from "../../services/api";
 import type { Action, FilterOptions, PaginatedResponse } from "./types";
 
 export async function fetchActions(filters: FilterOptions, page = 1, limit = 20): Promise<PaginatedResponse<Action>> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
+  const apiParams: Record<string, string | number> = {
+    page,
+    limit,
+  };
 
   if (filters.availability === "available") {
-    params.append("status", "OPEN");
+    apiParams.status = "OPEN";
   }
   
   if (filters.actionType !== "all") {
@@ -20,9 +20,13 @@ export async function fetchActions(filters: FilterOptions, page = 1, limit = 20)
       servico: "EXTENSION"
     };
     const mappedType = typeMap[filters.actionType];
-    if (mappedType) params.append("type", mappedType);
+    
+    if (mappedType) {
+      apiParams.type = mappedType;
+    }
   }
 
-  const response = await api.get(`/activities?${params.toString()}`);
+  const response = await api.get('/activities', apiParams);
+  
   return response as PaginatedResponse<Action>;
 }

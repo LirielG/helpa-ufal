@@ -14,6 +14,7 @@ import { Alert } from "../components/Alert";
 export function Dashboard() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [actions, setActions] = useState<Action[]>([]);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,13 +26,14 @@ export function Dashboard() {
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   };
 
   const loadActions = useCallback(() => {
     setIsLoading(true);
     setError(null);
 
-    fetchActions(filters)
+    fetchActions(filters, page)
       .then((res) => {
         setActions(res.activities);
       })
@@ -42,10 +44,22 @@ export function Dashboard() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [filters]);
+  }, [filters, page]);
 
   useEffect(() => {
-    loadActions();
+    let mounted = true;
+    
+    const fetchOnMount = async () => {
+      if (mounted) {
+        await loadActions();
+      }
+    };
+    
+    fetchOnMount();
+
+    return () => {
+      mounted = false;
+    };
   }, [loadActions]);
 
   const dashboardBackgroundStyle = {
@@ -67,7 +81,7 @@ export function Dashboard() {
           <FilterBar filters={filters} onFilterChange={handleFilterChange} />
           
           {isLoading && (
-            <p className="text-center text-gray-500 py-10">Buscando ações...</p>
+            <p className="text-center text-gray-500 py-10 font-medium">Buscando ações...</p>
           )}
 
           {!isLoading && error && (
@@ -75,7 +89,9 @@ export function Dashboard() {
           )}
 
           {!isLoading && !error && actions.length === 0 && (
-            <p className="text-center text-gray-500 py-10">Nenhuma ação encontrada com esses filtros.</p>
+            <p className="text-center text-gray-500 py-10 font-medium">
+              Nenhuma ação encontrada com esses filtros.
+            </p>
           )}
 
           {!isLoading && !error && actions.length > 0 && (
