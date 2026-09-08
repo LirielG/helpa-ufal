@@ -20,7 +20,25 @@ export type RequestOptions = {
    * "your session ended".
    */
   handleUnauthorized?: boolean;
+  /** Query string values. Empty ones are dropped instead of sent as blank. */
+  params?: Record<string, unknown>;
 };
+
+function buildQueryString(params?: Record<string, unknown>): string {
+  if (!params) return "";
+
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      query.append(key, String(value));
+    }
+  });
+
+  const queryString = query.toString();
+
+  return queryString ? `?${queryString}` : "";
+}
 
 async function readBody(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
@@ -76,12 +94,13 @@ async function request<T>(
   method: string,
   endpoint: string,
   body?: unknown,
-  { handleUnauthorized = true }: RequestOptions = {},
+  { handleUnauthorized = true, params }: RequestOptions = {},
 ): Promise<T> {
   let response: Response;
+  const url = `${API_BASE_URL}${endpoint}${buildQueryString(params)}`;
 
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(url, {
       method,
       headers: {
         "Content-Type": "application/json",
