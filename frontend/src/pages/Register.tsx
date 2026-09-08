@@ -51,13 +51,16 @@ export function Register() {
   });
 
   const onSubmit = async (data: RegisterFields) => {
+    
+    const formattedCourse = data.course?.trim() ? data.course.trim() : undefined;
+
     const payload: RegisterRequest = {
       fullName: data.fullName,
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
       userType: data.userType === "student" ? "STUDENT" : "TEACHER",
-      course: data.course,
+      course: formattedCourse,
       registrationCode: data.registrationCode,
       ...(data.userType === "teacher" ? { cndb: data.cndb } : {}),
     };
@@ -176,7 +179,7 @@ export function Register() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <AuthField
-            label="Curso"
+            label={selectedType === "teacher" ? "Curso (opcional)" : "Curso"}
             placeholder="Ex.: Ciência da Computação"
             error={errors.course?.message}
             registration={register("course")}
