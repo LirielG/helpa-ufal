@@ -384,12 +384,12 @@ class ActivityService implements IActivityService {
 
     const currentStatus = activity.status;
     
+    if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+      throw new CustomError(409, `Activity is already ${currentStatus} and cannot be transitioned.`);
+    }
+    
     if (!isValidTransition(currentStatus, newStatus)) {
       throw new CustomError(409, `Cannot transition from ${currentStatus} to ${newStatus}.`);
-    }
-
-    if (currentStatus === 'COMPLETED' || currentStatus === 'CANCELLED') {
-      throw new CustomError(409, `Activity is already ${currentStatus} and cannot be transitioned.`);
     }
 
     const updated = await this._activityRepository.updateStatus(activityId, newStatus as any);
