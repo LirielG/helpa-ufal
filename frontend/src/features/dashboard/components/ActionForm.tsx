@@ -24,7 +24,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
   const [spots, setSpots] = useState("");
   const [format, setFormat] = useState("");
   const [location, setLocation] = useState("");
-  const [cep, setCep] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
 
@@ -58,7 +58,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
         hibrido: "HYBRID"
       };
 
-      const cleanZipCode = cep.replace(/\D/g, "");
+      const cleanZipCode = zipCode.replace(/\D/g, "");
 
       const payload = {
         title,
@@ -99,7 +99,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
       setSpots("");
       setFormat("");
       setLocation("");
-      setCep("");
+      setZipCode("");
       setCity("");
       setState("");
 
@@ -314,8 +314,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                     <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
                     <input 
                       type="text"
-                      value={cep}
-                      onChange={(e) => setCep(e.target.value)}
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
                       placeholder="00000-000"
                       maxLength={9}
                       disabled={format === "remoto"}

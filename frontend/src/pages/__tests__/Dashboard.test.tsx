@@ -26,7 +26,7 @@ const mockApiActivities = {
 };
 
 describe("Dashboard", () => {
-  it("exibe o estado de carregamento e depois a lista de ações (Lista Carregada)", async () => {
+  it("shows the loading state and then the list of actions", async () => {
     server.use(
       http.get("*/activities", () => {
         return HttpResponse.json(mockApiActivities);
@@ -41,7 +41,7 @@ describe("Dashboard", () => {
   expect(actionTitles[0]).toBeInTheDocument();
   });
 
-  it("exibe mensagem de lista vazia quando a API não retorna ações (Lista Vazia)", async () => {
+  it("shows the empty state when the API returns no actions", async () => {
     server.use(
       http.get("*/activities", () => {
         return HttpResponse.json({ activities: [], meta: { total: 0, page: 1, limit: 20 } });
@@ -54,7 +54,7 @@ describe("Dashboard", () => {
     expect(emptyMessage).toBeInTheDocument();
   });
 
-  it("exibe a tarja de erro quando a requisição falha (Erro)", async () => {
+  it("shows the error banner when the request fails", async () => {
     server.use(
       http.get("*/activities", () => {
         return new HttpResponse(null, { status: 500 });
@@ -67,7 +67,7 @@ describe("Dashboard", () => {
     expect(errorMessage).toBeInTheDocument();
   });
 
-  it("abre o formulário de criação de ação a partir do cabeçalho", async () => {
+  it("opens the action creation form from the header", async () => {
     server.use(
       http.get("*/activities", () => HttpResponse.json(mockApiActivities))
     );

@@ -50,7 +50,6 @@ export function ActionCard({ action }: ActionCardProps) {
         />
       </div>
 
-      {/* Conteúdo */}
       <div className="p-4 flex flex-col flex-1 space-y-3">
         <h3
           className="text-lg font-bold text-gray-900 line-clamp-2"
