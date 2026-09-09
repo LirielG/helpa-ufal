@@ -39,7 +39,7 @@ export interface RegisterRequest {
   password: string;
   confirmPassword: string;
   userType: UserType;
-  course: string;
+  course?: string;
   registrationCode: string;
   cndb?: string;
 }
