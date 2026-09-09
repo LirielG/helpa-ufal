@@ -50,7 +50,7 @@ router.post(
 
 router.delete(
   "/activities/:id/enroll",
-  authMiddleware.auth(),
+  authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => enrollmentController.cancel(req, res).catch(next),
 );
 
