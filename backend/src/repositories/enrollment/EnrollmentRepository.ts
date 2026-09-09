@@ -37,6 +37,15 @@ class EnrollmentRepository implements IEnrollmentRepository {
         throw new CustomError(404, "Activity not found.");
       }
 
+      // Re-check under the lock: the value read here is the only one
+      // guaranteed to be current, so the "is the activity open" decision
+      // gets serialized against concurrent writers. The Service's check
+      // remains as a fast-path (fails fast without opening a transaction),
+      // this one is the actual source of truth for the error ordering.
+      if (activity.status !== "OPEN") {
+        throw new CustomError(409, "Activity is not open for enrollment.");
+      }
+
       const existing = await tx.enrollment.findUnique({
         where: { userId_activityId: { userId, activityId } },
       });
@@ -58,7 +67,12 @@ class EnrollmentRepository implements IEnrollmentRepository {
           where: { id: existing.id },
           data: {
             status: ENROLLMENT_INITIAL_STATUS,
-            /* enrolledAt: new Date(), */
+            // Contract decision: reactivating a cancelled enrollment DOES
+            // refresh enrolledAt to now, so the record reappears at the top
+            // of the "Ações Inscritas" tab (sorted by enrolledAt desc).
+            // createdAt is left untouched by Prisma/Postgres and keeps the
+            // original creation date of the record.
+            enrolledAt: new Date(),
             attendanceConfirmed: null,     
             confirmedWorkloadHours: 0,     
           },

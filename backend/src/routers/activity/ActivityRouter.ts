@@ -44,7 +44,7 @@ router.post(
 
 router.post(
   "/activities/:id/enroll",
-  authMiddleware.auth(),
+  authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => enrollmentController.enroll(req, res).catch(next),
 );
 

@@ -5,15 +5,19 @@ import type { UserEvent } from "@testing-library/user-event";
 import { render, screen, http, HttpResponse, server } from "@/test";
 import { makeUser } from "@/test";
 import { config } from "@/config";
+import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
 import { GuestRoute } from "@/routes/GuestRoute";
+import { useAuthStore } from "@/stores/authStore";
+import { Login } from "../Login";
 import { Register } from "../Register";
 
 const REGISTER_URL = `${config.apiUrl}/auth/register`;
 
 /**
- * Renders <Register/> at "/register" with a "/dashboard" route to land on after
- * success. `GuestRoute` is part of the tree because it, not this screen,
- * decides where a successful sign-up lands.
+ * Renders <Register/> at "/register" with the real login screen to land on
+ * after success, so the notice the sign-up hands over is asserted where the
+ * visitor actually reads it. `GuestRoute` wraps both because a sign-up must
+ * leave the visitor signed out.
  */
 function renderRegisterPage() {
   return render(
@@ -26,7 +30,14 @@ function renderRegisterPage() {
           </GuestRoute>
         }
       />
-      <Route path="/dashboard" element={<p>Bem-vindo ao painel</p>} />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
     </Routes>,
     { route: "/register" },
   );
@@ -230,15 +241,12 @@ describe("Register page", () => {
   });
 
   describe("submission", () => {
-    it("sends the expected payload for a student and redirects to /dashboard", async () => {
+    it("sends the expected payload for a student and redirects to /login", async () => {
       let capturedBody: unknown;
       server.use(
         http.post(REGISTER_URL, async ({ request }) => {
           capturedBody = await request.json();
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
@@ -248,8 +256,10 @@ describe("Register page", () => {
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
       expect(
-        await screen.findByText("Bem-vindo ao painel"),
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
       ).toBeInTheDocument();
+      // Creating an account must not sign the visitor in.
+      expect(useAuthStore.getState().user).toBeNull();
 
       expect(capturedBody).toMatchObject({
         fullName: "Jéssica Pereira da Silva",
@@ -266,10 +276,7 @@ describe("Register page", () => {
       server.use(
         http.post(REGISTER_URL, async ({ request }) => {
           capturedBody = await request.json();
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
@@ -286,7 +293,7 @@ describe("Register page", () => {
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
       expect(
-        await screen.findByText("Bem-vindo ao painel"),
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
       ).toBeInTheDocument();
 
       expect(capturedBody).toMatchObject({
@@ -313,17 +320,16 @@ describe("Register page", () => {
       expect(
         await screen.findByText("E-mail já cadastrado"),
       ).toBeInTheDocument();
-      expect(screen.queryByText("Bem-vindo ao painel")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(REGISTER_SUCCESS_MESSAGE),
+      ).not.toBeInTheDocument();
     });
 
     it("disables the submit button while the request is in flight", async () => {
       server.use(
         http.post(REGISTER_URL, async () => {
           await delay(50);
-          return HttpResponse.json(
-            { token: "test-token", user: makeUser() },
-            { status: 201 },
-          );
+          return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );
 
@@ -337,7 +343,7 @@ describe("Register page", () => {
       ).toBeDisabled();
 
       expect(
-        await screen.findByText("Bem-vindo ao painel"),
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
       ).toBeInTheDocument();
     });
   });

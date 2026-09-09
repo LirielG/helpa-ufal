@@ -90,16 +90,13 @@ describe("EnrollmentService.enroll", () => {
 
   // ---------- Input validation ----------
 
-  it("treats a malformed activityId as 404 (D1), before hitting the database", async () => {
+  it("rejects a malformed activityId with a ValidationError", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({ activityRepository, enrollmentRepository });
 
-    await expectHttpError(
+    await expect(
       service.enroll(USER_ID, "not-a-uuid"),
-      404,
-      "Activity not found.",
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
+    ).rejects.toBeInstanceOf(ValidationError);
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
