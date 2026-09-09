@@ -2,12 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 import { EnvSchema } from "@/config/env.js";
 
-
 const minimalEnv = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/helpa",
   JWT_SECRET: "x".repeat(32),
 };
-
 
 describe("EnvSchema — CORS_ORIGIN", () => {
   it("defaults to http://localhost:5173 when unset (criteria 1)", () => {

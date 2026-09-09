@@ -1,14 +1,11 @@
 import { z } from "zod";
 import dotenv from "dotenv";
 
-
 if (process.env["NODE_ENV"]) {
   dotenv.config({ path: `.env.${process.env["NODE_ENV"]}`, quiet: true });
 }
 
-
 dotenv.config({ path: ".env", quiet: true });
-
 
 export const EnvSchema = z.object({
   NODE_ENV: z
@@ -51,6 +48,5 @@ export const EnvSchema = z.object({
   ADMIN_PASSWORD: z.string().min(8).optional(),
   ADMIN_FULL_NAME: z.string().min(1).optional(),
 });
-
 
 export const env = EnvSchema.parse(process.env);

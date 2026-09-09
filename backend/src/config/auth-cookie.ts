@@ -8,12 +8,10 @@ import ms from "ms";
 import type { CookieOptions } from "express";
 import { env } from "@/config/env.js";
 
-
 type AuthCookieConfig = {
   nodeEnv: "development" | "test" | "production";
   sameSite: "strict" | "lax" | "none";
 };
-
 
 export function buildAuthCookieOptions(
   config: AuthCookieConfig,
@@ -25,10 +23,8 @@ export function buildAuthCookieOptions(
   };
 }
 
-
 export function deriveCookieMaxAge(jwtExpiresIn: string): number {
   const maxAge = ms(jwtExpiresIn);
-
 
   // Fail-fast: um JWT_EXPIRES_IN inválido não pode virar cookie de sessão
   // silenciosamente — mesma filosofia do EnvSchema (erro no boot).
@@ -36,15 +32,12 @@ export function deriveCookieMaxAge(jwtExpiresIn: string): number {
     throw new Error(`Invalid JWT_EXPIRES_IN: "${jwtExpiresIn}".`);
   }
 
-
   return maxAge;
 }
-
 
 export const authCookieOptions: CookieOptions = buildAuthCookieOptions({
   nodeEnv: env.NODE_ENV,
   sameSite: env.COOKIE_SAME_SITE,
 });
-
 
 export const authCookieMaxAge: number = deriveCookieMaxAge(env.JWT_EXPIRES_IN);
