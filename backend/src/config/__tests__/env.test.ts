@@ -10,7 +10,7 @@ const minimalEnv = {
 
 
 describe("EnvSchema — CORS_ORIGIN", () => {
-  it("defaults to http://localhost:5173 when unset (critério 1)", () => {
+  it("defaults to http://localhost:5173 when unset (criteria 1)", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });
 
 
@@ -49,7 +49,7 @@ describe("EnvSchema — CORS_ORIGIN", () => {
 
 
 describe("EnvSchema — COOKIE_SAME_SITE", () => {
-  it("defaults to strict (critério 1)", () => {
+  it("defaults to strict (criteria 1)", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });
 
 
@@ -73,7 +73,7 @@ describe("EnvSchema — COOKIE_SAME_SITE", () => {
 });
 
 
-describe("boot fail-fast (critério 6)", () => {
+describe("boot fail-fast (criteria 6)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
