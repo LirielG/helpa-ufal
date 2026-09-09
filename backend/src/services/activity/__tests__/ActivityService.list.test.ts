@@ -88,7 +88,6 @@ describe("ActivityService.list", () => {
   });
 
   it("Rejects a limit above 100 with an error in the limit field.", async () => {
-    // Teto alinhado ao contrato Bruno nesta branch (era 50) — decisão D1 da #92.
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
@@ -148,7 +147,7 @@ describe("ActivityService.list", () => {
     expect(repository.list).not.toHaveBeenCalled();
   });
 
-  // ---------- Filtros ----------
+  // ---------- Filters ----------
 
   it("rejects invalid type with an error in the 'tipo' field", async () => {
     const repository = mockRepository();
