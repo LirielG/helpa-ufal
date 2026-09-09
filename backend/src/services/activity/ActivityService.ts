@@ -133,7 +133,7 @@ class ActivityService implements IActivityService {
     usuarioId?: string,
   ): Promise<IListActivitiesResponse> {
     const pageRaw = filters.page ?? "1";
-    const limitRaw = filters.limit ?? "10";
+    const limitRaw = filters.limit ?? "20";
 
     const pageNum = parseInt(pageRaw, 10);
     const limitNum = parseInt(limitRaw, 10);
@@ -152,10 +152,10 @@ class ActivityService implements IActivityService {
         field: "limit",
         message: "limit must be a positive integer.",
       } as ValidationErrorItem);
-    } else if (limitNum > 50) {
+    } else if (limitNum > 100) {
       paginationErrors.push({
         field: "limit",
-        message: "limit can not exceed 50.",
+        message: "limit can not exceed 100.",
       } as ValidationErrorItem);
     }
 
