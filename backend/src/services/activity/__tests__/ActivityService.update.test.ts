@@ -55,9 +55,6 @@ function makeActivity(overrides: Partial<StoredActivity> = {}): StoredActivity {
   };
 }
 
-// O dublê do update expõe APENAS findById e update: o método não consulta o
-// usuário no banco. Essa ausência é proposital — faz parte do teste do
-// usuário fantasma (ver TODO(#148) na seção de autorização).
 function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
@@ -113,7 +110,6 @@ describe("ActivityService.update", () => {
   });
 
   it("throws 403 (not 409) when a third party targets a completed activity", async () => {
-    // Fixa a ordem das guardas: autorização vem antes da checagem de status.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity({ status: "COMPLETED" })),
     });
@@ -124,12 +120,9 @@ describe("ActivityService.update", () => {
   });
 
   it("allows a deleted user with a valid token to update (defect pinned until #148)", async () => {
-    // TODO(#148): o update deriva isAuthor/isManager apenas do token e nunca
-    // consulta o usuário no banco — um usuário apagado com JWT válido autoriza.
-    // Quando a #148 for resolvida, este caso deve lançar 403 e o dublê passará
-    // a expor findUserById. Este teste deve falhar de propósito nesse momento.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity()),
+      findUserById: vi.fn().mockResolvedValue(null),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -188,9 +181,6 @@ describe("ActivityService.update", () => {
       { title: "Oficina de Introdução à Programação — Turma 2", slots: 50 },
       "NONE",
     );
-    // Hoje o service repassa o retorno do repositório sem montar um DTO
-    // explícito (diferente de create/updateStatus). Fixado propositalmente;
-    // a issue de DTO do update deve reverter esta asserção.
     expect(result).toBe(stored);
   });
 
@@ -206,7 +196,6 @@ describe("ActivityService.update", () => {
   });
 
   it("a manager can update their own activity", async () => {
-    // Interseção das duas permissões: a regra não pode ser ambígua aqui.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity({ authorId: "manager-9" })),
     });
@@ -220,8 +209,6 @@ describe("ActivityService.update", () => {
   // ---------- Partial updates ----------
 
   it("forwards only the sent fields to the repository", async () => {
-    // Semântica de PATCH: o service valida com valores fundidos, mas persiste
-    // apenas o que veio no payload; preservar o restante é papel do repositório.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity()),
     });
@@ -237,8 +224,6 @@ describe("ActivityService.update", () => {
   });
 
   it("skips date validation when no date is sent, even with a past startDate", async () => {
-    // A validação de datas só roda se startDate ou endDate vierem no payload —
-    // editar o título de uma ação cuja data já passou deve continuar possível.
     const repository = mockRepository({
       findById: vi
         .fn()
@@ -273,7 +258,6 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects an endDate earlier than the merged startDate", async () => {
-    // Só endDate no payload: a comparação usa o startDate já salvo (merge).
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity()),
     });
@@ -305,6 +289,49 @@ describe("ActivityService.update", () => {
       { startDate, endDate },
       "NONE",
     );
+  });
+
+  it("rejects a duration above the maximum", async () => {
+    const repository = mockRepository({
+      findById: vi.fn().mockResolvedValue(makeActivity()),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureError(
+      service.update("act-1", AUTHOR, {
+        startDate: daysFromNow(20),
+        endDate: daysFromNow(386),
+      }),
+    );
+
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).errors).toEqual([
+      { field: "endDate", message: "Activity duration cannot exceed 365 days." },
+    ]);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a startDate too far in the future", async () => {
+    const repository = mockRepository({
+      findById: vi.fn().mockResolvedValue(makeActivity()),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureError(
+      service.update("act-1", AUTHOR, {
+        startDate: daysFromNow(400),
+        endDate: daysFromNow(402),
+      }),
+    );
+
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).errors).toEqual([
+      {
+        field: "startDate",
+        message: "startDate cannot be more than 365 days in the future.",
+      },
+    ]);
+    expect(repository.update).not.toHaveBeenCalled();
   });
 
   // ---------- Slots and workload ----------
@@ -348,7 +375,6 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects workloadHours above the activity duration", async () => {
-    // Ação padrão dura 2 dias (48h); 100h excede a duração total.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivity()),
     });
@@ -372,7 +398,7 @@ describe("ActivityService.update", () => {
 
   it("rejects ONLINE when no url is sent and none is stored", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity()), // IN_PERSON salvo, sem url
+      findById: vi.fn().mockResolvedValue(makeActivity()), 
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -401,8 +427,6 @@ describe("ActivityService.update", () => {
 
     await service.update("act-1", AUTHOR, { format: "ONLINE" });
 
-    // A asserção fica no addressAction (canal explícito). O service hoje também
-    // zera data.address por mutação — cheiro conhecido, não fixado aqui.
     expect(repository.update).toHaveBeenCalledWith(
       "act-1",
       expect.objectContaining({ format: "ONLINE" }),
@@ -411,10 +435,6 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts IN_PERSON using the stored address (no address in payload)", async () => {
-    // Semântica do service: o estado fundido (patch + banco) já satisfaz a
-    // regra. ATENÇÃO: o superRefine do UpdateActivitySchema hoje barra esse
-    // payload no controller antes do service — divergência Zod × service que
-    // será tratada em issue própria. Este teste fixa a semântica do service.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(
         makeActivity({
@@ -486,7 +506,7 @@ describe("ActivityService.update", () => {
 
   it("schedules address update when only a new address is sent", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity()), // IN_PERSON com endereço
+      findById: vi.fn().mockResolvedValue(makeActivity()),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -526,8 +546,6 @@ describe("ActivityService.update", () => {
   });
 
   it("drops a sent address when the activity is ONLINE", async () => {
-    // ONLINE não tem endereço: o service descarta o que veio no payload e não
-    // agenda nada (não há endereço salvo para remover).
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(
         makeActivity({
