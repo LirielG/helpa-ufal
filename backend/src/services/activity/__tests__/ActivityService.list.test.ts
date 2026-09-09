@@ -4,7 +4,6 @@ import type { IListActivitiesFilters } from "../IActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import ValidationError from "@/models/error/ValidationError.js";
 
-
 function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
@@ -178,7 +177,8 @@ describe("ActivityService.list", () => {
     expect(error.errors).toEqual([
       {
         field: "formato",
-        message: "formato must be one of the following: IN_PERSON, ONLINE, HYBRID.",
+        message:
+          "formato must be one of the following: IN_PERSON, ONLINE, HYBRID.",
       },
     ]);
     expect(repository.list).not.toHaveBeenCalled();
@@ -326,7 +326,7 @@ describe("ActivityService.list", () => {
     );
   });
 
-  // ---------- Precedência: paginação antes dos filtros ----------
+  // ---------- Precedence: pagination before filters ----------
 
   it("reports only the pagination error when pagination and filters are invalid", async () => {
     const repository = mockRepository();
@@ -342,7 +342,7 @@ describe("ActivityService.list", () => {
     expect(repository.list).not.toHaveBeenCalled();
   });
 
-  // ---------- Repasse ao repositório ----------
+  // ---------- Repository forwarding ----------
 
   it("applies order: 'desc' by default", async () => {
     const repository = mockRepository();
@@ -368,7 +368,7 @@ describe("ActivityService.list", () => {
 
   it("maps orderBy: 'start_date' to 'createdAt' (current faulty behavior)", async () => {
     // TODO(#147): validation accepts "start_date", but the mapping compares
-    // it against "data_inicio" — sorting by start date never happens. 
+    // it against "data_inicio" — sorting by start date never happens.
     // Once #147 is resolved, the expected value will become "startDate"
     // and this test should FAIL intentionally, signaling the fix.
     const repository = mockRepository();
@@ -448,7 +448,9 @@ describe("ActivityService.list", () => {
 
   it("returns the result from the repository without changes", async () => {
     const repoResult = {
-      activities: [{ id: "act-1", title: "Oficina de Introdução à Programação" }],
+      activities: [
+        { id: "act-1", title: "Oficina de Introdução à Programação" },
+      ],
       total: 1,
     };
     const repository = mockRepository({
