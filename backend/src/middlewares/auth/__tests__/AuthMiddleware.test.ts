@@ -11,7 +11,6 @@ const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const MALFORMED_TOKEN = "this-is-not-a-jwt";
 const RES = {} as Response;
 
-
 function anAuthenticatedUser(
   overrides: Partial<AuthenticatedUser> = {},
 ): AuthenticatedUser {
@@ -23,20 +22,17 @@ function anAuthenticatedUser(
   };
 }
 
-
 function anExpiredToken(
   payload: AuthenticatedUser = anAuthenticatedUser(),
 ): string {
   return signJwt(payload, "-1s");
 }
 
-
 function aTokenWithInvalidSignature(
   payload: AuthenticatedUser = anAuthenticatedUser(),
 ): string {
   return jwt.sign(payload, "wrong-secret");
 }
-
 
 function mockRequest(
   options: {
@@ -49,19 +45,15 @@ function mockRequest(
   if (options.bearerToken) headers.authorization = `Bearer ${options.bearerToken}`;
   if (options.rawAuthorization) headers.authorization = options.rawAuthorization;
 
-
   const cookies: Record<string, string> = {};
   if (options.cookieToken) cookies.token = options.cookieToken;
-
 
   return { headers, cookies } as unknown as Request;
 }
 
-
 function mockNext(): NextFunction {
   return vi.fn() as unknown as NextFunction;
 }
-
 
 function expectAuthError(fn: () => void, status: number): void {
   try {
@@ -76,10 +68,8 @@ function expectAuthError(fn: () => void, status: number): void {
   );
 }
 
-
 describe("AuthMiddleware", () => {
   const middleware = new AuthMiddleware();
-
 
   describe("required authentication — auth({ userTypes: 'all' })", () => {
     it("throws 401 and does not call next when no token is provided", () => {
@@ -87,13 +77,9 @@ describe("AuthMiddleware", () => {
       const req = mockRequest();
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(next).not.toHaveBeenCalled();
     });
-
 
     it("calls next and populates req.user with a valid Bearer token", () => {
       const handler = middleware.auth({ userTypes: "all" });
@@ -101,9 +87,7 @@ describe("AuthMiddleware", () => {
       const req = mockRequest({ bearerToken: signJwt(user) });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(next).toHaveBeenCalledWith();
@@ -113,7 +97,6 @@ describe("AuthMiddleware", () => {
         isManager: false,
       });
     });
-
 
     it("calls next and populates req.user with a valid cookie token", () => {
       const handler = middleware.auth({ userTypes: "all" });
@@ -121,9 +104,7 @@ describe("AuthMiddleware", () => {
       const req = mockRequest({ cookieToken: signJwt(user) });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(next).toHaveBeenCalledWith();
@@ -134,16 +115,12 @@ describe("AuthMiddleware", () => {
       });
     });
 
-
     it("throws 401 for a malformed token", () => {
       const handler = middleware.auth({ userTypes: "all" });
       const req = mockRequest({ bearerToken: MALFORMED_TOKEN });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(next).not.toHaveBeenCalled();
       expect(req.user).toBeUndefined();
     });
@@ -154,28 +131,20 @@ describe("AuthMiddleware", () => {
       const req = mockRequest({ bearerToken: aTokenWithInvalidSignature() });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(next).not.toHaveBeenCalled();
       expect(req.user).toBeUndefined();
     });
-
 
     it("throws 401 for an expired token", () => {
       const handler = middleware.auth({ userTypes: "all" });
       const req = mockRequest({ bearerToken: anExpiredToken() });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(next).not.toHaveBeenCalled();
       expect(req.user).toBeUndefined();
     });
-
 
     it("throws 401 when the Authorization header lacks the Bearer scheme", () => {
       const handler = middleware.auth({ userTypes: "all" });
@@ -184,13 +153,9 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(next).not.toHaveBeenCalled();
     });
-
 
     it("clears a pre-existing req.user when validation fails", () => {
       const handler = middleware.auth({ userTypes: "all" });
@@ -198,15 +163,11 @@ describe("AuthMiddleware", () => {
       req.user = anAuthenticatedUser({ id: "pre-existing-user" });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 401);
-
-
       expect(req.user).toBeUndefined();
       expect(next).not.toHaveBeenCalled();
     });
   });
-
 
   describe("optional authentication — auth()", () => {
     it("calls next anonymously when no token is provided", () => {
@@ -214,9 +175,7 @@ describe("AuthMiddleware", () => {
       const req = mockRequest();
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(next).toHaveBeenCalledWith();
@@ -230,9 +189,7 @@ describe("AuthMiddleware", () => {
       const req = mockRequest({ bearerToken: signJwt(user) });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(next).toHaveBeenCalledWith();
@@ -243,7 +200,6 @@ describe("AuthMiddleware", () => {
       });
     });
 
-
     it.each([
       ["invalid", MALFORMED_TOKEN],
       ["expired", anExpiredToken()],
@@ -252,16 +208,13 @@ describe("AuthMiddleware", () => {
       const req = mockRequest({ bearerToken: token });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(next).toHaveBeenCalledWith();
       expect(req.user).toBeUndefined();
     });
   });
-
 
   describe("authorization", () => {
     it.each(["STUDENT", "TEACHER"] as const)(
@@ -273,14 +226,11 @@ describe("AuthMiddleware", () => {
         });
         const next = mockNext();
 
-
         handler(req, RES, next);
-
 
         expect(next).toHaveBeenCalledTimes(1);
       },
     );
-
 
     it("calls next when the userType is explicitly allowed", () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
@@ -289,13 +239,10 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
     });
-
 
     it("throws 403 when the userType is not allowed", () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
@@ -304,13 +251,9 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 403);
-
-
       expect(next).not.toHaveBeenCalled();
     });
-
 
     it("calls next for a manager when manager: true", () => {
       const handler = middleware.auth({ manager: true });
@@ -319,13 +262,10 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       handler(req, RES, next);
-
 
       expect(next).toHaveBeenCalledTimes(1);
     });
-
 
     it("throws 403 for a non-manager when manager: true", () => {
       const handler = middleware.auth({ manager: true });
@@ -334,13 +274,9 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 403);
-
-
       expect(next).not.toHaveBeenCalled();
     });
-
 
     it("does not let a manager bypass userTypes restrictions", () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
@@ -351,10 +287,7 @@ describe("AuthMiddleware", () => {
       });
       const next = mockNext();
 
-
       expectAuthError(() => handler(req, RES, next), 403);
-
-
       expect(next).not.toHaveBeenCalled();
     });
   });
