@@ -1,9 +1,9 @@
 // src/config/auth-cookie.ts
-// Issue #166 — fonte única das opções do cookie de sessão.
-// O objeto base é compartilhado entre a escrita (login) e a limpeza (logout):
-// ele NUNCA carrega maxAge/expires, porque o clearCookie não pode recebê-los.
-// O maxAge é derivado de JWT_EXPIRES_IN com o mesmo parser (ms) que o
-// jsonwebtoken usa internamente, e entra apenas no momento da escrita.
+// Issue #166 — single source of truth for the session cookie options.
+// The base object is shared between writing (login) and clearing (logout):
+// it NEVER carries maxAge/expires, because clearCookie cannot receive them.
+// maxAge is derived from JWT_EXPIRES_IN with the same parser (ms) that
+// jsonwebtoken uses internally, and is applied only when writing the cookie.
 import ms from "ms";
 import type { CookieOptions } from "express";
 import { env } from "@/config/env.js";
@@ -24,10 +24,13 @@ export function buildAuthCookieOptions(
 }
 
 export function deriveCookieMaxAge(jwtExpiresIn: string): number {
-  const maxAge = ms(jwtExpiresIn);
+  // env only guarantees a string, while ms() narrows its input to a template
+  // literal type. The cast mirrors signJwt, and the guard below is what
+  // actually validates the value at runtime.
+  const maxAge = ms(jwtExpiresIn as ms.StringValue);
 
-  // Fail-fast: um JWT_EXPIRES_IN inválido não pode virar cookie de sessão
-  // silenciosamente — mesma filosofia do EnvSchema (erro no boot).
+  // Fail-fast: an invalid JWT_EXPIRES_IN must not silently become a session
+  // cookie — same philosophy as EnvSchema (fail at boot).
   if (typeof maxAge !== "number" || !Number.isFinite(maxAge) || maxAge <= 0) {
     throw new Error(`Invalid JWT_EXPIRES_IN: "${jwtExpiresIn}".`);
   }

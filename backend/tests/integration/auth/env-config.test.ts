@@ -17,7 +17,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-describe("CORS_ORIGIN (critério 2)", () => {
+describe("CORS_ORIGIN (criterion 2)", () => {
   it("answers the preflight with the configured origin and credentials", async () => {
     vi.stubEnv("CORS_ORIGIN", CUSTOM_ORIGIN);
     const app = await importFreshApp();
@@ -47,7 +47,7 @@ describe("CORS_ORIGIN (critério 2)", () => {
     );
   });
 
-  it("keeps serving the default origin when the variable is unset (critério 1)", async () => {
+  it("keeps serving the default origin when the variable is unset (criterion 1)", async () => {
     const app = await importFreshApp();
 
     const response = await request(app)
@@ -60,7 +60,7 @@ describe("CORS_ORIGIN (critério 2)", () => {
   });
 });
 
-describe("COOKIE_SAME_SITE (critério 3)", () => {
+describe("COOKIE_SAME_SITE (criterion 3)", () => {
   it("emits SameSite=Lax on the login Set-Cookie when configured", async () => {
     vi.stubEnv("COOKIE_SAME_SITE", "lax");
     const app = await importFreshApp();
@@ -82,7 +82,7 @@ describe("COOKIE_SAME_SITE (critério 3)", () => {
   });
 });
 
-describe("invalid config at boot (critério 6)", () => {
+describe("invalid config at boot (criterion 6)", () => {
   it("rejects the app import with a ZodError when COOKIE_SAME_SITE is invalid", async () => {
     vi.stubEnv("COOKIE_SAME_SITE", "sometimes");
 

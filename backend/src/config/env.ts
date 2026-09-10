@@ -15,9 +15,9 @@ export const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default("1d"),
-  // Origem permitida pelo CORS (com credentials). Validada como URL http(s)
-  // e normalizada para scheme://host[:porta] — path e barra final são
-  // descartados, pois o header Origin nunca os carrega.
+  // Origin allowed by CORS (with credentials). Validated as an http(s) URL
+  // and normalized to scheme://host[:port] — path and trailing slash are
+  // dropped, since the Origin header never carries them.
   CORS_ORIGIN: z
     .string()
     .transform((value, ctx) => {
@@ -40,8 +40,8 @@ export const EnvSchema = z.object({
       }
     })
     .default("http://localhost:5173"),
-  // Política SameSite do cookie de sessão. "none" só funciona com
-  // secure=true (NODE_ENV=production) — ver .env.example.
+  // SameSite policy for the session cookie. "none" only works with
+  // secure=true (NODE_ENV=production) — see .env.example.
   COOKIE_SAME_SITE: z.enum(["strict", "lax", "none"]).default("strict"),
   SIGAA_SYNC_ENABLED: z.stringbool().default(true),
   ADMIN_EMAIL: z.email().optional(),

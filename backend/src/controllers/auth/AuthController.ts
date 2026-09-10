@@ -20,8 +20,8 @@ class AuthController implements IAuthController {
     const data = LoginSchema.parse(req.body);
     const result = await this._authService.login(data);
 
-    // maxAge entra apenas na escrita; o objeto base (sem maxAge/expires) é
-    // o mesmo passado ao clearCookie — os dois não podem mais divergir.
+    // maxAge is applied only on write; the base object (no maxAge/expires) is
+    // the same one passed to clearCookie — the two can no longer diverge.
     res.cookie("token", result.token, {
       ...authCookieOptions,
       maxAge: authCookieMaxAge,

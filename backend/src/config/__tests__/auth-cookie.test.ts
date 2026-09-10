@@ -61,7 +61,7 @@ describe("deriveCookieMaxAge", () => {
   });
 
   it("treats bare numeric strings as milliseconds, like jsonwebtoken does", () => {
-    // Paridade de parser: "120" vale 120ms tanto no sign quanto no cookie.
+    // Parser parity: "120" means 120ms for both the sign and the cookie.
     expect(deriveCookieMaxAge("120")).toBe(120);
   });
 
