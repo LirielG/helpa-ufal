@@ -28,12 +28,13 @@ Ele é preenchido apenas no seu Bruno local; nunca comite um valor nele.
 
 ## Organização
 
-| Pasta | Conteúdo |
-|---|---|
-| `Activities/` | CRUD de ações, transição de status e denúncias |
-| `Auth/` | Login e cadastro |
+| Pasta          | Conteúdo                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| `Activities/`  | CRUD de ações, transição de status e denúncias                                                |
+| `Auth/`        | Login, cadastro e logout                                                                      |
 | `Enrollments/` | Inscrição e cancelamento em uma ação, mais os contratos de listagem e confirmação de presença |
-| `User/` | Rotas de perfil do usuário |
+| `SIGAA/`       | Listagem das ações raspadas do SIGAA e os valores aceitos pelos filtros                       |
+| `User/`        | Rotas de perfil do usuário                                                                    |
 
 Nem toda rota documentada aqui já existe no backend: `User/` inteira, mais
 `Confirm Attendance` e `List Activity Enrollments`, são contratos acordados que

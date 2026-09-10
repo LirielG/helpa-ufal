@@ -1,0 +1,185 @@
+info:
+  name: List SIGAA activities
+  type: http
+  seq: 1
+  tags:
+    - SIGAA
+
+http:
+  method: GET
+  url: "{{baseUrl}}/sigaa-activities"
+  params:
+    - name: search
+      value: ""
+      type: query
+      description: Partial, case-insensitive search on title.
+      disabled: true
+    - name: type
+      value: ""
+      type: query
+      description: Exact match on SIGAA type. Use /sigaa-activities/filters for valid values.
+      disabled: true
+    - name: department
+      value: ""
+      type: query
+      description: Exact match on department acronym. Use /sigaa-activities/filters for valid values.
+      disabled: true
+    - name: page
+      value: "1"
+      type: query
+      description: "Page number (default: 1). Out-of-range values are normalized, never rejected."
+      disabled: true
+    - name: limit
+      value: "10"
+      type: query
+      description: "Items per page (default: 10, max: 100). Out-of-range values are normalized, never rejected."
+      disabled: true
+    - name: orderBy
+      value: lastSeenAt
+      type: query
+      description: "Sort field (default: lastSeenAt)."
+      disabled: true
+    - name: orderBy
+      value: title
+      type: query
+      description: "Sort field (default: lastSeenAt)."
+      disabled: true
+    - name: order
+      value: desc
+      type: query
+      description: "Sort direction (default: desc)."
+      disabled: true
+    - name: order
+      value: asc
+      type: query
+      description: "Sort direction (default: desc)."
+      disabled: true
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Paginated list
+    description: Paginated SIGAA activities. The envelope is flat (items/total/page/limit) — there is no data/meta wrapper and no totalPages, unlike GET /activities.
+    request:
+      url: "{{baseUrl}}/sigaa-activities"
+      method: GET
+      params:
+        - name: page
+          value: "1"
+          type: query
+          description: "Page number (default: 1)"
+        - name: limit
+          value: "10"
+          type: query
+          description: "Items per page (default: 10, max: 100)"
+        - name: search
+          value: ""
+          type: query
+          description: Partial, case-insensitive search on title.
+          disabled: true
+        - name: type
+          value: ""
+          type: query
+          description: Exact match on SIGAA type.
+          disabled: true
+        - name: department
+          value: ""
+          type: query
+          description: Exact match on department acronym.
+          disabled: true
+        - name: orderBy
+          value: lastSeenAt
+          type: query
+          description: "Sort field (default: lastSeenAt)."
+        - name: order
+          value: desc
+          type: query
+          description: "Sort direction (default: desc)."
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [
+              {
+                "id": "",
+                "sigaaId": "",
+                "title": "",
+                "type": "",
+                "normalizedType": "EXTENSION",
+                "department": "",
+                "lastSeenAt": ""
+              }
+            ],
+            "total": 0,
+            "page": 1,
+            "limit": 10
+          }
+  - name: 400 - Validation error
+    description: Only orderBy and order are validated. Any other invalid value — including page and limit out of range — is normalized or ignored instead of rejected.
+    request:
+      url: "{{baseUrl}}/sigaa-activities"
+      method: GET
+      params:
+        - name: orderBy
+          value: foo
+          type: query
+          description: Invalid sort field.
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "orderBy",
+                "message": "orderBy must be one of: title, lastSeenAt"
+              }
+            ]
+          }
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/sigaa-activities"
+      method: GET
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Returns a paginated list of the extension activities scraped from the SIGAA.
+
+  - Public route: no token required.
+  - Flat response envelope: `{ items, total, page, limit }`. There is no `data`/`meta` wrapper and no `totalPages` — GET /activities returns a different shape, do not assume they match.
+  - `department` is nullable on each item. `type` is the raw SIGAA label, as scraped; `normalizedType` is the mapped value (EXTENSION, COURSE, EVENT, LECTURE, OTHER).
+  - `search`, `type` and `department` combine: `search` is a partial, case-insensitive match on the title, while `type` and `department` are exact matches. Only active activities are listed.
+  - Only `orderBy` and `order` are validated (400). `page` and `limit` out of range do NOT return 400 — they are normalized silently: `limit=500` becomes 100, `limit=0` falls back to the default 10, `limit=-5` becomes 1 and `page=abc` becomes 1. The response echoes the normalized values. This is the opposite of GET /activities, which rejects them with 400.
+  - Unknown query params and filter values that match nothing are accepted and return an empty `items` list.
+  - The request triggers an on-demand sync with the SIGAA (12h cache), so the first call after the cache expires can take much longer than the following ones. Use GET /sigaa-activities/filters when you only need the filter values, since that route never syncs.
