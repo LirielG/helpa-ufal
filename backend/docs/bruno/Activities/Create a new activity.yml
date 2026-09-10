@@ -1,0 +1,167 @@
+info:
+  name: Create a new activity
+  type: http
+  seq: 1
+  tags:
+    - Activities
+
+http:
+  method: POST
+  url: "{{baseUrl}}/activities"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "string",
+        "type": "EXTENSION",
+        "campus": "MACEIO",
+        "startDate": "2026-08-31T16:00:00.000Z",
+        "endDate": "2026-08-31T17:00:00.000Z",
+        "slots": 1,
+        "description": "string",
+        "area": "string",
+        "workloadHours": 1,
+        "format": "IN_PERSON",
+        "address": {
+          "addressLine": "string",
+          "district": "string",
+          "zipCode": "89985218",
+          "city": "string",
+          "state": "AC"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 201 Response
+    description: Activity created successfully.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 40,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "IN_PERSON",
+              "url": null,
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            }
+          }
+  - name: 400 Response
+    description: Validation error.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "",
+                "message": ""
+              }
+            ]
+          }
+  - name: 401 Response
+    description: Unauthenticated.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }

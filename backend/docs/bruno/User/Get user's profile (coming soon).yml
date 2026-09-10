@@ -1,0 +1,90 @@
+info:
+  name: Get user's profile (coming soon)
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me"
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Student profile
+    description: Valid token belonging to a STUDENT user.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000010",
+            "fullName": "Maria Silva",
+            "email": "maria@aluno.ufal.br",
+            "course": "Computer Science",
+            "registrationCode": "2021001234",
+            "userType": "STUDENT",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 401 Missing or invalid token
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Missing, invalid or expired token."
+          }
+  - name: 404 User no longer exists
+    response:
+      status: 404
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "User not found."
+          }
+
+docs: |-
+  # GET /users/me — Profile data
+
+  Returns the registration data of the authenticated user.
+  Powers the **Personal Data** section of the Profile screen.
+
+  ## Authentication
+  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - The `userId` is extracted exclusively from the token — never from `params`, `query` or `body`.
+
+  ## Field mapping (DTO → database)
+  | Field              | Source |
+  |--------------------|--------|
+  | `fullName`         | `User.fullName` |
+  | `email`            | `User.email` |
+  | `userType`         | `User.userType` (enum `STUDENT` \| `TEACHER`, untranslated) |
+  | `registrationCode` | `Student.registrationCode` or `Teacher.registrationCode` (per `userType`) |
+  | `course`           | `Student.course` or `Teacher.course` — **may be `null` for `TEACHER`** |
+
+  ## Business rules
+  - Only the token owner can view their own profile; there is no third-party lookup through this route.
+  - `passwordHash` and other internal fields are never serialized (explicit DTO).
+  - `registrationCode`, `course` and `userType` are read-only (see PATCH /users/me).
+  - Participation totals (e.g. `totalHours`) are **not** returned here —
+    see GET /users/me/certificates. This route performs a single primary-key lookup.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 401    | Missing, invalid or expired token |
+  | 404    | The user from the token no longer exists |
+
+  > Error body aligned with the rest of the API (`{ status, message }`) — see
+  > `ErrorResponse` in swagger.ts.

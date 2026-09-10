@@ -1,0 +1,152 @@
+info:
+  name: List user's activities (coming soon)
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me/activities"
+  params:
+    - name: filter
+      value: enrolled
+      type: query
+      description: enrolled | completed | managed
+      disabled: true
+    - name: page
+      value: "1"
+      type: query
+      description: Current page
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: Items per page (max. 50)
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 filter=enrolled
+    description: Activities with an approved enrollment and status OPEN or IN_PROGRESS.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "data": [
+              {
+                "id": "a1b2c3d4-0000-4000-8000-000000000030",
+                "title": "Lagoon Cleanup Volunteer Day",
+                "description": "Volunteer action to collect waste...",
+                "location": "Lagoa do Roteiro, Maceió",
+                "startDate": "2026-08-20T14:00:00.000Z",
+                "status": "OPEN",
+                "category": "EXTENSION",
+                "workloadHours": 8
+              }
+            ],
+            "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+          }
+  - name: 200 filter=managed
+    description: Activities created by the user (Activity.authorId = userId).
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "data": [
+              {
+                "id": "a1b2c3d4-0000-4000-8000-000000000031",
+                "title": "Intro to Programming Workshop",
+                "description": "Programming logic for beginners.",
+                "location": "Av. Manoel Severino Barbosa, s/n — Bom Sucesso, Arapiraca",
+                "startDate": "2026-08-01T08:00:00.000Z",
+                "status": "IN_PROGRESS",
+                "category": "COURSE",
+                "workloadHours": 20
+              }
+            ],
+            "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+          }
+  - name: 400 Invalid filter
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "filter", "message": "Must be one of: enrolled, completed, managed." }
+            ]
+          }
+  - name: 401 Missing or invalid token
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Missing, invalid or expired token."
+          }
+
+docs: |-
+  # GET /users/me/activities — Enrolled, completed and managed activities
+
+  Lists the activities linked to the authenticated user according to the chosen
+  filter. Powers the **Activities** section of the Profile screen (three tabs).
+
+  ## Authentication
+  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - The `userId` is extracted exclusively from the token.
+
+  ## Query params
+  | Param  | Type | Required          | Description |
+  |--------|------|-------------------|-------------|
+  | filter | enum | yes               | `enrolled` \| `completed` \| `managed` |
+  | page   | int  | no (default 1)    | Current page |
+  | limit  | int  | no (default 20)   | Items per page (max. 50) |
+
+  > Note: the English values replace `inscritas`/`concluidas`/`gerenciadas`
+  > from the issue, keeping the API 100% in English. Align with the team and,
+  > if approved, update the issue text.
+
+  ## Filter matrix
+  | filter      | Rule (all with `Activity.deletedAt IS NULL`) |
+  |-------------|----------------------------------------------|
+  | `enrolled`  | `Enrollment.status = APPROVED` for the user AND `Activity.status` in (`OPEN`, `IN_PROGRESS`) |
+  | `completed` | `Enrollment.status = APPROVED` AND `Enrollment.attendanceConfirmed = true` (attendance confirmed by the activity manager) |
+  | `managed`   | `Activity.authorId = userId` (user is the creator) |
+
+  ## Field mapping (DTO → database)
+  | Field           | Source |
+  |-----------------|--------|
+  | `startDate`     | `Activity.startDate` |
+  | `status`        | `Activity.status` (enum `OPEN` \| `IN_PROGRESS` \| `COMPLETED` \| `CANCELLED`) |
+  | `category`      | `Activity.type` (enum `EXTENSION` \| `COURSE` \| `EVENT` \| `LECTURE` \| `OTHER`) |
+  | `workloadHours` | `ActivityDetails.workloadHours` — `null` when the activity has no details |
+  | `location`      | `ActivityDetails → Address` (short string summary) |
+
+  ## Business rules
+  - The user only sees their own history.
+  - `PENDING` or `REJECTED` enrollments never appear in any filter.
+  - Soft-deleted activities (`deletedAt != null`) never appear in any filter.
+  - Default ordering: `startDate` descending.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | Missing or invalid `filter`; invalid `page`/`limit` |
+  | 401    | Missing, invalid or expired token |

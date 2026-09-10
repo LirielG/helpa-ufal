@@ -1,0 +1,121 @@
+info:
+  name: List user's certificates (coming soon)
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me/certificates"
+  params:
+    - name: page
+      value: "1"
+      type: query
+      description: Current page
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: Items per page (max. 50)
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Paginated list with totalHours
+    description: Student with one issued certificate.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "data": [
+              {
+                "id": "a1b2c3d4-0000-4000-8000-000000000020",
+                "activityTitle": "Computer Science Week — Git Workshop",
+                "workloadHours": 8,
+                "activityDate": "2026-06-10T14:00:00.000Z",
+                "issuedAt": "2026-06-15T09:00:00.000Z",
+                "validationCode": "HELPA-2026-A1B2C3"
+              }
+            ],
+            "meta": {
+              "total": 1,
+              "page": 1,
+              "limit": 20,
+              "totalPages": 1,
+              "totalHours": 8
+            }
+          }
+  - name: 200 User without certificates
+    description: Never returns 404 for an empty list.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "data": [],
+            "meta": { "total": 0, "page": 1, "limit": 20, "totalPages": 0, "totalHours": 0 }
+          }
+  - name: 401 Missing or invalid token
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Missing, invalid or expired token."
+          }
+
+docs: |-
+  # GET /users/me/certificates — Certificate cards
+
+  Lists the certificates issued to the authenticated user, one card per
+  completed activity, plus the total of certified hours. Powers the
+  **Certificates** section of the Profile screen.
+
+  ## Authentication
+  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - The `userId` is extracted exclusively from the token.
+
+  ## Query params
+  | Param | Type | Default | Description |
+  |-------|------|---------|-------------|
+  | page  | int  | 1       | Current page |
+  | limit | int  | 20      | Items per page (max. 50) |
+
+  ## Field mapping (DTO → database)
+  | Field            | Source |
+  |------------------|--------|
+  | `activityTitle`  | `Certificate → Enrollment → Activity.title` |
+  | `workloadHours`  | `Activity → ActivityDetails.workloadHours` |
+  | `activityDate`   | `Activity.startDate` |
+  | `issuedAt`       | `Certificate.issuedAt` (ISO 8601 with time) |
+  | `validationCode` | `Certificate.validationCode` |
+
+  ## Business rules
+  - There is no "status" column on `Certificate`: the record's existence
+    **is** the issuance.
+  - Default ordering: `issuedAt` descending.
+  - Certificates of soft-deleted activities **remain listed** —
+    the certificate is the student's document.
+  - `totalHours` (inside `meta`) = sum of `workloadHours` across **all** of the
+    user's certificates (not just the current page). This is the only route that
+    computes this aggregate — GET /users/me does not return it.
+  - A user without certificates receives `200` with `data: []` and `totalHours: 0`.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | Invalid `page`/`limit` |
+  | 401    | Missing, invalid or expired token |

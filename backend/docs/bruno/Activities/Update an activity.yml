@@ -1,0 +1,339 @@
+info:
+  name: Update an activity
+  type: http
+  seq: 4
+  tags:
+    - Activities
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/activities/:id"
+  params:
+    - name: id
+      value: 22ac40bd-e160-4c6e-8505-b63913d2482f
+      type: path
+      description: Activity UUID
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Oficina de Introdução à Programação — Turma 2",
+        "slots": 50,
+        "format": "HYBRID",
+        "url": "https://meet.example.com/turma2",
+        "address": {
+          "addressLine": "Av. Manoel Severino Barbosa, s/n",
+          "district": "Bom Sucesso",
+          "zipCode": "57309005",
+          "city": "Arapiraca",
+          "state": "AL"
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Response
+    description: Activity updated successfully.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: ""
+  - name: 400 Response
+    description: Validation error or empty body.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "",
+                "message": ""
+              }
+            ]
+          }
+  - name: 401 Response
+    description: Unauthenticated.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 403 Response
+    description: Forbidden. Requester is not the author or a manager.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 404 Response
+    description: Activity not found or deleted.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 409 Response
+    description: Activity cannot be updated (status COMPLETED or CANCELLED).
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+
+docs: Partially updates an activity. Only the author or a manager can perform this operation. Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated. At least one field must be provided.

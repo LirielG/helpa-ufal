@@ -12,7 +12,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: Enroll/Enroll-in-an-activity.yml.
+// Route contract: docs/bruno/Enrollments/Enroll-in-an-activity.yml.
 // If the team flattens the route (POST /enroll), this helper is the only line to change.
 const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
 

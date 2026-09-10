@@ -12,7 +12,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: docs/Cancel-Enrollment.yml (Bruno).
+// Route contract: docs/bruno/Enrollments/Cancel Enrollment.yml.
 const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
 
 async function anOpenActivity(slots = 30) {
