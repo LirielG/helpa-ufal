@@ -24,6 +24,17 @@ class EnrollmentController implements IEnrollmentController {
 
     res.status(201).json(enrollment);
   }
+
+  public async cancel(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    const { id } = req.params;
+    if (!id || Array.isArray(id)) throw new CustomError(400, "Invalid id parameter.");
+
+    await this._enrollmentService.cancel(req.user.id, id);
+
+    res.status(204).send();
+  }
 }
 
 export default EnrollmentController;
