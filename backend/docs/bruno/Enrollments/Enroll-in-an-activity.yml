@@ -1,0 +1,278 @@
+info:
+  name: Enroll in an activity
+  type: http
+  seq: 8
+  tags:
+    - Enroll
+
+http:
+  method: POST
+  url: "{{baseUrl}}/activities/:id/enroll"
+  params:
+    - name: id
+      value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
+      type: path
+      description: Activity UUID
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 201 - Successful
+    description: Enrollment created successfully. Also returned when a previously canceled enrollment is reactivated — in that case createdAt keeps the record's original creation date and enrolledAt is refreshed to the reactivation moment.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+            "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "createdAt": "2026-08-22T21:00:00.000Z"
+          }
+
+  - name: 401 - Unauthenticated
+    description: Unauthenticated. Token header is missing, invalid or expired.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Unauthenticated."
+          }
+
+  - name: 401 - Unauthenticated (Invalid token)
+    description: Unauthenticated. Token header is missing, invalid or expired.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer token.invalido.aqui
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Unauthenticated."
+          }
+
+  - name: 401 - User not found
+    description: Token is valid, but the user it identifies no longer exists or is inactive.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "User account not found or inactive."
+          }
+
+  - name: 404 - Activity not found
+    description: Activity not found, soft-deleted, or id is not a valid UUID. A malformed id is indistinguishable from a nonexistent activity by design (D1).
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "Activity not found."
+          }
+
+  - name: 409 - Already enrolled
+    description: User already has an active enrollment in this activity.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "User is already enrolled in this activity."
+          }
+
+  - name: 409 - No available slots
+    description: Activity has no available slots left (availableSlots = 0).
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "No available slots for this activity."
+          }
+
+  - name: 409 - Not open
+    description: Activity status is not OPEN.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Activity is not open for enrollment."
+          }
+
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Creates an enrollment in the activity for the authenticated user.
+
+  - Route: POST /activities/:id/enroll — the activity is identified by the id path param. No request body.
+  - The user is resolved exclusively from the JWT token (never from params, query or body).
+  - The token must be valid AND the user must still exist and be active in the database (light hybrid authentication).
+  - Validation order: authentication (401) → activity existence (404) → business rules (409). A non-UUID id is treated as not found (404), never 400 (decision D1).
+  - Only activities with status OPEN and availableSlots > 0 accept enrollments.
+  - Only active enrollments count as duplicates and consume slots.
+  - A previously canceled enrollment (soft-deleted) is reactivated by this endpoint, returning 201 instead of 409. Reactivation reuses the (userId, activityId) record, keeps the original createdAt, refreshes enrolledAt to the reactivation moment and clears any attendance confirmation.
+  - Slot check and enrollment creation run in the same transaction (row lock on the activity) to prevent overbooking under concurrency.

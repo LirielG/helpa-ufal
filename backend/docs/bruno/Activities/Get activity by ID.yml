@@ -1,0 +1,117 @@
+info:
+  name: Get activity by ID
+  type: http
+  seq: 3
+  tags:
+    - Activities
+
+http:
+  method: GET
+  url: "{{baseUrl}}/activities/:id"
+  params:
+    - name: id
+      value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
+      type: path
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Response
+    description: Full activity data.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            }
+          }
+  - name: 404 Response
+    description: Activity not found.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+
+docs: Returns the full data of an activity, including details and address if available.

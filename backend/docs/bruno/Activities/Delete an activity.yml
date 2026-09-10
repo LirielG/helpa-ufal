@@ -1,0 +1,149 @@
+info:
+  name: Delete an activity
+  type: http
+  seq: 7
+  tags:
+    - Activities
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/activities/:id"
+  params:
+    - name: id
+      value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
+      type: path
+      description: Activity UUID
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 204 Response
+    description: Activity soft-deleted successfully. No content returned.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: DELETE
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 204
+      statusText: No Content
+      body:
+        type: text
+        data: ""
+  - name: 401 Response
+    description: Unauthenticated.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: DELETE
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 403 Response
+    description: Forbidden.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: DELETE
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 404 Response
+    description: Activity not found or already deleted.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: DELETE
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: DELETE
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+
+docs: <br/>

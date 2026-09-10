@@ -1,0 +1,125 @@
+info:
+  name: Register a new user
+  type: http
+  seq: 2
+  tags:
+    - Auth
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/register"
+  body:
+    type: json
+    data: |-
+      {
+        "userType": "STUDENT",
+        "fullName": "Gabryel Adriano Borges de Souza",
+        "email": "user@email.com",
+        "password": "1AaBbCcDd_",
+        "course": "CC",
+        "registrationCode": "123456"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 201 - Register successfully
+    description: Registered successfully. The response body is the created user itself (no envelope, no token) and no Set-Cookie header is sent. To authenticate, use POST /auth/login.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "3f8a1c2e-4b5d-4e6f-8a9b-0c1d2e3f4a5b",
+            "fullName": "Fulano Master",
+            "email": "user@email.com",
+            "userType": "STUDENT",
+            "isManager": false,
+            "createdAt": "2026-08-26T22:00:00.000Z",
+            "updatedAt": "2026-08-26T22:00:00.000Z"
+          }
+  - name: 400 - Validation error
+    description: Validation error.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "",
+                "message": ""
+              }
+            ]
+          }
+  - name: 409 - Email already in use
+    description: Email already in use.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Email already in use."
+          }
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }

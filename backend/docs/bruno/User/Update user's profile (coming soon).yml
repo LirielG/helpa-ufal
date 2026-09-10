@@ -1,0 +1,119 @@
+info:
+  name: Update user's profile (coming soon)
+  type: http
+  seq: 1
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/users/me"
+  body:
+    type: json
+    data: |-
+      {
+        "fullName": "Maria Silva Souza",
+        "currentPassword": "currentPass123",
+        "newPassword": "newPass456"
+      }
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: 200 Profile updated
+    description: Valid edit (name and/or password).
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000010",
+            "fullName": "Maria Silva Souza",
+            "email": "maria@aluno.ufal.br",
+            "course": "Computer Science",
+            "registrationCode": "2021001234",
+            "userType": "STUDENT",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 400 Immutable field in body
+    description: registrationCode, course or userType are rejected; nothing is persisted.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "registrationCode", "message": "This field cannot be updated." }
+            ]
+          }
+  - name: 400 Weak password
+    description: New password without letters and numbers, or shorter than 8 characters.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "newPassword", "message": "Password must have at least 8 characters with letters and numbers." }
+            ]
+          }
+  - name: 401 Wrong current password
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Current password is incorrect."
+          }
+
+docs: |-
+  # PATCH /users/me — Profile update
+
+  Updates the editable fields of the authenticated user. Sensitive route:
+  institutional and permission fields are immutable here.
+
+  ## Authentication
+  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - The `userId` is extracted exclusively from the token.
+
+  ## Body (all fields optional; explicit whitelist)
+  | Field             | Type   | Rule |
+  |-------------------|--------|------|
+  | `fullName`        | string | 1–255 characters |
+  | `newPassword`     | string | min. 8 characters, with letters and numbers; must differ from current password |
+  | `currentPassword` | string | **required** when `newPassword` is present |
+
+  Any field outside the whitelist (`registrationCode`, `course`, `userType`,
+  `email`, `id`, ...) → **400** and **nothing is persisted** (atomic rejection).
+
+  ## Response — 200 OK
+  Same DTO as GET /users/me, already updated.
+
+  ## Business rules
+  - `registrationCode`, `course` and `userType` are immutable via API (certificate
+    integrity and protection against privilege escalation).
+  - The new password is persisted only as a bcrypt hash (same cost as registration).
+  - `updatedAt` is updated automatically.
+  - Decision to record in the PR: invalidate previous tokens/sessions after a
+    password change (recommendation: invalidate).
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | Field outside the whitelist; weak password; `newPassword` equal to the current one; `newPassword` without `currentPassword` |
+  | 401    | Missing/invalid/expired token; incorrect `currentPassword` |
+  | 404    | The user from the token no longer exists |

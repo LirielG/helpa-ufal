@@ -1,0 +1,310 @@
+info:
+  name: Transition activity status
+  type: http
+  seq: 5
+  tags:
+    - Activities
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/activities/:id/status"
+  params:
+    - name: id
+      value: 22ac40bd-e160-4c6e-8505-b63913d2482f
+      type: path
+      description: Activity UUID
+  body:
+    type: json
+    data: |-
+      {
+        "status": "IN_PROGRESS"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Response
+    description: Status transitioned successfully.
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "IN_PROGRESS"
+          }
+  - name: 400 Response
+    description: "Validation error: invalid UUID, missing `status`, or extra fields in body."
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "",
+                "message": ""
+              }
+            ]
+          }
+  - name: 401 Response
+    description: Unauthenticated.
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 403 Response
+    description: Forbidden. Requester is not the author or a manager.
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: 404 Response
+    description: Activity not found
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+  - name: Activity is in a terminal state
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Activity is already CANCELLED and cannot be transitioned."
+          }
+  - name: Invalid transition from current status
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Cannot transition from OPEN to COMPLETED."
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      headers:
+        - name: token
+          value: "{{apiKey}}"
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 0,
+            "message": ""
+          }
+
+docs: |-
+  Transitions an activity through its lifecycle. Status is treated as a business state with controlled transitions, not a free-update field.
+
+  **Allowed transitions:**
+  - `OPEN => IN_PROGRESS | CANCELLED`
+  - `IN_PROGRESS => COMPLETED | CANCELLED`
+
+  `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.
+
+  Only the activity author or a manager can perform transitions.
