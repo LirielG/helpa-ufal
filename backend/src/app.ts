@@ -5,9 +5,6 @@ import Router from "@/routers/index.js";
 import errorHandler from "@/controllers/error/ErrorHandler.js";
 import { env } from "@/config/env.js";
 
-import swaggerUi from "swagger-ui-express";
-import { swaggerDocument } from "@/docs/swagger.js";
-
 const app = express();
 
 app.use(
@@ -23,8 +20,6 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use(Router);
-
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler.zodErrorHandler.bind(errorHandler));
 app.use(errorHandler.validationErrorHandler.bind(errorHandler));
