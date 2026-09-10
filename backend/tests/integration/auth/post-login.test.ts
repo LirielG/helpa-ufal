@@ -1,8 +1,9 @@
-// tests/integration/auth/post-login.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
+import ms from "ms";
 import { app } from "@/app.js";
+import { env } from "@/config/env.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
 
 const LOGIN_URL = "/auth/login";
@@ -37,6 +38,23 @@ describe("POST /auth/login", () => {
     const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
     expect(sessionCookie).toMatch(/^token=/);
     expect(sessionCookie).toMatch(/HttpOnly/i);
+  });
+
+  it("sets Max-Age derived from JWT_EXPIRES_IN — cookie and token expire together", async () => {
+    const email = "aluno-maxage@ufal.br";
+    await createStudent({ email });
+
+    const response = await request(app)
+      .post(LOGIN_URL)
+      .send({ email, password: DEFAULT_PASSWORD });
+
+    expect(response.status).toBe(200);
+    const setCookie = response.headers["set-cookie"];
+    expect(setCookie).toBeDefined();
+    const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
+    const expectedMaxAge = Math.floor(ms(env.JWT_EXPIRES_IN) / 1000);
+    expect(sessionCookie).toContain(`Max-Age=${expectedMaxAge}`);
+    expect(sessionCookie).toMatch(/SameSite=Strict/);
   });
 
   it("accepts the session cookie on protected routes (cookie path)", async () => {
