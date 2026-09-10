@@ -5,6 +5,7 @@ info:
   tags:
     - Activities
 
+
 http:
   method: GET
   url: "{{baseUrl}}/activities"
@@ -12,113 +13,129 @@ http:
     - name: search
       value: ""
       type: query
-      description: Free text search on activity title. When provided, all other filters (status, type, campus, format, startAfter, endBefore) are ignored.
+      description: Free text search on activity title (partial, case-insensitive). Combines with all other filters.
+      disabled: true
+    - name: area
+      value: Saúde
+      type: query
+      description: Filter by area — exact match, case-insensitive, on details.area. Empty values are ignored (no filtering, never a 400). Valid values come from GET /activities/filters.
       disabled: true
     - name: status
       value: OPEN
       type: query
-      description: Filter by activity status. Ignored when `search` is present.
+      description: Filter by activity status.
       disabled: true
     - name: status
       value: IN_PROGRESS
       type: query
-      description: Filter by activity status. Ignored when `search` is present.
+      description: Filter by activity status.
       disabled: true
     - name: status
       value: COMPLETED
       type: query
-      description: Filter by activity status. Ignored when `search` is present.
+      description: Filter by activity status.
       disabled: true
     - name: status
       value: CANCELLED
       type: query
-      description: Filter by activity status. Ignored when `search` is present.
+      description: Filter by activity status.
       disabled: true
     - name: type
       value: EXTENSION
       type: query
-      description: Filter by activity type. Ignored when `search` is present.
+      description: Filter by activity type.
       disabled: true
     - name: type
       value: COURSE
       type: query
-      description: Filter by activity type. Ignored when `search` is present.
+      description: Filter by activity type.
       disabled: true
     - name: type
       value: EVENT
       type: query
-      description: Filter by activity type. Ignored when `search` is present.
+      description: Filter by activity type.
       disabled: true
     - name: type
       value: LECTURE
       type: query
-      description: Filter by activity type. Ignored when `search` is present.
+      description: Filter by activity type.
       disabled: true
     - name: type
       value: OTHER
       type: query
-      description: Filter by activity type. Ignored when `search` is present.
+      description: Filter by activity type.
       disabled: true
     - name: campus
       value: MACEIO
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: ARAPIRACA
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: PALMEIRA
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: PENEDO
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: RIO_LARGO
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: DELMIRO_GOUVEIA
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: campus
       value: SANTANA_IPANEMA
       type: query
-      description: Filter by campus. Ignored when `search` is present.
+      description: Filter by campus.
       disabled: true
     - name: format
       value: IN_PERSON
       type: query
-      description: Filter by activity format. Ignored when `search` is present.
+      description: Filter by activity format.
       disabled: true
     - name: format
       value: ONLINE
       type: query
-      description: Filter by activity format. Ignored when `search` is present.
+      description: Filter by activity format.
       disabled: true
     - name: format
       value: HYBRID
       type: query
-      description: Filter by activity format. Ignored when `search` is present.
+      description: Filter by activity format.
       disabled: true
-    - name: startAfter
-      value: ""
+    - name: page
+      value: "1"
       type: query
-      description: Return only activities starting after this date (ISO 8601). Ignored when `search` is present.
+      description: "Page number (default: 1)."
       disabled: true
-    - name: endBefore
-      value: ""
+    - name: limit
+      value: "10"
       type: query
-      description: Return only activities ending before this date (ISO 8601). Ignored when `search` is present.
+      description: "Items per page (default: 10, max: 50)."
       disabled: true
+    - name: orderBy
+      value: created_at
+      type: query
+      description: "Sort field: created_at (default) or start_date."
+      disabled: true
+    - name: order
+      value: desc
+      type: query
+      description: "Sort direction: asc or desc (default: desc)."
+      disabled: true
+
 
 settings:
   encodeUrl: true
@@ -127,131 +144,28 @@ settings:
   maxRedirects: 5
   forwardAuthorizationHeader: true
 
+
 examples:
-  - name: 200 Response
-    description: Paginated list of activities.
+  - name: 200 Filtered by area and format
+    description: Activities from a single area, combined with another filter.
     request:
       url: "{{baseUrl}}/activities"
       method: GET
       params:
-        - name: page
-          value: "1"
+        - name: area
+          value: Saúde
           type: query
-          description: "Page number (default: 1)"
-        - name: limit
-          value: "20"
-          type: query
-          description: "Items per page (default: 20, max: 100)"
-        - name: search
-          value: ""
-          type: query
-          description: Free text search on activity title. When provided, all other filters (status, type, campus, format, startAfter, endBefore) are ignored.
-          disabled: true
-        - name: status
-          value: OPEN
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: IN_PROGRESS
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: COMPLETED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: CANCELLED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EXTENSION
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: COURSE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EVENT
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: LECTURE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: OTHER
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: MACEIO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: ARAPIRACA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PALMEIRA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PENEDO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: RIO_LARGO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: DELMIRO_GOUVEIA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: SANTANA_IPANEMA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: IN_PERSON
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
+          description: Exact match, case-insensitive, on details.area
         - name: format
           value: ONLINE
           type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: HYBRID
+          description: Combines with area (AND)
+        - name: page
+          value: "1"
           type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: startAfter
-          value: ""
+        - name: limit
+          value: "10"
           type: query
-          description: Return only activities starting after this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
-        - name: endBefore
-          value: ""
-          type: query
-          description: Return only activities ending before this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
     response:
       status: 200
       statusText: OK
@@ -262,151 +176,68 @@ examples:
         type: json
         data: |-
           {
-            "data": [
+            "activities": [
               {
-                "id": "",
-                "authorId": "",
-                "title": "",
-                "type": "EXTENSION",
-                "campus": "MACEIO",
-                "startDate": "",
-                "endDate": "",
-                "slots": 0,
-                "availableSlots": 0,
-                "status": "OPEN"
+                "id": "a1b2c3d4-0000-4000-8000-000000000001",
+                "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+                "title": "Primeiros Socorros para Iniciantes",
+                "type": "COURSE",
+                "campus": "ARAPIRACA",
+                "startDate": "2026-08-01T08:00:00.000Z",
+                "endDate": "2026-08-15T12:00:00.000Z",
+                "slots": 40,
+                "status": "OPEN",
+                "createdAt": "2026-07-20T10:00:00.000Z",
+                "updatedAt": "2026-07-20T10:00:00.000Z",
+                "deletedAt": null,
+                "details": {
+                  "activityId": "a1b2c3d4-0000-4000-8000-000000000001",
+                  "description": "Noções básicas de primeiros socorros.",
+                  "area": "Saúde",
+                  "format": "ONLINE",
+                  "url": "https://meet.example.com/primeiros-socorros",
+                  "workloadHours": 20,
+                  "addressId": null,
+                  "createdAt": "2026-07-20T10:00:00.000Z",
+                  "updatedAt": "2026-07-20T10:00:00.000Z"
+                },
+                "availableSlots": 27
               }
             ],
-            "meta": {
-              "total": 0,
-              "page": 0,
-              "limit": 0,
-              "totalPages": 0
-            }
+            "total": 1
           }
-  - name: 400 Response
-    description: Validation error.
+  - name: 200 Area with no matches
+    description: Unknown area answers 200 with an empty page — never 404.
     request:
       url: "{{baseUrl}}/activities"
       method: GET
       params:
-        - name: page
-          value: "1"
+        - name: area
+          value: Astrobiologia
           type: query
-          description: "Page number (default: 1)"
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "activities": [],
+            "total": 0
+          }
+  - name: 400 Validation error
+    description: Invalid pagination or enum filter value.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: GET
+      params:
         - name: limit
-          value: "20"
+          value: "51"
           type: query
-          description: "Items per page (default: 20, max: 100)"
-        - name: search
-          value: ""
-          type: query
-          description: Free text search on activity title. When provided, all other filters (status, type, campus, format, startAfter, endBefore) are ignored.
-          disabled: true
-        - name: status
-          value: OPEN
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: IN_PROGRESS
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: COMPLETED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: CANCELLED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EXTENSION
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: COURSE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EVENT
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: LECTURE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: OTHER
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: MACEIO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: ARAPIRACA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PALMEIRA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PENEDO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: RIO_LARGO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: DELMIRO_GOUVEIA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: SANTANA_IPANEMA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: IN_PERSON
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: ONLINE
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: HYBRID
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: startAfter
-          value: ""
-          type: query
-          description: Return only activities starting after this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
-        - name: endBefore
-          value: ""
-          type: query
-          description: Return only activities ending before this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
+          description: Exceeds the maximum of 50
     response:
       status: 400
       statusText: Bad Request
@@ -421,135 +252,12 @@ examples:
             "message": "Validation error.",
             "errors": [
               {
-                "field": "",
-                "message": ""
+                "field": "limit",
+                "message": "limit can not exceed 50."
               }
             ]
           }
-  - name: 500 Response
-    description: Internal server error.
-    request:
-      url: "{{baseUrl}}/activities"
-      method: GET
-      params:
-        - name: page
-          value: "1"
-          type: query
-          description: "Page number (default: 1)"
-        - name: limit
-          value: "20"
-          type: query
-          description: "Items per page (default: 20, max: 100)"
-        - name: search
-          value: ""
-          type: query
-          description: Free text search on activity title. When provided, all other filters (status, type, campus, format, startAfter, endBefore) are ignored.
-          disabled: true
-        - name: status
-          value: OPEN
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: IN_PROGRESS
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: COMPLETED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: status
-          value: CANCELLED
-          type: query
-          description: Filter by activity status. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EXTENSION
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: COURSE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: EVENT
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: LECTURE
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: type
-          value: OTHER
-          type: query
-          description: Filter by activity type. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: MACEIO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: ARAPIRACA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PALMEIRA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: PENEDO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: RIO_LARGO
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: DELMIRO_GOUVEIA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: campus
-          value: SANTANA_IPANEMA
-          type: query
-          description: Filter by campus. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: IN_PERSON
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: ONLINE
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: format
-          value: HYBRID
-          type: query
-          description: Filter by activity format. Ignored when `search` is present.
-          disabled: true
-        - name: startAfter
-          value: ""
-          type: query
-          description: Return only activities starting after this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
-        - name: endBefore
-          value: ""
-          type: query
-          description: Return only activities ending before this date (ISO 8601). Ignored when `search` is present.
-          disabled: true
+  - name: 500 Internal server error
     response:
       status: 500
       statusText: Internal Server Error
@@ -564,4 +272,36 @@ examples:
             "message": ""
           }
 
-docs: Returns a paginated list of activities. When `search` is provided, all other filters are ignored. Results are ordered by `startDate` ascending.
+
+docs: |-
+  # GET /activities — List activities
+
+  Returns the paginated list of activities. Removed activities (soft delete,
+  `deletedAt`) never appear.
+
+  ## Response envelope
+  `{ "activities": [...], "total": <number> }` — `total` reflects all applied
+  filters; `activities` carries the current page. Items embed the `details`
+  relation (including `details.area`) and the computed `availableSlots`.
+
+  ## Filters (all optional; all combine with AND)
+  | Param | Match | Notes |
+  |-------|-------|-------|
+  | `search` | Partial, case-insensitive, on `title` | Combines with the other filters |
+  | `area` | Exact, case-insensitive, on `details.area` | Empty value = no filtering, never a 400. Valid values: `GET /activities/filters` |
+  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED | |
+  | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | |
+  | `campus` | Enum of UFAL campus locations | |
+  | `format` | Enum: IN_PERSON, ONLINE, HYBRID | |
+  | `page` / `limit` | Pagination | Defaults 1 / 10; `limit` max 50 |
+  | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | |
+
+  `startAfter` / `endBefore` were documented in a previous version of this
+  contract but are **not implemented**; they return when a route actually
+  supports them.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | Invalid pagination or enum filter (`{ status, message, errors[] }`) |
+  | 500    | Unexpected server error (`{ status, message }`) |
