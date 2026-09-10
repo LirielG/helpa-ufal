@@ -57,9 +57,7 @@ class AuthService implements IAuthService {
     return { token, user: loginUser };
   }
 
-  public async register(
-    data: RegisterInput,
-  ): Promise<{ token: string; user: UserResponse }> {
+  public async register(data: RegisterInput): Promise<UserResponse> {
     const existingUser = await this._userRepository.findByEmail(data.email);
 
     if (existingUser) {
@@ -83,16 +81,7 @@ class AuthService implements IAuthService {
       updatedAt: newUser.updatedAt,
     };
 
-    const authenticatedUser: AuthenticatedUser = {
-      id: newUser.id,
-      userType: newUser.userType,
-      isManager: newUser.isManager,
-    };
-
-    const token = signJwt(authenticatedUser);
-
-    return { token, user: userResponse };
+    return userResponse; 
+    }
   }
-}
-
-export default AuthService;
+  export default AuthService;

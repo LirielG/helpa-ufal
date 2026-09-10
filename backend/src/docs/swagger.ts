@@ -317,11 +317,14 @@ export const swaggerDocument: OpenAPIV3.Document = {
       post: {
         tags: ["Auth"],
         summary: "Register a new user",
+        description:
+          "Creates a new user account (STUDENT or TEACHER). This endpoint only creates the account: it does NOT authenticate the user — the response body contains no token and no session cookie (Set-Cookie) is sent. To authenticate, use POST /auth/login.",
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
+                // INALTERADO — o payload de entrada não é afetado pela refatoração.
                 oneOf: [
                   {
                     title: "STUDENT",
@@ -374,10 +377,20 @@ export const swaggerDocument: OpenAPIV3.Document = {
             description: "Registered successfully.",
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/AuthResponse" },
+                schema: { $ref: "#/components/schemas/UserResponse" },
+                example: {
+                  id: "3f8a1c2e-4b5d-4e6f-8a9b-0c1d2e3f4a5b",
+                  fullName: "Gabryel Adriano Borges de Souza",
+                  email: "user@email.com",
+                  userType: "STUDENT",
+                  isManager: false,
+                  createdAt: "2026-08-26T22:00:00.000Z",
+                  updatedAt: "2026-08-26T22:00:00.000Z",
+                },
               },
             },
           },
+          // 400, 409 e 500 INALTERADOS — a semântica dos erros não muda.
           400: {
             description: "Validation error.",
             content: {

@@ -5,6 +5,11 @@ import { Button } from "../../../components/Button";
 import { Alert } from "../../../components/Alert";
 import { enrollInAction } from "../services";
 import type { ActionDetail } from "../types";
+import { formatDate } from "../../../utils";
+import {
+  ACTION_CAMPUS_LABELS,
+  ACTION_FORMAT_LABELS,
+} from "../../dashboard/constants";
 
 type ModalStep = "confirm" | "loading" | "success" | "error";
 
@@ -17,6 +22,14 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const address = action.details?.address;
+  const format = action.details?.format;
+  const location = address
+    ? `${address.city} - ${address.state}`
+    : format
+      ? ACTION_FORMAT_LABELS[format]
+      : ACTION_CAMPUS_LABELS[action.campus];
 
   const handleConfirm = async () => {
     setStep("loading");
@@ -124,15 +137,15 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
                 <p className="font-semibold text-gray-900">{action.title}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar className="size-4 shrink-0 text-gray-400" />
-                  <span>{action.startDate}</span>
+                  <span>{formatDate(action.startDate)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <MapPin className="size-4 shrink-0 text-gray-400" />
-                  <span>{action.city}</span>
+                  <span>{location}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="size-4 shrink-0 text-gray-400" />
-                  <span>{action.workloadHours} horas</span>
+                  <span>{action.details?.workloadHours ?? 0} horas</span>
                 </div>
               </div>
               <div className="w-full border border-yellow-300 bg-yellow-50 rounded-xl px-5 py-4 text-sm text-left text-yellow-800">

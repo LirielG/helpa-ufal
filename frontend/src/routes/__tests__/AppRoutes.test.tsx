@@ -150,10 +150,12 @@ describe("AppRoutes", () => {
       expect(await findDashboard()).toBeInTheDocument();
     });
 
-    it("takes an unknown route to the dashboard", async () => {
+    it("renders 404 page for unknown route", async () => {
       render(<AppRoutes />, { route: "/rota-inexistente" });
 
-      expect(await findDashboard()).toBeInTheDocument();
+      expect(
+        await screen.findByText("Página não encontrada"),
+      ).toBeInTheDocument();
     });
   });
 });

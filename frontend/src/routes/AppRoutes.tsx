@@ -6,6 +6,7 @@ import {
   ActionDetail,
   Profile,
   EditAction,
+  NotFound,
 } from "../pages";
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
 import { PublicRoute } from "./PublicRoute";
@@ -67,7 +68,8 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

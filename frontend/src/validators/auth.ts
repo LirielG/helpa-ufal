@@ -50,7 +50,7 @@ export const RegisterSchema = z
           "A senha deve ter pelo menos 1 caractere especial",
         ),
       confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
-      course: z.string().min(1, "Curso é obrigatório"),
+      course: z.string().optional(),
       registrationCode: z.string().min(1, "Número de matrícula é obrigatório"),
       cndb: z.string().min(1, "CNDB é obrigatório"),
     }),
