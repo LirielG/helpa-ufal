@@ -58,13 +58,12 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           await authService.logout();
-          set({ user: null });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Erro ao fazer logout";
           set({ error: message });
         } finally {
-          set({ isLoading: false });
+          set({ user: null, isLoading: false });
         }
       },
       setUser: (user) => set({ user }),
