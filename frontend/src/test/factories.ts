@@ -2,6 +2,7 @@ import type { LoginRequest, RegisterRequest, User } from "@/types";
 import type { Action } from "@/features/dashboard/types";
 import type { ActionDetail } from "@/features/action-detail/types";
 import type { UserActivity } from "@/features/profile/types";
+import type { SigaaActivity } from "@/features/sigaa/types";
 
 let counter = 0;
 
@@ -82,6 +83,23 @@ export function makeActionDetail(
         state: "AL",
       },
     },
+    ...overrides,
+  };
+}
+
+export function makeSigaaActivity(
+  overrides: Partial<SigaaActivity> = {},
+): SigaaActivity {
+  counter += 1;
+
+  return {
+    id: unique("sigaa"),
+    sigaaId: String(13700 + counter),
+    title: "I Ciclo de Debates sobre Currículos",
+    type: "CURSO",
+    normalizedType: "COURSE",
+    department: "Instituto de Computação",
+    lastSeenAt: NOW,
     ...overrides,
   };
 }

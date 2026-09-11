@@ -45,4 +45,7 @@ export interface FilterOptions {
 export interface PaginatedResponse<T> {
   activities: T[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

@@ -1,7 +1,12 @@
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { config } from "@/config";
-import { makeAction, makeActionDetail, makeUser } from "./factories";
+import {
+  makeAction,
+  makeActionDetail,
+  makeSigaaActivity,
+  makeUser,
+} from "./factories";
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -28,11 +33,34 @@ export const handlers = [
   ),
 
   http.get(`${API}/activities`, () =>
-    HttpResponse.json({ activities: [makeAction()], total: 1 }),
+    HttpResponse.json({
+      activities: [makeAction()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    }),
   ),
 
   http.get(`${API}/activities/:id`, ({ params }) =>
     HttpResponse.json(makeActionDetail({ id: String(params.id) })),
+  ),
+
+  // Declared before /sigaa-activities so the literal path wins over the list.
+  http.get(`${API}/sigaa-activities/filters`, () =>
+    HttpResponse.json({
+      types: ["CURSO", "EVENTO"],
+      departments: ["Instituto de Computação"],
+    }),
+  ),
+
+  http.get(`${API}/sigaa-activities`, () =>
+    HttpResponse.json({
+      items: [makeSigaaActivity()],
+      total: 1,
+      page: 1,
+      limit: 10,
+    }),
   ),
 ];
 

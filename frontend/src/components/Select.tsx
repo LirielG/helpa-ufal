@@ -1,4 +1,5 @@
 import React from "react";
+import { ChevronDown } from "lucide-react";
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -8,11 +9,17 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, icon, options, className = "", ...props }, ref) => {
+  ({ label, error, icon, options, className = "", id, ...props }, ref) => {
+    const generatedId = React.useId();
+    const selectId = id ?? generatedId;
+
     return (
-      <div>
+      <div className="flex flex-col gap-2">
         {label && (
-          <label className="block text-sm font-medium mb-2">
+          <label
+            htmlFor={selectId}
+            className="text-xs text-gray-500 font-normal"
+          >
             {label}
           </label>
         )}
@@ -23,10 +30,15 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             </div>
           )}
           <select
+            id={selectId}
             ref={ref}
-            className={`w-full ${icon ? "pl-12" : "px-4"} py-3 border ${
-              error ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-            } rounded-lg outline-none focus:ring-2 transition appearance-none cursor-pointer ${className}`}
+            className={`w-full appearance-none rounded-lg ${
+              icon ? "pl-12" : "px-4"
+            } py-3 pr-10 text-sm text-gray-800 bg-[rgba(196,198,207,0.2)] border ${
+              error
+                ? "border-red-300 focus:ring-red-500"
+                : "border-[#C4C6CF] focus:ring-blue-400"
+            } focus:outline-none focus:ring-2 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
             {...props}
           >
             {options.map((option) => (
@@ -35,14 +47,15 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-            ▼
-          </div>
+          <ChevronDown
+            aria-hidden="true"
+            className="absolute right-3 top-1/2 -translate-y-1/2 size-5 text-gray-500 pointer-events-none"
+          />
         </div>
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       </div>
     );
-  }
+  },
 );
 
 Select.displayName = "Select";
