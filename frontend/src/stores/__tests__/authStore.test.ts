@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { API, server, http, HttpResponse } from "@/test";
-import { makeLoginRequest, signIn, signOut } from "@/test";
+import { makeLoginRequest, makeUser, signIn, signOut } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 
 function store() {
@@ -14,10 +14,17 @@ describe("authStore", () => {
 
   describe("login", () => {
     it("stores the user from the response and returns true on success", async () => {
+      const user = makeUser();
+      server.use(
+        http.post(`${API}/auth/login`, () =>
+          HttpResponse.json({ token: "test-token", user }),
+        ),
+      );
+
       const result = await store().login(makeLoginRequest());
 
       expect(result).toBe(true);
-      expect(store().user).not.toBeNull();
+      expect(store().user).toEqual(user);
       expect(store().error).toBeNull();
       expect(store().isLoading).toBe(false);
     });
@@ -25,7 +32,10 @@ describe("authStore", () => {
     it("returns false, keeps user null and stores the API message on failure", async () => {
       server.use(
         http.post(`${API}/auth/login`, () =>
-          HttpResponse.json({ message: "Credenciais inválidas" }, { status: 401 }),
+          HttpResponse.json(
+            { message: "Credenciais inválidas" },
+            { status: 401 },
+          ),
         ),
       );
 
@@ -72,7 +82,9 @@ describe("authStore", () => {
       expect(store().isLoading).toBe(false);
     });
 
-    it("clears the user and stores the message when the API fails", async () => {
+    // Fails open, and silently: an error left in the store would render on the
+    // login screen the visitor is sent to right after.
+    it("clears the user without surfacing an error when the API fails", async () => {
       signIn();
       server.use(
         http.post(`${API}/auth/logout`, () =>
@@ -83,7 +95,7 @@ describe("authStore", () => {
       await store().logout();
 
       expect(store().user).toBeNull();
-      expect(store().error).toBe("Erro ao sair");
+      expect(store().error).toBeNull();
       expect(store().isLoading).toBe(false);
     });
   });

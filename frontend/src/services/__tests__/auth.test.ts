@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { API, http, HttpResponse, server } from "@/test";
-import { makeLoginRequest, makeRegisterRequest } from "@/test";
+import { makeLoginRequest, makeRegisterRequest, makeUser } from "@/test";
 import { authService } from "../auth";
 import { setSessionExpiredHandler } from "../session";
 
@@ -21,7 +21,7 @@ describe("authService", () => {
   describe("endpoints", () => {
     it("login hits POST /auth/login", async () => {
       const requests = captureRequest("/auth/login", () =>
-        HttpResponse.json({ token: "test-token", user: makeLoginRequest() }),
+        HttpResponse.json({ token: "test-token", user: makeUser() }),
       );
 
       await authService.login(makeLoginRequest());
@@ -70,8 +70,9 @@ describe("authService", () => {
 
         try {
           server.use(
-            http.post(`${API}${endpoint}`, () =>
-              new HttpResponse(null, { status: 401 }),
+            http.post(
+              `${API}${endpoint}`,
+              () => new HttpResponse(null, { status: 401 }),
             ),
           );
 

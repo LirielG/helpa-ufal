@@ -58,10 +58,11 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           await authService.logout();
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Erro ao fazer logout";
-          set({ error: message });
+        } catch {
+          // Logout fails open: the visitor asked to leave, so the local session
+          // is dropped either way. Reporting the failure would only paint an
+          // error over the login screen they are sent to, with nothing to act
+          // on — and keeping them signed in would not clear the cookie either.
         } finally {
           set({ user: null, isLoading: false });
         }
