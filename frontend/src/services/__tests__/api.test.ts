@@ -192,6 +192,41 @@ describe("api client", () => {
       expect(error.status).toBe(NETWORK_ERROR_STATUS);
       expect(error.message).toBe("Erro na comunicação com o servidor");
     });
+
+    it("joins an array of messages into a single newline-separated string", async () => {
+      server.use(
+        http.post(URL, () =>
+          HttpResponse.json(
+            { message: ["email inválido", "senha muito curta"] },
+            { status: 400 },
+          ),
+        ),
+      );
+
+      const error = await catchApiError(api.post(ENDPOINT, {}));
+
+      expect(error.message).toBe("email inválido\nsenha muito curta");
+    });
+
+    it("uses the error field when the payload has no message", async () => {
+      server.use(
+        http.post(URL, () =>
+          HttpResponse.json({ error: "Falha no servidor" }, { status: 400 }),
+        ),
+      );
+
+      const error = await catchApiError(api.post(ENDPOINT, {}));
+
+      expect(error.message).toBe("Falha no servidor");
+    });
+
+    it("falls back to the communication error when neither message nor error is present", async () => {
+      server.use(http.post(URL, () => HttpResponse.json({}, { status: 400 })));
+
+      const error = await catchApiError(api.post(ENDPOINT, {}));
+
+      expect(error.message).toBe("Erro na comunicação com o servidor");
+    });
   });
 
   describe("session expiry", () => {
