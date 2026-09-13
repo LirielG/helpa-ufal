@@ -11,6 +11,10 @@ export async function fetchActions(
     limit,
   };
 
+  if (filters.search) {
+    apiParams.search = filters.search;
+  }
+
   if (filters.availability === "available") {
     apiParams.status = "OPEN";
   }

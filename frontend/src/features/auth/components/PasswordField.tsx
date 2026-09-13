@@ -1,6 +1,6 @@
-import { useId } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { Eye, EyeOff, Lock } from "lucide-react";
+import { Input } from "../../../components";
 
 type PasswordFieldProps = {
   label: string;
@@ -21,33 +21,19 @@ export function PasswordField({
   placeholder = "Digite sua senha",
   id,
 }: PasswordFieldProps) {
-  const generatedId = useId();
-  const inputId = id ?? generatedId;
-
   return (
-    <div>
-      <label htmlFor={inputId} className="block text-sm font-medium mb-2">
-        {label}
-      </label>
-      <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-          <Lock className="size-5" />
-        </div>
-        <input
-          id={inputId}
-          type={showPassword ? "text" : "password"}
-          placeholder={placeholder}
-          className={`w-full pl-12 pr-12 py-3 border ${
-            error
-              ? "border-red-300 focus:ring-red-500"
-              : "border-gray-300 focus:ring-blue-500"
-          } rounded-lg outline-none focus:ring-2 transition`}
-          {...registration}
-        />
+    <Input
+      id={id}
+      label={label}
+      error={error}
+      placeholder={placeholder}
+      type={showPassword ? "text" : "password"}
+      icon={<Lock className="size-5" />}
+      trailing={
         <button
           type="button"
           onClick={onTogglePassword}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+          className="text-gray-400 hover:text-gray-600 transition"
           aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
         >
           {showPassword ? (
@@ -56,8 +42,8 @@ export function PasswordField({
             <Eye className="size-5" />
           )}
         </button>
-      </div>
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-    </div>
+      }
+      {...registration}
+    />
   );
 }

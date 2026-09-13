@@ -5,6 +5,7 @@ export { Textarea } from "./Textarea";
 export { Checkbox } from "./Checkbox";
 export { Alert } from "./Alert";
 export { Tooltip } from "./Tooltip";
+export { Pagination } from "./Pagination";
 export { Navbar } from "./Navbar";
 export { Footer } from "./Footer";
 export { Layout } from "./Layout";
