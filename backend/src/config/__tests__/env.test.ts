@@ -72,3 +72,51 @@ describe("boot fail-fast (criteria 6)", () => {
     await expect(import("@/config/env.js")).rejects.toThrow(ZodError);
   });
 });
+
+describe("EnvSchema — SIGAA_BASE_URL", () => {
+  it("defaults to the SIGAA public extension search page when unset", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.SIGAA_BASE_URL).toBe(
+      "https://sigaa.sig.ufal.br/sigaa/public/extensao/consulta_extensao.jsf",
+    );
+  });
+
+  it("accepts a custom URL", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      SIGAA_BASE_URL: "https://sigaa.example.br/consulta.jsf",
+    });
+
+    expect(parsed.SIGAA_BASE_URL).toBe("https://sigaa.example.br/consulta.jsf");
+  });
+
+  it("rejects a non-URL value", () => {
+    expect(() =>
+      EnvSchema.parse({ ...minimalEnv, SIGAA_BASE_URL: "sigaa.sig.ufal.br" }),
+    ).toThrow(ZodError);
+  });
+});
+
+describe("EnvSchema — SIGAA_CACHE_TTL_HOURS", () => {
+  it("defaults to 12 hours when unset", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.SIGAA_CACHE_TTL_HOURS).toBe(12);
+  });
+
+  it("coerces the raw string into a number", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      SIGAA_CACHE_TTL_HOURS: "6",
+    });
+
+    expect(parsed.SIGAA_CACHE_TTL_HOURS).toBe(6);
+  });
+
+  it.each(["abc", "0", "-1", "1.5"])("rejects %s", (value) => {
+    expect(() =>
+      EnvSchema.parse({ ...minimalEnv, SIGAA_CACHE_TTL_HOURS: value }),
+    ).toThrow(ZodError);
+  });
+});

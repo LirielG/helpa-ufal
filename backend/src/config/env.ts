@@ -44,6 +44,12 @@ export const EnvSchema = z.object({
   // secure=true (NODE_ENV=production) — see .env.example.
   COOKIE_SAME_SITE: z.enum(["strict", "lax", "none"]).default("strict"),
   SIGAA_SYNC_ENABLED: z.stringbool().default(true),
+  SIGAA_BASE_URL: z
+    .url()
+    .default(
+      "https://sigaa.sig.ufal.br/sigaa/public/extensao/consulta_extensao.jsf",
+    ),
+  SIGAA_CACHE_TTL_HOURS: z.coerce.number().int().positive().default(12),
   ADMIN_EMAIL: z.email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   ADMIN_FULL_NAME: z.string().min(1).optional(),
