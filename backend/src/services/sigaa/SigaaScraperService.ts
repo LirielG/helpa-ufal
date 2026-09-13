@@ -6,10 +6,9 @@ import { Agent, fetch as undiciFetch } from "undici";
 import type { ISigaaScraperService } from "./ISigaaScraperService.js";
 import type { ScrapedSigaaActivity } from "@/types/sigaa.js";
 import type { ActivityType } from "@/types/activity.js";
+import { env } from "@/config/env.js";
 
-export const SIGAA_PUBLIC_SEARCH_URL =
-  process.env.SIGAA_BASE_URL ??
-  "https://sigaa.sig.ufal.br/sigaa/public/extensao/consulta_extensao.jsf";
+export const SIGAA_PUBLIC_SEARCH_URL = env.SIGAA_BASE_URL;
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
