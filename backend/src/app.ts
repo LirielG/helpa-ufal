@@ -28,6 +28,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(errorHandler.zodErrorHandler.bind(errorHandler));
 app.use(errorHandler.validationErrorHandler.bind(errorHandler));
+app.use(errorHandler.prismaErrorHandler.bind(errorHandler));
 app.use(errorHandler.defaultHandler.bind(errorHandler));
 
 export { app };
