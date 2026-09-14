@@ -172,15 +172,15 @@ class ActivityService implements IActivityService {
 
     if (filters.type && !validTypes.includes(filters.type)) {
       filterErrors.push({
-        field: "tipo",
-        message: `tipo must be one of the following: ${validTypes.join(", ")}.`,
+        field: "type",
+        message: `type must be one of the following: ${validTypes.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
     if (filters.format && !validFormats.includes(filters.format)) {
       filterErrors.push({
-        field: "formato",
-        message: `formato must be one of the following: ${validFormats.join(", ")}.`,
+        field: "format",
+        message: `format must be one of the following: ${validFormats.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
@@ -214,7 +214,7 @@ class ActivityService implements IActivityService {
 
     let sortField = "createdAt";
 
-    if (filters.orderBy === "data_inicio") {
+    if (filters.orderBy === "start_date") {
       sortField = "startDate";
     } else if (filters.orderBy === "created_at") {
       sortField = "createdAt";

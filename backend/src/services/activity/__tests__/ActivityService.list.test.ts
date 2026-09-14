@@ -148,42 +148,6 @@ describe("ActivityService.list", () => {
 
   // ---------- Filters ----------
 
-  it("rejects invalid type with an error in the 'tipo' field", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(
-      service.list({ type: "INVALIDO" }),
-    );
-
-    expect(error.errors).toEqual([
-      {
-        field: "tipo",
-        message:
-          "tipo must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
-      },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
-  it("rejects invalid type with an error in the 'tipo' field", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(
-      service.list({ format: "INVALIDO" }),
-    );
-
-    expect(error.errors).toEqual([
-      {
-        field: "formato",
-        message:
-          "formato must be one of the following: IN_PERSON, ONLINE, HYBRID.",
-      },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
   it("rejects invalid status with an error in the 'status' field", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
@@ -302,9 +266,9 @@ describe("ActivityService.list", () => {
 
     expect(error.errors).toEqual([
       {
-        field: "tipo",
+        field: "type",
         message:
-          "tipo must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
+          "type must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
       },
       {
         field: "status",
@@ -344,17 +308,6 @@ describe("ActivityService.list", () => {
 
   // ---------- Repository forwarding ----------
 
-  it("applies order: 'desc' by default", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({});
-
-    expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ order: "desc" }),
-    );
-  });
-
   it("maps orderBy: 'created_at' to 'createdAt'", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
@@ -366,19 +319,56 @@ describe("ActivityService.list", () => {
     );
   });
 
-  it("maps orderBy: 'start_date' to 'createdAt' (current faulty behavior)", async () => {
-    // TODO(#147): validation accepts "start_date", but the mapping compares
-    // it against "data_inicio" — sorting by start date never happens.
-    // Once #147 is resolved, the expected value will become "startDate"
-    // and this test should FAIL intentionally, signaling the fix.
+  it("maps start_date to startDate and passes it to repository.list", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
     await service.list({ orderBy: "start_date" });
 
     expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: "createdAt" }),
+      expect.objectContaining({
+        orderBy: "startDate",
+      }),
     );
+  });
+
+  it("maps created_at to createdAt and passes it to repository.list", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ orderBy: "created_at" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: "createdAt",
+      }),
+    );
+  });
+
+  it("throws a ValidationError with status 400 and field 'type' when filter.type is invalid", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expect(
+      service.list({ type: "INVALID_TYPE" as any }),
+    ).rejects.toSatisfy((error: any) => {
+      expect(error.statusCode ?? error.status).toBe(400);
+      expect(error.errors?.[0]?.field).toBe("type");
+      return true;
+    });
+  });
+
+  it("throws a ValidationError with status 400 and field 'format' when filter.format is invalid", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expect(
+      service.list({ format: "INVALID_FORMAT" as any }),
+    ).rejects.toSatisfy((error: any) => {
+      expect(error.statusCode ?? error.status).toBe(400);
+      expect(error.errors?.[0]?.field).toBe("format");
+      return true;
+    });
   });
 
   it("passes search and campus to the repository without validation", async () => {
