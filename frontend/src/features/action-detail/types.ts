@@ -1,17 +1,21 @@
-export interface ActionDetail {
+import type {
+  Action,
+  ActionDetails as ActionListDetails,
+} from "../dashboard/types";
+
+export interface ActionAddress {
   id: string;
-  title: string;
-  shortDescription: string;
-  fullDescription: string;
-  bannerUrl: string;
-  category: string;
-  institution: string;
+  addressLine: string;
+  district: string;
+  zipCode: string;
   city: string;
-  venue: string;
-  startDate: string;
-  endDate: string;
-  schedule: string;
-  workloadHours: number;
-  slots: number;
-  totalSlots: number;
+  state: string;
+}
+
+export interface ActionDetails extends ActionListDetails {
+  address: ActionAddress | null;
+}
+
+export interface ActionDetail extends Action {
+  details: ActionDetails | null;
 }

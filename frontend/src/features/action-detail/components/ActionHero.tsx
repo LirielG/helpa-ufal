@@ -12,7 +12,6 @@ export function ActionHero({
   bannerUrl,
   category,
   title,
-  shortDescription,
   onBack,
 }: ActionHeroProps) {
   return (
@@ -43,8 +42,6 @@ export function ActionHero({
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
           {title}
         </h1>
-
-        <p className="text-white/80 text-base max-w-xl">{shortDescription}</p>
       </div>
     </div>
   );

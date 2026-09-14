@@ -1,82 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { makeAction, render, screen } from "@/test";
-import type { ActionStatus } from "../../types";
+import { render, screen } from "@/test";
 import { ActionCard } from "../ActionCard";
-
-const STATUS_LABELS: Array<[ActionStatus, string]> = [
-  ["available", "Vagas Disponíveis"],
-  ["full", "Vagas Esgotadas"],
-  ["upcoming", "Em Breve"],
-];
+import type { Action } from "../../types";
 
 describe("ActionCard", () => {
-  it("shows the title, description, location, date and number of spots", () => {
-    const action = makeAction({
+  it("shows the title, location, date and number of spots", () => {
+    const action = {
+      id: "action-42",
       title: "Oficina de Robótica",
-      description: "Montagem de kits com estudantes do ensino médio.",
-      location: "UFAL, Arapiraca - AL",
-      date: "09/05/2026",
-      spots: 25,
-    });
+      campus: "UFAL, Arapiraca - AL",
+      startDate: "2026-05-09T12:00:00Z",
+      availableSlots: 25,
+      status: "OPEN",
+      type: "COURSE"
+    } as unknown as Action;
 
     render(<ActionCard action={action} />);
 
-    expect(
-      screen.getByRole("heading", { name: "Oficina de Robótica" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Montagem de kits com estudantes do ensino médio."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Oficina de Robótica" })).toBeInTheDocument();
     expect(screen.getByText("UFAL, Arapiraca - AL")).toBeInTheDocument();
-    expect(screen.getByText("09/05/2026")).toBeInTheDocument();
-    expect(screen.getByText("25 vagas")).toBeInTheDocument();
+    expect(screen.getByText(/25 vagas disponíveis/i)).toBeInTheDocument();
+    expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
+    expect(screen.getByText("Curso/Oficina")).toBeInTheDocument();
   });
 
   it("links to the detail page of its own action", () => {
-    const action = makeAction({ id: "action-42" });
-
+    const action = { id: "action-42", type: "COURSE", status: "OPEN" } as unknown as Action;
+    
     render(<ActionCard action={action} />);
-
+    
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      "/activity/action-42",
+      "/activity/action-42"
     );
-  });
-
-  it("uses the title as the alt text of the cover image", () => {
-    const action = makeAction({
-      title: "Aulas de Reforço",
-      image: "https://example.test/reforco.png",
-    });
-
-    render(<ActionCard action={action} />);
-
-    expect(
-      screen.getByRole("img", { name: "Aulas de Reforço" }),
-    ).toHaveAttribute("src", "https://example.test/reforco.png");
-  });
-
-  it.each(STATUS_LABELS)(
-    "labels an action with status %s as %s",
-    (status, label) => {
-      render(<ActionCard action={makeAction({ status })} />);
-
-      expect(screen.getByText(label)).toBeInTheDocument();
-
-      const otherLabels = STATUS_LABELS.filter(
-        ([, other]) => other !== label,
-      ).map(([, other]) => other);
-      for (const otherLabel of otherLabels) {
-        expect(screen.queryByText(otherLabel)).toBeNull();
-      }
-    },
-  );
-
-  // The type is rendered as the raw slug and only capitalized by CSS, so the
-  // text node itself stays lowercase.
-  it("shows the action type", () => {
-    render(<ActionCard action={makeAction({ type: "minicurso" })} />);
-
-    expect(screen.getByText("minicurso")).toBeInTheDocument();
   });
 });

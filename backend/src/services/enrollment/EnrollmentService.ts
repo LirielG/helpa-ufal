@@ -74,6 +74,10 @@ class EnrollmentService implements IEnrollmentService {
       throw new CustomError(404, "Activity not found.");
     }
 
+    if (activity.status !== "OPEN") {
+      throw new CustomError(409, "Activity is not open for cancellation.");
+    }
+
     await this._enrollmentRepository.cancel(userId, activityId);
   }
 

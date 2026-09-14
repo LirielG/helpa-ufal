@@ -28,7 +28,8 @@ export const useAuthStore = create<AuthStore>()(
           set({ user: response.user });
           return true;
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Erro ao fazer login";
+          const message =
+            error instanceof Error ? error.message : "Erro ao fazer login";
           set({ error: message });
           return false;
         } finally {
@@ -39,11 +40,13 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await authService.register(data);
-          set({ user: response.user });
+          // Sign-up does not authenticate: the screen sends the visitor to the
+          // login page and this only reports whether the account was created.
+          await authService.register(data);
           return true;
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Erro ao criar conta";
+          const message =
+            error instanceof Error ? error.message : "Erro ao criar conta";
           set({ error: message });
           return false;
         } finally {
@@ -57,7 +60,8 @@ export const useAuthStore = create<AuthStore>()(
           await authService.logout();
           set({ user: null });
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Erro ao fazer logout";
+          const message =
+            error instanceof Error ? error.message : "Erro ao fazer logout";
           set({ error: message });
         } finally {
           set({ isLoading: false });

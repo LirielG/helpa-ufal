@@ -12,7 +12,7 @@ export const ActionEditSchema = z
       .min(10, "A descrição deve ter no mínimo 10 caracteres"),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
-    type: z.enum(["oficina", "palestra", "evento", "servico", "minicurso"], {
+    type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"], {
       message: "Selecione um tipo de ação",
     }),
     spots: z.coerce

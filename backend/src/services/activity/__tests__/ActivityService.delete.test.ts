@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import CustomError from "@/models/error/CustomError.js";
 import { expectHttpError } from "@/utils/tests.js";
 
 function mockRepository(

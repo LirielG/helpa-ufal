@@ -79,6 +79,36 @@ describe("api client", () => {
     );
   });
 
+  describe("query string", () => {
+    it("appends the params to the URL", async () => {
+      const requests = captureRequest("get", () => HttpResponse.json({}));
+
+      await api.get(ENDPOINT, { params: { page: 2, status: "OPEN" } });
+
+      expect(requests[0].url).toBe(`${URL}?page=2&status=OPEN`);
+    });
+
+    // A blank filter means "no filter", so it must not reach the backend as an
+    // empty value it would then have to interpret.
+    it("drops undefined, null and empty params", async () => {
+      const requests = captureRequest("get", () => HttpResponse.json({}));
+
+      await api.get(ENDPOINT, {
+        params: { page: 1, type: undefined, campus: null, search: "" },
+      });
+
+      expect(requests[0].url).toBe(`${URL}?page=1`);
+    });
+
+    it("sends no query string when there are no params", async () => {
+      const requests = captureRequest("get", () => HttpResponse.json({}));
+
+      await api.get(ENDPOINT);
+
+      expect(requests[0].url).toBe(URL);
+    });
+  });
+
   describe("empty responses", () => {
     it("resolves a 204 without trying to parse the body", async () => {
       server.use(

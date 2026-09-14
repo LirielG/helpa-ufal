@@ -38,23 +38,28 @@ export function makeManager(overrides: Partial<User> = {}): User {
   return makeUser({ userType: "TEACHER", isManager: true, ...overrides });
 }
 
+const ACTION_START = "2026-03-10T14:00:00.000Z";
+const ACTION_END = "2026-03-17T18:00:00.000Z";
+
 export function makeAction(overrides: Partial<Action> = {}): Action {
   return {
     id: unique("action"),
-    title: "Ação de Teste",
-    description: "Descrição da ação de teste.",
-    image: "https://example.test/acao.png",
-    location: "Campus Arapiraca",
-    date: "2026-03-10",
-    workload: 20,
-    format: "presencial",
-    spots: 30,
-    cep: 57309005,
-    city: "Arapiraca",
-    state: "AL",
-    type: "oficina",
-    status: "available",
-    area: "robotica",
+    authorId: unique("author"),
+    title: "Oficina de Programação",
+    type: "COURSE",
+    campus: "ARAPIRACA",
+    startDate: ACTION_START,
+    endDate: ACTION_END,
+    slots: 30,
+    availableSlots: 12,
+    status: "OPEN",
+    details: {
+      description: "Descrição da ação de teste.",
+      area: "robotica",
+      format: "IN_PERSON",
+      url: null,
+      workloadHours: 20,
+    },
     ...overrides,
   };
 }
@@ -62,22 +67,21 @@ export function makeAction(overrides: Partial<Action> = {}): Action {
 export function makeActionDetail(
   overrides: Partial<ActionDetail> = {},
 ): ActionDetail {
+  const { details, ...action } = makeAction();
+
   return {
-    id: unique("action-detail"),
-    title: "Ação de Teste",
-    shortDescription: "Resumo da ação de teste.",
-    fullDescription: "Descrição completa da ação de teste.",
-    bannerUrl: "https://example.test/banner.png",
-    category: "Oficina",
-    institution: "UFAL",
-    city: "Arapiraca",
-    venue: "Campus Arapiraca",
-    startDate: "2026-03-10",
-    endDate: "2026-03-17",
-    schedule: "14h às 18h",
-    workloadHours: 20,
-    slots: 12,
-    totalSlots: 30,
+    ...action,
+    details: details && {
+      ...details,
+      address: {
+        id: unique("address"),
+        addressLine: "Av. Manoel Severino Barbosa, s/n",
+        district: "Bom Sucesso",
+        zipCode: "57309005",
+        city: "Arapiraca",
+        state: "AL",
+      },
+    },
     ...overrides,
   };
 }

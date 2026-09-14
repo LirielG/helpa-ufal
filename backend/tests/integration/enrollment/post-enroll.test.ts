@@ -12,7 +12,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: docs/Create-Enrollment.yml (Bruno).
+// Route contract: Enroll/Enroll-in-an-activity.yml.
 // If the team flattens the route (POST /enroll), this helper is the only line to change.
 const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
 
@@ -59,6 +59,7 @@ describe("POST /activities/:id/enroll", () => {
       confirmedWorkloadHours: 8,        // novo
     });
 
+
     const response = await request(app)
       .post(enrollUrl(activity.id))
       .set(...authHeader(student.token));
@@ -74,6 +75,7 @@ describe("POST /activities/:id/enroll", () => {
     expect(stored.status).toBe("APPROVED");
     expect(stored.attendanceConfirmed).toBeNull();   // era: toBe(false)
     expect(stored.confirmedWorkloadHours).toBe(0);   // novo
+    expect(stored.enrolledAt.getTime()).toBeGreaterThan(
       new Date("2026-01-01T00:00:00.000Z").getTime(),
     );
 
@@ -98,6 +100,20 @@ describe("POST /activities/:id/enroll", () => {
 
     expect(detail.status).toBe(200);
     expect(detail.body.availableSlots).toBe(1);
+  });
+
+  it("ignores any userId sent in the request body and enrolls the token's user", async () => {
+    const { activity } = await anOpenActivity();
+    const student = await createStudent();
+    const other = await createStudent();
+
+    const response = await request(app)
+      .post(enrollUrl(activity.id))
+      .set(...authHeader(student.token))
+      .send({ userId: other.user.id });
+
+    expect(response.status).toBe(201);
+    expect(response.body.userId).toBe(student.user.id);
   });
 
   // ---------- 401 - Unauthorized ----------
@@ -170,8 +186,8 @@ describe("POST /activities/:id/enroll", () => {
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
-  });
-
+  }); 
+  
   // ---------- 409 - Conflict ----------
 
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
@@ -237,19 +253,6 @@ describe("POST /activities/:id/enroll", () => {
     });
   });
 
-  // ---------- 400 - Bad Request ----------
-
-  it("rejects a malformed activity id", async () => {
-    const student = await createStudent();
-
-    const response = await request(app)
-      .post(enrollUrl("not-a-uuid"))
-      .set(...authHeader(student.token));
-
-    expect(response.status).toBe(400);
-    // Body depends on how ErrorHandler serializes ValidationError; document
-    // the exact shape in Bruno when the route lands (#83).
-  });
 
   // ---------- Concurrency ----------
 

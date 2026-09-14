@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router";
 import { Mail } from "lucide-react";
 import { Button, Alert } from "../components";
 import { useAuth } from "../hooks";
@@ -16,9 +17,17 @@ type LoginFields = {
   password: string;
 };
 
+type LoginRouteState = {
+  successMessage?: string;
+};
+
 export function Login() {
   const { login, isLoading, error: authError } = useAuth();
+  const { state } = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+
+  const successMessage =
+    (state as LoginRouteState | null)?.successMessage ?? null;
 
   const {
     register,
@@ -55,6 +64,12 @@ export function Login() {
         />
       }
     >
+      {successMessage && !authError && (
+        <div className="mb-6">
+          <Alert type="success" message={successMessage} />
+        </div>
+      )}
+
       {authError && (
         <div className="mb-6">
           <Alert type="error" message={authError} />

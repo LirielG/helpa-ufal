@@ -1,5 +1,5 @@
 // src/repositories/enrollment/locks.ts
-import type { Prisma } from "@prisma/client";
+import type { ActivityStatus, Prisma } from "@prisma/client";
 
 /**
 * Locks the Activity row (SELECT ... FOR UPDATE) and returns the fields
@@ -14,11 +14,12 @@ import type { Prisma } from "@prisma/client";
 export async function lockActivityForCapacity(
   tx: Prisma.TransactionClient,
   activityId: string,
-): Promise<{ slots: number } | null> {
-  const rows = await tx.$queryRaw<{ slots: number }[]>`
-    SELECT slots
+): Promise<{ slots: number; status: ActivityStatus } | null> {
+  const rows = await tx.$queryRaw<{ slots: number; status: ActivityStatus }[]>`
+    SELECT slots, status
     FROM "Activity"
     WHERE id = ${activityId}
+      AND "deletedAt" IS NULL
     FOR UPDATE
   `;
   return rows[0] ?? null;

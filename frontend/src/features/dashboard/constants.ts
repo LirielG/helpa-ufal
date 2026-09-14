@@ -1,71 +1,4 @@
-import type { Action } from "./types";
-
-export const MOCK_ACTIONS: Action[] = [
-  {
-    id: "1",
-    title: "Oficina de Programação",
-    description: "Ensinar fundamentos de programação e desenvolvimento web para jovens de escolas...",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400",
-    location: "UFAL, Arapiraca - AL",
-    date: "09/05/2026",
-    spots: 30,
-    type: "oficina",
-    status: "available",
-    workload: 0,
-    format: "",
-    cep: 0,
-    city: "",
-    state: "",
-  },
-  {
-    id: "2",
-    title: "Aulas de Reforço de Matemática",
-    description: "Oferecer aulas de reforço para auxiliar alunos do ensino fundamental em matemática básica. Os...",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400",
-    location: "UFAL, Arapiraca - AL",
-    date: "08/05/2026",
-    spots: 15,
-    type: "oficina",
-    status: "full",
-    workload: 0,
-    format: "",
-    cep: 0,
-    city: "",
-    state: "",
-  },
-  {
-    id: "3",
-    title: "Oficina de Programação",
-    description: "Ensinar fundamentos de programação e desenvolvimento web para jovens de escolas...",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400",
-    location: "UFAL, Arapiraca - AL",
-    date: "09/05/2026",
-    spots: 30,
-    type: "oficina",
-    status: "available",
-    workload: 0,
-    format: "",
-    cep: 0,
-    city: "",
-    state: "",
-  },
-  {
-    id: "4",
-    title: "Oficina de Programação em blocos",
-    description: "Ensinar fundamentos de programação e desenvolvimento web para jovens de escolas...",
-    image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400",
-    location: "UFAL, Arapiraca - AL",
-    date: "09/05/2026",
-    spots: 30,
-    type: "oficina",
-    status: "available",
-    workload: 0,
-    format: "",
-    cep: 0,
-    city: "",
-    state: "",
-  },
-];
+import type { ActionCampus, ActionFormat, ActionType } from "./types";
 
 export const FILTER_OPTIONS = {
   areas: [
@@ -95,7 +28,7 @@ export const ACTION_AREAS = [
   { value: "educacao", label: "Educação" },
   { value: "saude", label: "Saúde" },
   { value: "meio_ambiente", label: "Meio Ambiente" },
-  { value: "arquitetura", label: "Arquitetura" }
+  { value: "arquitetura", label: "Arquitetura" },
 ];
 
 export const ACTION_TYPES = [
@@ -104,10 +37,38 @@ export const ACTION_TYPES = [
   { value: "evento", label: "Evento" },
   { value: "servico", label: "Serviço" },
   { value: "minicurso", label: "Minicurso" },
-]
+];
 
 export const ACTION_FORMATS = [
   { value: "presencial", label: "Presencial" },
-  {value: "remoto", label: "Remoto" },
-  {value: "hibrido", label: "Híbrido"}
-]
+  { value: "remoto", label: "Remoto" },
+  { value: "hibrido", label: "Híbrido" },
+];
+
+export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
+  EXTENSION: "Extensão",
+  COURSE: "Curso/Oficina",
+  EVENT: "Evento",
+  LECTURE: "Palestra",
+  OTHER: "Outro",
+};
+
+export const ACTION_FORMAT_LABELS: Record<ActionFormat, string> = {
+  IN_PERSON: "Presencial",
+  ONLINE: "Remoto",
+  HYBRID: "Híbrido",
+};
+
+export const ACTION_CAMPUS_LABELS: Record<ActionCampus, string> = {
+  MACEIO: "Maceió",
+  ARAPIRACA: "Arapiraca",
+  PALMEIRA: "Palmeira dos Índios",
+  PENEDO: "Penedo",
+  RIO_LARGO: "Rio Largo",
+  DELMIRO_GOUVEIA: "Delmiro Gouveia",
+  SANTANA_IPANEMA: "Santana do Ipanema",
+};
+
+export const ACTION_TYPE_OPTIONS = (
+  Object.keys(ACTION_TYPE_LABELS) as ActionType[]
+).map((value) => ({ value, label: ACTION_TYPE_LABELS[value] }));

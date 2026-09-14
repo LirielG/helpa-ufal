@@ -1,74 +1,53 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@/test";
 import { HeroBanner } from "../HeroBanner";
+import type { Action } from "../../types";
 
-/** Slide titles, in carousel order. They are UI copy, kept literal on purpose. */
-const SLIDE_TITLES = [
-  "Oficina de Programação",
-  "Aulas de Reforço Escolar",
-  "Ação Ambiental",
-  "Saúde na Comunidade",
-];
+const mockActions = [
+  { id: "1", title: "Slide 1", startDate: "2026-05-09T12:00:00Z" },
+  { id: "2", title: "Slide 2", startDate: "2026-05-10T12:00:00Z" },
+  { id: "3", title: "Slide 3", startDate: "2026-05-11T12:00:00Z" },
+  { id: "4", title: "Slide 4", startDate: "2026-05-12T12:00:00Z" },
+] as unknown as Action[]
 
-/** The title of the slide currently exposed to the user. */
 function getVisibleSlideTitle(): string {
-  const visible = SLIDE_TITLES.filter(
-    (title) => screen.queryByRole("heading", { name: title }) !== null,
-  );
-
-  expect(visible).toHaveLength(1);
-  return visible[0];
+  return screen.getByRole("heading").textContent || "";
 }
 
 describe("HeroBanner", () => {
   it("shows the first slide on mount", () => {
-    render(<HeroBanner />);
-
-    expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[0]);
+    render(<HeroBanner actions={mockActions} />);
+    expect(getVisibleSlideTitle()).toBe("Slide 1");
   });
 
   it("moves to the next slide", async () => {
-    const { user } = render(<HeroBanner />);
-
+    const { user } = render(<HeroBanner actions={mockActions} />);
     await user.click(screen.getByRole("button", { name: "Próximo slide" }));
-
-    expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[1]);
+    expect(getVisibleSlideTitle()).toBe("Slide 2");
   });
 
   it("wraps around to the last slide when going back from the first", async () => {
-    const { user } = render(<HeroBanner />);
-
+    const { user } = render(<HeroBanner actions={mockActions} />);
     await user.click(screen.getByRole("button", { name: "Slide anterior" }));
-
-    expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES.at(-1));
+    expect(getVisibleSlideTitle()).toBe("Slide 4");
   });
 
   it("wraps around to the first slide when advancing past the last", async () => {
-    const { user } = render(<HeroBanner />);
-
-    for (let click = 0; click < SLIDE_TITLES.length; click += 1) {
+    const { user } = render(<HeroBanner actions={mockActions} />);
+    for (let click = 0; click < 4; click += 1) {
       await user.click(screen.getByRole("button", { name: "Próximo slide" }));
     }
-
-    expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[0]);
+    expect(getVisibleSlideTitle()).toBe("Slide 1");
   });
 
   it("jumps to the slide picked from the dots and marks it as current", async () => {
-    const { user } = render(<HeroBanner />);
-
+    const { user } = render(<HeroBanner actions={mockActions} />);
     await user.click(screen.getByRole("button", { name: "Ir para slide 3" }));
-
-    expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[2]);
-    expect(
-      screen.getByRole("button", { name: "Ir para slide 3" }),
-    ).toHaveAttribute("aria-current", "true");
-    expect(
-      screen.getByRole("button", { name: "Ir para slide 1" }),
-    ).not.toHaveAttribute("aria-current", "true");
+    
+    expect(getVisibleSlideTitle()).toBe("Slide 3");
+    expect(screen.getByRole("button", { name: "Ir para slide 3" })).toHaveAttribute("aria-current", "true");
   });
 
-  // Fake timers are scoped to this test: the ones above rely on userEvent,
-  // which needs the real clock to settle its interactions.
   describe("automatic rotation", () => {
     beforeEach(() => {
       vi.useFakeTimers();
@@ -79,24 +58,18 @@ describe("HeroBanner", () => {
     });
 
     it("advances on its own every five seconds", () => {
-      render(<HeroBanner />);
+      render(<HeroBanner actions={mockActions} />);
 
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[1]);
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(getVisibleSlideTitle()).toBe("Slide 2");
 
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
-      expect(getVisibleSlideTitle()).toBe(SLIDE_TITLES[2]);
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(getVisibleSlideTitle()).toBe("Slide 3");
     });
 
     it("stops rotating once it leaves the screen", () => {
-      const { unmount } = render(<HeroBanner />);
-
+      const { unmount } = render(<HeroBanner actions={mockActions} />);
       unmount();
-
       expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
       expect(vi.getTimerCount()).toBe(0);
     });

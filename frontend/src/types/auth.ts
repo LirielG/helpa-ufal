@@ -39,15 +39,12 @@ export interface RegisterRequest {
   password: string;
   confirmPassword: string;
   userType: UserType;
-  course: string;
+  course?: string;
   registrationCode: string;
   cndb?: string;
 }
 
-export interface RegisterResponse {
-  token: string;
-  user: User;
-}
+export type RegisterResponse = User;
 
 export interface AuthError {
   message: string;

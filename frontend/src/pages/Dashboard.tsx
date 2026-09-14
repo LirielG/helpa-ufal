@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { HeroBanner } from "../features/dashboard/components/HeroBanner";
@@ -7,11 +7,16 @@ import { ActionGrid } from "../features/dashboard/components/ActionGrid";
 import { ActionRegister } from "../features/dashboard/components/ActionForm";
 import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg"; 
-import { MOCK_ACTIONS } from "../features/dashboard/constants";
-import type { FilterOptions } from "../features/dashboard/types";
+import { fetchActions } from "../features/dashboard/services";
+import type { FilterOptions, Action } from "../features/dashboard/types";
+import { Alert } from "../components/Alert";
 
 export function Dashboard() {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [actions, setActions] = useState<Action[]>([]);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<FilterOptions>({
     area: "all",
@@ -21,19 +26,41 @@ export function Dashboard() {
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
   };
 
-  const filteredActions = useMemo(() => {
-    return MOCK_ACTIONS.filter((action) => {
-      if (filters.availability !== "all" && action.status !== filters.availability) {
-        return false;
+  const loadActions = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+
+    fetchActions(filters, page)
+      .then((res) => {
+        setActions(res.activities);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Não foi possível carregar as ações. Tente novamente.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [filters, page]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const fetchOnMount = async () => {
+      if (mounted) {
+        await loadActions();
       }
-      if (filters.actionType !== "all" && action.type !== filters.actionType) {
-        return false;
-      }
-      return true;
-    });
-  }, [filters]);
+    };
+    
+    fetchOnMount();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadActions]);
 
   const dashboardBackgroundStyle = {
     backgroundImage: `url(${bgDashboard})`,
@@ -47,19 +74,36 @@ export function Dashboard() {
       header={<DashboardHeader onOpenRegister={() => setIsRegisterOpen(true)} />}
       footer={<Footer />}
     >
-      <HeroBanner />
+      <HeroBanner actions={actions} />
       
-      <div className="w-full bg-white" style={dashboardBackgroundStyle}>
-        
+      <div className="w-full min-h-[50vh] bg-white" style={dashboardBackgroundStyle}>
         <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
           <FilterBar filters={filters} onFilterChange={handleFilterChange} />
-          <ActionGrid actions={filteredActions} />
-        </div>
+          
+          {isLoading && (
+            <p className="text-center text-gray-500 py-10 font-medium">Buscando ações...</p>
+          )}
 
+          {!isLoading && error && (
+            <Alert type="error" message={error} />
+          )}
+
+          {!isLoading && !error && actions.length === 0 && (
+            <p className="text-center text-gray-500 py-10 font-medium">
+              Nenhuma ação encontrada com esses filtros.
+            </p>
+          )}
+
+          {!isLoading && !error && actions.length > 0 && (
+            <ActionGrid actions={actions} />
+          )}
+        </div>
       </div>
+      
       <ActionRegister 
         isOpen={isRegisterOpen} 
         onClose={() => setIsRegisterOpen(false)} 
+        onSuccess={loadActions}
       />
     </DashboardShell>
   );
