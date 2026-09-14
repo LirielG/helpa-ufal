@@ -86,5 +86,5 @@ docs: |-
   | 401    | Missing, invalid or expired token |
   | 404    | The user from the token no longer exists |
 
-  > Error body aligned with the rest of the API (`{ status, message }`) — see
-  > `ErrorResponse` in swagger.ts.
+  > Error body aligned with the rest of the API: `{ status, message }`, plus an
+  > `errors` array on validation failures.

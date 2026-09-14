@@ -9,6 +9,16 @@ http:
   method: GET
   url: "{{baseUrl}}/activities"
   params:
+    - name: page
+      value: "1"
+      type: query
+      description: "Page number (default: 1)"
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: "Items per page (default: 20, max: 100)"
+      disabled: true
     - name: search
       value: ""
       type: query

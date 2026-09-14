@@ -57,7 +57,6 @@ export default defineConfig({
       exclude: [
         "src/**/__tests__/**",
         "src/**/I*.ts",
-        "src/docs/swagger.ts",
         "src/types/**",
         "src/server.ts",
       ],

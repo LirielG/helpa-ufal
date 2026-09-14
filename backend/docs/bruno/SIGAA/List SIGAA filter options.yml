@@ -1,0 +1,72 @@
+info:
+  name: List SIGAA filter options
+  type: http
+  seq: 2
+  tags:
+    - SIGAA
+
+http:
+  method: GET
+  url: "{{baseUrl}}/sigaa-activities/filters"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Available filter options
+    description: Distinct types and department acronyms found in active SIGAA activities, sorted alphabetically. Empty lists when there is no activity — never an error.
+    request:
+      url: "{{baseUrl}}/sigaa-activities/filters"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "types": [
+              "CURSO",
+              "EVENTO",
+              "PROJETO"
+            ],
+            "departments": [
+              "CEDU",
+              "FDA",
+              "ICAT"
+            ]
+          }
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/sigaa-activities/filters"
+      method: GET
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Returns the values accepted by the `type` and `department` filters of GET /sigaa-activities.
+
+  - Public route, no parameters: any query string sent is ignored.
+  - Both lists hold the distinct values found in active activities, sorted alphabetically, each value appearing once. Every value listed here matches at least one activity, so no option leads to an empty result.
+  - Values that exist only in inactive activities are left out — the scraper flips `isActive` when it stops seeing a row, and offering a filter that matches nothing would be a dead end in the UI.
+  - An activity with no department still contributes its type; it just adds nothing to `departments`.
+  - Reads only what is persisted: this route NEVER triggers a sync with the SIGAA, unlike GET /sigaa-activities. Right after a fresh database it answers 200 with two empty lists.
