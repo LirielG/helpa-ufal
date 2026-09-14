@@ -67,11 +67,10 @@ class ActivityController implements IActivityController {
 
     const updatedActivity = await this._activityService.update(
       id, 
-      { id: req.user.id, isManager: !!req.user.isManager }, 
+      req.user.id, 
       data
     );
 
-    
     res.status(200).json(updatedActivity);
   }
 
