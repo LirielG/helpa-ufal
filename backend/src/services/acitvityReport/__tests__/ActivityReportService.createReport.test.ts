@@ -9,7 +9,6 @@ import {
   expectCustomError,
 } from "@/utils/tests.js";
 
-
 // v4 UUIDs only: isValidUUID rejects anything else (project convention).
 const ACTIVITY_ID = "22ac40bd-e160-4c6e-8505-b63913d2482f"; // from the Bruno contract
 const REPORTER_ID = "a1b2c3d4-0000-4000-8000-000000000042";
@@ -26,7 +25,6 @@ const REPORT_REASONS = [
   "DUPLICATE",
   "OTHER",
 ] as const;
-
 
 // Mirrors toActivityReportResponse: fields come from the persisted row, and
 // moderation fields (resolvedAt/resolvedById) stay out until Sprint 5.
@@ -45,12 +43,10 @@ function reportFactory(
   };
 }
 
-
 // Only the field the service reads.
 function activityFrom(authorId: string) {
   return { id: ACTIVITY_ID, authorId };
 }
-
 
 function mockReportRepository(
   overrides: Partial<IActivityReportRepository> = {},
@@ -67,7 +63,6 @@ function mockReportRepository(
   } as unknown as IActivityReportRepository;
 }
 
-
 function mockActivityRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
@@ -76,7 +71,6 @@ function mockActivityRepository(
     ...overrides,
   } as unknown as IActivityRepository;
 }
-
 
 // Base valid payload: a MISINFORMATION report with description. Overrides stay
 // untyped on purpose: one test sends a payload the Zod contract would reject.
@@ -90,10 +84,8 @@ function validInput(
   } as unknown as CreateActivityReportInput;
 }
 
-
 describe("ActivityReportService.createReport", () => {
   // ---------- Happy path ----------
-
 
   it("passes ids and data untouched to the repository and returns its exact DTO", async () => {
     const activityRepository = mockActivityRepository({
@@ -107,10 +99,8 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     const input = validInput();
     const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
-
 
     expect(activityRepository.findById).toHaveBeenCalledTimes(1);
     expect(activityRepository.findById).toHaveBeenCalledWith(ACTIVITY_ID);
@@ -137,7 +127,6 @@ describe("ActivityReportService.createReport", () => {
     });
   });
 
-
   it("accepts a report without a description (the Zod schema makes it optional)", async () => {
     const activityRepository = mockActivityRepository({
       findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),
@@ -150,10 +139,8 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     const input = validInput({ description: undefined });
     const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
-
 
     expect(reportRepository.create).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -164,9 +151,7 @@ describe("ActivityReportService.createReport", () => {
     expect(response.description).toBeNull();
   });
 
-
   // ---------- Category pass-through (validation lives in the Zod layer) ----------
-
 
   it.each(REPORT_REASONS)(
     "accepts the %s category and forwards the data untouched",
@@ -182,10 +167,8 @@ describe("ActivityReportService.createReport", () => {
         activityRepository,
       });
 
-
       const input = validInput({ category });
       const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
-
 
       expect(reportRepository.create).toHaveBeenCalledWith(
         ACTIVITY_ID,
@@ -195,7 +178,6 @@ describe("ActivityReportService.createReport", () => {
       expect(response.category).toBe(category);
     },
   );
-
 
   it("forwards even a category the Zod contract would reject (detector test)", async () => {
     const activityRepository = mockActivityRepository({
@@ -209,21 +191,17 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     // Today's behavior: category validation belongs to the Zod schema in the
     // controller, so the service forwards whatever it receives. If the rule
     // ever moves into the service, this test is the detector.
     const input = validInput({ category: "HARASSMENT" });
     const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
 
-
     expect(reportRepository.create).toHaveBeenCalledTimes(1);
     expect(response.category).toBe("HARASSMENT");
   });
 
-
   // ---------- Block 1: activityId format (ValidationError, 400) ----------
-
 
   it("rejects a malformed activity id with a ValidationError", async () => {
     const activityRepository = mockActivityRepository();
@@ -232,7 +210,6 @@ describe("ActivityReportService.createReport", () => {
       activityReportRepository: reportRepository,
       activityRepository,
     });
-
 
     await expectValidationError(
       service.createReport("not-a-uuid", REPORTER_ID, validInput()),
@@ -243,7 +220,6 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.create).not.toHaveBeenCalled();
   });
 
-
   it("rejects a well-formed non-v4 UUID (isValidUUID only accepts v4)", async () => {
     const activityRepository = mockActivityRepository();
     const reportRepository = mockReportRepository();
@@ -251,7 +227,6 @@ describe("ActivityReportService.createReport", () => {
       activityReportRepository: reportRepository,
       activityRepository,
     });
-
 
     // Fixation: "a1b2...-1000-..." is a valid v1 UUID, but the project
     // convention accepts v4 only.
@@ -266,7 +241,6 @@ describe("ActivityReportService.createReport", () => {
     expect(activityRepository.findById).not.toHaveBeenCalled();
   });
 
-
   it("accepts a boundary UUID whose version nibble is 4", async () => {
     const activityRepository = mockActivityRepository({
       findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),
@@ -279,7 +253,6 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     // Boundary of the version check: only the third group's first nibble
     // distinguishes a v4 UUID from a rejected one.
     const response = await service.createReport(
@@ -288,14 +261,11 @@ describe("ActivityReportService.createReport", () => {
       validInput(),
     );
 
-
     expect(reportRepository.create).toHaveBeenCalledTimes(1);
     expect(response.activityId).toBe("a1b2c3d4-0000-4fff-bfff-ffffffffffff");
   });
 
-
   // ---------- Blocks 2-4: not found, own activity, duplicate (CustomError) ----------
-
 
   it("throws 404 when the activity does not exist", async () => {
     const activityRepository = mockActivityRepository({
@@ -306,7 +276,6 @@ describe("ActivityReportService.createReport", () => {
       activityReportRepository: reportRepository,
       activityRepository,
     });
-
 
     // Also covers a soft-deleted activity: findById filters deletedAt, so both
     // cases reach the service as null (matches the Bruno "not found or deleted").
@@ -319,7 +288,6 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.create).not.toHaveBeenCalled();
   });
 
-
   it("throws 403 when the author reports their own activity", async () => {
     const activityRepository = mockActivityRepository({
       findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),
@@ -330,7 +298,6 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     await expectCustomError(
       service.createReport(ACTIVITY_ID, AUTHOR_ID, validInput()),
       403,
@@ -339,7 +306,6 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.findByUserAndActivity).not.toHaveBeenCalled();
     expect(reportRepository.create).not.toHaveBeenCalled();
   });
-
 
   it("throws 409 when the user has already reported the activity", async () => {
     const input = validInput();
@@ -356,7 +322,6 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     await expectCustomError(
       service.createReport(ACTIVITY_ID, REPORTER_ID, input),
       409,
@@ -365,9 +330,7 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.create).not.toHaveBeenCalled();
   });
 
-
   // ---------- Precedence between blocks ----------
-
 
   it("answers 403 when the author has also already reported (author check runs first)", async () => {
     const activityRepository = mockActivityRepository({
@@ -379,7 +342,6 @@ describe("ActivityReportService.createReport", () => {
       activityRepository,
     });
 
-
     // First-failure chain: when the reporter is the author, the duplicate
     // check must never run.
     await expectCustomError(
@@ -390,13 +352,10 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.findByUserAndActivity).not.toHaveBeenCalled();
   });
 
-
   // ---------- Repository failures propagate unchanged ----------
-
 
   it("propagates repository rejections unchanged (no wrapping)", async () => {
     const infraError = new Error("database is down");
-
 
     const failingFindById = mockActivityRepository({
       findById: vi.fn().mockRejectedValue(infraError),
@@ -409,7 +368,6 @@ describe("ActivityReportService.createReport", () => {
     await expect(
       service.createReport(ACTIVITY_ID, REPORTER_ID, validInput()),
     ).rejects.toBe(infraError);
-
 
     const activityRepository = mockActivityRepository({
       findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),
@@ -424,7 +382,6 @@ describe("ActivityReportService.createReport", () => {
     await expect(
       service.createReport(ACTIVITY_ID, REPORTER_ID, validInput()),
     ).rejects.toBe(infraError);
-
 
     // A race between the duplicate check and create would surface here as a
     // Prisma P2002 (@@unique) — today it propagates as a 500 (contract debt);
