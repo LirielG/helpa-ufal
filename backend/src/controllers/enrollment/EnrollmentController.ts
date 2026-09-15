@@ -1,4 +1,3 @@
-// Substitui src/controllers/enrollment/EnrollmentController.ts
 import type { Request, Response } from "express";
 import EnrollmentService from "@/services/enrollment/EnrollmentService.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";

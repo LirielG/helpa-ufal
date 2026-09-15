@@ -1,4 +1,3 @@
-// src/routers/enrollment/EnrollmentRouter.ts — arquivo novo
 import express from "express";
 import EnrollmentController from "@/controllers/enrollment/EnrollmentController.js";
 import AuthMiddleware from "@/middlewares/auth/AuthMiddleware.js";

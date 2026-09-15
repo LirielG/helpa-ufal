@@ -1,4 +1,3 @@
-// src/middlewares/validation/validateQuery.ts
 import type { NextFunction, Request, Response } from "express";
 import type { z } from "zod";
 import ValidationError from "@/models/error/ValidationError.js";

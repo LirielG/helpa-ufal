@@ -1,4 +1,3 @@
-// src/services/enrollment/__tests__/EnrollmentService.listParticipants.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";

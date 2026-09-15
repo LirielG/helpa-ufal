@@ -1,4 +1,3 @@
-// Substitui src/controllers/enrollment/IEnrollmentController.ts
 import type { Request, Response } from "express";
 
 export interface IEnrollmentController {

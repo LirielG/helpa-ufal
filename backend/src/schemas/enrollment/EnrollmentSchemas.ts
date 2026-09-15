@@ -1,4 +1,3 @@
-// src/schemas/enrollment/EnrollmentSchemas.ts
 import { z } from "zod";
 
 // Contract message pinned by docs/bruno/Enrollments/List Activity Enrollments.yml

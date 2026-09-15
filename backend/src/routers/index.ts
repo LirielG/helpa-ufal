@@ -1,4 +1,3 @@
-// Substitui src/routers/index.ts
 import express from "express";
 import AuthRouter from "@/routers/auth/AuthRouter.js";
 import ActivityRouter from "@/routers/activity/ActivityRouter.js";
