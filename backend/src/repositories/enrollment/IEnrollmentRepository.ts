@@ -4,6 +4,13 @@ export type EnrollmentWithActivity = Prisma.EnrollmentGetPayload<{
   include: { activity: { include: { details: true } } };
 }>;
 
+// Participant payload for the creator/manager view. The nested include makes
+// user.passwordHash reachable from this object — consumers must map field by
+// field to ParticipantResponse, never return it raw.
+export type EnrollmentWithParticipant = Prisma.EnrollmentGetPayload<{
+  include: { user: { include: { student: true } } };
+}>;
+
 export interface IEnrollmentRepository {
   findByUserAndActivity(userId: string, activityId: string): Promise<Enrollment | null>;
 
@@ -21,4 +28,14 @@ export interface IEnrollmentRepository {
     skip?: number,
     take?: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }>;
+
+  findByActivityId(
+    activityId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    items: EnrollmentWithParticipant[];
+    total: number;
+    totalPresent: number;
+  }>;
 }

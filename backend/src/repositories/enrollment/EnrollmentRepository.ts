@@ -2,10 +2,14 @@
 import { Prisma, type Enrollment, type PrismaClient } from "@prisma/client";
 import type {
   EnrollmentWithActivity,
+  EnrollmentWithParticipant,
   IEnrollmentRepository,
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import { lockActivityForCapacity } from "@/repositories/enrollment/locks.js";
-import { ENROLLMENT_INITIAL_STATUS } from "@/types/enrollment.js";
+import {
+  ACTIVE_ENROLLMENT_STATUS,
+  ENROLLMENT_INITIAL_STATUS,
+} from "@/types/enrollment.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
 
@@ -13,11 +17,43 @@ type Props = {
   prisma?: PrismaClient;
 };
 
+
+
 class EnrollmentRepository implements IEnrollmentRepository {
   private _prisma: PrismaClient;
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
+  }
+  
+  public async findByActivityId(
+    activityId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    items: EnrollmentWithParticipant[];
+    total: number;
+    totalPresent: number;
+  }> {
+    // Only active enrollments occupy slots and appear in the list — CANCELLED
+    // rows stay hidden from items, total and totalPresent alike.
+    const where = { activityId, status: ACTIVE_ENROLLMENT_STATUS };
+
+    const [items, total, totalPresent] = await this._prisma.$transaction([
+      this._prisma.enrollment.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ enrolledAt: "asc" }, { id: "asc" }],
+        include: { user: { include: { student: true } } },
+      }),
+      this._prisma.enrollment.count({ where }),
+      this._prisma.enrollment.count({
+        where: { ...where, attendanceConfirmed: true },
+      }),
+    ]);
+
+    return { items, total, totalPresent };
   }
 
   public async findByUserAndActivity(
@@ -141,6 +177,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
 
     return { items, total };
   }
+
+  
 }
 
 export default EnrollmentRepository;
