@@ -16,6 +16,8 @@ import type {
   EnrollmentListResponse,
   EnrollmentResponse,
   EnrollmentWithActivityResponse,
+  ParticipantResponse,
+  ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
 
@@ -103,6 +105,44 @@ class EnrollmentService implements IEnrollmentService {
     };
   }
 
+  public async listParticipants(
+    userId: string,
+    activityId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<ParticipantsListResponse> {
+    const user = await this.requireUser(userId);
+
+    if (!isValidUUID(activityId)) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    if (activity.authorId !== userId && !user.isManager) {
+      throw new CustomError(
+        403,
+        "Only the activity creator or a manager can view the enrollment list.",
+      );
+    }
+
+    const { items, total, totalPresent } =
+      await this._enrollmentRepository.findByActivityId(activityId, page, limit);
+
+    // totalPresent comes from the repository as-is: the service forwards the
+    // authoritative count instead of re-deriving it from confirmedWorkloadHours.
+    return {
+      items: items.map((item) => this.toParticipantResponse(item)),
+      total,
+      page,
+      limit,
+      totalPresent,
+    };
+  }
+
   // Token valid and user still exists
   private async requireUser(userId: string): Promise<{ isManager: boolean }> {
     const user = await this._activityRepository.findUserById(userId);
@@ -144,6 +184,24 @@ class EnrollmentService implements IEnrollmentService {
         endDate: enrollment.activity.endDate,
         status: enrollment.activity.status,
       },
+    };
+  }
+
+  private toParticipantResponse(
+    enrollment: EnrollmentWithParticipant,
+  ): ParticipantResponse {
+    return {
+      enrollmentId: enrollment.id,
+      userId: enrollment.userId,
+      fullName: enrollment.user.fullName,
+      email: enrollment.user.email,
+      // By data minimization only Student.registrationCode is exposed;
+      // Teacher.registrationCode is deliberately not read here (post-MVP,
+      // additive evolution).
+      registrationCode: enrollment.user.student?.registrationCode ?? null,
+      status: enrollment.status,
+      attendanceConfirmed: enrollment.attendanceConfirmed,
+      confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
     };
   }
 }
