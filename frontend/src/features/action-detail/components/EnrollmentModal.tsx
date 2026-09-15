@@ -42,8 +42,6 @@ export function EnrollmentModal({ action, onClose, onSuccess }: EnrollmentModalP
     setStep("loading");
     try {
       await enrollInAction(action.id);
-      onSuccess?.();
-      setStep("success");
     } catch (err) {
       let message: string | null = null;
 
@@ -58,9 +56,13 @@ export function EnrollmentModal({ action, onClose, onSuccess }: EnrollmentModalP
         setErrorMessage(message);
         setStep("error");
       }
+      return;
     } finally {
       setIsSubmitting(false);
     }
+
+    setStep("success");
+    onSuccess?.();
   };
 
   const handleBackToFeed = () => {
