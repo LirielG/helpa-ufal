@@ -4,6 +4,7 @@ import type { IActivityRepository } from "@/repositories/activity/IActivityRepos
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type {
   EnrollmentWithActivity,
+  EnrollmentWithParticipant,
   IEnrollmentRepository,
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
@@ -16,6 +17,7 @@ import type {
   EnrollmentResponse,
   EnrollmentWithActivityResponse,
 } from "@/types/enrollment.js";
+
 
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
@@ -102,11 +104,17 @@ class EnrollmentService implements IEnrollmentService {
   }
 
   // Token valid and user still exists
-  private async assertUserExists(userId: string): Promise<void> {
+  private async requireUser(userId: string): Promise<{ isManager: boolean }> {
     const user = await this._activityRepository.findUserById(userId);
     if (!user) {
       throw new CustomError(401, "User account not found or inactive.");
     }
+    return user;
+  }
+
+  // Token valid and user still exists
+  private async assertUserExists(userId: string): Promise<void> {
+    await this.requireUser(userId);
   }
 
   private toEnrollResponse(enrollment: Enrollment): EnrollmentResponse {
