@@ -19,6 +19,7 @@ class EnrollmentController implements IEnrollmentController {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { id } = req.params;
+    if (!id || Array.isArray(id)) throw new CustomError(400, "Invalid id parameter.");
 
     const enrollment = await this._enrollmentService.enroll(req.user.id, id);
 
