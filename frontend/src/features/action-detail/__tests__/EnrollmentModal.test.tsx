@@ -257,6 +257,29 @@ describe("EnrollmentModal", () => {
     });
   });
 
+  describe("Generic non-ApiErrors", () => {
+    it("displays generic pt-BR error message for non-ApiError exceptions", async () => {
+      const action = makeActionDetail({ id: "act-generic-err" });
+      server.use(
+        http.post(`${API}/activities/act-generic-err/enroll`, () => {
+          throw new Error("Raw JavaScript Error Message");
+        })
+      );
+
+      const { user } = render(
+        <EnrollmentModal action={action} onClose={vi.fn()} />
+      );
+
+      await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Erro ao realizar inscrição. Tente novamente.")
+        ).toBeInTheDocument();
+      });
+    });
+  });
+
   describe("Double-click prevention", () => {
     it("prevents multiple requests from double-clicking confirm button", async () => {
       const action = makeActionDetail({ id: "act-dblclick" });

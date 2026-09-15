@@ -49,8 +49,8 @@ export function EnrollmentModal({ action, onClose, onSuccess }: EnrollmentModalP
 
       if (err instanceof ApiError) {
         message = getEnrollmentErrorMessage(err);
-      } else if (err instanceof Error) {
-        message = err.message;
+      } else {
+        message = "Erro ao realizar inscrição. Tente novamente.";
       }
 
       // Don't show error for 401 (session middleware handles redirect)
