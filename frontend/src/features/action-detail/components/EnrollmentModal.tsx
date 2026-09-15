@@ -4,8 +4,10 @@ import { UserPlus, CheckCircle, MapPin, Calendar, Clock } from "lucide-react";
 import { Button } from "../../../components/Button";
 import { Alert } from "../../../components/Alert";
 import { enrollInAction } from "../services";
+import { getEnrollmentErrorMessage } from "../errors";
 import type { ActionDetail } from "../types";
 import { formatDate } from "../../../utils";
+import { ApiError } from "../../../services/apiError";
 import {
   ACTION_CAMPUS_LABELS,
   ACTION_FORMAT_LABELS,
@@ -16,12 +18,14 @@ type ModalStep = "confirm" | "loading" | "success" | "error";
 interface EnrollmentModalProps {
   action: ActionDetail;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
+export function EnrollmentModal({ action, onClose, onSuccess }: EnrollmentModalProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const address = action.details?.address;
   const format = action.details?.format;
@@ -32,18 +36,33 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
       : ACTION_CAMPUS_LABELS[action.campus];
 
   const handleConfirm = async () => {
+    if (isSubmitting) return; // Prevent double-click
+
+    setIsSubmitting(true);
     setStep("loading");
     try {
       await enrollInAction(action.id);
-      setStep("success");
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : "Erro ao realizar inscrição. Tente novamente.",
-      );
-      setStep("error");
+      let message: string | null = null;
+
+      if (err instanceof ApiError) {
+        message = getEnrollmentErrorMessage(err);
+      } else {
+        message = "Erro ao realizar inscrição. Tente novamente.";
+      }
+
+      // Don't show error for 401 (session middleware handles redirect)
+      if (message !== null) {
+        setErrorMessage(message);
+        setStep("error");
+      }
+      return;
+    } finally {
+      setIsSubmitting(false);
     }
+
+    setStep("success");
+    onSuccess?.();
   };
 
   const handleBackToFeed = () => {
@@ -160,7 +179,7 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
                   size="md"
                   rounded
                   className="flex-1"
-                  disabled={step === "loading"}
+                  disabled={step === "loading" || isSubmitting}
                   onClick={onClose}
                 >
                   ✕ Cancelar
@@ -170,6 +189,7 @@ export function EnrollmentModal({ action, onClose }: EnrollmentModalProps) {
                   size="md"
                   rounded
                   className="flex-1"
+                  disabled={isSubmitting}
                   isLoading={step === "loading"}
                   onClick={handleConfirm}
                 >

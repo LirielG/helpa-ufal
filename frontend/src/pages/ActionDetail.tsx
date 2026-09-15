@@ -40,6 +40,15 @@ export function ActionDetail() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  const handleEnrollmentSuccess = async () => {
+    // Refetch action data to reflect updated available slots
+    if (!id) return;
+    const updatedAction = await getActionById(id);
+    if (updatedAction) {
+      setAction(updatedAction);
+    }
+  };
+
   return (
     <DashboardShell
       header={<DashboardHeader onOpenRegister={() => navigate("/dashboard")} />}
@@ -114,6 +123,7 @@ export function ActionDetail() {
             <EnrollmentModal
               action={action}
               onClose={() => setShowModal(false)}
+              onSuccess={handleEnrollmentSuccess}
             />
           )}
         </>
