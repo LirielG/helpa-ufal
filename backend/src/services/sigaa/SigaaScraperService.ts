@@ -8,8 +8,6 @@ import type { ScrapedSigaaActivity } from "@/types/sigaa.js";
 import type { ActivityType } from "@/types/activity.js";
 import { env } from "@/config/env.js";
 
-export const SIGAA_PUBLIC_SEARCH_URL = env.SIGAA_BASE_URL;
-
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -45,7 +43,7 @@ export class SigaaScraperService implements ISigaaScraperService {
   private _timeoutMs: number;
 
   constructor(
-    searchUrl: string = SIGAA_PUBLIC_SEARCH_URL,
+    searchUrl: string = env.SIGAA_BASE_URL,
     timeoutMs: number = 30_000,
   ) {
     this._searchUrl = searchUrl;

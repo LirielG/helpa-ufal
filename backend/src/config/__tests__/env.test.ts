@@ -91,10 +91,16 @@ describe("EnvSchema — SIGAA_BASE_URL", () => {
     expect(parsed.SIGAA_BASE_URL).toBe("https://sigaa.example.br/consulta.jsf");
   });
 
-  it("rejects a non-URL value", () => {
-    expect(() =>
-      EnvSchema.parse({ ...minimalEnv, SIGAA_BASE_URL: "sigaa.sig.ufal.br" }),
-    ).toThrow(ZodError);
+  // The issue message alone is generic ("Invalid URL"); it is the issue path
+  // that names the offending variable, so that is what we pin down.
+  it("rejects a non-URL value, naming the variable in the error", () => {
+    const result = EnvSchema.safeParse({
+      ...minimalEnv,
+      SIGAA_BASE_URL: "sigaa.sig.ufal.br",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["SIGAA_BASE_URL"]);
   });
 });
 
@@ -114,9 +120,16 @@ describe("EnvSchema — SIGAA_CACHE_TTL_HOURS", () => {
     expect(parsed.SIGAA_CACHE_TTL_HOURS).toBe(6);
   });
 
-  it.each(["abc", "0", "-1", "1.5"])("rejects %s", (value) => {
-    expect(() =>
-      EnvSchema.parse({ ...minimalEnv, SIGAA_CACHE_TTL_HOURS: value }),
-    ).toThrow(ZodError);
-  });
+  it.each(["abc", "0", "-1", "1.5"])(
+    "rejects %s, naming the variable in the error",
+    (value) => {
+      const result = EnvSchema.safeParse({
+        ...minimalEnv,
+        SIGAA_CACHE_TTL_HOURS: value,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(["SIGAA_CACHE_TTL_HOURS"]);
+    },
+  );
 });
