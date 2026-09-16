@@ -1,0 +1,195 @@
+import { describe, it, expect, vi } from "vitest";
+import EnrollmentService from "../EnrollmentService.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import CustomError from "@/models/error/CustomError.js";
+import ValidationError from "@/models/error/ValidationError.js";
+import { expectHttpError } from "@/utils/tests.js";
+
+const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+const ACTIVITY_ID = "f26559ac-d672-4252-a9a4-d6fe6583d8ec";
+const ENROLLMENT_ID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d";
+
+function anEnrollment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: ENROLLMENT_ID,
+    userId: USER_ID,
+    activityId: ACTIVITY_ID,
+    status: "APPROVED",
+    attendanceConfirmed: null,
+    confirmedWorkloadHours: 0,
+    isModerator: false,
+    enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
+    createdAt: new Date("2026-08-22T21:00:00.000Z"),
+    updatedAt: new Date("2026-08-22T21:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function anActivity(overrides: Record<string, unknown> = {}) {
+  return {
+    id: ACTIVITY_ID,
+    authorId: "author-1",
+    title: "Atividade de Teste",
+    type: "COURSE",
+    campus: "ARAPIRACA",
+    startDate: new Date("2026-08-29T09:00:00.000Z"),
+    endDate: new Date("2026-09-05T18:00:00.000Z"),
+    slots: 30,
+    availableSlots: 5,
+    status: "OPEN",
+    details: null,
+    ...overrides,
+  };
+}
+
+function mockRepositories(
+  overrides: {
+    activity?: Partial<IActivityRepository>;
+    enrollment?: Partial<IEnrollmentRepository>;
+    user?: Partial<IUserRepository>;
+  } = {},
+) {
+  const activityRepository = {
+    findById: vi.fn().mockResolvedValue(anActivity()),
+    ...overrides.activity,
+  } as unknown as IActivityRepository;
+
+  const userRepository = {
+    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
+    findByEmail: vi.fn(),
+    createWithSubtype: vi.fn(),
+    ...overrides.user,
+  } as unknown as IUserRepository;
+
+  const enrollmentRepository = {
+    findByUserAndActivity: vi.fn().mockResolvedValue(null),
+    enroll: vi.fn().mockResolvedValue(anEnrollment()),
+    cancel: vi.fn().mockResolvedValue(undefined),
+    countApprovedByActivityId: vi.fn().mockResolvedValue(0),
+    findActiveByUserId: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    ...overrides.enrollment,
+  } as unknown as IEnrollmentRepository;
+
+  return { activityRepository, enrollmentRepository, userRepository };
+}
+
+
+describe("EnrollmentService.enroll", () => {
+  it("throws 401 when the token's user no longer exists in the database", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+      user: { findUserById: vi.fn().mockResolvedValue(null) },
+    });
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      401,
+      "User account not found or inactive.",
+    );
+    expect(activityRepository.findById).not.toHaveBeenCalled();
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed activityId with a ValidationError", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories();
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    await expect(
+      service.enroll(USER_ID, "not-a-uuid"),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
+
+  it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(null) },
+    });
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    await expectHttpError(service.enroll(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
+
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
+    "throws 409 when the activity status is %s (not open for enrollment)",
+    async (status) => {
+      const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+        activity: { findById: vi.fn().mockResolvedValue(anActivity({ status })) },
+      });
+      const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+      await expectHttpError(
+        service.enroll(USER_ID, ACTIVITY_ID),
+        409,
+        "Activity is not open for enrollment.",
+      );
+      expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+    },
+  );
+
+  it("creates an enrollment and returns the contract's 201 shape", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories();
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    const response = await service.enroll(USER_ID, ACTIVITY_ID);
+
+    expect(response).toEqual({
+      id: ENROLLMENT_ID,
+      activityId: ACTIVITY_ID,
+      userId: USER_ID,
+      createdAt: new Date("2026-08-22T21:00:00.000Z"),
+    });
+  });
+
+  it("keeps the original createdAt when the repository reactivates a canceled enrollment", async () => {
+    const reactivated = anEnrollment({
+      createdAt: new Date("2026-06-01T10:00:00.000Z"),
+      enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
+    });
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+      enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
+    });
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    const response = await service.enroll(USER_ID, ACTIVITY_ID);
+
+    expect(response.id).toBe(ENROLLMENT_ID);
+    expect(response.createdAt).toEqual(new Date("2026-06-01T10:00:00.000Z"));
+  });
+
+  it("propagates 409 when the user is already enrolled", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+      enrollment: {
+        enroll: vi
+          .fn()
+          .mockRejectedValue(new CustomError(409, "User is already enrolled in this activity.")),
+      },
+    });
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      409,
+      "User is already enrolled in this activity.",
+    );
+  });
+
+  it("propagates 409 when the activity has no available slots", async () => {
+    const { activityRepository, enrollmentRepository, userRepository } = mockRepositories({
+      enrollment: {
+        enroll: vi
+          .fn()
+          .mockRejectedValue(new CustomError(409, "No available slots for this activity.")),
+      },
+    });
+    const service = new EnrollmentService({ activityRepository, enrollmentRepository, userRepository });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      409,
+      "No available slots for this activity.",
+    );
+  });
+});
