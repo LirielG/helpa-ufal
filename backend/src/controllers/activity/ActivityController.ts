@@ -36,6 +36,11 @@ class ActivityController implements IActivityController {
 
     res.status(200).json(result);
   }
+
+  public async listFilters(req: Request, res: Response): Promise<void> {
+    const result = await this._activityService.listFilterOptions();
+    res.status(200).json(result);
+  }
   
   public async findById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;

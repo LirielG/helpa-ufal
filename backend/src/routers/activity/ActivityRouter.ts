@@ -26,6 +26,11 @@ router.get(
 );
 
 router.get(
+  "/activities/filters",
+  (req, res, next) => activityController.listFilters(req, res).catch(next),
+);
+
+router.get(
   "/activities/:id",
   (req, res, next) => activityController.findById(req, res).catch(next),
 );

@@ -22,6 +22,7 @@ export interface IActivityRepository {
   countApprovedEnrollments(activityId: string): Promise<number>;
   softDelete(id: string): Promise<boolean>;
   
+  listDistinctAreas(): Promise<string[]>;
 }
 
 export interface IRepositoryListActivitiesFilters {

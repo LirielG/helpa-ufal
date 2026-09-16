@@ -170,6 +170,35 @@ class ActivityRepository implements IActivityRepository {
     };
   }
 
+    public async listDistinctAreas(): Promise<string[]> {
+    const rows = await this._prisma.activityDetails.groupBy({
+      by: ["area"],
+      where: {
+        activity: {
+          is: {
+            deletedAt: null,
+            status: { not: "CANCELLED" },
+          },
+        },
+      },
+    });
+
+    const areas = rows.map((r) => r.area);
+
+    const canonicalByKey = new Map<string, string>();
+    for (const area of areas) {
+      const key = area.toLowerCase();
+      const current = canonicalByKey.get(key);
+      if (current === undefined || area < current) {
+        canonicalByKey.set(key, area);
+      }
+    }
+
+    return Array.from(canonicalByKey.entries())
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([, canonicalArea]) => canonicalArea);
+  }
+
   public async update(
     id: string,
     data: UpdateActivityInput,
