@@ -114,7 +114,7 @@ class ActivityRepository implements IActivityRepository {
   public async list(
     filters: IRepositoryListActivitiesFilters
   ): Promise<IRepositoryListActivitiesResponse> {
-    const {type, format, status, search, campus, page, limit, orderBy, order} = filters;
+    const {type, format, status, search, campus, area, page, limit, orderBy, order} = filters;
 
     const whereClause: any = { deletedAt: null };
 
@@ -122,9 +122,10 @@ class ActivityRepository implements IActivityRepository {
     if(status)whereClause.status = status;
     if(campus)whereClause.campus = campus;
 
-    if(format){
+    if(format || area){
       whereClause.details = {
-        format: format,
+        ...(format ? { format: format } : {}),
+        ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),
       };
     }
 

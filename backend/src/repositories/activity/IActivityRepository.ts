@@ -30,6 +30,7 @@ export interface IRepositoryListActivitiesFilters {
   status?: string;
   search?: string;
   campus?: string;
+  area?: string;
   page: number;
   limit: number;
   orderBy: string;
