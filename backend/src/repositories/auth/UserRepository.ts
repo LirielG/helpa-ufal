@@ -18,6 +18,13 @@ class UserRepository implements IUserRepository {
     return this._prisma.user.findUnique({ where: { email } });
   }
 
+  public async findUserById(id: string): Promise<{ isManager: boolean } | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: { isManager: true },
+    });
+  }
+
   public async createWithSubtype(
     data: RegisterInput & { passwordHash: string },
   ): Promise<User> {
