@@ -337,7 +337,9 @@ describe("Dashboard", () => {
     server.use(
       http.get("*/activities", ({ request }) => {
         pages.push(new URL(request.url).searchParams.get("page"));
-        return HttpResponse.json({ ...mockApiActivities, totalPages: 3 });
+        // The page count comes from `total` over the limit of 20, so this is
+        // what puts more than one page on screen and keeps "next" enabled.
+        return HttpResponse.json({ ...mockApiActivities, total: 60 });
       }),
     );
 
@@ -362,13 +364,7 @@ describe("Dashboard", () => {
         const term = new URL(request.url).searchParams.get("search");
 
         return term
-          ? HttpResponse.json({
-              activities: [],
-              total: 0,
-              page: 1,
-              limit: 20,
-              totalPages: 0,
-            })
+          ? HttpResponse.json({ activities: [], total: 0 })
           : HttpResponse.json(mockApiActivities);
       }),
     );
