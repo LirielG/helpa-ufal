@@ -1,4 +1,5 @@
 export { Input } from "./Input";
+export { SearchField } from "./SearchField";
 export { Button } from "./Button";
 export { Select } from "./Select";
 export { Textarea } from "./Textarea";

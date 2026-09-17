@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
@@ -12,10 +12,16 @@ import { ActionRegister } from "../features/dashboard/components/ActionForm";
 import { SigaaFeed } from "../features/sigaa/components/SigaaFeed";
 import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { fetchActions } from "../features/dashboard/services";
 import type { FilterOptions, Action } from "../features/dashboard/types";
 
-export function Dashboard() {
+interface DashboardProps {
+  /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
+  debounceMs?: number;
+}
+
+export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const feed: FeedKey =
     searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
@@ -32,12 +38,24 @@ export function Dashboard() {
     area: "all",
     actionType: "all",
     availability: "all",
+    search: "",
   });
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   };
+
+  // The field stays controlled by what was typed while the request trails it.
+  // Debouncing `filters` as a whole would delay the selects too, which filter
+  // on the spot.
+  const { area, actionType, availability } = filters;
+  const search = useDebouncedValue(filters.search ?? "", debounceMs);
+
+  const requestFilters = useMemo<FilterOptions>(
+    () => ({ area, actionType, availability, search }),
+    [area, actionType, availability, search],
+  );
 
   const changeFeed = useCallback(
     (next: FeedKey) => {
@@ -49,23 +67,36 @@ export function Dashboard() {
 
   const showHelpaFeed = useCallback(() => changeFeed("helpa"), [changeFeed]);
 
+  // Typing fires a request per debounce window, and those can settle out of
+  // order. Only the newest one is allowed to touch the screen, so an abandoned
+  // response can neither bring back a stale list nor erase a fresher error.
+  const latestRequest = useRef(0);
+
   const loadActions = useCallback(() => {
+    latestRequest.current += 1;
+    const requestId = latestRequest.current;
+    const isCurrent = () => requestId === latestRequest.current;
+
     setIsLoading(true);
     setError(null);
 
-    fetchActions(filters, page)
+    fetchActions(requestFilters, page)
       .then((res) => {
+        if (!isCurrent()) return;
+
         setActions(res.activities);
         setTotalPages(Math.max(1, res.totalPages ?? 1));
       })
       .catch((err) => {
+        if (!isCurrent()) return;
+
         console.error(err);
         setError("Não foi possível carregar as ações. Tente novamente.");
       })
       .finally(() => {
-        setIsLoading(false);
+        if (isCurrent()) setIsLoading(false);
       });
-  }, [filters, page]);
+  }, [requestFilters, page]);
 
   useEffect(() => {
     let mounted = true;

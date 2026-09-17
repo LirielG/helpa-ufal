@@ -8,6 +8,7 @@ const ALL_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
   availability: "all",
+  search: "",
 };
 
 function renderFilterBar(filters: Partial<FilterOptions> = {}) {
@@ -74,6 +75,28 @@ describe("FilterBar", () => {
       "actionType",
       "palestra",
     );
+  });
+
+  it("shows the search term it is given in the search field", () => {
+    renderFilterBar({ search: "robótica" });
+
+    expect(
+      screen.getByRole("searchbox", { name: "Buscar ações pelo título" }),
+    ).toHaveValue("robótica");
+  });
+
+  it("reports each typed character of the search term to the parent", async () => {
+    const { user, onFilterChange } = renderFilterBar();
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Buscar ações pelo título" }),
+      "ab",
+    );
+
+    // The field is controlled by an unchanging prop here, so every keystroke
+    // reports from the same empty value; the parent is what accumulates it.
+    expect(onFilterChange).toHaveBeenNthCalledWith(1, "search", "a");
+    expect(onFilterChange).toHaveBeenNthCalledWith(2, "search", "b");
   });
 
   it("offers every configured option in each filter", () => {
