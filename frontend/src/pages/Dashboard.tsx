@@ -85,7 +85,7 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
         if (!isCurrent()) return;
 
         setActions(res.activities);
-        setTotalPages(Math.max(1, res.totalPages ?? 1));
+        setTotalPages(res.totalPages);
       })
       .catch((err) => {
         if (!isCurrent()) return;

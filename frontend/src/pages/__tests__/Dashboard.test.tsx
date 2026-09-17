@@ -46,10 +46,49 @@ const mockApiActivities = {
     },
   ],
   total: 1,
-  page: 1,
-  limit: 20,
-  totalPages: 1,
 };
+
+/** The limit `fetchActions` sends, and what the page count is derived from. */
+const PAGE_LIMIT = 20;
+
+/** Long enough to span three pages, so a narrower cut still spans two. */
+const catalogue = Array.from({ length: 45 }, (_, index) => ({
+  ...mockApiActivities.activities[0],
+  id: `action-${index + 1}`,
+  title: `Ação ${index + 1}`,
+}));
+
+/**
+ * Stands in for GET /activities: `select` decides which actions the filters
+ * matched, and the handler slices that by the page and limit it was asked for.
+ * The body carries only what the real route returns, so a reader of
+ * `totalPages` off the response would see `undefined` and fall back to a
+ * single page.
+ */
+function serveActivities(
+  select: (params: URLSearchParams) => typeof catalogue,
+): URLSearchParams[] {
+  const requests: URLSearchParams[] = [];
+
+  server.use(
+    http.get("*/activities", ({ request }) => {
+      const params = new URL(request.url).searchParams;
+      requests.push(params);
+
+      const matched = select(params);
+      const page = Number(params.get("page") ?? 1);
+      const limit = Number(params.get("limit") ?? PAGE_LIMIT);
+      const start = (page - 1) * limit;
+
+      return HttpResponse.json({
+        activities: matched.slice(start, start + limit),
+        total: matched.length,
+      });
+    }),
+  );
+
+  return requests;
+}
 
 describe("Dashboard", () => {
   it("shows the loading state and then the list of actions", async () => {
@@ -75,9 +114,6 @@ describe("Dashboard", () => {
         return HttpResponse.json({
           activities: [],
           total: 0,
-          page: 1,
-          limit: 20,
-          totalPages: 0,
         });
       }),
     );
@@ -408,5 +444,76 @@ describe("Dashboard", () => {
       name: "Oficina de React",
     });
     expect(actionTitles[0]).toBeInTheDocument();
+  });
+
+  it("opens the second page of a feed longer than the limit", async () => {
+    const requests = serveActivities(() => catalogue.slice(0, 25));
+
+    const { user } = render(<Dashboard />);
+
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Ação 21" }),
+    ).not.toBeInTheDocument();
+
+    // 25 actions over a limit of 20 span two pages and not a third.
+    expect(
+      screen.getByRole("button", { name: "Página 2" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Página 3" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Página 2" }));
+
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Ação 21" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 3, name: "Ação 1" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(5);
+    expect(requests.at(-1)?.get("page")).toBe("2");
+  });
+
+  it("counts the pages of a filtered cut from its own total", async () => {
+    serveActivities((params) =>
+      params.get("status") === "OPEN" ? catalogue.slice(0, 25) : catalogue,
+    );
+
+    const { user } = render(<Dashboard />);
+
+    expect(
+      await screen.findByRole("button", { name: "Página 3" }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Disponibilidade" }),
+      "available",
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "Página 3" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("button", { name: "Página 2" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no pagination when the cut is empty", async () => {
+    serveActivities(() => []);
+
+    render(<Dashboard />);
+
+    expect(
+      await screen.findByText("Nenhuma ação encontrada com esses filtros."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Paginação" }),
+    ).not.toBeInTheDocument();
   });
 });

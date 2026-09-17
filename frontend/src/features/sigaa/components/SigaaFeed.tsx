@@ -125,7 +125,7 @@ export function SigaaFeed({
   }, [queryKey, search, type, department, order, page, onErrorChange]);
 
   const activities = loaded?.key === queryKey ? loaded.items : [];
-  // The SIGAA response carries no totalPages, unlike GET /activities.
+  // Neither feed's route returns a page count; both derive it from the limit.
   const totalPages = loaded
     ? Math.max(1, Math.ceil(loaded.total / loaded.limit))
     : 1;
