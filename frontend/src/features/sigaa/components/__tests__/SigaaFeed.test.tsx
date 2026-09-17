@@ -224,6 +224,73 @@ describe("SigaaFeed", () => {
     expect(requests.at(-1)?.searchParams.get("page")).toBe("1");
   });
 
+  it("sends the term from the search field and restarts on page 1", async () => {
+    const requests: URL[] = [];
+
+    server.use(
+      http.get(`${API}/sigaa-activities`, ({ request }) => {
+        requests.push(new URL(request.url));
+        return listResponse([makeSigaaActivity()], { total: 40 });
+      }),
+    );
+
+    const { user } = renderFeed();
+
+    await screen.findByRole("heading", {
+      name: "I Ciclo de Debates sobre Currículos",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Página 2" }));
+    await waitFor(() => {
+      expect(requests.at(-1)?.searchParams.get("page")).toBe("2");
+    });
+
+    // Pasted rather than typed: one edit is one request, so the assertions do
+    // not race a request per prefix.
+    await user.click(
+      screen.getByRole("searchbox", { name: "Pesquisar ações do SIGAA" }),
+    );
+    await user.paste("Recital");
+
+    await waitFor(() => {
+      expect(requests.at(-1)?.searchParams.get("search")).toBe("Recital");
+    });
+    expect(requests.at(-1)?.searchParams.get("page")).toBe("1");
+  });
+
+  it("drops the term from the query once the field is cleared", async () => {
+    const requests: URL[] = [];
+
+    server.use(
+      http.get(`${API}/sigaa-activities`, ({ request }) => {
+        requests.push(new URL(request.url));
+        return listResponse([makeSigaaActivity()]);
+      }),
+    );
+
+    const { user } = renderFeed();
+
+    await screen.findByRole("heading", {
+      name: "I Ciclo de Debates sobre Currículos",
+    });
+
+    const field = screen.getByRole("searchbox", {
+      name: "Pesquisar ações do SIGAA",
+    });
+    await user.click(field);
+    await user.paste("Recital");
+
+    await waitFor(() => {
+      expect(requests.at(-1)?.searchParams.get("search")).toBe("Recital");
+    });
+
+    await user.clear(field);
+
+    await waitFor(() => {
+      expect(requests.at(-1)?.searchParams.has("search")).toBe(false);
+    });
+  });
+
   it("never offers enrollment on a SIGAA activity", async () => {
     renderFeed();
 

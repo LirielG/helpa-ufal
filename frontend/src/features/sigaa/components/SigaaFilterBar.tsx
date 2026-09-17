@@ -1,5 +1,5 @@
-import { Search } from "lucide-react";
 import { Alert } from "../../../components/Alert";
+import { SearchField } from "../../../components/SearchField";
 import { Select } from "../../../components/Select";
 import { ALL_OPTION, SIGAA_ORDER_OPTIONS } from "../constants";
 import type { SigaaFeedFilters, SigaaFilterOptions } from "../types";
@@ -41,20 +41,12 @@ export function SigaaFilterBar({
 
   return (
     <div className="w-full bg-white rounded-xl border border-gray-200 px-6 py-5 flex flex-col gap-5">
-      <div className="relative">
-        <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={filters.search}
-          onChange={(event) => onFilterChange("search", event.target.value)}
-          placeholder="Pesquisar ações do SIGAA..."
-          aria-label="Pesquisar ações do SIGAA"
-          className="w-full rounded-lg border border-gray-300 py-3 pl-12 pr-4 outline-none transition focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      <SearchField
+        value={filters.search}
+        onChange={(value) => onFilterChange("search", value)}
+        label="Pesquisar ações do SIGAA"
+        placeholder="Pesquisar ações do SIGAA..."
+      />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Select
