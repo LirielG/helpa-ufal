@@ -25,6 +25,8 @@ export function HelpaFeed({
   isLoading,
   error,
 }: HelpaFeedProps) {
+  const search = filters.search?.trim();
+
   return (
     <div className="flex flex-col gap-8">
       <FilterBar filters={filters} onFilterChange={onFilterChange} />
@@ -38,9 +40,23 @@ export function HelpaFeed({
       {!isLoading && error && <Alert type="error" message={error} />}
 
       {!isLoading && !error && actions.length === 0 && (
-        <p className="text-center text-gray-500 py-10 font-medium">
-          Nenhuma ação encontrada com esses filtros.
-        </p>
+        <div className="flex flex-col items-center gap-4 py-10">
+          <p className="text-center text-gray-500 font-medium">
+            {search
+              ? `Nenhuma ação encontrada para "${search}".`
+              : "Nenhuma ação encontrada com esses filtros."}
+          </p>
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => onFilterChange("search", "")}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              Limpar busca
+            </button>
+          )}
+        </div>
       )}
 
       {!isLoading && !error && actions.length > 0 && (
