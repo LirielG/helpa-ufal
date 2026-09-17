@@ -1,11 +1,11 @@
 import type { UseFormRegisterReturn } from "react-hook-form";
 
-interface SpotsFieldProps {
+interface SlotsFieldProps {
   registration: UseFormRegisterReturn;
   error?: string;
 }
 
-export function SpotsField({ registration, error }: SpotsFieldProps) {
+export function SlotsField({ registration, error }: SlotsFieldProps) {
   return (
     <div className="space-y-1">
       <label className="text-sm font-semibold text-gray-700">Qtde. de Vagas</label>

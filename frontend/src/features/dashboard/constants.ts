@@ -47,7 +47,7 @@ export const ACTION_FORMATS = [
 
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   EXTENSION: "Extensão",
-  COURSE: "Curso/Oficina",
+  COURSE: "Curso ou minicurso",
   EVENT: "Evento",
   LECTURE: "Palestra",
   OTHER: "Outro",
@@ -55,20 +55,28 @@ export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
 
 export const ACTION_FORMAT_LABELS: Record<ActionFormat, string> = {
   IN_PERSON: "Presencial",
-  ONLINE: "Remoto",
+  ONLINE: "On-line",
   HYBRID: "Híbrido",
 };
 
 export const ACTION_CAMPUS_LABELS: Record<ActionCampus, string> = {
-  MACEIO: "Maceió",
-  ARAPIRACA: "Arapiraca",
-  PALMEIRA: "Palmeira dos Índios",
-  PENEDO: "Penedo",
-  RIO_LARGO: "Rio Largo",
-  DELMIRO_GOUVEIA: "Delmiro Gouveia",
-  SANTANA_IPANEMA: "Santana do Ipanema",
+  MACEIO: "UFAL - Campus Maceió",
+  ARAPIRACA: "UFAL - Campus Arapiraca",
+  PALMEIRA: "UFAL - Campus Palmeira dos Índios",
+  PENEDO: "UFAL - Campus Penedo",
+  RIO_LARGO: "UFAL - Campus Rio Largo",
+  DELMIRO_GOUVEIA: "UFAL - Campus Delmiro Gouveia",
+  SANTANA_IPANEMA: "UFAL - Campus Santana do Ipanema",
 };
 
 export const ACTION_TYPE_OPTIONS = (
   Object.keys(ACTION_TYPE_LABELS) as ActionType[]
 ).map((value) => ({ value, label: ACTION_TYPE_LABELS[value] }));
+
+export const ACTION_FORMAT_OPTIONS = (
+  Object.keys(ACTION_FORMAT_LABELS) as ActionFormat[]
+).map((value) => ({ value, label: ACTION_FORMAT_LABELS[value] }));
+
+export const ACTION_CAMPUS_OPTIONS = (
+  Object.keys(ACTION_CAMPUS_LABELS) as ActionCampus[]
+).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
