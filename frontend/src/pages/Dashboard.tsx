@@ -56,7 +56,7 @@ export function Dashboard() {
     fetchActions(filters, page)
       .then((res) => {
         setActions(res.activities);
-        setTotalPages(Math.max(1, res.totalPages ?? 1));
+        setTotalPages(res.totalPages);
       })
       .catch((err) => {
         console.error(err);

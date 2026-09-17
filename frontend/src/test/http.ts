@@ -36,9 +36,6 @@ export const handlers = [
     HttpResponse.json({
       activities: [makeAction()],
       total: 1,
-      page: 1,
-      limit: 20,
-      totalPages: 1,
     }),
   ),
 
