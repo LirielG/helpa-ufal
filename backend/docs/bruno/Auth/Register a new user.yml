@@ -27,6 +27,34 @@ settings:
   maxRedirects: 5
   forwardAuthorizationHeader: true
 
+docs: |
+  Public registration endpoint: students and faculty share the same endpoint,
+  distinguished by `userType`. 
+
+  Validation order:
+  1.  Zod — if the body fails to parse, respond with 400 immediately, without
+      touching the database. An invalid body that *also* contains a duplicate
+      field receives a 400, never a 409.
+  2.  Uniqueness constraints on insert — if the database rejects the operation
+      due to a duplicate field (Prisma P2002), respond with 409. The message
+      depends on the field:
+        - `email`            -> "Email already in use." 
+        - `registrationCode` -> "Registration code already in use." 
+        - `cndb`             -> "CNDB already in use." 
+        - any other unique field -> "This value is already in use." 
+          (generic fallback by design: never expose the internal column
+          or constraint name). 
+  3. Unexpected errors -> 500.
+
+  Rules:
+  - In the event of a 409, nothing is persisted: the transaction rolls back
+    partial writes (User + Student/Teacher), and the data from the failed
+    attempt remains available for subsequent attempts. 
+  - The error response body never exposes internals: no constraint names,
+    SQL, or stack traces — only `{ status, message }`. 
+  - Field-specific 409 messages confirm the existence of a record with that
+    data (a UX tradeoff accepted by the team).
+
 examples:
   - name: 201 - Register successfully
     description: Registered successfully. The response body is the created user itself (no envelope, no token) and no Set-Cookie header is sent. To authenticate, use POST /auth/login.
@@ -54,8 +82,9 @@ examples:
             "createdAt": "2026-08-26T22:00:00.000Z",
             "updatedAt": "2026-08-26T22:00:00.000Z"
           }
+
   - name: 400 - Validation error
-    description: Validation error.
+    description: Validation error. Field-level messages come from the Zod schema. Runs before any uniqueness check, so an invalid body never reaches the 409 cases.
     request:
       url: "{{baseUrl}}/auth/register"
       method: POST
@@ -76,13 +105,104 @@ examples:
             "message": "Validation error.",
             "errors": [
               {
-                "field": "",
-                "message": ""
+                "field": "<field name>",
+                "message": "<Zod message>"
               }
             ]
           }
+
   - name: 409 - Email already in use
-    description: Email already in use.
+    description: Email already in use. Triggered when `email` duplicates an existing user, regardless of userType.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "userType": "STUDENT",
+            "fullName": "Outro Estudante",
+            "email": "user@email.com",
+            "password": "1AaBbCcDd_",
+            "course": "ES",
+            "registrationCode": "654321"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Email already in use."
+          }
+
+  - name: 409 - Registration code already in use
+    description: Registration code already in use. Triggered when `registrationCode` duplicates an existing registration — applies to STUDENT and TEACHER payloads. The rest of the failed attempt is rolled back and stays available.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "userType": "STUDENT",
+            "fullName": "Terceiro Estudante",
+            "email": "novo@email.com",
+            "password": "1AaBbCcDd_",
+            "course": "CC",
+            "registrationCode": "123456"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Registration code already in use."
+          }
+
+  - name: 409 - CNDB already in use
+    description: CNDB already in use. TEACHER-only field. Triggered when `cndb` duplicates an existing teacher. Exact teacher payload fields follow the RegisterTeacher Zod schema.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "userType": "TEACHER",
+            "fullName": "Outro Docente",
+            "email": "docente.novo@email.com",
+            "password": "1AaBbCcDd_",
+            "registrationCode": "998877",
+            "cndb": "CNDB-0001"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "CNDB already in use."
+          }
+
+  - name: 409 - Unique field conflict (generic fallback)
+    description: Returned for a uniqueness violation on any unique field NOT in the documented whitelist (email, registrationCode, cndb). The generic message is deliberate — it never echoes the internal column or constraint name.
     request:
       url: "{{baseUrl}}/auth/register"
       method: POST
@@ -100,8 +220,53 @@ examples:
         data: |-
           {
             "status": 409,
-            "message": "Email already in use."
+            "message": "This value is already in use."
           }
+  
+  - name: 409 - Registration code already in use
+    description: Registration code already in use.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+          "status": 409,
+          "message": "Registration code already in use."
+          }
+
+  - name: 409 - CNDB already in use
+    description: CNDB already in use.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+          "status": 409,
+          "message": "CNDB already in use."
+          }
+
   - name: 500 - Internal error
     description: Internal server error.
     request:
