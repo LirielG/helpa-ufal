@@ -4,11 +4,20 @@ export type EnrollmentWithActivity = Prisma.EnrollmentGetPayload<{
   include: { activity: { include: { details: true } } };
 }>;
 
-// Participant payload for the creator/manager view. The nested include makes
-// user.passwordHash reachable from this object — consumers must map field by
-// field to ParticipantResponse, never return it raw.
+// Participant payload for the creator/manager view. select (not include)
+// loads ONLY these fields: passwordHash and other user internals never
+// enter application memory — the type can't even express them.
 export type EnrollmentWithParticipant = Prisma.EnrollmentGetPayload<{
-  include: { user: { include: { student: true } } };
+  include: {
+    user: {
+      select: {
+        id: true;
+        fullName: true;
+        email: true;
+        student: { select: { registrationCode: true } };
+      };
+    };
+  };
 }>;
 
 export interface IEnrollmentRepository {

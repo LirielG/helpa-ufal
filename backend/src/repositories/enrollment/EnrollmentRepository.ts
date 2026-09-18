@@ -45,7 +45,16 @@ class EnrollmentRepository implements IEnrollmentRepository {
         skip: (page - 1) * limit,
         take: limit,
         orderBy: [{ enrolledAt: "asc" }, { id: "asc" }],
-        include: { user: { include: { student: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              student: { select: { registrationCode: true } },
+            },
+          },
+        },
       }),
       this._prisma.enrollment.count({ where }),
       this._prisma.enrollment.count({

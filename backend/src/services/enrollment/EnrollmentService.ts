@@ -195,9 +195,8 @@ class EnrollmentService implements IEnrollmentService {
       userId: enrollment.userId,
       fullName: enrollment.user.fullName,
       email: enrollment.user.email,
-      // By data minimization only Student.registrationCode is exposed;
-      // Teacher.registrationCode is deliberately not read here (post-MVP,
-      // additive evolution).
+      // Field-by-field stays as a second line of defense, but the repository
+      // now selects only these fields — passwordHash never leaves the database.
       registrationCode: enrollment.user.student?.registrationCode ?? null,
       status: enrollment.status,
       attendanceConfirmed: enrollment.attendanceConfirmed,
