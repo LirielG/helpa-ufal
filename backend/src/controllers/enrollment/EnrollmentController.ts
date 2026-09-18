@@ -46,22 +46,18 @@ class EnrollmentController implements IEnrollmentController {
       throw new CustomError(404, "Activity not found.");
     }
 
-    // Parsed and defaulted upstream by validateQuery(ListParticipantsQuerySchema),
-    // registered BEFORE auth on the route (400 -> 401 -> 404 -> 403 chain).
-    // The fallback keeps this handler safe if the middleware is forgotten.
-    const { page, limit } = (res.locals.validatedQuery ?? {
-      page: 1,
-      limit: 10,
-    }) as ListParticipantsQuery;
+    // Validated and defaulted upstream by validateQuery(ListParticipantsQuerySchema),
+    // registered BEFORE auth on the route. If it is absent, page/limit arrive as
+    // undefined and the service defaults apply — defaults live in exactly one
+    // runtime place (the service signature), never duplicated here.
+    const query = res.locals.validatedQuery as ListParticipantsQuery | undefined;
 
-    // userId comes exclusively from the credential (req.user), never from
-    // params/query/body — per the listing contract.
     const result = await this._enrollmentService.listParticipants(
-      req.user.id,
-      activityId,
-      page,
-      limit,
-    );
+        req.user.id,
+        activityId,
+        query?.page,
+        query?.limit,
+      );
 
     // 200 even with zero enrollments — never 404 for an empty list.
     res.status(200).json(result);
