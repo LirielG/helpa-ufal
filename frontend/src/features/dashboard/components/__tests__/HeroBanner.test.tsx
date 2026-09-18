@@ -48,6 +48,22 @@ describe("HeroBanner", () => {
     expect(screen.getByRole("button", { name: "Ir para slide 3" })).toHaveAttribute("aria-current", "true");
   });
 
+  it("links 'Saiba mais' to the detail screen of the slide currently visible", async () => {
+    const { user } = render(<HeroBanner actions={mockActions} />);
+
+    expect(screen.getByRole("link", { name: "Saiba mais" })).toHaveAttribute(
+      "href",
+      "/activity/1",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Próximo slide" }));
+
+    expect(screen.getByRole("link", { name: "Saiba mais" })).toHaveAttribute(
+      "href",
+      "/activity/2",
+    );
+  });
+
   describe("automatic rotation", () => {
     beforeEach(() => {
       vi.useFakeTimers();
