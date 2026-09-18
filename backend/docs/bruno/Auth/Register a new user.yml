@@ -28,34 +28,6 @@ settings:
   forwardAuthorizationHeader: true
 
 docs: |
-  Endpoint publico de cadastro: aluno e docente no mesmo endpoint,
-  discriminados por `userType`.
-
-  Ordem de validacao:
-  1. Zod — se o body nao parsear, responde 400 imediatamente, sem tocar
-     no banco. Um body invalido E com campo duplicado recebe 400, nunca 409.
-  2. Restricoes de unicidade no insert — se o banco rejeitar por campo
-     duplicado (Prisma P2002), responde 409. A mensagem depende do campo:
-       - `email`            -> "Email already in use."
-       - `registrationCode` -> "Registration code already in use."
-       - `cndb`             -> "CNDB already in use."
-       - qualquer outro campo unico -> "This value is already in use."
-         (fallback generico e intencional: nunca ecoar o nome interno da
-         coluna/constraint).
-  3. Erros inesperados -> 500.
-
-  Regras:
-  - Em caso de 409, nada e persistido: a transacao faz rollback da escrita
-    parcial (User + Student/Teacher), e os demais dados da tentativa falha
-    seguem disponiveis para novas tentativas.
-  - O body de erro nunca carrega internals: sem nome de constraint, SQL ou
-    stack — apenas `{ status, message }`.
-  - As mensagens de 409 distintas por campo confirmam a existencia de
-    cadastro com aquele dado (tradeoff de UX assumido pelo time). Rate
-    limiting nesta rota e a mitigacao recomendada — divida registrada no
-    board.
-
-
   Public registration endpoint: students and faculty share the same endpoint,
   distinguished by `userType`. 
 
@@ -81,8 +53,7 @@ docs: |
   - The error response body never exposes internals: no constraint names,
     SQL, or stack traces — only `{ status, message }`. 
   - Field-specific 409 messages confirm the existence of a record with that
-    data (a UX tradeoff accepted by the team). Rate limiting on this route
-    is the recommended mitigation — a task for this has been logged on the board.
+    data (a UX tradeoff accepted by the team).
 
 examples:
   - name: 201 - Register successfully
@@ -250,6 +221,50 @@ examples:
           {
             "status": 409,
             "message": "This value is already in use."
+          }
+  
+  - name: 409 - Registration code already in use
+    description: Registration code already in use.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+          "status": 409,
+          "message": "Registration code already in use."
+          }
+
+  - name: 409 - CNDB already in use
+    description: CNDB already in use.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: "{}"
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+          "status": 409,
+          "message": "CNDB already in use."
           }
 
   - name: 500 - Internal error
