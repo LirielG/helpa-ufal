@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router";
 import { formatDate } from "../../../utils";
 import type { Action } from "../types";
 
@@ -80,9 +81,12 @@ export function HeroBanner({ actions }: HeroBannerProps) {
                       <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">
                         {formattedDate}
                       </span>
-                      <button className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                      <Link
+                        to={`/activity/${action.id}`}
+                        className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                      >
                         Saiba mais
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>
