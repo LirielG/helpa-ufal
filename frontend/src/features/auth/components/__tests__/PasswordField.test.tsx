@@ -49,7 +49,9 @@ describe("PasswordField", () => {
     await user.click(toggle);
 
     expect(input).toHaveAttribute("type", "text");
-    expect(screen.getByRole("button", { name: "Ocultar senha" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ocultar senha" }),
+    ).toBeInTheDocument();
   });
 
   it("calls the onTogglePassword callback instead of managing state itself", async () => {

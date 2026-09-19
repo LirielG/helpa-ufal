@@ -8,8 +8,10 @@ const SIZE_STYLES: Record<FieldSize, string> = {
 
 // `size` is overridden: the native attribute measures the input in characters,
 // which no screen here uses, while the density variant is needed everywhere.
-export interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size"
+> {
   label?: string;
   error?: string;
   icon?: React.ReactNode;

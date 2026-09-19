@@ -9,8 +9,10 @@ const SIZE_STYLES: Record<FieldSize, string> = {
 
 // `size` is overridden: the native attribute turns the select into a list box,
 // which no screen here uses, while the density variant is needed everywhere.
-interface SelectProps
-  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> {
+interface SelectProps extends Omit<
+  React.SelectHTMLAttributes<HTMLSelectElement>,
+  "size"
+> {
   label?: string;
   error?: string;
   icon?: React.ReactNode;
@@ -33,7 +35,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <label
             htmlFor={selectId}
             className={
-              compact ? COMPACT_FIELD_LABEL : "text-xs text-gray-500 font-normal"
+              compact
+                ? COMPACT_FIELD_LABEL
+                : "text-xs text-gray-500 font-normal"
             }
           >
             {label}

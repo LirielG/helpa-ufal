@@ -89,7 +89,9 @@ describe("POST /auth/register", () => {
 
   it("does NOT send a Set-Cookie header", async () => {
     // AC central da refatoração.
-    const response = await request(app).post(REGISTER_URL).send(aStudentPayload());
+    const response = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload());
 
     expect(response.status).toBe(201);
     expect(response.headers["set-cookie"]).toBeUndefined();
@@ -205,7 +207,9 @@ describe("POST /auth/register", () => {
     const first = aStudentPayload();
     await request(app).post(REGISTER_URL).send(first).expect(201);
 
-    const second = aStudentPayload({ registrationCode: first.registrationCode });
+    const second = aStudentPayload({
+      registrationCode: first.registrationCode,
+    });
     const response = await request(app).post(REGISTER_URL).send(second);
 
     expect(response.status).toBe(409);
@@ -228,7 +232,9 @@ describe("POST /auth/register", () => {
     const first = aTeacherPayload();
     await request(app).post(REGISTER_URL).send(first).expect(201);
 
-    const second = aTeacherPayload({ registrationCode: first.registrationCode });
+    const second = aTeacherPayload({
+      registrationCode: first.registrationCode,
+    });
     const response = await request(app).post(REGISTER_URL).send(second);
 
     expect(response.status).toBe(409);

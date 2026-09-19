@@ -14,12 +14,13 @@ export function DashboardShell({
   containerStyle,
 }: DashboardShellProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50" style={containerStyle}>
+    <div
+      className="min-h-screen flex flex-col bg-gray-50"
+      style={containerStyle}
+    >
       {header && <header>{header}</header>}
 
-      <main className="flex flex-col w-full">
-        {children}
-      </main>
+      <main className="flex flex-col w-full">{children}</main>
 
       {footer && <footer>{footer}</footer>}
     </div>

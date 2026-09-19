@@ -26,7 +26,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         {label ? <span className="text-sm text-gray-700">{label}</span> : null}
       </label>
     );
-  }
+  },
 );
 
 Checkbox.displayName = "Checkbox";

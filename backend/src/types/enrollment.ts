@@ -5,10 +5,7 @@ import type {
 } from "./activity.js";
 
 export type EnrollmentStatus =
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "CANCELLED";
+  "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
 // Occupies a slot and counts as an active registration.
 // Remains "APPROVED" even when an approval workflow is in place.

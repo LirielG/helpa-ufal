@@ -14,7 +14,6 @@ function mockRepository(
   } as unknown as IActivityRepository;
 }
 
-
 describe("ActivityService.delete", () => {
   // ---------- Missing/deleted activity ----------
 
@@ -40,7 +39,9 @@ describe("ActivityService.delete", () => {
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -53,7 +54,9 @@ describe("ActivityService.delete", () => {
     // This is the main reason for using the fresh database value
     // instead of the JWT claim.
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       findUserById: vi.fn().mockResolvedValue(null),
     });
     const service = new ActivityService({ activityRepository: repository });
@@ -66,7 +69,9 @@ describe("ActivityService.delete", () => {
     // The authorship check requires a live user record: a deleted account
     // must not operate on the system, regardless of what the token says.
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       findUserById: vi.fn().mockResolvedValue(null),
     });
     const service = new ActivityService({ activityRepository: repository });
@@ -79,7 +84,9 @@ describe("ActivityService.delete", () => {
 
   it("the author can delete their own activity", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -90,7 +97,9 @@ describe("ActivityService.delete", () => {
 
   it("a manager can delete another author's activity", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       findUserById: vi.fn().mockResolvedValue({ isManager: true }),
     });
     const service = new ActivityService({ activityRepository: repository });
@@ -102,7 +111,9 @@ describe("ActivityService.delete", () => {
   it("a manager can delete their own activity", async () => {
     // Intersection of both permissions: the rule must not be ambiguous here.
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "manager-9" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "manager-9" }),
       findUserById: vi.fn().mockResolvedValue({ isManager: true }),
     });
     const service = new ActivityService({ activityRepository: repository });
@@ -119,7 +130,9 @@ describe("ActivityService.delete", () => {
     // (deletedAt: null) returns count 0 ⇒ softDelete returns false.
     // Treated as success: the desired final state already holds.
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       softDelete: vi.fn().mockResolvedValue(false),
     });
     const service = new ActivityService({ activityRepository: repository });

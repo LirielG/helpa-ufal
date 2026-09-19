@@ -2,10 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
-import {
-  expectValidationError,
-  expectCustomError,
-} from "@/utils/tests.js";
+import { expectValidationError, expectCustomError } from "@/utils/tests.js";
 import { daysFromNow } from "../../../../tests/helpers/dates.js";
 
 const AUTHOR_ID = "a1b2c3d4-0000-4000-8000-000000000099";
@@ -21,7 +18,9 @@ const validAddress = {
 
 // Base valid payload: a 2-day IN_PERSON activity (48h total). Overrides stay
 // untyped on purpose: some tests send payloads the Zod contract would reject.
-function validInput(overrides: Record<string, unknown> = {}): CreateActivityInput {
+function validInput(
+  overrides: Record<string, unknown> = {},
+): CreateActivityInput {
   return {
     title: "Oficina de Introdução à Programação",
     type: "EXTENSION",
@@ -371,12 +370,10 @@ describe("ActivityService.create", () => {
   it("takes availableSlots from the persisted row, not from the request payload", async () => {
     const input = validInput({ slots: 40 });
     const repository = mockRepository({
-      create: vi
-        .fn()
-        .mockResolvedValue({
-          ...createdActivityFrom(AUTHOR_ID, input),
-          slots: 30,
-        }),
+      create: vi.fn().mockResolvedValue({
+        ...createdActivityFrom(AUTHOR_ID, input),
+        slots: 30,
+      }),
     });
     const service = new ActivityService({ activityRepository: repository });
 

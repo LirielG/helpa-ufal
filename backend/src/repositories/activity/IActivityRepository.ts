@@ -1,10 +1,13 @@
 import type { Activity } from "@prisma/client";
-import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import type {
+  CreateActivityInput,
+  UpdateActivityInput,
+} from "@/schemas/activity/ActivitySchemas.js";
 import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 
 export interface IActivityRepository {
   create(authorId: string, data: CreateActivityInput): Promise<Activity>;
-  
+
   findById(id: string): Promise<ActivityFullResponse | null>;
 
   list(
@@ -14,14 +17,13 @@ export interface IActivityRepository {
   update(
     id: string,
     data: UpdateActivityInput,
-    addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE"
+    addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE",
   ): Promise<ActivityFullResponse>;
 
   updateStatus(id: string, status: string): Promise<Activity>;
   findUserById(id: string): Promise<{ isManager: boolean } | null>;
   countApprovedEnrollments(activityId: string): Promise<number>;
   softDelete(id: string): Promise<boolean>;
-  
 }
 
 export interface IRepositoryListActivitiesFilters {

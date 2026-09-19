@@ -1,15 +1,27 @@
 import React, { useState } from "react";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
 import { ACTION_AREAS, ACTION_TYPES, ACTION_FORMATS } from "../constants";
-import { ImagePlus, X, ArrowRight, ArrowLeft, Check, Eye, Loader2 } from "lucide-react";
+import {
+  ImagePlus,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Eye,
+  Loader2,
+} from "lucide-react";
 import { api } from "../../../services/api";
 interface ActionRegisterProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void; 
+  onSuccess?: () => void;
 }
 
-export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterProps) {
+export function ActionRegister({
+  isOpen,
+  onClose,
+  onSuccess,
+}: ActionRegisterProps) {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,8 +51,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
     if (step === 1) {
       setStep(2);
       return;
-    } 
-    
+    }
+
     setIsLoading(true);
 
     try {
@@ -49,13 +61,13 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
         minicurso: "COURSE",
         palestra: "LECTURE",
         evento: "EVENT",
-        servico: "EXTENSION"
+        servico: "EXTENSION",
       };
 
       const formatMap: Record<string, string> = {
         presencial: "IN_PERSON",
         remoto: "ONLINE",
-        hibrido: "HYBRID"
+        hibrido: "HYBRID",
       };
 
       const cleanZipCode = zipCode.replace(/\D/g, "");
@@ -72,22 +84,23 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
         area,
         workloadHours: Number(workload),
         format: formatMap[format] || "IN_PERSON",
-        
-        ...(format !== "remoto" && city && {
-          address: {
-            addressLine: location || "Não informado",
-            district: "Centro", 
-            zipCode: cleanZipCode || "00000000",
-            city,
-            state: state.toUpperCase(),
-          }
-        })
+
+        ...(format !== "remoto" &&
+          city && {
+            address: {
+              addressLine: location || "Não informado",
+              district: "Centro",
+              zipCode: cleanZipCode || "00000000",
+              city,
+              state: state.toUpperCase(),
+            },
+          }),
       };
 
       await api.post("/activities", payload);
-      
+
       setShowSuccessConfirm(true);
-      
+
       setStep(1);
       setTitle("");
       setDescription("");
@@ -104,10 +117,11 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
       setState("");
 
       if (onSuccess) onSuccess();
-
     } catch (error) {
       console.error("Erro ao criar ação:", error);
-      alert("Não foi possível criar a ação. Verifique os dados e tente novamente.");
+      alert(
+        "Não foi possível criar a ação. Verifique os dados e tente novamente.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -116,51 +130,72 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm">
       <div className="bg-[#E0E0E0] rounded-2xl w-full max-w-4xl p-4 flex gap-4 relative shadow-2xl m-4">
-        
         <div className="w-1/3 bg-[#002147CC] rounded-xl py-6 text-white flex flex-col justify-between relative overflow-hidden min-h-[450px]">
           <div className="flex flex-col gap-8 z-10">
             <span className="text-sm font-semibold tracking-wide px-[28px] pt-[40px] block">
               Vamos criar uma ação?
             </span>
-            
+
             <div className="flex flex-col px-[30px] gap-6 relative">
               <div className="flex items-center gap-4">
-                <div className={`size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-sm transition-colors ${step === 1 ? 'bg-white text-[#0A2540]' : 'bg-[#002147] text-white'}`}>
+                <div
+                  className={`size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-sm transition-colors ${step === 1 ? "bg-white text-[#0A2540]" : "bg-[#002147] text-white"}`}
+                >
                   1
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm">Identificação</h4>
-                  <p className="text-xs opacity-60">Dê um nome para a sua ação</p>
+                  <p className="text-xs opacity-60">
+                    Dê um nome para a sua ação
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className={`size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-sm transition-colors ${step === 2 ? 'bg-white text-[#0A2540]' : 'border-2 border-white/40 text-white/40'}`}>
+                <div
+                  className={`size-8 rounded-full shrink-0 flex items-center justify-center font-bold text-sm transition-colors ${step === 2 ? "bg-white text-[#0A2540]" : "border-2 border-white/40 text-white/40"}`}
+                >
                   2
                 </div>
                 <div>
-                  <h4 className={`font-semibold text-sm ${step === 2 ? 'text-white' : 'text-white/40'}`}>Logística</h4>
-                  <p className="text-xs opacity-60">Conte-nos onde e quando será</p>
+                  <h4
+                    className={`font-semibold text-sm ${step === 2 ? "text-white" : "text-white/40"}`}
+                  >
+                    Logística
+                  </h4>
+                  <p className="text-xs opacity-60">
+                    Conte-nos onde e quando será
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 flex items-center justify-center opacity-20 pointer-events-none my-4" >
-            <img src={helpaBlueLogo} alt="helpa" className="h-60 w-auto object-contain select-none" />
+          <div className="flex-1 flex items-center justify-center opacity-20 pointer-events-none my-4">
+            <img
+              src={helpaBlueLogo}
+              alt="helpa"
+              className="h-60 w-auto object-contain select-none"
+            />
           </div>
         </div>
 
         <div className="flex-1 bg-[#FFF7F7] rounded-xl p-8 flex flex-col justify-between">
-          <form onSubmit={handleNext} className="h-full flex flex-col justify-between gap-6">
-            
+          <form
+            onSubmit={handleNext}
+            className="h-full flex flex-col justify-between gap-6"
+          >
             {step === 1 ? (
               <div className="flex flex-col gap-4 overflow-y-auto pr-2 max-h-[60vh]">
-                <h2 className="text-2xl font-bold text-[#0A2540]">Dê um nome para a sua ação</h2>
-                
+                <h2 className="text-2xl font-bold text-[#0A2540]">
+                  Dê um nome para a sua ação
+                </h2>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Título da ação</label>
-                  <input 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Título da ação
+                  </label>
+                  <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -171,8 +206,13 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descrição completa <span className="text-gray-400 font-normal">(opcional)</span></label>
-                  <textarea 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrição completa{" "}
+                    <span className="text-gray-400 font-normal">
+                      (opcional)
+                    </span>
+                  </label>
+                  <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Descreva a sua ação"
@@ -182,19 +222,25 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Imagem de capa</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Imagem de capa
+                  </label>
                   <label className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-50 hover:border-[#1B75BB] transition-colors group bg-white">
                     <ImagePlus className="size-8 text-gray-400 group-hover:text-[#1B75BB] transition-colors" />
                     <div className="text-center">
                       <p className="text-xs font-semibold text-gray-600">
-                        {image ? `Selecionado: ${image}` : "Clique para fazer o upload"}
+                        {image
+                          ? `Selecionado: ${image}`
+                          : "Clique para fazer o upload"}
                       </p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG ou JPEG</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        PNG, JPG ou JPEG
+                      </p>
                     </div>
-                    <input 
+                    <input
                       type="file"
                       accept="image/*"
-                      className="hidden" 
+                      className="hidden"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
                           setImage(e.target.files[0].name);
@@ -206,8 +252,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <select 
-                      value={area} 
+                    <select
+                      value={area}
                       onChange={(e) => setArea(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg p-2.5 bg-white text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#1B75BB]"
                       required
@@ -221,8 +267,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                     </select>
                   </div>
                   <div>
-                    <select 
-                      value={type} 
+                    <select
+                      value={type}
                       onChange={(e) => setType(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg p-2.5 bg-white text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#1B75BB]"
                       required
@@ -239,10 +285,14 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
               </div>
             ) : (
               <div className="flex flex-col gap-4 overflow-y-auto pr-2 max-h-[60vh]">
-                <h2 className="text-2xl font-bold text-[#0A2540]">Conte-nos onde e quando será</h2>
-                
+                <h2 className="text-2xl font-bold text-[#0A2540]">
+                  Conte-nos onde e quando será
+                </h2>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data da ação</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Data da ação
+                  </label>
                   <input
                     type="date"
                     value={date}
@@ -254,7 +304,9 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Carga horária total</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Carga horária total
+                    </label>
                     <input
                       type="number"
                       value={workload}
@@ -266,7 +318,9 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número de vagas</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de vagas
+                    </label>
                     <input
                       type="number"
                       value={spots}
@@ -280,8 +334,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                 </div>
 
                 <div className="w-1/2">
-                  <select 
-                    value={format} 
+                  <select
+                    value={format}
                     onChange={(e) => setFormat(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg p-2.5 bg-white text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#1B75BB]"
                     required
@@ -295,11 +349,15 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                   </select>
                 </div>
 
-                <h3 className="text-base font-semibold text-[#0A2540] mt-2">Endereço</h3>
+                <h3 className="text-base font-semibold text-[#0A2540] mt-2">
+                  Endereço
+                </h3>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
-                  <input 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Logradouro
+                  </label>
+                  <input
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
@@ -311,8 +369,10 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
 
                 <div className="grid grid-cols-12 gap-4">
                   <div className="col-span-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
-                    <input 
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CEP
+                    </label>
+                    <input
                       type="text"
                       value={zipCode}
                       onChange={(e) => setZipCode(e.target.value)}
@@ -323,7 +383,9 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                     />
                   </div>
                   <div className="col-span-5">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cidade
+                    </label>
                     <input
                       type="text"
                       value={city}
@@ -334,8 +396,10 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                     />
                   </div>
                   <div className="col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                    <input 
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estado
+                    </label>
+                    <input
                       type="text"
                       value={state}
                       onChange={(e) => setState(e.target.value)}
@@ -350,8 +414,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
             )}
 
             <div className="flex justify-between items-center mt-6 w-full pt-4 border-t border-gray-200">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowCancelConfirm(true)}
                 disabled={isLoading}
                 className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-red-900 transition-colors shadow-sm disabled:opacity-50"
@@ -360,7 +424,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
               </button>
 
               {step === 1 ? (
-                <button 
+                <button
                   type="submit"
                   className="px-6 py-2 bg-[#002147] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-[#1B75BB] transition-colors shadow-sm"
                 >
@@ -368,27 +432,30 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                 </button>
               ) : (
                 <div className="flex items-center gap-4">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setStep(1)}
                     disabled={isLoading}
                     className="px-5 py-2 bg-[#002147] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-[#1B75BB] transition-colors shadow-sm disabled:opacity-50"
                   >
                     <ArrowLeft className="size-3" /> Voltar
                   </button>
-                  
-                  <button 
+
+                  <button
                     type="submit"
                     disabled={isLoading}
                     className="px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center gap-1 hover:bg-green-800 transition-colors shadow-sm disabled:opacity-50"
                   >
-                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Criar ação"}
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Criar ação"
+                    )}
                     {!isLoading && <Check className="size-3.5 stroke-[3]" />}
                   </button>
                 </div>
               )}
             </div>
-
           </form>
         </div>
       </div>
@@ -405,8 +472,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
             <button
               type="button"
               onClick={() => {
-                setShowCancelConfirm(false); 
-                setStep(1);               
+                setShowCancelConfirm(false);
+                setStep(1);
                 onClose();
               }}
               className="w-full bg-[#002147] text-white py-3 px-6 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#1B75BB] transition-colors shadow-md"

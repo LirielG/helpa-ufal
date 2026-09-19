@@ -6,8 +6,12 @@ describe("ProfileSelector", () => {
   it("renders a card for every profile option", () => {
     render(<ProfileSelector selectedType={null} onSelect={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: /docente/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /estudante/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /docente/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /estudante/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows the call-to-action label when nothing is selected yet", () => {

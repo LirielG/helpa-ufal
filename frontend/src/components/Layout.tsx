@@ -26,9 +26,7 @@ export function Layout({ children }: LayoutProps) {
       }
     >
       <Navbar />
-      <main className="flex-1 py-12 px-4">
-        {children}
-      </main>
+      <main className="flex-1 py-12 px-4">{children}</main>
       <Footer />
     </div>
   );

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
-import { createActivity, createManager, createTeacher } from "../../helpers/factories.js";
+import {
+  createActivity,
+  createManager,
+  createTeacher,
+} from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
 
 describe("PATCH /activities/:id", () => {

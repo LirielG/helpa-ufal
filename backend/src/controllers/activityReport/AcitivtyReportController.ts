@@ -13,17 +13,23 @@ class ActivityReportController implements IActivityReportController {
   private _activityReportService: IActivityReportService;
 
   constructor(props?: Props) {
-    this._activityReportService = props?.activityReportService ?? new ActivityReportService();
+    this._activityReportService =
+      props?.activityReportService ?? new ActivityReportService();
   }
 
   public async createReport(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { id } = req.params;
-    if (!id || Array.isArray(id)) throw new CustomError(400, "Invalid id parameter.");
+    if (!id || Array.isArray(id))
+      throw new CustomError(400, "Invalid id parameter.");
 
     const data = CreateActivityReportSchema.parse(req.body);
-    const report = await this._activityReportService.createReport(id, req.user.id, data);
+    const report = await this._activityReportService.createReport(
+      id,
+      req.user.id,
+      data,
+    );
 
     res.status(201).json(report);
   }

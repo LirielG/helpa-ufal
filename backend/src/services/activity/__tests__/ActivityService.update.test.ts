@@ -111,11 +111,16 @@ describe("ActivityService.update", () => {
 
   it("throws 403 (not 409) when a third party targets a completed activity", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity({ status: "COMPLETED" })),
+      findById: vi
+        .fn()
+        .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    await expectHttpError(service.update("act-1", THIRD_PARTY, { title: "x" }), 403);
+    await expectHttpError(
+      service.update("act-1", THIRD_PARTY, { title: "x" }),
+      403,
+    );
     expect(repository.update).not.toHaveBeenCalled();
   });
 
@@ -135,7 +140,9 @@ describe("ActivityService.update", () => {
 
   it("throws 409 when the activity is COMPLETED", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity({ status: "COMPLETED" })),
+      findById: vi
+        .fn()
+        .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -149,7 +156,9 @@ describe("ActivityService.update", () => {
 
   it("throws 409 when the activity is CANCELLED", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity({ status: "CANCELLED" })),
+      findById: vi
+        .fn()
+        .mockResolvedValue(makeActivity({ status: "CANCELLED" })),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -197,7 +206,9 @@ describe("ActivityService.update", () => {
 
   it("a manager can update their own activity", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity({ authorId: "manager-9" })),
+      findById: vi
+        .fn()
+        .mockResolvedValue(makeActivity({ authorId: "manager-9" })),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -225,11 +236,12 @@ describe("ActivityService.update", () => {
 
   it("skips date validation when no date is sent, even with a past startDate", async () => {
     const repository = mockRepository({
-      findById: vi
-        .fn()
-        .mockResolvedValue(
-          makeActivity({ startDate: daysFromNow(-5), endDate: daysFromNow(-3) }),
-        ),
+      findById: vi.fn().mockResolvedValue(
+        makeActivity({
+          startDate: daysFromNow(-5),
+          endDate: daysFromNow(-3),
+        }),
+      ),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -306,7 +318,10 @@ describe("ActivityService.update", () => {
 
     expect(error).toBeInstanceOf(ValidationError);
     expect((error as ValidationError).errors).toEqual([
-      { field: "endDate", message: "Activity duration cannot exceed 365 days." },
+      {
+        field: "endDate",
+        message: "Activity duration cannot exceed 365 days.",
+      },
     ]);
     expect(repository.update).not.toHaveBeenCalled();
   });
@@ -345,7 +360,9 @@ describe("ActivityService.update", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    const error = await captureError(service.update("act-1", AUTHOR, { slots: 10 }));
+    const error = await captureError(
+      service.update("act-1", AUTHOR, { slots: 10 }),
+    );
 
     expect(error).toBeInstanceOf(ValidationError);
     expect((error as ValidationError).errors).toEqual([
@@ -388,7 +405,8 @@ describe("ActivityService.update", () => {
     expect((error as ValidationError).errors).toEqual([
       {
         field: "workloadHours",
-        message: "workloadHours cannot exceed the total duration of the activity.",
+        message:
+          "workloadHours cannot exceed the total duration of the activity.",
       },
     ]);
     expect(repository.update).not.toHaveBeenCalled();
@@ -398,7 +416,7 @@ describe("ActivityService.update", () => {
 
   it("rejects ONLINE when no url is sent and none is stored", async () => {
     const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivity()), 
+      findById: vi.fn().mockResolvedValue(makeActivity()),
     });
     const service = new ActivityService({ activityRepository: repository });
 
@@ -536,7 +554,10 @@ describe("ActivityService.update", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.update("act-1", AUTHOR, { format: "IN_PERSON", address: ADDRESS });
+    await service.update("act-1", AUTHOR, {
+      format: "IN_PERSON",
+      address: ADDRESS,
+    });
 
     expect(repository.update).toHaveBeenCalledWith(
       "act-1",

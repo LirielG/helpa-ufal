@@ -54,8 +54,7 @@ class EnrollmentController implements IEnrollmentController {
     // undefined and the service defaults apply — defaults live in exactly one
     // runtime place (the service signature), never duplicated here.
     const query = res.locals.validatedQuery as
-      | ListParticipantsQuery
-      | undefined;
+      ListParticipantsQuery | undefined;
 
     const result = await this._enrollmentService.listParticipants(
       req.user.id,

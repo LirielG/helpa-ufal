@@ -9,7 +9,9 @@ export type ActivityReportResponse = {
   createdAt: Date;
 };
 
-export function toActivityReportResponse(report: ActivityReport): ActivityReportResponse {
+export function toActivityReportResponse(
+  report: ActivityReport,
+): ActivityReportResponse {
   return {
     id: report.id,
     activityId: report.activityId,

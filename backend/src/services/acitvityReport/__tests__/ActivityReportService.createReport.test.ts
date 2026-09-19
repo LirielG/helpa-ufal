@@ -4,10 +4,7 @@ import type { IActivityReportRepository } from "@/repositories/activityReport/IA
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
 import type { ActivityReportResponse } from "@/types/activityReport.js";
-import {
-  expectValidationError,
-  expectCustomError,
-} from "@/utils/tests.js";
+import { expectValidationError, expectCustomError } from "@/utils/tests.js";
 
 // v4 UUIDs only: isValidUUID rejects anything else (project convention).
 const ACTIVITY_ID = "22ac40bd-e160-4c6e-8505-b63913d2482f"; // from the Bruno contract
@@ -100,7 +97,11 @@ describe("ActivityReportService.createReport", () => {
     });
 
     const input = validInput();
-    const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
+    const response = await service.createReport(
+      ACTIVITY_ID,
+      REPORTER_ID,
+      input,
+    );
 
     expect(activityRepository.findById).toHaveBeenCalledTimes(1);
     expect(activityRepository.findById).toHaveBeenCalledWith(ACTIVITY_ID);
@@ -140,7 +141,11 @@ describe("ActivityReportService.createReport", () => {
     });
 
     const input = validInput({ description: undefined });
-    const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
+    const response = await service.createReport(
+      ACTIVITY_ID,
+      REPORTER_ID,
+      input,
+    );
 
     expect(reportRepository.create).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -168,7 +173,11 @@ describe("ActivityReportService.createReport", () => {
       });
 
       const input = validInput({ category });
-      const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
+      const response = await service.createReport(
+        ACTIVITY_ID,
+        REPORTER_ID,
+        input,
+      );
 
       expect(reportRepository.create).toHaveBeenCalledWith(
         ACTIVITY_ID,
@@ -195,7 +204,11 @@ describe("ActivityReportService.createReport", () => {
     // controller, so the service forwards whatever it receives. If the rule
     // ever moves into the service, this test is the detector.
     const input = validInput({ category: "HARASSMENT" });
-    const response = await service.createReport(ACTIVITY_ID, REPORTER_ID, input);
+    const response = await service.createReport(
+      ACTIVITY_ID,
+      REPORTER_ID,
+      input,
+    );
 
     expect(reportRepository.create).toHaveBeenCalledTimes(1);
     expect(response.category).toBe("HARASSMENT");

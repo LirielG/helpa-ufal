@@ -16,8 +16,8 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
     userId: USER_ID,
     activityId: ACTIVITY_ID,
     status: "APPROVED",
-    attendanceConfirmed: null,       // era: false
-    confirmedWorkloadHours: 0,       // novo
+    attendanceConfirmed: null, // era: false
+    confirmedWorkloadHours: 0, // novo
     isModerator: false,
     enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     createdAt: new Date("2026-08-22T21:00:00.000Z"),
@@ -67,7 +67,6 @@ function mockRepositories(
   return { activityRepository, enrollmentRepository };
 }
 
-
 describe("EnrollmentService.enroll", () => {
   // ---------- Authentication (contract: 401 before existence/business rules) ----------
 
@@ -77,7 +76,10 @@ describe("EnrollmentService.enroll", () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       activity: { findUserById: vi.fn().mockResolvedValue(null) },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),
@@ -92,11 +94,14 @@ describe("EnrollmentService.enroll", () => {
 
   it("rejects a malformed activityId with a ValidationError", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
-    await expect(
-      service.enroll(USER_ID, "not-a-uuid"),
-    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.enroll(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
+      ValidationError,
+    );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
@@ -107,9 +112,16 @@ describe("EnrollmentService.enroll", () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(null) },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
-    await expectHttpError(service.enroll(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      404,
+      "Activity not found.",
+    );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
@@ -119,9 +131,14 @@ describe("EnrollmentService.enroll", () => {
       // CANCELLED here is the activity lifecycle status — distinct from soft
       // delete (deletedAt), which is 404 via the filtered findById.
       const { activityRepository, enrollmentRepository } = mockRepositories({
-        activity: { findById: vi.fn().mockResolvedValue(anActivity({ status })) },
+        activity: {
+          findById: vi.fn().mockResolvedValue(anActivity({ status })),
+        },
       });
-      const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+      const service = new EnrollmentService({
+        activityRepository,
+        enrollmentRepository,
+      });
 
       await expectHttpError(
         service.enroll(USER_ID, ACTIVITY_ID),
@@ -136,7 +153,10 @@ describe("EnrollmentService.enroll", () => {
 
   it("creates an enrollment and returns the contract's 201 shape", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
@@ -148,7 +168,6 @@ describe("EnrollmentService.enroll", () => {
     });
   });
 
-
   it("keeps the original createdAt when the repository reactivates a canceled enrollment", async () => {
     // Contract decision: reactivation returns 201 with the record's original
     // createdAt, not the reactivation moment (that one lives in enrolledAt).
@@ -159,7 +178,10 @@ describe("EnrollmentService.enroll", () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
@@ -174,10 +196,15 @@ describe("EnrollmentService.enroll", () => {
       enrollment: {
         enroll: vi
           .fn()
-          .mockRejectedValue(new CustomError(409, "User is already enrolled in this activity.")),
+          .mockRejectedValue(
+            new CustomError(409, "User is already enrolled in this activity."),
+          ),
       },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),
@@ -191,10 +218,15 @@ describe("EnrollmentService.enroll", () => {
       enrollment: {
         enroll: vi
           .fn()
-          .mockRejectedValue(new CustomError(409, "No available slots for this activity.")),
+          .mockRejectedValue(
+            new CustomError(409, "No available slots for this activity."),
+          ),
       },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),

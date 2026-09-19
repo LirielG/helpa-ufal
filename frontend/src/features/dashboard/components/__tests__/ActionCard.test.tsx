@@ -12,12 +12,14 @@ describe("ActionCard", () => {
       startDate: "2026-05-09T12:00:00Z",
       availableSlots: 25,
       status: "OPEN",
-      type: "COURSE"
+      type: "COURSE",
     } as unknown as Action;
 
     render(<ActionCard action={action} />);
 
-    expect(screen.getByRole("heading", { name: "Oficina de Robótica" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Oficina de Robótica" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("UFAL, Arapiraca - AL")).toBeInTheDocument();
     expect(screen.getByText(/25 vagas disponíveis/i)).toBeInTheDocument();
     expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
@@ -25,13 +27,17 @@ describe("ActionCard", () => {
   });
 
   it("links to the detail page of its own action", () => {
-    const action = { id: "action-42", type: "COURSE", status: "OPEN" } as unknown as Action;
-    
+    const action = {
+      id: "action-42",
+      type: "COURSE",
+      status: "OPEN",
+    } as unknown as Action;
+
     render(<ActionCard action={action} />);
-    
+
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      "/activity/action-42"
+      "/activity/action-42",
     );
   });
 });

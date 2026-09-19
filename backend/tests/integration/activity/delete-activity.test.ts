@@ -3,7 +3,12 @@ import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
-import { createStudent, createTeacher, createManager, createActivity } from "../../helpers/factories.js";
+import {
+  createStudent,
+  createTeacher,
+  createManager,
+  createActivity,
+} from "../../helpers/factories.js";
 import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
 
 describe("DELETE /activities/:id", () => {
@@ -17,7 +22,9 @@ describe("DELETE /activities/:id", () => {
       .expect(204);
 
     // Direct database query (bypasses the API): proves the "soft" in soft delete.
-    const row = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const row = await prisma.activity.findUnique({
+      where: { id: activity.id },
+    });
     expect(row).not.toBeNull();
     expect(row!.deletedAt).toBeInstanceOf(Date);
   });
@@ -47,14 +54,18 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(author.token))
       .expect(204);
 
-    const first = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const first = await prisma.activity.findUnique({
+      where: { id: activity.id },
+    });
 
     await request(app)
       .delete(`/activities/${activity.id}`)
       .set(...authHeader(author.token))
       .expect(404);
 
-    const second = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const second = await prisma.activity.findUnique({
+      where: { id: activity.id },
+    });
     expect(second!.deletedAt).toEqual(first!.deletedAt);
   });
 
@@ -68,7 +79,9 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(other.token))
       .expect(403);
 
-    const row = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const row = await prisma.activity.findUnique({
+      where: { id: activity.id },
+    });
     expect(row!.deletedAt).toBeNull(); // nothing was touched
   });
 
@@ -86,7 +99,9 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(ghost.token))
       .expect(403);
 
-    const row = await prisma.activity.findUnique({ where: { id: activity.id } });
+    const row = await prisma.activity.findUnique({
+      where: { id: activity.id },
+    });
     expect(row!.deletedAt).toBeNull();
   });
 
@@ -139,7 +154,11 @@ describe("DELETE /activities/:id", () => {
 
     // No Enrollment factory yet: create it directly via Prisma.
     const enrollment = await prisma.enrollment.create({
-      data: { userId: student.user.id, activityId: activity.id, status: "APPROVED" },
+      data: {
+        userId: student.user.id,
+        activityId: activity.id,
+        status: "APPROVED",
+      },
     });
 
     await request(app)
@@ -147,7 +166,9 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(author.token))
       .expect(204);
 
-    const preserved = await prisma.enrollment.findUnique({ where: { id: enrollment.id } });
+    const preserved = await prisma.enrollment.findUnique({
+      where: { id: enrollment.id },
+    });
     expect(preserved).not.toBeNull();
     expect(preserved!.status).toBe("APPROVED");
   });
@@ -174,7 +195,9 @@ describe("DELETE /activities/:id", () => {
       .set(...authHeader(author.token))
       .expect(204);
 
-    const preserved = await prisma.activityReport.findUnique({ where: { id: report.id } });
+    const preserved = await prisma.activityReport.findUnique({
+      where: { id: report.id },
+    });
     expect(preserved).not.toBeNull();
   });
 
@@ -204,8 +227,12 @@ describe("DELETE /activities/:id", () => {
 
   it("does not affect other activities from the same author", async () => {
     const author = await createTeacher();
-    const target = await createActivity(author.user.id, { title: "Will be deleted" });
-    const survivor = await createActivity(author.user.id, { title: "Must survive" });
+    const target = await createActivity(author.user.id, {
+      title: "Will be deleted",
+    });
+    const survivor = await createActivity(author.user.id, {
+      title: "Must survive",
+    });
 
     await request(app)
       .delete(`/activities/${target.id}`)
