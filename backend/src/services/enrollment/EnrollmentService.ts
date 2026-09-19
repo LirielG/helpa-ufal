@@ -12,12 +12,15 @@ import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 import type { Enrollment } from "@prisma/client";
-import type {
-  EnrollmentListResponse,
-  EnrollmentResponse,
-  EnrollmentWithActivityResponse,
-  ParticipantResponse,
-  ParticipantsListResponse,
+import {
+  ACTIVE_ENROLLMENT_STATUS,
+  type AttendanceResponse,
+  type ConfirmAttendanceInput,
+  type EnrollmentListResponse,
+  type EnrollmentResponse,
+  type EnrollmentWithActivityResponse,
+  type ParticipantResponse,
+  type ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
 type Props = {
@@ -143,6 +146,111 @@ class EnrollmentService implements IEnrollmentService {
       limit,
       totalPresent,
     };
+  }
+
+  public async confirmAttendance(
+    userId: string,
+    activityId: string,
+    enrollmentId: string,
+    input: ConfirmAttendanceInput,
+  ): Promise<AttendanceResponse> {
+    const user = await this.requireUser(userId);
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const enrollment = await this._enrollmentRepository.findByIdAndActivity(
+      enrollmentId,
+      activityId,
+    );
+    if (!enrollment) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    // Order is the contract: existence (404) is decided before authorization
+    // (403), which is decided before the business rules (409/422).
+    if (activity.authorId !== userId && !user.isManager) {
+      throw new CustomError(
+        403,
+        "Only the activity creator or a manager can confirm attendance.",
+      );
+    }
+
+    if (activity.status !== "COMPLETED") {
+      throw new CustomError(
+        409,
+        "Attendance can only be confirmed for completed activities.",
+      );
+    }
+
+    if (enrollment.status !== ACTIVE_ENROLLMENT_STATUS) {
+      throw new CustomError(
+        409,
+        "Only approved enrollments can have attendance confirmed.",
+      );
+    }
+
+    // An activity with no details has no declared workload, so no amount of
+    // hours can be homologated against it: the ceiling of 0 rejects them all.
+    const confirmedWorkloadHours = this.resolveConfirmedHours(
+      input,
+      activity.details?.workloadHours ?? 0,
+    );
+
+    const updated = await this._enrollmentRepository.confirmAttendance(
+      activityId,
+      enrollmentId,
+      input.attended,
+      confirmedWorkloadHours,
+    );
+
+    return {
+      attendanceConfirmed: updated.attendanceConfirmed,
+      confirmedWorkloadHours: updated.confirmedWorkloadHours,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
+  /**
+   * Turns the request body into the hours that will be persisted.
+   * Returning a single number is what makes the invalid states
+   * unrepresentable downstream: the pair is always (true, n >= 1) or (false, 0).
+   */
+  private resolveConfirmedHours(
+    input: ConfirmAttendanceInput,
+    workloadCeiling: number,
+  ): number {
+    if (!input.attended) {
+      if (input.workloadHours !== undefined) {
+        throw new CustomError(
+          422,
+          "workloadHours must be omitted when attended is false.",
+        );
+      }
+      return 0;
+    }
+
+    if (input.workloadHours === undefined) {
+      throw new CustomError(
+        422,
+        "workloadHours is required when attended is true.",
+      );
+    }
+
+    if (
+      !Number.isInteger(input.workloadHours) ||
+      input.workloadHours < 1 ||
+      input.workloadHours > workloadCeiling
+    ) {
+      throw new CustomError(
+        422,
+        "workloadHours must be an integer between 1 and the activity's workload hours.",
+      );
+    }
+
+    return input.workloadHours;
   }
 
   // Token valid and user still exists

@@ -1,4 +1,6 @@
 import type {
+  AttendanceResponse,
+  ConfirmAttendanceInput,
   EnrollmentListResponse,
   EnrollmentResponse,
   ParticipantsListResponse,
@@ -18,4 +20,10 @@ export interface IEnrollmentService {
     page?: number,
     limit?: number,
   ): Promise<ParticipantsListResponse>;
+  confirmAttendance(
+    userId: string,
+    activityId: string,
+    enrollmentId: string,
+    input: ConfirmAttendanceInput,
+  ): Promise<AttendanceResponse>;
 }

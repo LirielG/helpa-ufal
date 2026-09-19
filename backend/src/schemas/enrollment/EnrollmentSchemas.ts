@@ -31,3 +31,21 @@ export const ListParticipantsQuerySchema = z.object({
 export type ListParticipantsQuery = z.output<
   typeof ListParticipantsQuerySchema
 >;
+
+export const ConfirmAttendanceParamsSchema = z.object({
+  activityId: z.uuid("activityId must be a valid UUID."),
+  enrollmentId: z.uuid("enrollmentId must be a valid UUID."),
+});
+
+/**
+ * workloadHours is deliberately NOT .int(): the range, the ceiling and the
+ * attended/workloadHours combination are business rules and answer 422, so
+ * only a wrong TYPE may fail here (400). A fractional value is a number and
+ * must reach the service.
+ */
+export const ConfirmAttendanceBodySchema = z
+  .object({
+    attended: z.boolean(),
+    workloadHours: z.number().optional(),
+  })
+  .strict();

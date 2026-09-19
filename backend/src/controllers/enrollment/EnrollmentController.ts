@@ -2,7 +2,11 @@ import type { Request, Response } from "express";
 import EnrollmentService from "@/services/enrollment/EnrollmentService.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
 import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollmentController.js";
-import type { ListParticipantsQuery } from "@/schemas/enrollment/EnrollmentSchemas.js";
+import {
+  ConfirmAttendanceBodySchema,
+  ConfirmAttendanceParamsSchema,
+  type ListParticipantsQuery,
+} from "@/schemas/enrollment/EnrollmentSchemas.js";
 import CustomError from "@/models/error/CustomError.js";
 
 type Props = {
@@ -66,6 +70,28 @@ class EnrollmentController implements IEnrollmentController {
 
     // 200 even with zero enrollments — never 404 for an empty list.
     res.status(200).json(result);
+  }
+
+  public async confirmAttendance(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    // Shape first (400), business afterwards: both ids are validated here so
+    // the service can treat them as real identifiers. The user is taken from
+    // the token alone — params, query and body never name who homologates.
+    const { activityId, enrollmentId } = ConfirmAttendanceParamsSchema.parse(
+      req.params,
+    );
+    const body = ConfirmAttendanceBodySchema.parse(req.body);
+
+    const attendance = await this._enrollmentService.confirmAttendance(
+      req.user.id,
+      activityId,
+      enrollmentId,
+      body,
+    );
+
+    // Always 200: a correction is not a creation, so there is no 201 here.
+    res.status(200).json(attendance);
   }
 }
 

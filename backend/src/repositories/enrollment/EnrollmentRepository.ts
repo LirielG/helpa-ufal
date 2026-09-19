@@ -5,7 +5,10 @@ import type {
   EnrollmentWithParticipant,
   IEnrollmentRepository,
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
-import { lockActivityForCapacity } from "@/repositories/enrollment/locks.js";
+import {
+  lockActivityForAttendance,
+  lockActivityForCapacity,
+} from "@/repositories/enrollment/locks.js";
 import {
   ACTIVE_ENROLLMENT_STATUS,
   ENROLLMENT_INITIAL_STATUS,
@@ -61,6 +64,17 @@ class EnrollmentRepository implements IEnrollmentRepository {
     ]);
 
     return { items, total, totalPresent };
+  }
+
+  public async findByIdAndActivity(
+    enrollmentId: string,
+    activityId: string,
+  ): Promise<Enrollment | null> {
+    // findFirst, not findUnique by id: an enrollment of ANOTHER activity must
+    // be indistinguishable from one that does not exist at all.
+    return this._prisma.enrollment.findFirst({
+      where: { id: enrollmentId, activityId },
+    });
   }
 
   public async findByUserAndActivity(
@@ -162,6 +176,63 @@ class EnrollmentRepository implements IEnrollmentRepository {
     if (result.count === 0) {
       throw new CustomError(404, "Enrollment not found.");
     }
+  }
+
+  public async confirmAttendance(
+    activityId: string,
+    enrollmentId: string,
+    attendanceConfirmed: boolean,
+    confirmedWorkloadHours: number,
+  ): Promise<Enrollment> {
+    return this._prisma.$transaction(async (tx) => {
+      // Lock BEFORE any read: status and workload ceiling are re-read under
+      // the lock, so a concurrent status transition or a workload edit cannot
+      // slip between the Service's checks and this write. The Service's own
+      // checks stay as a fast path; these are the authoritative ones.
+      const activity = await lockActivityForAttendance(tx, activityId);
+      if (!activity) {
+        throw new CustomError(404, "Activity not found.");
+      }
+
+      if (activity.status !== "COMPLETED") {
+        throw new CustomError(
+          409,
+          "Attendance can only be confirmed for completed activities.",
+        );
+      }
+
+      if (
+        attendanceConfirmed &&
+        confirmedWorkloadHours > activity.workloadHours
+      ) {
+        throw new CustomError(
+          422,
+          "workloadHours must be an integer between 1 and the activity's workload hours.",
+        );
+      }
+
+      // The pair travels in a single statement — there is no path that
+      // writes one column without the other. The where clause carries the
+      // guards, so an enrollment that stopped being APPROVED (or never
+      // belonged to this activity) is simply not written.
+      const result = await tx.enrollment.updateMany({
+        where: {
+          id: enrollmentId,
+          activityId,
+          status: ACTIVE_ENROLLMENT_STATUS,
+        },
+        data: { attendanceConfirmed, confirmedWorkloadHours },
+      });
+
+      if (result.count === 0) {
+        throw new CustomError(
+          409,
+          "Only approved enrollments can have attendance confirmed.",
+        );
+      }
+
+      return tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } });
+    });
   }
 
   public async countApprovedByActivityId(activityId: string): Promise<number> {
