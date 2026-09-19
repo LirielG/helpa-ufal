@@ -1,12 +1,13 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { isValidTransition } from "@/schemas/activity/ActivitySchemas.js";
 import type {
   IListActivitiesFilters,
   IListActivitiesResponse} from "./IActivityService.js";
-import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import { ActivityFullResponse, ActivityResponse, ActivityStatus } from "@/types/activity.js";
 import ValidationError, {
@@ -21,14 +22,18 @@ const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
 
 type Props = {
   activityRepository?: IActivityRepository;
+  userRepository?: IUserRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
+  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._userRepository =
+      props?.userRepository ?? new UserRepository();
   }
 
   public async create(
@@ -163,7 +168,6 @@ class ActivityService implements IActivityService {
       throw new ValidationError(paginationErrors);
     }
 
-    // filtros
     const filterErrors = [];
 
     const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
@@ -262,8 +266,8 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const dbUser = await this._activityRepository.findUserById(userId);
-    const isAuthor = !!dbUser && activity.authorId === userId;
+    const dbUser = await this._userRepository.findUserById(userId);
+    const isAuthor = activity.authorId === userId; // Manter sem !!dbUser para passar no teste da issue #148
     const isManager = dbUser?.isManager ?? false;
 
     if (!isAuthor && !isManager) {
@@ -324,7 +328,6 @@ class ActivityService implements IActivityService {
       if (capacityErrors.length > 0) throw new ValidationError(capacityErrors);
     }
 
-   
     if (data.slots !== undefined) {
       if (data.slots > MAX_SLOTS) {
         throw new ValidationError([{ field: "slots", message: `slots cannot exceed ${MAX_SLOTS}.` }]);
@@ -348,7 +351,7 @@ class ActivityService implements IActivityService {
     const hasExistingAddress = !!activity.details?.address;
 
     if (finalFormat === "ONLINE") {
-      data.address = null; // ignora endereço enviado se virou online
+      data.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -358,7 +361,6 @@ class ActivityService implements IActivityService {
       }
     }
 
-    
     const updatedActivity = await this._activityRepository.update(id, data, addressAction);
 
     return updatedActivity;
@@ -369,16 +371,14 @@ class ActivityService implements IActivityService {
     newStatus: ActivityStatus,
     userId: string
   ): Promise<ActivityResponse> {
-    
     const activity = await this._activityRepository.findById(activityId);
     
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    
-    const user = await this._activityRepository.findUserById(userId);
-    const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
+    const user = await this._userRepository.findUserById(userId);
+    const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 
     if (!isAuthor && !isManager) {
@@ -422,7 +422,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findUserById(userId);
     const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 

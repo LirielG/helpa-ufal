@@ -18,10 +18,8 @@ export interface IActivityRepository {
   ): Promise<ActivityFullResponse>;
 
   updateStatus(id: string, status: string): Promise<Activity>;
-  findUserById(id: string): Promise<{ isManager: boolean } | null>;
   countApprovedEnrollments(activityId: string): Promise<number>;
   softDelete(id: string): Promise<boolean>;
-  
 }
 
 export interface IRepositoryListActivitiesFilters {

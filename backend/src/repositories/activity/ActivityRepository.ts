@@ -145,7 +145,7 @@ class ActivityRepository implements IActivityRepository {
         orderBy: { [orderBy]: order },
         include: {
           details: true,
-          _count: {                              // NOVO
+          _count: {
             select: {
               enrollments: {
                 where: { status: "APPROVED" },
@@ -258,13 +258,6 @@ class ActivityRepository implements IActivityRepository {
     });
   }
 
-  public async findUserById(id: string): Promise<{ isManager: boolean } | null> {
-    return this._prisma.user.findUnique({
-      where: { id },
-      select: { isManager: true },
-    });
-  }
-
   public async countApprovedEnrollments(activityId: string): Promise<number> {
     return this._prisma.enrollment.count({
       where: {
@@ -283,4 +276,5 @@ class ActivityRepository implements IActivityRepository {
     return result.count > 0;
   }
 }
+
 export default ActivityRepository;
