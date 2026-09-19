@@ -4,8 +4,27 @@ export type EnrollmentWithActivity = Prisma.EnrollmentGetPayload<{
   include: { activity: { include: { details: true } } };
 }>;
 
+// Participant payload for the creator/manager view. select (not include)
+// loads ONLY these fields: passwordHash and other user internals never
+// enter application memory — the type can't even express them.
+export type EnrollmentWithParticipant = Prisma.EnrollmentGetPayload<{
+  include: {
+    user: {
+      select: {
+        id: true;
+        fullName: true;
+        email: true;
+        student: { select: { registrationCode: true } };
+      };
+    };
+  };
+}>;
+
 export interface IEnrollmentRepository {
-  findByUserAndActivity(userId: string, activityId: string): Promise<Enrollment | null>;
+  findByUserAndActivity(
+    userId: string,
+    activityId: string,
+  ): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
   enroll(userId: string, activityId: string): Promise<Enrollment>;
@@ -21,4 +40,14 @@ export interface IEnrollmentRepository {
     skip?: number,
     take?: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }>;
+
+  findByActivityId(
+    activityId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    items: EnrollmentWithParticipant[];
+    total: number;
+    totalPresent: number;
+  }>;
 }

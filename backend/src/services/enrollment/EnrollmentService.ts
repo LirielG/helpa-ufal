@@ -4,6 +4,7 @@ import type { IActivityRepository } from "@/repositories/activity/IActivityRepos
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type {
   EnrollmentWithActivity,
+  EnrollmentWithParticipant,
   IEnrollmentRepository,
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
@@ -15,6 +16,8 @@ import type {
   EnrollmentListResponse,
   EnrollmentResponse,
   EnrollmentWithActivityResponse,
+  ParticipantResponse,
+  ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
 type Props = {
@@ -37,7 +40,7 @@ class EnrollmentService implements IEnrollmentService {
     userId: string,
     activityId: string,
   ): Promise<EnrollmentResponse> {
-    await this.assertUserExists(userId);
+    await this.requireUser(userId);
 
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
@@ -54,14 +57,16 @@ class EnrollmentService implements IEnrollmentService {
       throw new CustomError(409, "Activity is not open for enrollment.");
     }
 
-
-    const enrollment = await this._enrollmentRepository.enroll(userId, activityId);
+    const enrollment = await this._enrollmentRepository.enroll(
+      userId,
+      activityId,
+    );
 
     return this.toEnrollResponse(enrollment);
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    await this.assertUserExists(userId);
+    await this.requireUser(userId);
 
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
@@ -87,11 +92,8 @@ class EnrollmentService implements IEnrollmentService {
     limit = 10,
   ): Promise<EnrollmentListResponse> {
     const skip = (page - 1) * limit;
-    const { items, total } = await this._enrollmentRepository.findActiveByUserId(
-      userId,
-      skip,
-      limit,
-    );
+    const { items, total } =
+      await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
     return {
       items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
@@ -101,12 +103,55 @@ class EnrollmentService implements IEnrollmentService {
     };
   }
 
+  public async listParticipants(
+    userId: string,
+    activityId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<ParticipantsListResponse> {
+    const user = await this.requireUser(userId);
+
+    if (!isValidUUID(activityId)) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    if (activity.authorId !== userId && !user.isManager) {
+      throw new CustomError(
+        403,
+        "Only the activity creator or a manager can view the enrollment list.",
+      );
+    }
+
+    const { items, total, totalPresent } =
+      await this._enrollmentRepository.findByActivityId(
+        activityId,
+        page,
+        limit,
+      );
+
+    // totalPresent comes from the repository as-is: the service forwards the
+    // authoritative count instead of re-deriving it from confirmedWorkloadHours.
+    return {
+      items: items.map((item) => this.toParticipantResponse(item)),
+      total,
+      page,
+      limit,
+      totalPresent,
+    };
+  }
+
   // Token valid and user still exists
-  private async assertUserExists(userId: string): Promise<void> {
+  private async requireUser(userId: string): Promise<{ isManager: boolean }> {
     const user = await this._activityRepository.findUserById(userId);
     if (!user) {
       throw new CustomError(401, "User account not found or inactive.");
     }
+    return user;
   }
 
   private toEnrollResponse(enrollment: Enrollment): EnrollmentResponse {
@@ -136,6 +181,23 @@ class EnrollmentService implements IEnrollmentService {
         endDate: enrollment.activity.endDate,
         status: enrollment.activity.status,
       },
+    };
+  }
+
+  private toParticipantResponse(
+    enrollment: EnrollmentWithParticipant,
+  ): ParticipantResponse {
+    return {
+      enrollmentId: enrollment.id,
+      userId: enrollment.userId,
+      fullName: enrollment.user.fullName,
+      email: enrollment.user.email,
+      // Field-by-field stays as a second line of defense, but the repository
+      // now selects only these fields — passwordHash never leaves the database.
+      registrationCode: enrollment.user.student?.registrationCode ?? null,
+      status: enrollment.status,
+      attendanceConfirmed: enrollment.attendanceConfirmed,
+      confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
     };
   }
 }
