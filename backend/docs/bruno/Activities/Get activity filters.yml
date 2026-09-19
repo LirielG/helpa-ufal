@@ -1,0 +1,98 @@
+info:
+  name: Get activity filters (coming soon)
+  type: http
+  seq: 8
+  tags:
+    - Activities
+
+
+http:
+  method: GET
+  url: "{{baseUrl}}/activities/filters"
+
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+
+examples:
+  - name: 200 Options available
+    description: Distinct areas from eligible activities, alphabetically ordered.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "areas": ["Educação", "Meio Ambiente", "Saúde"]
+          }
+  - name: 200 No eligible areas
+    description: Empty base (or only removed/cancelled activities) still answers 200.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "areas": []
+          }
+  - name: 500 Internal server error
+    response:
+      status: 500
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": ""
+          }
+
+
+docs: |-
+  # GET /activities/filters — Area filter options
+
+  Returns the distinct activity areas, so the frontend can populate the
+  dashboard's area filter dynamically (US 2.1.2) instead of hardcoding values.
+
+  > Contract first: this route is **not implemented yet** (issue #158). The
+  > "(coming soon)" suffix is removed from the file name when it ships.
+
+  ## Authentication
+  - None. Public route, like `GET /activities`. A token may be sent (the
+    collection inherits one), but it is ignored.
+
+  ## Source and eligibility
+  - Values come from `ActivityDetails.area`, considering only activities whose
+    parent `Activity` has `deletedAt: null` **and** `status != CANCELLED`.
+  - Removed or cancelled activities never contribute areas: the filter is a
+    discovery tool, and an option that only leads to unavailable activities is
+    a dead end in the UI.
+  - Reads only persisted data — no sync, scraping or side effects.
+
+  ## Case and accents
+  - Options that differ only by letter case ("Saúde" / "saúde" / "SAÚDE") are
+    merged into a single canonical option, because the `area` listing filter
+    matches case-insensitively — the announced option always finds every
+    variant of the group.
+  - Accents are **not** folded: "Saúde" and "Saude" remain separate options.
+    Known limitation; full normalization (unaccent / normalized column) is
+    tracked in a follow-up issue.
+
+  ## Ordering
+  - Alphabetical, by the case-insensitive key, using database ordering.
+
+  ## Coherence with the listing
+  - Every announced area matches at least one activity in
+    `GET /activities?area=<value>` (exact, case-insensitive match on
+    `details.area`).
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 500    | Unexpected server error |
+
+  > Error body follows the API default (`{ status, message }`).

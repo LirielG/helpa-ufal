@@ -114,7 +114,7 @@ class ActivityRepository implements IActivityRepository {
   public async list(
     filters: IRepositoryListActivitiesFilters
   ): Promise<IRepositoryListActivitiesResponse> {
-    const {type, format, status, search, campus, page, limit, orderBy, order} = filters;
+    const {type, format, status, search, campus, area, page, limit, orderBy, order} = filters;
 
     const whereClause: any = { deletedAt: null };
 
@@ -122,9 +122,10 @@ class ActivityRepository implements IActivityRepository {
     if(status)whereClause.status = status;
     if(campus)whereClause.campus = campus;
 
-    if(format){
+    if(format || area){
       whereClause.details = {
-        format: format,
+        ...(format ? { format: format } : {}),
+        ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),
       };
     }
 
@@ -167,6 +168,35 @@ class ActivityRepository implements IActivityRepository {
       activities,
       total,
     };
+  }
+
+    public async listDistinctAreas(): Promise<string[]> {
+    const rows = await this._prisma.activityDetails.groupBy({
+      by: ["area"],
+      where: {
+        activity: {
+          is: {
+            deletedAt: null,
+            status: { not: "CANCELLED" },
+          },
+        },
+      },
+    });
+
+    const areas = rows.map((r) => r.area);
+
+    const canonicalByKey = new Map<string, string>();
+    for (const area of areas) {
+      const key = area.toLowerCase();
+      const current = canonicalByKey.get(key);
+      if (current === undefined || area < current) {
+        canonicalByKey.set(key, area);
+      }
+    }
+
+    return Array.from(canonicalByKey.entries())
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([, canonicalArea]) => canonicalArea);
   }
 
   public async update(

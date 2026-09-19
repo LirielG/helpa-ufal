@@ -22,6 +22,7 @@ export interface IActivityRepository {
   countApprovedEnrollments(activityId: string): Promise<number>;
   softDelete(id: string): Promise<boolean>;
   
+  listDistinctAreas(): Promise<string[]>;
 }
 
 export interface IRepositoryListActivitiesFilters {
@@ -30,6 +31,7 @@ export interface IRepositoryListActivitiesFilters {
   status?: string;
   search?: string;
   campus?: string;
+  area?: string;
   page: number;
   limit: number;
   orderBy: string;
