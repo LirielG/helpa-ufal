@@ -1,22 +1,33 @@
-import type { ActionType } from "../dashboard/types";
+import type {
+  ActionCampus,
+  ActionFormat,
+  ActionType,
+} from "../dashboard/types";
 
-export interface ActionEditFormData {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  type: ActionType;
-  slots: number;
-  format: "IN_PERSON" | "ONLINE" | "HYBRID";
+/**
+ * The API has no partial address: `AddressSchema` requires the five fields in
+ * every address object, so a change to one of them sends the whole block.
+ */
+export interface ActionAddressPayload {
+  addressLine: string;
+  district: string;
+  zipCode: string;
+  city: string;
+  state: string;
+}
+
+/** Body of `PATCH /activities/:id`: only the fields the user changed. */
+export interface UpdateActionPayload {
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  type?: ActionType;
+  campus?: ActionCampus;
+  format?: ActionFormat;
+  area?: string;
+  slots?: number;
   workloadHours?: number;
-  area: string;
   url?: string;
-  campus: string;
-  address?: {
-    address: string;
-    district: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
+  address?: ActionAddressPayload;
 }

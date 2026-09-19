@@ -1,5 +1,23 @@
 import { z } from "zod";
 
+/** Same list the API validates `address.state` against. */
+const BRAZILIAN_STATES = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+  "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+] as const;
+
+/** The screen masks the zip code, the API takes the eight digits raw. */
+const ZIP_CODE_PATTERN = /^\d{5}-?\d{3}$/;
+
+const REQUIRED_ADDRESS_FIELDS = [
+  ["addressLine", "Informe o logradouro"],
+  ["district", "Informe o bairro"],
+  ["zipCode", "Informe o CEP"],
+  ["city", "Informe a cidade"],
+  ["state", "Informe o estado"],
+] as const;
+
 export const ActionEditSchema = z
   .object({
     title: z
@@ -18,33 +36,37 @@ export const ActionEditSchema = z
     slots: z.coerce
       .number({ message: "A quantidade de vagas deve ser um número válido" })
       .int("A quantidade de vagas deve ser um número inteiro")
-      .positive("A quantidade de vagas deve ser maior que zero")
       .min(1, "Informe a quantidade de vagas"),
     workloadHours: z.coerce
       .number({ message: "Informe a carga horária" })
       .int("A carga horária deve ser um número inteiro")
-      .positive("A carga horária deve ser maior que zero"),
+      .min(1, "A carga horária deve ser maior que zero"),
     format: z.enum(["ONLINE", "IN_PERSON", "HYBRID"], {
       message: "Selecione o formato da ação",
     }),
-    area: z.enum(["Robótica", "Educação", "Saúde", "Meio Ambiente", "Arquitetura"], {
-      message: "Selecione uma área de atuação",
-    }),
-    campus: z.enum(["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"],
-      { message: "Selecione o campus" }
+    // Free text, like the API: an action created before the closed list of #171
+    // still has to be editable.
+    area: z.string().trim().min(1, "Selecione uma área de atuação"),
+    campus: z.enum(
+      [
+        "MACEIO",
+        "ARAPIRACA",
+        "PALMEIRA",
+        "PENEDO",
+        "RIO_LARGO",
+        "DELMIRO_GOUVEIA",
+        "SANTANA_IPANEMA",
+      ],
+      { message: "Selecione o campus" },
     ),
-    url: z
-      .string()
-      .url("Informe uma URL válida")
-      .optional()
-      .or(z.literal("")),
+    url: z.string().url("Informe uma URL válida").or(z.literal("")),
     address: z
       .object({
-        addressLine: z.string().optional().or(z.literal("")),
-        district: z.string().optional().or(z.literal("")),
-        zipCode: z.string().optional().or(z.literal("")),
-        city: z.string().optional().or(z.literal("")),
-        state: z.string().optional().or(z.literal("")),
+        addressLine: z.string().trim(),
+        district: z.string().trim(),
+        zipCode: z.string().trim(),
+        city: z.string().trim(),
+        state: z.string().trim(),
       })
       .optional(),
   })
@@ -52,35 +74,41 @@ export const ActionEditSchema = z
     message: "A data de encerramento deve ser posterior à data de início",
     path: ["endDate"],
   })
-  .refine(
-    (data) => {
-      if (data.format === "ONLINE" || data.format === "HYBRID") {
-        return !!data.url && data.url.trim().length > 0;
+  .refine((data) => data.format === "IN_PERSON" || !!data.url, {
+    message: "Link do evento é obrigatório para ações on-line ou híbridas",
+    path: ["url"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.format === "ONLINE") return;
+
+    REQUIRED_ADDRESS_FIELDS.forEach(([field, message]) => {
+      if (!data.address?.[field]) {
+        ctx.addIssue({ code: "custom", message, path: ["address", field] });
       }
-      return true;
-    },
-    {
-      message: "Link do evento é obrigatório para ações on-line ou híbridas",
-      path: ["url"],
+    });
+
+    const { zipCode, state } = data.address ?? {};
+
+    if (zipCode && !ZIP_CODE_PATTERN.test(zipCode)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "O CEP deve ter 8 dígitos",
+        path: ["address", "zipCode"],
+      });
     }
-  )
-  .refine(
-    (data) => {
-      if (data.format === "IN_PERSON" || data.format === "HYBRID") {
-        return (
-          !!data.address?.addressLine?.trim() &&
-          !!data.address?.district?.trim() &&
-          !!data.address?.zipCode?.trim() &&
-          !!data.address?.city?.trim() &&
-          !!data.address?.state?.trim()
-        );
-      }
-      return true;
-    },
-    {
-      message: "Endereço completo é obrigatório para ações presenciais ou híbridas",
-      path: ["address", "addressLine"],
+
+    if (
+      state &&
+      !BRAZILIAN_STATES.includes(
+        state.toUpperCase() as (typeof BRAZILIAN_STATES)[number],
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe uma UF válida (ex.: AL)",
+        path: ["address", "state"],
+      });
     }
-  );
+  });
 
 export type ActionEditSchemaType = z.infer<typeof ActionEditSchema>;

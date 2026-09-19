@@ -1,550 +1,551 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@/test";
-import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
-import { server } from "@/test";
+import { describe, expect, it, vi } from "vitest";
+import { Route, Routes } from "react-router";
+import {
+  API,
+  HttpResponse,
+  delay,
+  fireEvent,
+  http,
+  makeActionDetail,
+  render,
+  screen,
+  server,
+  waitFor,
+  within,
+} from "@/test";
+import type { ActionDetail, ActionDetails } from "@/features/action-detail/types";
+import type { ActionAddressPayload } from "@/features/action-edit/types";
 import { EditAction } from "../EditAction";
 
-const mockNavigate = vi.fn();
+const ACTION_ID = "action-1";
 
-vi.mock("react-router", async () => {
-  const actual = await vi.importActual("react-router");
+const ADDRESS: ActionAddressPayload = {
+  addressLine: "Av. Manoel Severino Barbosa, s/n",
+  district: "Bom Sucesso",
+  zipCode: "57309005",
+  city: "Arapiraca",
+  state: "AL",
+};
+
+type EditableAction = ActionDetail & { details: ActionDetails };
+
+function editableAction(
+  details: Partial<ActionDetails> = {},
+  action: Partial<ActionDetail> = {},
+): EditableAction {
+  const base = makeActionDetail({ id: ACTION_ID, ...action });
+
   return {
-    ...actual,
-    useParams: () => ({ id: "123" }),
-    useNavigate: () => mockNavigate,
-  };
-});
-
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useParams: () => ({ id: "123" }),
-    useNavigate: () => mockNavigate,
-  };
-});
-
-const mockActionData = {
-  id: "123",
-  title: "Oficina de React Real",
-  type: "COURSE",
-  status: "OPEN",
-  slots: 30,
-  campus: "MACEIO",
-  startDate: "2026-10-10",
-  endDate: "2026-10-20",
-  details: {
-    description: "Descrição vinda da API real com tamanho suficiente",
-    workloadHours: 20,
-    format: "IN_PERSON",
-    area: "Robótica",
-    url: "https://exemplo.com",
-    address: {
-      addressLine: "Av. Lourival Melo Mota, s/n",
-      district: "Cidade Universitária",
-      city: "Maceió",
-      state: "AL",
-      zipCode: "57072970",
+    ...base,
+    details: {
+      ...(base.details as ActionDetails),
+      area: "Robótica",
+      url: "https://exemplo.com/oficina",
+      address: { id: "address-1", ...ADDRESS },
+      ...details,
     },
-  },
-};
+  };
+}
 
-const setupGetSuccess = () => {
+function mockAction(action: ActionDetail = editableAction()) {
   server.use(
-    http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData))
+    http.get(`${API}/activities/:id`, () => HttpResponse.json(action)),
   );
-};
 
-describe("EditAction Component", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  return action;
+}
+
+/**
+ * Replaces the update handler with a spy over the request body, so each test
+ * can assert the exact payload the screen built.
+ */
+function spyOnUpdate(onResponse?: () => Promise<void>) {
+  const onRequest = vi.fn();
+
+  server.use(
+    http.patch(`${API}/activities/:id`, async ({ request }) => {
+      onRequest(await request.json());
+      await onResponse?.();
+      return HttpResponse.json(editableAction());
+    }),
+  );
+
+  return onRequest;
+}
+
+function failUpdate(status: number, body: unknown = {}) {
+  server.use(
+    http.patch(`${API}/activities/:id`, () =>
+      HttpResponse.json(body, { status }),
+    ),
+  );
+}
+
+/**
+ * The destination routes are part of the tree so a redirect is observed
+ * through what ends up on screen, rather than by spying on `useNavigate`.
+ */
+function renderEditAction() {
+  return render(
+    <Routes>
+      <Route path="/activity/:id/edit" element={<EditAction />} />
+      <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+      <Route path="/login" element={<h1>Entrar</h1>} />
+    </Routes>,
+    { route: `/activity/${ACTION_ID}/edit` },
+  );
+}
+
+/** Resolves once the fetched action is in the form. */
+function findTitleField() {
+  return screen.findByLabelText("Título");
+}
+
+function getSaveButton() {
+  return screen.getByRole("button", { name: "Salvar" });
+}
+
+function optionLabels(select: HTMLElement) {
+  return within(select)
+    .getAllByRole("option")
+    .map((option) => option.textContent);
+}
+
+describe("EditAction", () => {
+  it("loads the action from the API into the form", async () => {
+    const action = mockAction();
+
+    renderEditAction();
+
+    expect(await findTitleField()).toHaveValue(action.title);
+    expect(screen.getByPlaceholderText(/Descreva os detalhes/)).toHaveValue(
+      action.details.description,
+    );
+    expect(screen.getByLabelText("Qtde. de Vagas")).toHaveValue(action.slots);
+    expect(screen.getByLabelText("Carga horária")).toHaveValue(20);
+    expect(screen.getByLabelText("Tipo de ação")).toHaveValue("COURSE");
+    expect(screen.getByLabelText("Formato da ação")).toHaveValue("IN_PERSON");
+    expect(screen.getByLabelText("Área de atuação")).toHaveValue("Robótica");
+    expect(screen.getByLabelText("Campus")).toHaveValue("ARAPIRACA");
+    expect(screen.getByLabelText("Link do evento")).toHaveValue(
+      action.details.url,
+    );
+    expect(screen.getByLabelText("Logradouro")).toHaveValue(
+      ADDRESS.addressLine,
+    );
+    expect(screen.getByLabelText("Bairro")).toHaveValue(ADDRESS.district);
+    expect(screen.getByLabelText("Cidade")).toHaveValue(ADDRESS.city);
+    expect(screen.getByLabelText("Estado")).toHaveValue(ADDRESS.state);
   });
 
-  it("reproduz o layout com título, descrição largura total e botões Cancelar e Salvar", async () => {
-    setupGetSuccess();
+  it("shows the masked zip code and the local end date", async () => {
+    // The API stores the end of the day in UTC, which in America/Maceio falls
+    // on the next calendar day, so the ISO prefix is not the value to show.
+    mockAction(editableAction({}, { endDate: "2026-03-18T02:59:59.999Z" }));
 
-    render(<EditAction />);
+    renderEditAction();
 
-    expect(await screen.findByDisplayValue("Oficina de React Real")).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/Descrição vinda da API real/i)).toBeInTheDocument();
+    await findTitleField();
 
-    expect(screen.getByRole("button", { name: /cancelar/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /salvar/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("CEP")).toHaveValue("57309-005");
+    expect(screen.getByLabelText("Data de encerramento")).toHaveValue(
+      "2026-03-17",
+    );
   });
 
-  it("não exibe o card de responsável", async () => {
-    setupGetSuccess();
+  it("does not show the responsible card", async () => {
+    mockAction();
 
-    render(<EditAction />);
+    renderEditAction();
 
-    await screen.findByDisplayValue("Oficina de React Real");
+    await findTitleField();
 
-    expect(screen.queryByText(/responsável/i)).not.toBeInTheDocument();
-    expect(screen.queryByTestId("responsible-card")).not.toBeInTheDocument();
+    expect(screen.queryByText(/respons[áa]vel/i)).not.toBeInTheDocument();
   });
 
-  it("carrega os dados reais da ação ao abrir a tela de edição", async () => {
-    setupGetSuccess();
+  it("offers the type, format, area and campus vocabulary closed in #171", async () => {
+    mockAction();
 
-    render(<EditAction />);
+    renderEditAction();
 
-    expect(await screen.findByDisplayValue("Oficina de React Real")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-10-10")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-10-20")).toBeInTheDocument();
+    await findTitleField();
+
+    expect(optionLabels(screen.getByLabelText("Tipo de ação"))).toEqual([
+      "Extensão",
+      "Curso ou minicurso",
+      "Evento",
+      "Palestra",
+      "Outro",
+    ]);
+    expect(optionLabels(screen.getByLabelText("Formato da ação"))).toEqual([
+      "Presencial",
+      "On-line",
+      "Híbrido",
+    ]);
+    expect(optionLabels(screen.getByLabelText("Área de atuação"))).toEqual([
+      "Robótica",
+      "Educação",
+      "Saúde",
+      "Meio Ambiente",
+      "Arquitetura",
+    ]);
+    expect(optionLabels(screen.getByLabelText("Campus"))).toEqual([
+      "UFAL - Campus Maceió",
+      "UFAL - Campus Arapiraca",
+      "UFAL - Campus Palmeira dos Índios",
+      "UFAL - Campus Penedo",
+      "UFAL - Campus Rio Largo",
+      "UFAL - Campus Delmiro Gouveia",
+      "UFAL - Campus Santana do Ipanema",
+    ]);
   });
 
-  it("exibe todos os 12 campos do formulário e permite alterá-los individualmente", async () => {
-    const user = userEvent.setup();
-    setupGetSuccess();
+  it("sends only the changed fields and goes to the action detail", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    render(<EditAction />);
+    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
 
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    const descInput = screen.getByDisplayValue(/Descrição vinda da API real/i);
-    const startDateInput = screen.getByDisplayValue("2026-10-10");
-    const endDateInput = screen.getByDisplayValue("2026-10-20");
-    const typeSelect = screen.getByDisplayValue("Curso ou minicurso");
-    const slotsInput = screen.getByDisplayValue("30");
-    const formatSelect = screen.getByDisplayValue("Presencial");
-    const workloadInput = screen.getByDisplayValue("20");
-    const areaSelect = screen.getByDisplayValue("Robótica");
-    const urlInput = screen.getByDisplayValue("https://exemplo.com");
-    const addressInput = screen.getByDisplayValue("Av. Lourival Melo Mota, s/n");
-    const campusSelect = screen.getByDisplayValue("UFAL - Campus Maceió");
-
-    expect(titleInput).toHaveAttribute("name", "title");
-    expect(descInput).toHaveAttribute("name", "description");
-    expect(startDateInput).toHaveAttribute("name", "startDate");
-    expect(endDateInput).toHaveAttribute("name", "endDate");
-    expect(typeSelect).toHaveAttribute("name", "type");
-    expect(slotsInput).toHaveAttribute("name", "slots");
-    expect(formatSelect).toHaveAttribute("name", "format");
-    expect(workloadInput).toHaveAttribute("name", "workloadHours");
-    expect(areaSelect).toHaveAttribute("name", "area");
-    expect(urlInput).toHaveAttribute("name", "url");
-    expect(addressInput).toHaveAttribute("name", "address.addressLine");
-    expect(campusSelect).toHaveAttribute("name", "campus");
-
-    await user.clear(titleInput);
-    await user.type(titleInput, "Título Editado Válido");
-    expect(titleInput).toHaveValue("Título Editado Válido");
-
-    await user.clear(descInput);
-    await user.type(descInput, "Nova descrição editada com texto suficiente");
-    expect(descInput).toHaveValue("Nova descrição editada com texto suficiente");
-
-    fireEvent.change(startDateInput, { target: { value: "2026-11-01" } });
-    expect(startDateInput).toHaveValue("2026-11-01");
-
-    fireEvent.change(endDateInput, { target: { value: "2026-11-10" } });
-    expect(endDateInput).toHaveValue("2026-11-10");
-
-    await user.clear(slotsInput);
-    await user.type(slotsInput, "50");
-    expect(slotsInput).toHaveValue(50);
-
-    await user.clear(workloadInput);
-    await user.type(workloadInput, "40");
-    expect(workloadInput).toHaveValue(40);
-
-    await user.clear(urlInput);
-    await user.type(urlInput, "https://novo-link.com");
-    expect(urlInput).toHaveValue("https://novo-link.com");
-
-    await user.clear(addressInput);
-    await user.type(addressInput, "Nova Rua 456");
-    expect(addressInput).toHaveValue("Nova Rua 456");
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
   });
 
-  it("exibe os rótulos e opções corretas em pt-BR nos selects de tipo, formato, área e campus", async () => {
-    setupGetSuccess();
-    render(<EditAction />);
+  it("sends the whole address block when a single subfield changes", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    await screen.findByDisplayValue("Oficina de React Real");
+    await findTitleField();
 
-    const formatSelect = screen.getByDisplayValue("Presencial");
-    expect(formatSelect).toHaveTextContent("Presencial");
-    expect(formatSelect).toHaveTextContent("On-line");
-    expect(formatSelect).toHaveTextContent("Híbrido");
+    const district = screen.getByLabelText("Bairro");
+    await user.clear(district);
+    await user.type(district, "Centro");
+    await user.click(getSaveButton());
 
-    const typeSelect = screen.getByDisplayValue("Curso ou minicurso");
-    expect(typeSelect).toHaveTextContent("Curso ou minicurso");
-
-    const areaSelect = screen.getByDisplayValue("Robótica");
-    expect(areaSelect).toBeInTheDocument();
-
-    const campusSelect = screen.getByDisplayValue("UFAL - Campus Maceió");
-    expect(campusSelect).toBeInTheDocument();
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        address: { ...ADDRESS, district: "Centro" },
+      }),
+    );
   });
 
-  it("persiste a mudança ao corrigir o endereço de uma ação já publicada", async () => {
-    const user = userEvent.setup();
-    let sentAddress: Record<string, unknown> | undefined;
+  it("sends the link of an in-person action when it is edited", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async ({ request }) => {
-        const body = (await request.json()) as { address?: Record<string, unknown> };
-        sentAddress = body.address;
-        return HttpResponse.json({});
-      })
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link do evento");
+    await user.clear(url);
+    await user.type(url, "https://exemplo.com/novo");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        url: "https://exemplo.com/novo",
+      }),
+    );
+  });
+
+  it("uppercases a state typed in lower case", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const state = screen.getByLabelText("Estado");
+    await user.clear(state);
+    await user.type(state, "se");
+
+    expect(state).toHaveValue("SE");
+
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        address: { ...ADDRESS, state: "SE" },
+      }),
+    );
+  });
+
+  it("blocks an incomplete zip code before any request goes out", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const zipCode = screen.getByLabelText("CEP");
+    await user.clear(zipCode);
+    await user.type(zipCode, "5730");
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText("O CEP deve ter 8 dígitos")).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("keeps an action editable when its area is outside the closed list", async () => {
+    mockAction(editableAction({ area: "Tecnologia e Inovação" }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+
+    expect(screen.getByLabelText("Área de atuação")).toHaveValue(
+      "Tecnologia e Inovação",
     );
 
-    render(<EditAction />);
+    await user.clear(title);
+    await user.type(title, "Oficina de Robótica");
+    await user.click(getSaveButton());
 
-    const addressInput = await screen.findByDisplayValue("Av. Lourival Melo Mota, s/n");
-    await user.clear(addressInput);
-    await user.type(addressInput, "Rua das Flores, 123");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(sentAddress).toBeDefined();
-      expect(sentAddress?.addressLine).toBe("Rua das Flores, 123");
-    });
-  });
-
-  it("persiste a mudança de um campo e redireciona para a tela da ação", async () => {
-    const user = userEvent.setup();
-    let patchPayload: Record<string, unknown> = {};
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async ({ request }) => {
-        patchPayload = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
-      })
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ title: "Oficina de Robótica" }),
     );
-
-    render(<EditAction />);
-
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Título Atualizado Válido");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(patchPayload).toEqual({ title: "Título Atualizado Válido" });
-      expect(mockNavigate).toHaveBeenCalledWith("/activity/123");
-    });
   });
 
-  it("não dispara requisição HTTP PATCH ao salvar sem alterar nada", async () => {
-    const user = userEvent.setup();
-    let patchCalled = false;
+  it("makes no request and stays on the form when nothing changed", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () => {
-        patchCalled = true;
-        return HttpResponse.json({});
-      })
-    );
+    await findTitleField();
+    await user.click(getSaveButton());
 
-    render(<EditAction />);
-
-    await screen.findByDisplayValue("Oficina de React Real");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/activity/123");
-    });
-
-    expect(patchCalled).toBe(false);
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.queryByText("Detalhe da ação")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Título")).toBeInTheDocument();
   });
 
-  it("envia somente os campos alterados no corpo do PATCH", async () => {
-    const user = userEvent.setup();
-    let patchPayload: Record<string, unknown> = {};
+  it("asks for confirmation before turning the action online", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async ({ request }) => {
-        patchPayload = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
-      })
-    );
+    await findTitleField();
+    await user.selectOptions(screen.getByLabelText("Formato da ação"), "ONLINE");
+    await user.click(getSaveButton());
 
-    render(<EditAction />);
+    const dialog = await screen.findByRole("dialog");
 
-    const slotsInput = await screen.findByDisplayValue("30");
-    await user.clear(slotsInput);
-    await user.type(slotsInput, "45");
+    expect(
+      within(dialog).getByText(/dados de endereço .* serão excluídos/i),
+    ).toBeInTheDocument();
 
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
+    await user.click(within(dialog).getByRole("button", { name: "Confirmar" }));
 
-    await waitFor(() => {
-      expect(patchPayload).toEqual({ slots: 45 });
-      expect(patchPayload).not.toHaveProperty("title");
-    });
-  });
-
-  it("envia o CEP sanitizado apenas com dígitos para a API", async () => {
-    const user = userEvent.setup();
-    let sentZipCode = "";
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async ({ request }) => {
-        const body = (await request.json()) as { address?: { zipCode?: string } };
-        sentZipCode = body.address?.zipCode || "";
-        return HttpResponse.json({});
-      })
-    );
-
-    render(<EditAction />);
-
-    const zipInput = await screen.findByDisplayValue("57072-970");
-    await user.clear(zipInput);
-    await user.type(zipInput, "57000000");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(sentZipCode).toBe("57000000");
-    });
-  });
-
-  it("exibe modal de confirmação ao mudar o formato para ONLINE e envia após confirmar", async () => {
-    const user = userEvent.setup();
-    let patchPayload: Record<string, unknown> = {};
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async ({ request }) => {
-        patchPayload = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
-      })
-    );
-
-    render(<EditAction />);
-
-    const formatSelect = await screen.findByDisplayValue("Presencial");
-    await user.selectOptions(formatSelect, "ONLINE");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    expect(await screen.findByText(/Confirmar alteração/i)).toBeInTheDocument();
-    expect(screen.getByText(/dados de endereço anteriormente associados a esta ação serão excluídos/i)).toBeInTheDocument();
-
-    const confirmButton = screen.getByRole("button", { name: /^confirmar$/i });
-    await user.click(confirmButton);
-
-    await waitFor(() => {
-      expect(patchPayload.format).toBe("ONLINE");
-    });
-  });
-
-  it("mudar o formato para presencial ou híbrido sem endereço preenchido é bloqueado pelo schema", async () => {
-    const user = userEvent.setup();
-    let patchCalled = false;
-
-    const onlineData = {
-      ...mockActionData,
-      details: {
-        ...mockActionData.details,
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
         format: "ONLINE",
-        address: null,
-      },
-    };
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(onlineData)),
-      http.patch(/\/activities\/123/, () => {
-        patchCalled = true;
-        return HttpResponse.json({});
-      })
+        url: "https://exemplo.com/oficina",
+      }),
     );
+  });
 
-    render(<EditAction />);
+  it("sends nothing and returns to the form when the confirmation is cancelled", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
 
-    const formatSelect = await screen.findByDisplayValue("On-line");
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
+    await findTitleField();
+    await user.selectOptions(screen.getByLabelText("Formato da ação"), "ONLINE");
+    await user.click(getSaveButton());
 
-    await user.selectOptions(formatSelect, "IN_PERSON");
-    await user.click(saveButton);
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
-    await waitFor(() => {
-      expect(screen.getByText(/Endereço completo é obrigatório/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Título")).toBeInTheDocument();
+  });
+
+  it("reports every empty address field when the action becomes in-person", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "IN_PERSON",
+    );
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText("Informe o logradouro")).toBeInTheDocument();
+    expect(screen.getByText("Informe o bairro")).toBeInTheDocument();
+    expect(screen.getByText("Informe o CEP")).toBeInTheDocument();
+    expect(screen.getByText("Informe a cidade")).toBeInTheDocument();
+    expect(screen.getByText("Informe o estado")).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("translates the slots error the API answers with", async () => {
+    mockAction();
+    failUpdate(400, {
+      status: 400,
+      message: "Validation error.",
+      errors: [
+        {
+          field: "slots",
+          message:
+            "slots cannot be reduced below the current number of approved enrollments (15).",
+        },
+      ],
     });
-    expect(patchCalled).toBe(false);
+    const { user } = renderEditAction();
 
-    await user.selectOptions(formatSelect, "HYBRID");
-    await user.click(saveButton);
+    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    await user.clear(slots);
+    await user.type(slots, "5");
+    await user.click(getSaveButton());
 
-    await waitFor(() => {
-      expect(screen.getByText(/Endereço completo é obrigatório/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (15).",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a pt-BR message when the API rejects the zip code", async () => {
+    mockAction();
+    failUpdate(400, {
+      status: 400,
+      message: "Validation error.",
+      errors: [
+        {
+          field: "address.zipCode",
+          message: "zipCode must contain exactly 8 digits.",
+        },
+      ],
     });
-    expect(patchCalled).toBe(false);
-  });
+    const { user } = renderEditAction();
 
-  it("reduzir vagas exibe erro retornado pela API no campo de vagas", async () => {
-    const user = userEvent.setup();
+    await findTitleField();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () =>
-        HttpResponse.json(
-          { message: "O número mínimo de vagas permitido é 15 inscritos atuais." },
-          { status: 400 }
-        )
-      )
-    );
-
-    render(<EditAction />);
-
-    const slotsInput = await screen.findByDisplayValue("30");
-    await user.clear(slotsInput);
-    await user.type(slotsInput, "5");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
+    const city = screen.getByLabelText("Cidade");
+    await user.clear(city);
+    await user.type(city, "Maceió");
+    await user.click(getSaveButton());
 
     expect(
-      await screen.findByText(/O número mínimo de vagas permitido é 15 inscritos atuais/i)
+      await screen.findByText("O CEP deve ter 8 dígitos."),
     ).toBeInTheDocument();
   });
 
-  it("editar ação concluída exibe mensagem de erro 409", async () => {
-    const user = userEvent.setup();
+  it("shows the permission message on 403", async () => {
+    mockAction();
+    failUpdate(403);
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () =>
-        HttpResponse.json(
-          { message: "Ações concluídas ou canceladas não podem ser editadas." },
-          { status: 409 }
-        )
-      )
-    );
-
-    render(<EditAction />);
-
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Título Alterado Novo");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título sem permissão");
+    await user.click(getSaveButton());
 
     expect(
-      await screen.findByText(/Ações concluídas ou canceladas não podem ser editadas/i)
+      await screen.findByText("Apenas o autor ou gestor pode editar esta ação."),
     ).toBeInTheDocument();
   });
 
-  it("usuário sem permissão recebe mensagem de permissão 403 em pt-BR", async () => {
-    const user = userEvent.setup();
+  it("shows the removed-action message when the update answers 404", async () => {
+    mockAction();
+    failUpdate(404);
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () =>
-        HttpResponse.json({}, { status: 403 })
-      )
-    );
-
-    render(<EditAction />);
-
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Título Permissão Teste");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título de ação removida");
+    await user.click(getSaveButton());
 
     expect(
-      await screen.findByText(/Apenas o autor ou gestor pode editar esta ação/i)
+      await screen.findByText("Ação não encontrada ou removida."),
     ).toBeInTheDocument();
   });
 
-  it("ação inexistente exibe mensagem de ação não encontrada", async () => {
+  it("shows the closed-action message on 409", async () => {
+    mockAction();
+    failUpdate(409);
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título de ação concluída");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "Ações concluídas ou canceladas não podem ser editadas.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("goes to the login screen on 401", async () => {
+    mockAction();
+    failUpdate(401);
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título com sessão expirada");
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText("Entrar")).toBeInTheDocument();
+  });
+
+  it("keeps what was typed when the update fails with a server error", async () => {
+    mockAction();
+    failUpdate(500, { message: "Internal server error." });
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título preservado após o erro");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Título")).toHaveValue(
+      "Título preservado após o erro",
+    );
+  });
+
+  it("shows the not-found screen when the action does not exist", async () => {
     server.use(
-      http.get(/\/activities\/123/, () => new HttpResponse(null, { status: 404 }))
+      http.get(
+        `${API}/activities/:id`,
+        () => new HttpResponse(null, { status: 404 }),
+      ),
     );
 
-    render(<EditAction />);
+    renderEditAction();
 
     expect(await screen.findByText("Ação não encontrada.")).toBeInTheDocument();
   });
 
-  it("status 401 redireciona para o login", async () => {
-    const user = userEvent.setup();
+  it("sends a single request when save is clicked twice", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate(() => delay(200));
+    const { user } = renderEditAction();
 
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () => new HttpResponse(null, { status: 401 }))
-    );
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "Título com clique duplo");
 
-    render(<EditAction />);
+    const save = getSaveButton();
+    fireEvent.click(save);
+    fireEvent.click(save);
 
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Título Auth Test");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
-    });
-  });
-
-  it("falha 500 preserva o formulário preenchido", async () => {
-    const user = userEvent.setup();
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, () =>
-        HttpResponse.json({ message: "Erro interno" }, { status: 500 })
-      )
-    );
-
-    render(<EditAction />);
-
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Texto Preservado Apos Erro");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-    await user.click(saveButton);
-
-    expect(await screen.findByDisplayValue("Texto Preservado Apos Erro")).toBeInTheDocument();
-  });
-
-  it("clique duplo em salvar não dispara duas requisições concorrentes", async () => {
-    const user = userEvent.setup();
-    let patchCallCount = 0;
-
-    server.use(
-      http.get(/\/activities\/123/, () => HttpResponse.json(mockActionData)),
-      http.patch(/\/activities\/123/, async () => {
-        patchCallCount++;
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        return HttpResponse.json({});
-      })
-    );
-
-    render(<EditAction />);
-
-    const titleInput = await screen.findByDisplayValue("Oficina de React Real");
-    await user.clear(titleInput);
-    await user.type(titleInput, "Clique Duplo Teste");
-
-    const saveButton = screen.getByRole("button", { name: /salvar/i });
-
-    fireEvent.click(saveButton);
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(patchCallCount).toBe(1);
-    });
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
   });
 });

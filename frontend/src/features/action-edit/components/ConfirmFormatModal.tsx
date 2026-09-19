@@ -1,5 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import { Button } from "../../../components/Button";
+import { ACTION_FORMAT_LABELS } from "../../dashboard/constants";
 
 interface ConfirmFormatModalProps {
   isOpen: boolean;
@@ -18,19 +19,29 @@ export function ConfirmFormatModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-format-title"
+        className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6"
+      >
         
         <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-600 border-2 border-red-500">
           <AlertCircle className="w-8 h-8" />
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-2xl font-bold text-[#0A2240]">
+          <h3
+            id="confirm-format-title"
+            className="text-2xl font-bold text-[#0A2240]"
+          >
             Confirmar alteração
           </h3>
           <p className="text-sm text-gray-600 leading-snug">
             Você está prestes a alterar o formato da ação para{" "}
-            <span className="font-semibold text-gray-800">Online</span>.
+            <span className="font-semibold text-gray-800">
+              {ACTION_FORMAT_LABELS.ONLINE}
+            </span>.
           </p>
         </div>
 

@@ -1,9 +1,10 @@
 import { api } from "../../services/api";
-import type { ActionEditSchemaType } from "./validators";
+import type { ActionDetail } from "../action-detail/types";
+import type { UpdateActionPayload } from "./types";
 
-export async function updateAction(id: string, payload: Partial<ActionEditSchemaType>) {
-  const response = (await api.patch(`/activities/${id}`, payload)) as {
-    data: Record<string, unknown>;
-  };
-  return response.data;
+export function updateAction(
+  id: string,
+  payload: UpdateActionPayload,
+): Promise<ActionDetail> {
+  return api.patch<ActionDetail>(`/activities/${id}`, payload);
 }

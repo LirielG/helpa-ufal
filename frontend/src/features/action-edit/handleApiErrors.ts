@@ -1,114 +1,80 @@
-import type { UseFormSetError, FieldValues, Path } from "react-hook-form";
+import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 import type { NavigateFunction } from "react-router";
+import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
 
-interface ApiErrorShape {
-  status?: number;
-  message?: string;
-  errors?: Array<{ field?: string; path?: string; message?: string }>;
-  response?: {
-    status?: number;
-    data?: {
-      message?: string;
-      errors?: Array<{ field?: string; path?: string; message?: string }>;
-    };
-  };
-  data?: {
-    message?: string;
-    errors?: Array<{ field?: string; path?: string; message?: string }>;
-  };
-}
+const GENERIC_ERROR = "Ocorreu um erro ao atualizar a ação. Tente novamente.";
 
-function translateSlotErrorMessage(message: string): string {
-  const lowerMessage = message.toLowerCase();
+/**
+ * The API answers in English, so every field it can reject gets its own pt-BR
+ * message here instead of the response text reaching the screen.
+ */
+const FIELD_MESSAGES: Record<string, string> = {
+  title: "Informe um título válido.",
+  description: "Informe uma descrição válida.",
+  type: "Selecione um tipo de ação válido.",
+  campus: "Selecione um campus válido.",
+  area: "Informe uma área de atuação válida.",
+  format: "Selecione um formato de ação válido.",
+  slots: "Informe uma quantidade de vagas válida.",
+  workloadHours: "Informe uma carga horária válida.",
+  startDate: "A data de início deve ser futura e anterior à de encerramento.",
+  endDate: "A data de encerramento deve ser posterior à de início.",
+  url: "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+  "address.addressLine": "Informe o logradouro.",
+  "address.district": "Informe o bairro.",
+  "address.zipCode": "O CEP deve ter 8 dígitos.",
+  "address.city": "Informe a cidade.",
+  "address.state": "Informe uma UF válida (ex.: AL).",
+};
 
-  // "slots cannot be reduced below the current number of approved enrollments (X)."
-  if (
-    lowerMessage.includes("cannot be reduced") ||
-    lowerMessage.includes("approved enrollments")
-  ) {
-    const countMatch = message.match(/\((\d+)\)/) || message.match(/\d+/);
-    const count = countMatch ? countMatch[1] || countMatch[0] : null;
+/**
+ * A missing address is reported on the object itself, which renders nothing —
+ * show it on the first field of the block instead.
+ */
+const FIELD_ALIASES: Record<string, string> = {
+  address: "address.addressLine",
+};
 
-    return count
-      ? `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${count}).`
-      : "A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas.";
-  }
+const APPROVED_ENROLLMENTS_PATTERN =
+  /approved enrollments \((\d+)\)/i;
 
-  // "The minimum number of slots allowed is X current subscribers."
-  if (
-    lowerMessage.includes("minimum number of slots") ||
-    lowerMessage.includes("current subscribers")
-  ) {
-    const countMatch = message.match(/\d+/);
-    const count = countMatch ? countMatch[0] : null;
+function translateSlotsMessage(apiMessage: string): string {
+  const match = apiMessage.match(APPROVED_ENROLLMENTS_PATTERN);
 
-    return count
-      ? `O número mínimo de vagas permitido é ${count} inscritos atuais.`
-      : "A quantidade de vagas não pode ser menor do que o número de inscritos atuais.";
-  }
-
-  return message;
+  return match
+    ? `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${match[1]}).`
+    : FIELD_MESSAGES.slots;
 }
 
 export function handleActionApiErrors<T extends FieldValues>(
-  error: ApiErrorShape,
+  error: unknown,
   setError: UseFormSetError<T>,
-  setGeneralError: (msg: string | null) => void,
-  navigate: NavigateFunction
-) {
-  const status = error?.status ?? error?.response?.status;
-  const message =
-    error?.message ?? error?.response?.data?.message ?? error?.data?.message;
-  const apiErrors =
-    error?.errors ?? error?.response?.data?.errors ?? error?.data?.errors;
+  setGeneralError: (message: string | null) => void,
+  navigate: NavigateFunction,
+): void {
+  if (!(error instanceof ApiError)) {
+    setGeneralError(GENERIC_ERROR);
+    return;
+  }
 
-  switch (status) {
+  switch (error.status) {
     case 400: {
       let assignedToField = false;
 
-      // Trata erros de campos específicos vindos na lista apiErrors
-      if (Array.isArray(apiErrors) && apiErrors.length > 0) {
-        apiErrors.forEach((err) => {
-          const fieldName = err.field || err.path;
-          if (fieldName && err.message) {
-            const finalMessage =
-              fieldName === "slots" || fieldName === "details.slots"
-                ? translateSlotErrorMessage(err.message)
-                : err.message;
+      error.errors.forEach(({ field, message }) => {
+        const target = FIELD_ALIASES[field] ?? field;
+        const translated =
+          target === "slots"
+            ? translateSlotsMessage(message)
+            : FIELD_MESSAGES[target];
 
-            setError(fieldName as Path<T>, {
-              type: "manual",
-              message: finalMessage,
-            });
-            assignedToField = true;
-          }
-        });
-      }
+        if (!translated) return;
 
-      // Trata mensagem de erro geral ou fallback
-      if (message) {
-        const lowerMessage = message.toLowerCase();
+        setError(target as Path<T>, { type: "server", message: translated });
+        assignedToField = true;
+      });
 
-        const isSlotError = [
-          "vaga",
-          "slot",
-          "inscrito",
-          "subscriber",
-          "enrollment",
-          "enrolled",
-          "minimum",
-          "reduced",
-        ].some((term) => lowerMessage.includes(term));
-
-        if (isSlotError) {
-          setError("slots" as Path<T>, {
-            type: "manual",
-            message: translateSlotErrorMessage(message),
-          });
-        } else if (!assignedToField) {
-          setGeneralError(message);
-        }
-      }
+      if (!assignedToField) setGeneralError(GENERIC_ERROR);
       break;
     }
 
@@ -128,8 +94,12 @@ export function handleActionApiErrors<T extends FieldValues>(
       setGeneralError("Ações concluídas ou canceladas não podem ser editadas.");
       break;
 
+    case NETWORK_ERROR_STATUS:
+      setGeneralError("Falha de comunicação com o servidor. Tente novamente.");
+      break;
+
     default:
-      setGeneralError("Ocorreu um erro ao atualizar a ação. Tente novamente.");
+      setGeneralError(GENERIC_ERROR);
       break;
   }
 }

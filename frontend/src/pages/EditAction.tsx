@@ -1,26 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
-import { Button } from "../components";
-//import { useAuth } from "../hooks";                               VER ISSO DPS
+import { Button, Input, Select, Textarea } from "../components";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
 import {
-  TitleField,
-  DescriptionField,
-  DateField,
-  ActionTypeField,
-  SlotsField,
   AddressBlock,
-  AreaField,
-  CampusField,
-  FormatField,
-  UrlField,
-  WorkloadField,
-  ConfirmFormatModal
+  ConfirmFormatModal,
 } from "../features/action-edit/components";
+import {
+  ACTION_AREA_OPTIONS,
+  ACTION_CAMPUS_OPTIONS,
+  ACTION_FORMAT_OPTIONS,
+  ACTION_TYPE_OPTIONS,
+} from "../features/dashboard/constants";
 import {
   ActionEditSchema,
   type ActionEditSchemaType,
@@ -28,28 +23,48 @@ import {
 import { getActionById } from "../features/action-detail/services";
 import { handleActionApiErrors } from "../features/action-edit/handleApiErrors";
 import { updateAction } from "../features/action-edit/services";
+import type {
+  ActionAddressPayload,
+  UpdateActionPayload,
+} from "../features/action-edit/types";
 import { toInputDate } from "../utils";
 
-function formatActionInputDate(dateStr?: string): string {
-  if (!dateStr) return "";
-  const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (match) {
-    return match[1];
-  }
-  return toInputDate(dateStr);
+const EMPTY_ADDRESS = {
+  addressLine: "",
+  district: "",
+  city: "",
+  state: "",
+  zipCode: "",
+};
+
+function toAddressPayload(
+  address: ActionEditSchemaType["address"],
+): ActionAddressPayload {
+  return {
+    addressLine: address?.addressLine ?? "",
+    district: address?.district ?? "",
+    city: address?.city ?? "",
+    // An action saved before this screen existed may hold a lowercase state,
+    // and the API only takes the uppercase abbreviation.
+    state: (address?.state ?? "").toUpperCase(),
+    zipCode: (address?.zipCode ?? "").replace(/\D/g, ""),
+  };
 }
 
 export function EditAction() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
- // const { user } = useAuth();
 
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
   const [loadFailed, setLoadFailed] = useState(false);
   const notFound = !id || loadFailed;
 
+  const [loadedArea, setLoadedArea] = useState("");
+
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [pendingData, setPendingData] = useState<ActionEditSchemaType | null>(null);
+  const [pendingData, setPendingData] = useState<ActionEditSchemaType | null>(
+    null,
+  );
   const [isConfirming, setIsConfirming] = useState(false);
 
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -58,7 +73,6 @@ export function EditAction() {
     register,
     handleSubmit,
     reset,
-    setValue,
     setError,
     control,
     formState: { errors, isSubmitting, dirtyFields },
@@ -67,66 +81,64 @@ export function EditAction() {
     mode: "onSubmit",
   });
 
-  const zipCodeValue = useWatch({ control, name: "address.zipCode" });
   const currentFormat = useWatch({ control, name: "format" });
 
-  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = e.target.value
-      .replace(/\D/g, "")
-      .replace(/^(\d{5})(\d)/, "$1-$2")
-      .slice(0, 9);
+  /**
+   * `area` is free text in the API, so an action may carry a value the closed
+   * list of #171 does not have. Offering it keeps the action editable instead
+   * of silently switching it to the first option.
+   */
+  const areaOptions = useMemo(() => {
+    const isKnown = ACTION_AREA_OPTIONS.some(
+      (option) => option.value === loadedArea,
+    );
 
-    setValue("address.zipCode", masked, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
+    return isKnown || !loadedArea
+      ? ACTION_AREA_OPTIONS
+      : [...ACTION_AREA_OPTIONS, { value: loadedArea, label: loadedArea }];
+  }, [loadedArea]);
 
   useEffect(() => {
-  if (!id) return;
+    if (!id) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  (async () => {
-    const action = await getActionById(id);
+    (async () => {
+      const action = await getActionById(id);
 
-    if (!isMounted) return;
+      if (!isMounted) return;
 
-    if (!action) {
-      setLoadFailed(true);
-      setIsLoadingAction(false);
-      return;
-    }
+      if (!action) {
+        setLoadFailed(true);
+        setIsLoadingAction(false);
+        return;
+      }
 
-    reset({
-      title: action.title,
-      description: action.details?.description ?? "",
-      startDate: formatActionInputDate(action.startDate),
-      endDate: formatActionInputDate(action.endDate),
-      type: action.type,
-      slots: action.slots,
-      format: action.details?.format as ActionEditSchemaType["format"],
-      workloadHours: action.details?.workloadHours,
-      area: action.details?.area as ActionEditSchemaType["area"],
-      url: action.details?.url ?? "",
-      campus: action.campus as ActionEditSchemaType["campus"],
-      address: action.details?.address
-        ? {
-            addressLine: action.details.address.addressLine ?? "",
-            district: action.details.address.district ?? "",
-            city: action.details.address.city ?? "",
-            state: action.details.address.state ?? "",
-            zipCode: action.details.address.zipCode
-              ? action.details.address.zipCode.replace(/^(\d{5})(\d)/, "$1-$2")
-              : "",
-          }
-        : {
-            addressLine: "",
-            district: "",
-            city: "",
-            state: "",
-            zipCode: "",
-          },
+      setLoadedArea(action.details?.area ?? "");
+
+      reset({
+        title: action.title,
+        description: action.details?.description ?? "",
+        startDate: toInputDate(action.startDate),
+        endDate: toInputDate(action.endDate),
+        type: action.type,
+        slots: action.slots,
+        format: action.details?.format,
+        workloadHours: action.details?.workloadHours,
+        area: action.details?.area ?? "",
+        url: action.details?.url ?? "",
+        campus: action.campus,
+        address: action.details?.address
+          ? {
+              addressLine: action.details.address.addressLine ?? "",
+              district: action.details.address.district ?? "",
+              city: action.details.address.city ?? "",
+              state: action.details.address.state ?? "",
+              zipCode: action.details.address.zipCode
+                ? action.details.address.zipCode.replace(/^(\d{5})(\d)/, "$1-$2")
+                : "",
+            }
+          : EMPTY_ADDRESS,
       } as ActionEditSchemaType);
 
       setIsLoadingAction(false);
@@ -137,74 +149,60 @@ export function EditAction() {
     };
   }, [id, reset]);
 
+  const buildPayload = (data: ActionEditSchemaType): UpdateActionPayload => {
+    const payload: UpdateActionPayload = {};
+
+    if (dirtyFields.title) payload.title = data.title;
+    if (dirtyFields.description) payload.description = data.description;
+    if (dirtyFields.startDate) {
+      payload.startDate = new Date(`${data.startDate}T00:00:00`).toISOString();
+    }
+    if (dirtyFields.endDate) {
+      payload.endDate = new Date(`${data.endDate}T23:59:59.999`).toISOString();
+    }
+    if (dirtyFields.type) payload.type = data.type;
+    if (dirtyFields.slots) payload.slots = data.slots;
+    if (dirtyFields.workloadHours) payload.workloadHours = data.workloadHours;
+    if (dirtyFields.area) payload.area = data.area;
+    if (dirtyFields.campus) payload.campus = data.campus;
+    if (dirtyFields.format) payload.format = data.format;
+
+    // The link is editable in every format — it is only optional in person —
+    // so an edit to it is sent whatever the format is.
+    const urlRequiredByNewFormat =
+      dirtyFields.format && data.format !== "IN_PERSON";
+
+    if (dirtyFields.url || urlRequiredByNewFormat) {
+      payload.url = data.url;
+    }
+
+    // `AddressSchema` is not partial on the API: every address object has to
+    // carry the five fields, so one changed subfield sends the whole block.
+    const addressChanged = Object.values(dirtyFields.address ?? {}).some(
+      Boolean,
+    );
+
+    if (data.format !== "ONLINE" && (addressChanged || dirtyFields.format)) {
+      payload.address = toAddressPayload(data.address);
+    }
+
+    return payload;
+  };
+
   const executeSubmit = async (data: ActionEditSchemaType) => {
     if (!id) return;
     setGeneralError(null);
 
-    const payload: Record<string, unknown> = {};
+    const payload = buildPayload(data);
 
-    if (dirtyFields.title) payload.title = data.title.trim();
-    if (dirtyFields.description) payload.description = data.description.trim();
-    if (dirtyFields.startDate) payload.startDate = new Date(`${data.startDate}T00:00:00`).toISOString();
-    if (dirtyFields.endDate) payload.endDate = new Date(`${data.endDate}T23:59:59.999`).toISOString();
-    if (dirtyFields.type) payload.type = data.type;
-    if (dirtyFields.slots) payload.slots = Number(data.slots);
-    if (dirtyFields.workloadHours) payload.workloadHours = data.workloadHours ? Number(data.workloadHours) : undefined;
-    if (dirtyFields.area) payload.area = data.area;
-    if (dirtyFields.campus) payload.campus = data.campus;
+    // Nothing changed: no request, and the screen stays where it is.
+    if (Object.keys(payload).length === 0) return;
 
-    if(dirtyFields.format){
-      payload.format = data.format;
-
-      if(data.format !== "ONLINE"){
-        payload.address = {
-          addressLine: data.address?.addressLine?.trim() ?? "",
-          district: data.address?.district?.trim() ?? "",
-          city: data.address?.city?.trim() ?? "",
-          state: data.address?.state?.trim() ?? "",
-          zipCode: data.address?.zipCode?.replace(/\D/g, "") ?? "",
-        };
-      }
-
-      if(data.format !== "IN_PERSON"){
-        payload.url = data.url?.trim() ?? "";
-      }
-    }
-    else {
-      if (dirtyFields.url && data.format !== "IN_PERSON") {
-      payload.url = data.url?.trim();
-    }
-
-    if (dirtyFields.address && data.format !== "ONLINE") {
-      const addressPayload: Record<string, unknown> = {};
-
-      if (dirtyFields.address.addressLine) addressPayload.addressLine = data.address?.addressLine?.trim();
-      if (dirtyFields.address.district) addressPayload.district = data.address?.district?.trim();
-      if (dirtyFields.address.city) addressPayload.city = data.address?.city?.trim();
-      if (dirtyFields.address.state) addressPayload.state = data.address?.state?.trim();
-      if (dirtyFields.address.zipCode) addressPayload.zipCode = data.address?.zipCode?.replace(/\D/g, "") ?? "";
-
-      if (Object.keys(addressPayload).length > 0) {
-        payload.address = addressPayload;
-      }
-    }
-    }
-    
-    if (Object.keys(payload).length === 0) {
-      navigate(`/activity/${id}`);
-      return;
-    }
-    
     try {
-      await updateAction(id, payload as Partial<ActionEditSchemaType>);
+      await updateAction(id, payload);
       navigate(`/activity/${id}`);
     } catch (error) {
-      handleActionApiErrors(
-      error as Parameters<typeof handleActionApiErrors>[0],
-      setError,
-      setGeneralError,
-      navigate
-  );
+      handleActionApiErrors(error, setError, setGeneralError, navigate);
     }
   };
 
@@ -280,78 +278,111 @@ export function EditAction() {
           onSubmit={handleSubmit(onSubmit)}
           className="bg-white rounded-2xl shadow-sm px-6 pt-6 pb-6 md:px-10 md:pt-10 md:pb-6 space-y-6"
         >
-          <TitleField
-            registration={register("title")}
+          {/* The prototype draws the title with no visible label. */}
+          <Input
+            aria-label="Título"
+            placeholder="Título"
             error={errors.title?.message}
+            {...register("title")}
           />
 
-          <DescriptionField
-            registration={register("description")}
+          <Textarea
+            label="Descrição"
+            placeholder="Descreva os detalhes da ação..."
+            className="min-h-[150px]"
             error={errors.description?.message}
+            {...register("description")}
           />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <DateField
-                    label="Data de início"
-                    registration={register("startDate")}
-                    error={errors.startDate?.message}
-                  />
-                  <DateField
-                    label="Data de encerramento"
-                    registration={register("endDate")}                  
-                    error={errors.endDate?.message}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <ActionTypeField
-                    registration={register("type")}
-                    error={errors.type?.message}
-                  />
-                  <SlotsField
-                    registration={register("slots")}
-                    error={errors.slots?.message}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <FormatField
-                    registration={register("format")}
-                    error={errors.format?.message}
-                  />
-                  <WorkloadField
-                    registration={register("workloadHours")}
-                    error={errors.workloadHours?.message}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <AreaField
-                    registration={register("area")}
-                    error={errors.area?.message}
-                  />
-                  <UrlField
-                    registration={register("url")}
-                    error={errors.url?.message}
-                  />
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input
+                  size="sm"
+                  type="date"
+                  label="Data de início"
+                  error={errors.startDate?.message}
+                  {...register("startDate")}
+                />
+                <Input
+                  size="sm"
+                  type="date"
+                  label="Data de encerramento"
+                  error={errors.endDate?.message}
+                  {...register("endDate")}
+                />
               </div>
 
-              <div className="space-y-4">
-                <div
-                  className={`transition-opacity duration-200 ${
-                    currentFormat === "ONLINE"
-                      ? "opacity-40 pointer-events-none select-none"
-                      : "opacity-100"
-                  }`}
-                >
-                  <AddressBlock
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  size="sm"
+                  label="Tipo de ação"
+                  options={ACTION_TYPE_OPTIONS}
+                  error={errors.type?.message}
+                  {...register("type")}
+                />
+                <Input
+                  size="sm"
+                  type="number"
+                  min={1}
+                  placeholder="0"
+                  label="Qtde. de Vagas"
+                  error={errors.slots?.message}
+                  {...register("slots")}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  size="sm"
+                  label="Formato da ação"
+                  options={ACTION_FORMAT_OPTIONS}
+                  error={errors.format?.message}
+                  {...register("format")}
+                />
+                <Input
+                  size="sm"
+                  type="number"
+                  min={1}
+                  placeholder="0"
+                  label="Carga horária"
+                  error={errors.workloadHours?.message}
+                  {...register("workloadHours")}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  size="sm"
+                  label="Área de atuação"
+                  options={areaOptions}
+                  error={errors.area?.message}
+                  {...register("area")}
+                />
+                <Input
+                  size="sm"
+                  label="Link do evento"
+                  placeholder="(Opcional para presencial)"
+                  error={errors.url?.message}
+                  {...register("url")}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div
+                className={`transition-opacity duration-200 ${
+                  currentFormat === "ONLINE"
+                    ? "opacity-40 pointer-events-none select-none"
+                    : "opacity-100"
+                }`}
+              >
+                <AddressBlock
                   addressLineRegistration={register("address.addressLine")}
                   districtRegistration={register("address.district")}
                   zipCodeRegistration={register("address.zipCode")}
                   cityRegistration={register("address.city")}
                   stateRegistration={register("address.state")}
-                  zipCodeValue={zipCodeValue}
-                  onZipCodeChange={handleZipCodeChange}
                   disabled={currentFormat === "ONLINE"}
                   errors={{
                     addressLine: errors.address?.addressLine?.message,
@@ -361,15 +392,17 @@ export function EditAction() {
                     state: errors.address?.state?.message,
                   }}
                 />
+              </div>
 
-                </div>
-                
-                <CampusField
-                  registration={register("campus")}
-                  error={errors.campus?.message}
-                />
-              </div>             
+              <Select
+                size="sm"
+                label="Campus"
+                options={ACTION_CAMPUS_OPTIONS}
+                error={errors.campus?.message}
+                {...register("campus")}
+              />
             </div>
+          </div>
 
           <div className="flex justify-end gap-3 pt-4">
             <Button
