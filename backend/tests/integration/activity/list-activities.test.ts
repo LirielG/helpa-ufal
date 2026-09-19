@@ -1,5 +1,3 @@
-// backend/tests/integration/activity/list-activities.test.ts
-//
 // Coverage for the `area` filter in GET /activities (#158, step 1). This suite
 // is reviewer-owned and was written from the issue's acceptance criteria
 // (CA1-CA8), not from the implementation diff: if anything here fails, the
@@ -16,8 +14,8 @@ import { createTeacher, createActivity } from "../../helpers/factories.js";
 
 
 describe("GET /activities — area filter", () => {
-  // ---------- CA1 / CA3: exact, case-insensitive match on details.area ----------
-  it("returns only the activities of the requested area", async () => {
+  // ---------- 200 - OK ----------
+  it("returns only the activities of the requested area (CA1)", async () => {
     const { user: author } = await createTeacher();
     const first = await createActivity(author.id, { area: "Saúde" });
     const second = await createActivity(author.id, { area: "Saúde" });
@@ -40,7 +38,7 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  it("matches case-insensitively and trims surrounding spaces", async () => {
+  it("matches case-insensitively and trims surrounding spaces (CA2)", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
@@ -58,7 +56,7 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  it("answers an unknown area with an empty page instead of a 404", async () => {
+  it("answers an unknown area with an empty page instead of a 404 (CA3)", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
@@ -74,8 +72,7 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  // ---------- CA4 / CA5: absent or empty area means "no filter" ----------
-  it("without area, returns the same listing as before (and stays soft-delete blind)", async () => {
+  it("without area, returns the same listing as before (CA4) — and stays soft-delete blind", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Educação" });
@@ -91,7 +88,7 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  it("treats an empty or whitespace-only area as no filter — never a 400", async () => {
+  it("treats an empty or whitespace-only area as no filter — never a 400 (CA5)", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Educação" });
@@ -109,8 +106,8 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  // ---------- CA6 / CA7: composition with the other filters ----------
-  it("applies area AND format together — no silent overwrite between them", async () => {
+  // ---------- 200 - OK: composition with other filters ----------
+  it("applies area AND format together — no silent overwrite between them (CA6)", async () => {
     // The issue's trap: `whereClause.details` assigned twice would make the
     // second filter erase the first. Two "Saúde" rows with different formats
     // make that failure loud.
@@ -134,7 +131,7 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  it("combines area with search, type, status and campus", async () => {
+  it("combines area with search, type, status and campus (CA7)", async () => {
     // One target survives all five restrictions; each decoy is killed by
     // exactly one of them, so every filter must work for the test to pass.
     const { user: author } = await createTeacher();
@@ -199,8 +196,8 @@ describe("GET /activities — area filter", () => {
   });
 
 
-  // ---------- CA8: total and pagination over the filtered subset ----------
-  it("reports the filtered total and paginates only within the matching subset", async () => {
+  // ---------- 200 - OK: pagination over the filtered subset ----------
+  it("reports the filtered total and paginates only within the matching subset (CA8)", async () => {
     const { user: author } = await createTeacher();
     for (let i = 0; i < 5; i++) {
       await createActivity(author.id, { area: "Saúde" });
@@ -228,4 +225,34 @@ describe("GET /activities — area filter", () => {
 
     expect(seen.size).toBe(5); // the whole subset, page by page
   });
+
+
+  // ---------- 400 - Validation ----------
+  it("does not interfere with the existing query validation", async () => {
+    // `area` itself never validates (issue #158, trap 5). The 400 below comes
+    // from `limit` — proving the new param slots into the existing manual
+    // validation without changing it.
+    const { user: author } = await createTeacher();
+    await createActivity(author.id, { area: "Saúde" });
+
+
+    const response = await request(app)
+      .get("/activities")
+      .query({ area: "Saúde", limit: 51 });
+
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation error.");
+    expect(response.body.errors).toEqual([
+      { field: "limit", message: "limit can not exceed 50." },
+    ]);
+  });
+
+
+  // ---------- 401 / 404: intentionally absent ----------
+  // 401: the route is public — it registers no auth middleware.
+  // 404: an unknown area answers 200 with an empty page (see CA3 above); the
+  //      listing route itself always exists.
+  // Format-level 400s for `type`/`status`/`format`/`orderBy` belong to a
+  // general list-validation suite, not to the area filter.
 });
