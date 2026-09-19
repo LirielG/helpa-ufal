@@ -8,7 +8,6 @@ import {
 } from "@/schemas/enrollment/EnrollmentSchemas.js";
 import { validateQuery } from "@/middlewares/validation/validateQuery.js";
 
-
 const router = express.Router();
 const enrollmentController = new EnrollmentController();
 const authMiddleware = new AuthMiddleware();

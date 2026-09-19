@@ -23,10 +23,12 @@ export function validateQuery<TSchema extends z.ZodTypeAny>(
     const result = schema.safeParse(req.query);
 
     if (!result.success) {
-      const errors: ValidationErrorItem[] = result.error.issues.map((issue) => ({
-        field: String(issue.path[0] ?? "query"),
-        message: issue.message,
-      }));
+      const errors: ValidationErrorItem[] = result.error.issues.map(
+        (issue) => ({
+          field: String(issue.path[0] ?? "query"),
+          message: issue.message,
+        }),
+      );
       next(new ValidationError(errors, message));
       return;
     }

@@ -1,6 +1,14 @@
-import type { ActivityStatus, ActivityType, CampusLocation } from "./activity.js";
+import type {
+  ActivityStatus,
+  ActivityType,
+  CampusLocation,
+} from "./activity.js";
 
-export type EnrollmentStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export type EnrollmentStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
 
 // Occupies a slot and counts as an active registration.
 // Remains "APPROVED" even when an approval workflow is in place.
@@ -44,8 +52,6 @@ export type ParticipantsListResponse = {
   totalPresent: number;
 };
 
-
-
 // ---------------------------------------------------------------------------
 // Epic 3 ("Registered Actions" tab) — PROVISIONAL
 // ---------------------------------------------------------------------------
@@ -75,4 +81,3 @@ export type EnrollmentListResponse = {
   page: number;
   limit: number;
 };
-

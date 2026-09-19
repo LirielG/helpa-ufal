@@ -17,15 +17,13 @@ type Props = {
   prisma?: PrismaClient;
 };
 
-
-
 class EnrollmentRepository implements IEnrollmentRepository {
   private _prisma: PrismaClient;
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
   }
-  
+
   public async findByActivityId(
     activityId: string,
     page = 1,
@@ -96,7 +94,10 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (existing && existing.status !== "CANCELLED") {
-        throw new CustomError(409, "User is already enrolled in this activity.");
+        throw new CustomError(
+          409,
+          "User is already enrolled in this activity.",
+        );
       }
 
       const approvedCount = await tx.enrollment.count({
@@ -118,8 +119,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
             // createdAt is left untouched by Prisma/Postgres and keeps the
             // original creation date of the record.
             enrolledAt: new Date(),
-            attendanceConfirmed: null,     
-            confirmedWorkloadHours: 0,     
+            attendanceConfirmed: null,
+            confirmedWorkloadHours: 0,
           },
         });
       }
@@ -133,13 +134,16 @@ class EnrollmentRepository implements IEnrollmentRepository {
           },
         });
       } catch (error) {
-        // Defense-in-depth against execution outside of the lock 
+        // Defense-in-depth against execution outside of the lock
         // (e.g., another transaction that did not go through lockActivityForCapacity).
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          throw new CustomError(409, "User is already enrolled in this activity.");
+          throw new CustomError(
+            409,
+            "User is already enrolled in this activity.",
+          );
         }
         throw error;
       }
@@ -147,8 +151,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    // Atomic transition: two concurrent cancellations result in one success 
-    // and one 404, with no race window. 
+    // Atomic transition: two concurrent cancellations result in one success
+    // and one 404, with no race window.
     // Accepts APPROVED and PENDING
     const result = await this._prisma.enrollment.updateMany({
       where: { userId, activityId, status: { in: ["APPROVED", "PENDING"] } },
@@ -186,8 +190,6 @@ class EnrollmentRepository implements IEnrollmentRepository {
 
     return { items, total };
   }
-
-  
 }
 
 export default EnrollmentRepository;

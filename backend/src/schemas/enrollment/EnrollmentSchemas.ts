@@ -28,4 +28,6 @@ export const ListParticipantsQuerySchema = z.object({
 });
 
 /** Post-transform shape consumed by the controller/service. */
-export type ListParticipantsQuery = z.output<typeof ListParticipantsQuerySchema>;
+export type ListParticipantsQuery = z.output<
+  typeof ListParticipantsQuerySchema
+>;

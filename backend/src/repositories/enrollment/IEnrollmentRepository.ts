@@ -21,7 +21,10 @@ export type EnrollmentWithParticipant = Prisma.EnrollmentGetPayload<{
 }>;
 
 export interface IEnrollmentRepository {
-  findByUserAndActivity(userId: string, activityId: string): Promise<Enrollment | null>;
+  findByUserAndActivity(
+    userId: string,
+    activityId: string,
+  ): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
   enroll(userId: string, activityId: string): Promise<Enrollment>;

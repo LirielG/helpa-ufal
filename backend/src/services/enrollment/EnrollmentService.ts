@@ -20,7 +20,6 @@ import type {
   ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
-
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
   activityRepository?: IActivityRepository;
@@ -58,8 +57,10 @@ class EnrollmentService implements IEnrollmentService {
       throw new CustomError(409, "Activity is not open for enrollment.");
     }
 
-
-    const enrollment = await this._enrollmentRepository.enroll(userId, activityId);
+    const enrollment = await this._enrollmentRepository.enroll(
+      userId,
+      activityId,
+    );
 
     return this.toEnrollResponse(enrollment);
   }
@@ -91,11 +92,8 @@ class EnrollmentService implements IEnrollmentService {
     limit = 10,
   ): Promise<EnrollmentListResponse> {
     const skip = (page - 1) * limit;
-    const { items, total } = await this._enrollmentRepository.findActiveByUserId(
-      userId,
-      skip,
-      limit,
-    );
+    const { items, total } =
+      await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
     return {
       items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
@@ -130,7 +128,11 @@ class EnrollmentService implements IEnrollmentService {
     }
 
     const { items, total, totalPresent } =
-      await this._enrollmentRepository.findByActivityId(activityId, page, limit);
+      await this._enrollmentRepository.findByActivityId(
+        activityId,
+        page,
+        limit,
+      );
 
     // totalPresent comes from the repository as-is: the service forwards the
     // authoritative count instead of re-deriving it from confirmedWorkloadHours.

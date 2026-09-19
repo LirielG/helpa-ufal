@@ -13,14 +13,16 @@ class EnrollmentController implements IEnrollmentController {
   private _enrollmentService: IEnrollmentService;
 
   constructor(props?: Props) {
-    this._enrollmentService = props?.enrollmentService ?? new EnrollmentService();
+    this._enrollmentService =
+      props?.enrollmentService ?? new EnrollmentService();
   }
 
   public async enroll(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { id } = req.params;
-    if (!id || Array.isArray(id)) throw new CustomError(400, "Invalid id parameter.");
+    if (!id || Array.isArray(id))
+      throw new CustomError(400, "Invalid id parameter.");
 
     const enrollment = await this._enrollmentService.enroll(req.user.id, id);
 
@@ -31,7 +33,8 @@ class EnrollmentController implements IEnrollmentController {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { id } = req.params;
-    if (!id || Array.isArray(id)) throw new CustomError(400, "Invalid id parameter.");
+    if (!id || Array.isArray(id))
+      throw new CustomError(400, "Invalid id parameter.");
 
     await this._enrollmentService.cancel(req.user.id, id);
 
@@ -50,14 +53,16 @@ class EnrollmentController implements IEnrollmentController {
     // registered BEFORE auth on the route. If it is absent, page/limit arrive as
     // undefined and the service defaults apply — defaults live in exactly one
     // runtime place (the service signature), never duplicated here.
-    const query = res.locals.validatedQuery as ListParticipantsQuery | undefined;
+    const query = res.locals.validatedQuery as
+      | ListParticipantsQuery
+      | undefined;
 
     const result = await this._enrollmentService.listParticipants(
-        req.user.id,
-        activityId,
-        query?.page,
-        query?.limit,
-      );
+      req.user.id,
+      activityId,
+      query?.page,
+      query?.limit,
+    );
 
     // 200 even with zero enrollments — never 404 for an empty list.
     res.status(200).json(result);

@@ -222,7 +222,9 @@ describe("GET /activities/:activityId/enrollments", () => {
   it("returns 200 with an empty envelope when every enrollment is CANCELLED", async () => {
     const { author, activity } = await anActivityWithAuthor();
     const canceled = await createStudent();
-    await createEnrollment(canceled.user.id, activity.id, { status: "CANCELLED" });
+    await createEnrollment(canceled.user.id, activity.id, {
+      status: "CANCELLED",
+    });
 
     const response = await request(app)
       .get(listUrl(activity.id))
@@ -254,11 +256,9 @@ describe("GET /activities/:activityId/enrollments", () => {
       .set(...authHeader(author.token));
 
     expect(response.status).toBe(200);
-    expect(response.body.items.map((i: { userId: string }) => i.userId)).toEqual([
-      oldest.user.id,
-      middle.user.id,
-      newest.user.id,
-    ]);
+    expect(
+      response.body.items.map((i: { userId: string }) => i.userId),
+    ).toEqual([oldest.user.id, middle.user.id, newest.user.id]);
   });
 
   it("paginates with page and limit while total stays global", async () => {
@@ -299,7 +299,9 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     expect(response.status).toBe(200);
     expect(JSON.stringify(response.body)).not.toContain("passwordHash");
-    expect(JSON.stringify(response.body)).not.toContain(enrolled.user.passwordHash);
+    expect(JSON.stringify(response.body)).not.toContain(
+      enrolled.user.passwordHash,
+    );
     for (const item of response.body.items) {
       expect(Object.keys(item).sort()).toEqual(PARTICIPANT_KEYS);
     }
@@ -396,7 +398,10 @@ describe("GET /activities/:activityId/enrollments", () => {
       .set(...authHeader(user.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -411,7 +416,10 @@ describe("GET /activities/:activityId/enrollments", () => {
       .set(...authHeader(author.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 — not 400 — for a non-UUID activity id", async () => {
@@ -425,13 +433,18 @@ describe("GET /activities/:activityId/enrollments", () => {
       .set(...authHeader(user.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   // ---------- Validation order ----------
 
   it("returns 401 (not 404) for an unauthenticated request to a nonexistent activity", async () => {
-    const response = await request(app).get(listUrl("b87c043e-5e00-4f98-b186-3843be61a4b1"));
+    const response = await request(app).get(
+      listUrl("b87c043e-5e00-4f98-b186-3843be61a4b1"),
+    );
 
     expect(response.status).toBe(401);
   });
@@ -461,9 +474,12 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
-      message: "Only the activity creator or a manager can view the enrollment list.",
+      message:
+        "Only the activity creator or a manager can view the enrollment list.",
     });
-    expect(JSON.stringify(response.body)).not.toContain(enrolledData.user.email);
+    expect(JSON.stringify(response.body)).not.toContain(
+      enrolledData.user.email,
+    );
   });
 
   it("returns 403 even for a volunteer enrolled in the activity", async () => {
