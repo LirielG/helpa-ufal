@@ -1,31 +1,19 @@
-// Coverage for the `area` filter in GET /activities (#158, step 1). This suite
-// is reviewer-owned and was written from the issue's acceptance criteria
-// (CA1-CA8), not from the implementation diff: if anything here fails, the
-// finding belongs to the implementation — do not bend the assertions to fit it.
-//
-// Out of scope on purpose: multi-value `?area=A&area=B` (not specified by the
-// issue) and accent folding ("saude" does NOT match "Saúde" yet — follow-up
-// normalization issue).
-
 import { describe, it, expect } from "vitest"; // globals are disabled: explicit import
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
 
-
 describe("GET /activities — area filter", () => {
   // ---------- 200 - OK ----------
-  it("returns only the activities of the requested area (CA1)", async () => {
+  it("returns only the activities of the requested area", async () => {
     const { user: author } = await createTeacher();
     const first = await createActivity(author.id, { area: "Saúde" });
     const second = await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Educação" });
 
-
     const response = await request(app)
       .get("/activities")
       .query({ area: "Saúde" });
-
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(2);
@@ -37,17 +25,14 @@ describe("GET /activities — area filter", () => {
     }
   });
 
-
-  it("matches case-insensitively and trims surrounding spaces (CA2)", async () => {
+  it("matches case-insensitively and trims surrounding spaces", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
-
 
     for (const area of ["saúde", "SAÚDE", "  saúde  "]) {
       const response = await request(app)
         .get("/activities")
         .query({ area });
-
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(1);
@@ -55,59 +40,49 @@ describe("GET /activities — area filter", () => {
     }
   });
 
-
-  it("answers an unknown area with an empty page instead of a 404 (CA3)", async () => {
+  it("answers an unknown area with an empty page instead of a 404 ", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
-
 
     const response = await request(app)
       .get("/activities")
       .query({ area: "Astrobiologia" });
-
 
     expect(response.status).toBe(200);
     expect(response.body.activities).toEqual([]);
     expect(response.body.total).toBe(0);
   });
 
-
-  it("without area, returns the same listing as before (CA4) — and stays soft-delete blind", async () => {
+  it("without area, returns the same listing as before — and stays soft-delete blind", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Educação" });
     await createActivity(author.id, { area: "Tecnologia" });
     await createActivity(author.id, { area: "Saúde", deletedAt: new Date() });
 
-
     const response = await request(app).get("/activities");
-
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(3); // the soft-deleted one stays invisible
   });
 
-
-  it("treats an empty or whitespace-only area as no filter — never a 400 (CA5)", async () => {
+  it("treats an empty or whitespace-only area as no filter — never a 400", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Educação" });
-
 
     for (const area of ["", "   "]) {
       const response = await request(app)
         .get("/activities")
         .query({ area });
 
-
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(2);
     }
   });
 
-
   // ---------- 200 - OK: composition with other filters ----------
-  it("applies area AND format together — no silent overwrite between them (CA6)", async () => {
+  it("applies area AND format together — no silent overwrite between them", async () => {
     // The issue's trap: `whereClause.details` assigned twice would make the
     // second filter erase the first. Two "Saúde" rows with different formats
     // make that failure loud.
@@ -119,19 +94,16 @@ describe("GET /activities — area filter", () => {
     await createActivity(author.id, { area: "Saúde", format: "IN_PERSON" });
     await createActivity(author.id, { area: "Educação", format: "ONLINE" });
 
-
     const response = await request(app)
       .get("/activities")
       .query({ area: "Saúde", format: "ONLINE" });
-
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
     expect(response.body.activities[0].id).toBe(target.id);
   });
 
-
-  it("combines area with search, type, status and campus (CA7)", async () => {
+  it("combines area with search, type, status and campus", async () => {
     // One target survives all five restrictions; each decoy is killed by
     // exactly one of them, so every filter must work for the test to pass.
     const { user: author } = await createTeacher();
@@ -162,7 +134,6 @@ describe("GET /activities — area filter", () => {
       title: "Primeiros Socorros",
     });
 
-
     const response = await request(app).get("/activities").query({
       area: "Saúde",
       search: "socorros",
@@ -171,12 +142,10 @@ describe("GET /activities — area filter", () => {
       campus: "ARAPIRACA",
     });
 
-
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
     expect(response.body.activities[0].id).toBe(target.id);
   });
-
 
   it("still lists CANCELLED activities when filtering by area", async () => {
     // The CANCELLED exclusion applies ONLY to GET /activities/filters (the
@@ -184,20 +153,17 @@ describe("GET /activities — area filter", () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde", status: "CANCELLED" });
 
-
     const response = await request(app)
       .get("/activities")
       .query({ area: "Saúde" });
-
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
     expect(response.body.activities[0].status).toBe("CANCELLED");
   });
 
-
   // ---------- 200 - OK: pagination over the filtered subset ----------
-  it("reports the filtered total and paginates only within the matching subset (CA8)", async () => {
+  it("reports the filtered total and paginates only within the matching subset", async () => {
     const { user: author } = await createTeacher();
     for (let i = 0; i < 5; i++) {
       await createActivity(author.id, { area: "Saúde" });
@@ -205,13 +171,11 @@ describe("GET /activities — area filter", () => {
     await createActivity(author.id, { area: "Educação" });
     await createActivity(author.id, { area: "Educação" });
 
-
     const seen = new Set<string>();
     for (const page of [1, 2, 3]) {
       const response = await request(app)
         .get("/activities")
         .query({ area: "Saúde", limit: 2, page });
-
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(5);
@@ -222,10 +186,8 @@ describe("GET /activities — area filter", () => {
       }
     }
 
-
     expect(seen.size).toBe(5); // the whole subset, page by page
   });
-
 
   // ---------- 400 - Validation ----------
   it("does not interfere with the existing query validation", async () => {
@@ -235,11 +197,9 @@ describe("GET /activities — area filter", () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
-
     const response = await request(app)
       .get("/activities")
       .query({ area: "Saúde", limit: 51 });
-
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
@@ -247,7 +207,6 @@ describe("GET /activities — area filter", () => {
       { field: "limit", message: "limit can not exceed 50." },
     ]);
   });
-
 
   // ---------- 401 / 404: intentionally absent ----------
   // 401: the route is public — it registers no auth middleware.
