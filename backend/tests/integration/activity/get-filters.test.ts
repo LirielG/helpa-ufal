@@ -1,32 +1,16 @@
-// backend/tests/integration/activity/get-filters.test.ts
-//
-// Executable spec for GET /activities/filters (#158, step 2). Written BEFORE the
-// route exists (TDD): the expected initial failure is the Express default 404,
-// and the exact `toEqual` assertions keep that red honest.
-//
-// Assumes the factory `createActivity` accepts `deletedAt` in its overrides
-// (step 2, first commit — one-line change to ActivityOverrides). `area` and
-// `status` were already supported.
-//
-// Verified against the real code (02/09): the public listing shape is
-// `{ activities, total }` — not `items` — and list items carry `details.area`.
-
 import { describe, it, expect } from "vitest"; // globals are disabled: explicit import
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
-
 
 describe("GET /activities/filters", () => {
   // ---------- 200 - OK ----------
   it("returns an empty list instead of an error when there is no eligible activity", async () => {
     const response = await request(app).get("/activities/filters");
 
-
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: [] });
   });
-
 
   it("reports each area once, sorts alphabetically and answers with the exact contract shape", async () => {
     const { user: author } = await createTeacher();
@@ -35,9 +19,7 @@ describe("GET /activities/filters", () => {
     await createActivity(author.id, { area: "Zoologia" });
     await createActivity(author.id, { area: "Medicina" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -45,31 +27,25 @@ describe("GET /activities/filters", () => {
     });
   });
 
-
   it("is public: answers without an Authorization header", async () => {
     // Same posture as GET /activities, which registers no auth middleware.
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
-
 
   it("is not captured by GET /activities/:id", async () => {
     // The route must be registered BEFORE /activities/:id; "filters" is not a
     // UUID, so a wrong registration order surfaces here as a 404.
     const response = await request(app).get("/activities/filters");
 
-
     expect(response.status).not.toBe(404);
     expect(response.body).toHaveProperty("areas");
   });
-
 
   // ---------- Case handling ----------
   it("merges values that differ only by letter case into a single option", async () => {
@@ -83,15 +59,12 @@ describe("GET /activities/filters", () => {
     await createActivity(author.id, { area: "SAÚDE" });
     await createActivity(author.id, { area: "saúde" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body.areas).toHaveLength(1);
     expect(response.body.areas[0].toLowerCase()).toBe("saúde");
   });
-
 
   it("keeps values that differ by accents as separate options", async () => {
     // Known limitation (normalization follow-up issue): the database cannot
@@ -102,9 +75,7 @@ describe("GET /activities/filters", () => {
     await createActivity(author.id, { area: "Saude" });
     await createActivity(author.id, { area: "Saúde" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body.areas).toHaveLength(2);
@@ -112,7 +83,6 @@ describe("GET /activities/filters", () => {
       expect.arrayContaining(["Saude", "Saúde"]),
     );
   });
-
 
   // ---------- Eligibility: soft delete and CANCELLED ----------
   it("omits areas that only exist in soft-deleted activities", async () => {
@@ -123,14 +93,11 @@ describe("GET /activities/filters", () => {
       deletedAt: new Date(),
     });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
-
 
   it("keeps an area present in both a soft-deleted and an eligible activity", async () => {
     const { user: author } = await createTeacher();
@@ -140,14 +107,11 @@ describe("GET /activities/filters", () => {
       deletedAt: new Date(),
     });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
-
 
   it("omits areas that only exist in CANCELLED activities", async () => {
     // Product decision (#158): the filter is a discovery tool — announcing an
@@ -159,28 +123,22 @@ describe("GET /activities/filters", () => {
       status: "CANCELLED", // two Ls: CANCELED does not exist in the enum
     });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
-
 
   it("keeps an area present in both a CANCELLED and an eligible activity", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
     await createActivity(author.id, { area: "Saúde", status: "CANCELLED" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
-
 
   it("evaluates eligibility before case-merging", async () => {
     // "Saúde" only on a CANCELLED row, "saúde" on an OPEN one: the group is
@@ -190,22 +148,15 @@ describe("GET /activities/filters", () => {
     await createActivity(author.id, { area: "Saúde", status: "CANCELLED" });
     await createActivity(author.id, { area: "saúde" });
 
-
     const response = await request(app).get("/activities/filters");
-
 
     expect(response.status).toBe(200);
     expect(response.body.areas).toHaveLength(1);
     expect(response.body.areas[0].toLowerCase()).toBe("saúde");
   });
 
-
   // ---------- Coherence with the listing filter ----------
   it("returns exactly the activities of every announced area", async () => {
-    // Depends on #158 step 1 (the `area` listing filter): this stays red until
-    // BOTH the route and the filter exist on the branch — expected, do not
-    // "fix" it during step 3.
-    //
     // The assertion is exact on purpose: today `?area=` is silently ignored
     // and the listing comes back unfiltered, so a weak `total > 0` check (as
     // the SIGAA suite uses, where the filter works) would false-pass here.
@@ -214,9 +165,7 @@ describe("GET /activities/filters", () => {
     await createActivity(author.id, { area: "saúde" });
     await createActivity(author.id, { area: "Educação" });
 
-
     const options = await request(app).get("/activities/filters").expect(200);
-
 
     // Case-insensitive filter: both "Saúde" spellings match either announcement.
     const expectedTotalByArea: Record<string, number> = {
@@ -224,16 +173,13 @@ describe("GET /activities/filters", () => {
       educação: 1,
     };
 
-
     for (const area of options.body.areas) {
       const listed = await request(app)
         .get("/activities")
         .query({ area });
 
-
       expect(listed.status).toBe(200);
       expect(listed.body.total).toBe(expectedTotalByArea[area.toLowerCase()]);
-
 
       // The listing includes the raw `details` relation; area is nested.
       for (const item of listed.body.activities) {
