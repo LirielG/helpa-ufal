@@ -47,6 +47,23 @@ describe("GET /activities/filters", () => {
     expect(response.body).toHaveProperty("areas");
   });
 
+  it("sorts accented names in pt-BR order, not by code units", async () => {
+    const { user: author } = await createTeacher();
+    await createActivity(author.id, { area: "Zoologia" });
+    await createActivity(author.id, { area: "Saúde" });
+    await createActivity(author.id, { area: "Educador" });
+    await createActivity(author.id, { area: "Educação" });
+    await createActivity(author.id, { area: "Assistência" });
+    await createActivity(author.id, { area: "Água" });
+
+    const response = await request(app).get("/activities/filters");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      areas: ["Água", "Assistência", "Educação", "Educador", "Saúde", "Zoologia"],
+    });
+  });
+
   // ---------- Case handling ----------
   it("merges values that differ only by letter case into a single option", async () => {
     // The listing filter matches case-insensitively, so one canonical option
