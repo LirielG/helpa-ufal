@@ -199,12 +199,12 @@ describe("GET /activities — area filter", () => {
 
     const response = await request(app)
       .get("/activities")
-      .query({ area: "Saúde", limit: 51 });
+      .query({ area: "Saúde", limit: 101 });
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
     expect(response.body.errors).toEqual([
-      { field: "limit", message: "limit can not exceed 50." },
+      { field: "limit", message: "limit can not exceed 100." },
     ]);
   });
 
