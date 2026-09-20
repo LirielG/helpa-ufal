@@ -32,11 +32,6 @@ export type ListParticipantsQuery = z.output<
   typeof ListParticipantsQuerySchema
 >;
 
-export const ConfirmAttendanceParamsSchema = z.object({
-  activityId: z.uuid("activityId must be a valid UUID."),
-  enrollmentId: z.uuid("enrollmentId must be a valid UUID."),
-});
-
 /**
  * workloadHours is deliberately NOT .int(): the range, the ceiling and the
  * attended/workloadHours combination are business rules and answer 422, so

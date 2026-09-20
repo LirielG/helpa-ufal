@@ -4,10 +4,10 @@ import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentServic
 import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollmentController.js";
 import {
   ConfirmAttendanceBodySchema,
-  ConfirmAttendanceParamsSchema,
   type ListParticipantsQuery,
 } from "@/schemas/enrollment/EnrollmentSchemas.js";
 import CustomError from "@/models/error/CustomError.js";
+import type { AuthenticatedUser } from "@/types/auth.js";
 
 type Props = {
   enrollmentService?: IEnrollmentService;
@@ -58,8 +58,7 @@ class EnrollmentController implements IEnrollmentController {
     // undefined and the service defaults apply — defaults live in exactly one
     // runtime place (the service signature), never duplicated here.
     const query = res.locals.validatedQuery as
-      | ListParticipantsQuery
-      | undefined;
+      ListParticipantsQuery | undefined;
 
     const result = await this._enrollmentService.listParticipants(
       req.user.id,
@@ -73,18 +72,24 @@ class EnrollmentController implements IEnrollmentController {
   }
 
   public async confirmAttendance(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    // auth({ userTypes: "all" }) on the route already answered 401 for a
+    // missing or invalid credential, so req.user is set by the time we get
+    // here. The user is taken from the token alone — params, query and body
+    // never name who homologates.
+    const user = req.user as AuthenticatedUser;
 
-    // Shape first (400), business afterwards: both ids are validated here so
-    // the service can treat them as real identifiers. The user is taken from
-    // the token alone — params, query and body never name who homologates.
-    const { activityId, enrollmentId } = ConfirmAttendanceParamsSchema.parse(
-      req.params,
-    );
+    const { activityId, enrollmentId } = req.params;
+    if (!activityId || Array.isArray(activityId)) {
+      throw new CustomError(404, "Activity not found.");
+    }
+    if (!enrollmentId || Array.isArray(enrollmentId)) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
     const body = ConfirmAttendanceBodySchema.parse(req.body);
 
     const attendance = await this._enrollmentService.confirmAttendance(
-      req.user.id,
+      user.id,
       activityId,
       enrollmentId,
       body,

@@ -156,9 +156,20 @@ class EnrollmentService implements IEnrollmentService {
   ): Promise<AttendanceResponse> {
     const user = await this.requireUser(userId);
 
+    // A malformed id is a lookup that finds nothing, never operator input: it
+    // answers the same 404 as a nonexistent or soft-deleted row, so the route
+    // never reveals which ids are merely badly shaped.
+    if (!isValidUUID(activityId)) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
+    }
+
+    if (!isValidUUID(enrollmentId)) {
+      throw new CustomError(404, "Enrollment not found.");
     }
 
     const enrollment = await this._enrollmentRepository.findByIdAndActivity(
