@@ -8,6 +8,7 @@ const ALL_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
   availability: "all",
+  search: "",
 };
 
 function renderFilterBar(filters: Partial<FilterOptions> = {}) {
@@ -27,24 +28,24 @@ describe("FilterBar", () => {
     renderFilterBar();
 
     expect(
-      screen.getByRole("combobox", { name: "Filtrar por área" }),
+      screen.getByRole("combobox", { name: "Área de atuação" }),
     ).toHaveValue("all");
+    expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
+      "all",
+    );
     expect(
-      screen.getByRole("combobox", { name: "Filtrar por tipo de ação" }),
-    ).toHaveValue("all");
-    expect(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
+      screen.getByRole("combobox", { name: "Disponibilidade" }),
     ).toHaveValue("all");
   });
 
   it("shows the filters it is given as the selected options", () => {
     renderFilterBar({ actionType: "palestra", availability: "full" });
 
+    expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
+      "palestra",
+    );
     expect(
-      screen.getByRole("combobox", { name: "Filtrar por tipo de ação" }),
-    ).toHaveValue("palestra");
-    expect(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
+      screen.getByRole("combobox", { name: "Disponibilidade" }),
     ).toHaveValue("full");
   });
 
@@ -52,7 +53,7 @@ describe("FilterBar", () => {
     const { user, onFilterChange } = renderFilterBar();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por disponibilidade" }),
+      screen.getByRole("combobox", { name: "Disponibilidade" }),
       "full",
     );
 
@@ -66,7 +67,7 @@ describe("FilterBar", () => {
     const { user, onFilterChange } = renderFilterBar();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Filtrar por tipo de ação" }),
+      screen.getByRole("combobox", { name: "Tipos de ação" }),
       "palestra",
     );
 
@@ -74,6 +75,28 @@ describe("FilterBar", () => {
       "actionType",
       "palestra",
     );
+  });
+
+  it("shows the search term it is given in the search field", () => {
+    renderFilterBar({ search: "robótica" });
+
+    expect(
+      screen.getByRole("searchbox", { name: "Buscar ações pelo título" }),
+    ).toHaveValue("robótica");
+  });
+
+  it("reports each typed character of the search term to the parent", async () => {
+    const { user, onFilterChange } = renderFilterBar();
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Buscar ações pelo título" }),
+      "ab",
+    );
+
+    // The field is controlled by an unchanging prop here, so every keystroke
+    // reports from the same empty value; the parent is what accumulates it.
+    expect(onFilterChange).toHaveBeenNthCalledWith(1, "search", "a");
+    expect(onFilterChange).toHaveBeenNthCalledWith(2, "search", "b");
   });
 
   it("offers every configured option in each filter", () => {
@@ -85,13 +108,13 @@ describe("FilterBar", () => {
         (option) => option.textContent,
       );
 
-    expect(optionLabels("Filtrar por área")).toEqual(
+    expect(optionLabels("Área de atuação")).toEqual(
       FILTER_OPTIONS.areas.map((option) => option.label),
     );
-    expect(optionLabels("Filtrar por tipo de ação")).toEqual(
+    expect(optionLabels("Tipos de ação")).toEqual(
       FILTER_OPTIONS.actionTypes.map((option) => option.label),
     );
-    expect(optionLabels("Filtrar por disponibilidade")).toEqual(
+    expect(optionLabels("Disponibilidade")).toEqual(
       FILTER_OPTIONS.availability.map((option) => option.label),
     );
   });

@@ -40,6 +40,15 @@ export function ActionDetail() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  const handleEnrollmentSuccess = async () => {
+    // Refetch action data to reflect updated available slots
+    if (!id) return;
+    const updatedAction = await getActionById(id);
+    if (updatedAction) {
+      setAction(updatedAction);
+    }
+  };
+
   return (
     <DashboardShell
       header={<DashboardHeader onOpenRegister={() => navigate("/dashboard")} />}
@@ -50,7 +59,7 @@ export function ActionDetail() {
           <p className="text-gray-500 text-lg">Carregando...</p>
         </div>
       )}
-      
+
       {!isLoading && error && (
         <div className="max-w-2xl mx-auto px-4 py-12">
           <Alert type="error" message={error} />
@@ -74,7 +83,7 @@ export function ActionDetail() {
             shortDescription={action.details?.description ?? ""}
             onBack={() => navigate(-1)}
           />
-          
+
           <div
             className="bg-white flex-1"
             style={{
@@ -87,7 +96,11 @@ export function ActionDetail() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                  <ActionDescription description={action.details?.description || "Descrição não informada."} />
+                  <ActionDescription
+                    description={
+                      action.details?.description || "Descrição não informada."
+                    }
+                  />
                 </div>
 
                 <div className="lg:col-span-1 flex flex-col gap-4">
@@ -102,7 +115,9 @@ export function ActionDetail() {
                       className="flex items-center justify-center gap-3 rounded-xl"
                     >
                       <Users className="size-6" />
-                      {action.availableSlots === 0 ? "Vagas esgotadas" : "Inscrever-se"}
+                      {action.availableSlots === 0
+                        ? "Vagas esgotadas"
+                        : "Inscrever-se"}
                     </Button>
                   )}
                 </div>
@@ -114,6 +129,7 @@ export function ActionDetail() {
             <EnrollmentModal
               action={action}
               onClose={() => setShowModal(false)}
+              onSuccess={handleEnrollmentSuccess}
             />
           )}
         </>

@@ -1,10 +1,12 @@
 export { Input } from "./Input";
+export { SearchField } from "./SearchField";
 export { Button } from "./Button";
 export { Select } from "./Select";
 export { Textarea } from "./Textarea";
 export { Checkbox } from "./Checkbox";
 export { Alert } from "./Alert";
 export { Tooltip } from "./Tooltip";
+export { Pagination } from "./Pagination";
 export { Navbar } from "./Navbar";
 export { Footer } from "./Footer";
 export { Layout } from "./Layout";

@@ -5,8 +5,7 @@ import SigaaScraperService from "./SigaaScraperService.js";
 import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 import { env } from "@/config/env.js";
 
-const DEFAULT_CACHE_TTL_MS =
-  (Number(process.env.SIGAA_CACHE_TTL_HOURS) || 12) * 60 * 60 * 1000;
+const DEFAULT_CACHE_TTL_MS = env.SIGAA_CACHE_TTL_HOURS * 60 * 60 * 1000;
 
 type Props = {
   scraperService?: ISigaaScraperService;

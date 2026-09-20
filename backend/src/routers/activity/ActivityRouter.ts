@@ -10,19 +10,17 @@ import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollment
 
 const router = express.Router();
 const activityController: IActivityController = new ActivityController();
-const activityReportController: IActivityReportController = new ActivityReportController();
+const activityReportController: IActivityReportController =
+  new ActivityReportController();
 const enrollmentController: IEnrollmentController = new EnrollmentController();
 const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 
-router.post(
-  "/activities",
-  authMiddleware.auth(),
-  (req, res, next) => activityController.create(req, res).catch(next),
+router.post("/activities", authMiddleware.auth(), (req, res, next) =>
+  activityController.create(req, res).catch(next),
 );
 
-router.get(
-  "/activities",
-  (req, res, next) => activityController.list(req, res).catch(next),
+router.get("/activities", (req, res, next) =>
+  activityController.list(req, res).catch(next),
 );
 
 router.get(
@@ -35,16 +33,15 @@ router.get(
   (req, res, next) => activityController.findById(req, res).catch(next),
 );
 
-router.patch(
-  "/activities/:id",
-  authMiddleware.auth(),
-  (req, res, next) => activityController.update(req, res).catch(next),
+router.patch("/activities/:id", authMiddleware.auth(), (req, res, next) =>
+  activityController.update(req, res).catch(next),
 );
 
 router.post(
   "/activities/:id/reports",
   authMiddleware.auth({ userTypes: "all" }),
-  (req, res, next) => activityReportController.createReport(req, res).catch(next),
+  (req, res, next) =>
+    activityReportController.createReport(req, res).catch(next),
 );
 
 router.post(
@@ -65,10 +62,8 @@ router.patch(
   (req, res, next) => activityController.updateStatus(req, res).catch(next),
 );
 
-router.delete(
-  "/activities/:id",
-  authMiddleware.auth(),
-  (req, res, next) => activityController.delete(req, res).catch(next),
+router.delete("/activities/:id", authMiddleware.auth(), (req, res, next) =>
+  activityController.delete(req, res).catch(next),
 );
 
 export default router;

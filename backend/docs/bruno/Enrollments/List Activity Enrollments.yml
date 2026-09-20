@@ -20,7 +20,7 @@ http:
     - name: limit
       value: "10"
       type: query
-      description: Items per page (default 10)
+      description: Items per page (default 10, maximum 50)
   auth: inherit
 
 settings:
@@ -32,7 +32,7 @@ settings:
 
 examples:
   - name: 200 - Successful
-    description: Returns the paginated list of active (APPROVED) enrollments, ordered by enrolledAt ascending (oldest first). Available to the activity creator or to a manager (isManager) — both receive exactly the same result. CANCELLED enrollments are hidden and count neither in total nor in totalPresent. attendanceConfirmed is null when no one homologated yet, true for confirmed presence and false for registered absence; confirmedWorkloadHours is 0 in both null and false cases — consumers must always discriminate by attendanceConfirmed, never by the number. registrationCode is null for enrolled professors (no Student record).
+    description: Returns the paginated list of active (APPROVED) enrollments, ordered by enrolledAt ascending (oldest first, tie-broken by id for stable pagination). Available to the activity creator or to a manager (isManager) — both receive exactly the same result. CANCELLED enrollments are hidden and count neither in total nor in totalPresent. attendanceConfirmed is null when no one homologated yet, true for confirmed presence and false for registered absence; confirmedWorkloadHours is 0 in both null and false cases — consumers must always discriminate by attendanceConfirmed, never by the number. registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists in the database).
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -99,6 +99,7 @@ examples:
             "limit": 10,
             "totalPresent": 1
           }
+
   - name: 200 - Empty list
     description: Activity has no active enrollments. Returns 200 with an empty list — never 404 for lack of enrollees.
     request:
@@ -128,8 +129,9 @@ examples:
             "limit": 10,
             "totalPresent": 0
           }
+
   - name: 400 - Invalid query params
-    description: page or limit is not a positive integer.
+    description: page or limit is not a positive integer, or limit exceeds the maximum of 50. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -161,8 +163,43 @@ examples:
               { "field": "page", "message": "page must be a positive integer." }
             ]
           }
+
+  - name: 400 - Limit above maximum
+    description: limit above 50 is rejected. The ceiling protects the query against unbounded page sizes.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+        - name: limit
+          value: "51"
+          type: query
+          description: Items per page
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Invalid query parameters.",
+            "errors": [
+              { "field": "limit", "message": "limit must be at most 50." }
+            ]
+          }
+
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Token header is missing, invalid or expired — or the user it identifies no longer exists in the database. Checked before activity existence, so not even the existence of the activity is revealed.
+    description: Unauthenticated. Session cookie is missing or invalid/expired, or the Bearer token is missing, invalid or expired — or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -171,6 +208,10 @@ examples:
           value: ""
           type: path
           description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
     response:
       status: 401
       statusText: Unauthorized
@@ -184,6 +225,7 @@ examples:
             "status": 401,
             "message": "Unauthenticated."
           }
+
   - name: 403 - Forbidden
     description: Authenticated user is neither the activity creator nor a manager (isManager). Volunteers enrolled in the activity also receive 403. No enrollee data is exposed. Checked only after the activity is known to exist (404 takes precedence).
     request:
@@ -210,8 +252,9 @@ examples:
             "status": 403,
             "message": "Only the activity creator or a manager can view the enrollment list."
           }
+
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400), preserving the validation order authentication (401) → existence (404) → authorization (403), aligned with DELETE /activities/:id/enroll.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:id/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -223,6 +266,10 @@ examples:
           value: not-a-uuid
           type: path
           description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
     response:
       status: 404
       statusText: Not Found
@@ -236,6 +283,7 @@ examples:
             "status": 404,
             "message": "Activity not found."
           }
+
   - name: 500 - Internal error
     description: Internal server error.
     request:
@@ -266,18 +314,20 @@ examples:
 docs: |-
   Lists the active enrollments of an activity for its creator or a manager.
 
-  - Collection route: GET /activities/:activityId/enrollments, paginated with ?page=1&limit=10 (defaults).
-  - The requesting user is resolved exclusively from the JWT token (never from params, query or body), and must still exist and be active in the database (light hybrid authentication).
-  - Validation order: authentication (401) → activity existence (404) → authorization (403), so the existence of an activity is never leaked to unauthorized users.
+  - Collection route: GET /activities/:activityId/enrollments, paginated with ?page=1&limit=10 (defaults; limit is capped at 50).
+  - Authentication is hybrid: the middleware accepts an httpOnly session cookie (used by the web frontend) or an Authorization: Bearer token (used by Bruno and scripts). Both resolve the same way, and the identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
+  - The requesting user is resolved exclusively from the credential (cookie or Bearer) — never from params, query or body.
+  - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
+  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:id/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
-  - Each item exposes only: enrollmentId, userId, fullName, email, registrationCode (null for professors), status, attendanceConfirmed and confirmedWorkloadHours. Email is kept by team decision (the user story justifies participant contact).
+  - Each item exposes only: enrollmentId, userId, fullName, email, registrationCode, status, attendanceConfirmed and confirmedWorkloadHours. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
   - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
   - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
   - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:id.
-  - The list is ordered by enrolledAt ascending (oldest enrollment first).
+  - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
   - A nonexistent, soft-deleted or non-UUID activity id returns 404.
-  - Status filters and sorting are additive evolutions that do not break this contract.
+  - Status filters and sorting are additive evolutions that do not break this contract; the enrolledAt ASC ordering is fixed.

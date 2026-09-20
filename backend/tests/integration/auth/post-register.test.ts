@@ -89,7 +89,9 @@ describe("POST /auth/register", () => {
 
   it("does NOT send a Set-Cookie header", async () => {
     // AC central da refatoração.
-    const response = await request(app).post(REGISTER_URL).send(aStudentPayload());
+    const response = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload());
 
     expect(response.status).toBe(201);
     expect(response.headers["set-cookie"]).toBeUndefined();
@@ -199,5 +201,98 @@ describe("POST /auth/register", () => {
     });
     const rows = await prisma.user.count({ where: { email: payload.email } });
     expect(rows).toBe(1);
+  });
+
+  it("returns 409 when a STUDENT registrationCode is already registered", async () => {
+    const first = aStudentPayload();
+    await request(app).post(REGISTER_URL).send(first).expect(201);
+
+    const second = aStudentPayload({
+      registrationCode: first.registrationCode,
+    });
+    const response = await request(app).post(REGISTER_URL).send(second);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 409,
+      message: "Registration code already in use.",
+    });
+
+    // Nothing was created for the failed attempt: the transaction rolled
+    // back the User row too, and the email stays available.
+    const users = await prisma.user.count({ where: { email: second.email } });
+    expect(users).toBe(0);
+    const students = await prisma.student.count({
+      where: { registrationCode: first.registrationCode },
+    });
+    expect(students).toBe(1);
+  });
+
+  it("returns 409 when a TEACHER registrationCode is already registered", async () => {
+    const first = aTeacherPayload();
+    await request(app).post(REGISTER_URL).send(first).expect(201);
+
+    const second = aTeacherPayload({
+      registrationCode: first.registrationCode,
+    });
+    const response = await request(app).post(REGISTER_URL).send(second);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 409,
+      message: "Registration code already in use.",
+    });
+
+    const users = await prisma.user.count({ where: { email: second.email } });
+    expect(users).toBe(0);
+  });
+
+  it("returns 409 when a TEACHER cndb is already registered", async () => {
+    const first = aTeacherPayload();
+    await request(app).post(REGISTER_URL).send(first).expect(201);
+
+    const second = aTeacherPayload({ cndb: first.cndb });
+    const response = await request(app).post(REGISTER_URL).send(second);
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 409,
+      message: "CNDB already in use.",
+    });
+
+    const users = await prisma.user.count({ where: { email: second.email } });
+    expect(users).toBe(0);
+  });
+
+  it("gives a different message for a registrationCode conflict than for an email conflict", async () => {
+    const first = aStudentPayload();
+    await request(app).post(REGISTER_URL).send(first).expect(201);
+
+    const emailConflict = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ email: first.email }));
+
+    const codeConflict = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ registrationCode: first.registrationCode }));
+
+    expect(emailConflict.status).toBe(409);
+    expect(codeConflict.status).toBe(409);
+    expect(emailConflict.body.message).not.toBe(codeConflict.body.message);
+  });
+
+  it("does not leak Prisma internals (constraint name, sql, stack) in the response body", async () => {
+    const first = aStudentPayload();
+    await request(app).post(REGISTER_URL).send(first).expect(201);
+
+    const response = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ registrationCode: first.registrationCode }));
+
+    expect(Object.keys(response.body).sort()).toEqual(["message", "status"]);
+    const raw = JSON.stringify(response.body);
+    expect(raw).not.toMatch(/prisma/i);
+    expect(raw).not.toMatch(/_key/);
+    expect(raw).not.toMatch(/select |insert |constraint/i);
   });
 });

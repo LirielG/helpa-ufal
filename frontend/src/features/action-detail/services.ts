@@ -11,6 +11,5 @@ export async function getActionById(id: string): Promise<ActionDetail | null> {
 }
 
 export async function enrollInAction(actionId: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  void actionId;
+  await api.post<void>(`/activities/${actionId}/enroll`);
 }

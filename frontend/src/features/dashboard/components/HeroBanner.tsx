@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router";
 import { formatDate } from "../../../utils";
 import type { Action } from "../types";
 
@@ -32,7 +33,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
   const goToSlide = (index: number) => setCurrentSlide(index);
 
   const goToPrevious = () => {
-    setCurrentSlide((prev) => (prev - 1 + featuredActions.length) % featuredActions.length);
+    setCurrentSlide(
+      (prev) => (prev - 1 + featuredActions.length) % featuredActions.length,
+    );
   };
 
   const goToNext = () => {
@@ -40,7 +43,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
   };
 
   if (featuredActions.length === 0) {
-    return <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />;
+    return (
+      <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />
+    );
   }
 
   return (
@@ -74,15 +79,19 @@ export function HeroBanner({ actions }: HeroBannerProps) {
                       {action.title}
                     </h2>
                     <p className="text-lg md:text-xl text-gray-200 line-clamp-3">
-                      {action.details?.description || "Descrição não informada."}
+                      {action.details?.description ||
+                        "Descrição não informada."}
                     </p>
                     <div className="flex items-center gap-4">
                       <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">
                         {formattedDate}
                       </span>
-                      <button className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                      <Link
+                        to={`/activity/${action.id}`}
+                        className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                      >
                         Saiba mais
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>

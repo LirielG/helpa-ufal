@@ -1,7 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/database/prisma.js";
 import type { IActivityReportRepository } from "./IActivityReportRepository.js";
-import { type ActivityReportResponse, toActivityReportResponse } from "@/types/activityReport.js";
+import {
+  type ActivityReportResponse,
+  toActivityReportResponse,
+} from "@/types/activityReport.js";
 import { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
 
 type Props = {

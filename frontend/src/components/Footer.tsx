@@ -8,9 +8,14 @@ export function Footer() {
           {/* Logo e Descrição */}
           <div className="px-0 md:px-8 py-6 md:py-0 md:flex-1">
             <div className="flex items-start md:items-center gap-6">
-              <img src={helpaWhiteLogo} alt="helpa" className="h-20 md:h-24 w-auto flex-shrink-0" />
+              <img
+                src={helpaWhiteLogo}
+                alt="helpa"
+                className="h-20 md:h-24 w-auto flex-shrink-0"
+              />
               <p className="text-sm text-gray-300 max-w-md leading-relaxed">
-                Plataforma de voluntariado universitário conectando estudantes, docentes e comunidade.
+                Plataforma de voluntariado universitário conectando estudantes,
+                docentes e comunidade.
               </p>
             </div>
           </div>
@@ -20,9 +25,21 @@ export function Footer() {
             <div className="pl-0 md:pl-8">
               <h4 className="font-semibold mb-4 text-white">Links Rápidos</h4>
               <ul className="space-y-2 text-sm text-gray-300">
-                <li><a href="#" className="hover:text-white transition">Home</a></li>
-                <li><a href="#" className="hover:text-white transition">Sobre</a></li>
-                <li><a href="#" className="hover:text-white transition">Oportunidades</a></li>
+                <li>
+                  <a href="#" className="hover:text-white transition">
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition">
+                    Sobre
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition">
+                    Oportunidades
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
@@ -31,9 +48,7 @@ export function Footer() {
           <div className="px-0 md:px-8 py-6 md:py-0 md:flex-1">
             <div className="pl-0 md:pl-8">
               <h4 className="font-semibold mb-4 text-white">Contato</h4>
-              <p className="text-sm text-gray-300">
-                helpa@universidade.edu.br
-              </p>
+              <p className="text-sm text-gray-300">helpa@universidade.edu.br</p>
             </div>
           </div>
         </div>

@@ -42,7 +42,13 @@ export interface FilterOptions {
   search?: string;
 }
 
+/** The body `GET /activities` answers with: the slice and the overall count. */
 export interface PaginatedResponse<T> {
   activities: T[];
   total: number;
+}
+
+/** An API page plus the page count derived from the limit the client sent. */
+export interface ActionsPage extends PaginatedResponse<Action> {
+  totalPages: number;
 }

@@ -1,11 +1,15 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
-import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
+import type {
+  CreateActivityInput,
+  UpdateActivityInput,
+} from "@/schemas/activity/ActivitySchemas.js";
 import { isValidTransition } from "@/schemas/activity/ActivitySchemas.js";
 import type {
   IListActivitiesFilters,
-  IListActivitiesResponse} from "./IActivityService.js";
+  IListActivitiesResponse,
+} from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import { ActivityFullResponse, ActivityResponse, ActivityStatus, ActivityFilterOptions} from "@/types/activity.js";
@@ -172,15 +176,15 @@ class ActivityService implements IActivityService {
 
     if (filters.type && !validTypes.includes(filters.type)) {
       filterErrors.push({
-        field: "tipo",
-        message: `tipo must be one of the following: ${validTypes.join(", ")}.`,
+        field: "type",
+        message: `type must be one of the following: ${validTypes.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
     if (filters.format && !validFormats.includes(filters.format)) {
       filterErrors.push({
-        field: "formato",
-        message: `formato must be one of the following: ${validFormats.join(", ")}.`,
+        field: "format",
+        message: `format must be one of the following: ${validFormats.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
@@ -214,7 +218,7 @@ class ActivityService implements IActivityService {
 
     let sortField = "createdAt";
 
-    if (filters.orderBy === "data_inicio") {
+    if (filters.orderBy === "start_date") {
       sortField = "startDate";
     } else if (filters.orderBy === "created_at") {
       sortField = "createdAt";
@@ -232,7 +236,7 @@ class ActivityService implements IActivityService {
       orderBy: sortField,
       order: (filters.order ?? "desc") as "asc" | "desc",
     });
-    
+
     return result;
   }
 
@@ -259,7 +263,7 @@ class ActivityService implements IActivityService {
 
   public async update(
     id: string,
-    user: { id: string; isManager: boolean },
+    userId: string,
     data: UpdateActivityInput,
   ): Promise<ActivityFullResponse> {
     const activity = await this._activityRepository.findById(id);
@@ -268,9 +272,15 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const isAuthor = activity.authorId === user.id; // Alvo futuro: permite autor/gestor fantasma, pois não consulta usuário no banco
-    if (!isAuthor && !user.isManager) {
-      throw new CustomError(403, "You do not have permission to update this activity.");
+    const dbUser = await this._activityRepository.findUserById(userId);
+    const isAuthor = !!dbUser && activity.authorId === userId;
+    const isManager = dbUser?.isManager ?? false;
+
+    if (!isAuthor && !isManager) {
+      throw new CustomError(
+        403,
+        "You do not have permission to update this activity.",
+      );
     }
 
     if (activity.status === "COMPLETED" || activity.status === "CANCELLED") {
@@ -287,63 +297,96 @@ class ActivityService implements IActivityService {
 
     if (data.startDate || data.endDate) {
       const dateErrors: ValidationErrorItem[] = [];
-      const durationDays = (finalEndDate.getTime() - finalStartDate.getTime()) / (1000 * 60 * 60 * 24);
-      const daysUntilStart = (finalStartDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      const durationDays =
+        (finalEndDate.getTime() - finalStartDate.getTime()) /
+        (1000 * 60 * 60 * 24);
+      const daysUntilStart =
+        (finalStartDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
       if (data.startDate && finalStartDate <= now) {
-        dateErrors.push({ field: "startDate", message: "startDate must be in the future." });
+        dateErrors.push({
+          field: "startDate",
+          message: "startDate must be in the future.",
+        });
       }
 
       if (finalEndDate <= finalStartDate) {
-        dateErrors.push({ field: "endDate", message: "endDate must be after startDate." });
+        dateErrors.push({
+          field: "endDate",
+          message: "endDate must be after startDate.",
+        });
       }
 
       if (durationDays > MAX_ACTIVITY_DURATION_DAYS) {
-        dateErrors.push({ field: "endDate", message: `Activity duration cannot exceed ${MAX_ACTIVITY_DURATION_DAYS} days.` });
+        dateErrors.push({
+          field: "endDate",
+          message: `Activity duration cannot exceed ${MAX_ACTIVITY_DURATION_DAYS} days.`,
+        });
       }
 
       if (data.startDate && daysUntilStart > MAX_FUTURE_START_DAYS) {
-        dateErrors.push({ field: "startDate", message: `startDate cannot be more than ${MAX_FUTURE_START_DAYS} days in the future.` });
+        dateErrors.push({
+          field: "startDate",
+          message: `startDate cannot be more than ${MAX_FUTURE_START_DAYS} days in the future.`,
+        });
       }
 
       if (dateErrors.length > 0) throw new ValidationError(dateErrors);
     }
 
-    const finalWorkloadHours = data.workloadHours ?? activity.details?.workloadHours ?? 0;
-    const durationDays = (finalEndDate.getTime() - finalStartDate.getTime()) / (1000 * 60 * 60 * 24);
+    const finalWorkloadHours =
+      data.workloadHours ?? activity.details?.workloadHours ?? 0;
+    const durationDays =
+      (finalEndDate.getTime() - finalStartDate.getTime()) /
+      (1000 * 60 * 60 * 24);
     const durationHours = durationDays * 24;
 
     if (data.workloadHours || data.startDate || data.endDate) {
       const capacityErrors = [];
 
       if (finalWorkloadHours > durationHours) {
-        capacityErrors.push({ field: "workloadHours", message: "workloadHours cannot exceed the total duration of the activity." });
+        capacityErrors.push({
+          field: "workloadHours",
+          message:
+            "workloadHours cannot exceed the total duration of the activity.",
+        });
       }
 
       if (finalWorkloadHours > MAX_WORKLOAD_HOURS) {
-        capacityErrors.push({ field: "workloadHours", message: `workloadHours cannot exceed ${MAX_WORKLOAD_HOURS}.` });
+        capacityErrors.push({
+          field: "workloadHours",
+          message: `workloadHours cannot exceed ${MAX_WORKLOAD_HOURS}.`,
+        });
       }
 
       if (capacityErrors.length > 0) throw new ValidationError(capacityErrors);
     }
 
-   
     if (data.slots !== undefined) {
       if (data.slots > MAX_SLOTS) {
-        throw new ValidationError([{ field: "slots", message: `slots cannot exceed ${MAX_SLOTS}.` }]);
+        throw new ValidationError([
+          { field: "slots", message: `slots cannot exceed ${MAX_SLOTS}.` },
+        ]);
       }
 
       const approvedEnrollments = activity.slots - activity.availableSlots;
       if (data.slots < approvedEnrollments) {
         throw new ValidationError([
-          { field: "slots", message: `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).` }
+          {
+            field: "slots",
+            message: `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`,
+          },
         ]);
       }
     }
 
     const finalFormat = data.format ?? activity.details?.format;
 
-    if ((finalFormat === "ONLINE" || finalFormat === "HYBRID") && !data.url && !activity.details?.url) {
+    if (
+      (finalFormat === "ONLINE" || finalFormat === "HYBRID") &&
+      !data.url &&
+      !activity.details?.url
+    ) {
       throw new CustomError(400, `${finalFormat} activities require a url.`);
     }
 
@@ -357,51 +400,68 @@ class ActivityService implements IActivityService {
       if (data.address) {
         addressAction = hasExistingAddress ? "UPDATE" : "CREATE";
       } else if (!hasExistingAddress && data.format) {
-        throw new CustomError(400, `${finalFormat} activities require an address.`);
+        throw new CustomError(
+          400,
+          `${finalFormat} activities require an address.`,
+        );
       }
     }
 
-    
-    const updatedActivity = await this._activityRepository.update(id, data, addressAction);
+    const updatedActivity = await this._activityRepository.update(
+      id,
+      data,
+      addressAction,
+    );
 
     return updatedActivity;
   }
-  
+
   public async updateStatus(
     activityId: string,
     newStatus: ActivityStatus,
-    userId: string
+    userId: string,
   ): Promise<ActivityResponse> {
-    
     const activity = await this._activityRepository.findById(activityId);
-    
+
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    
     const user = await this._activityRepository.findUserById(userId);
     const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
     const isManager = user?.isManager ?? false;
 
     if (!isAuthor && !isManager) {
-      throw new CustomError(403, "Forbidden. Requester is not the author or a manager.");
+      throw new CustomError(
+        403,
+        "Forbidden. Requester is not the author or a manager.",
+      );
     }
 
     const currentStatus = activity.status;
-    
+
     if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
-      throw new CustomError(409, `Activity is already ${currentStatus} and cannot be transitioned.`);
+      throw new CustomError(
+        409,
+        `Activity is already ${currentStatus} and cannot be transitioned.`,
+      );
     }
-    
+
     if (!isValidTransition(currentStatus, newStatus)) {
-      throw new CustomError(409, `Cannot transition from ${currentStatus} to ${newStatus}.`);
+      throw new CustomError(
+        409,
+        `Cannot transition from ${currentStatus} to ${newStatus}.`,
+      );
     }
 
-    const updated = await this._activityRepository.updateStatus(activityId, newStatus as any);
+    const updated = await this._activityRepository.updateStatus(
+      activityId,
+      newStatus as any,
+    );
 
-    const approvedCount = await this._activityRepository.countApprovedEnrollments(activityId);
-    
+    const approvedCount =
+      await this._activityRepository.countApprovedEnrollments(activityId);
+
     const activityResponse: ActivityResponse = {
       id: updated.id,
       authorId: updated.authorId,

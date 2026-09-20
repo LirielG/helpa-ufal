@@ -16,7 +16,9 @@ function mockRepositories(
   } = {},
 ) {
   const activityRepository = {
-    findById: vi.fn().mockResolvedValue({ id: ACTIVITY_ID, status: "OPEN", slots: 30 }),
+    findById: vi
+      .fn()
+      .mockResolvedValue({ id: ACTIVITY_ID, status: "OPEN", slots: 30 }),
     findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.activity,
   } as unknown as IActivityRepository;
@@ -33,16 +35,21 @@ function mockRepositories(
   return { activityRepository, enrollmentRepository };
 }
 
-
 describe("EnrollmentService.cancel", () => {
   // ---------- Happy path ----------
 
   it("cancels the enrollment and resolves with no content (contract: 204)", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     await expect(service.cancel(USER_ID, ACTIVITY_ID)).resolves.toBeUndefined();
-    expect(enrollmentRepository.cancel).toHaveBeenCalledWith(USER_ID, ACTIVITY_ID);
+    expect(enrollmentRepository.cancel).toHaveBeenCalledWith(
+      USER_ID,
+      ACTIVITY_ID,
+    );
   });
 
   // ---------- Authentication ----------
@@ -51,7 +58,10 @@ describe("EnrollmentService.cancel", () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       activity: { findUserById: vi.fn().mockResolvedValue(null) },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
     await expectHttpError(
       service.cancel(USER_ID, ACTIVITY_ID),
@@ -64,14 +74,16 @@ describe("EnrollmentService.cancel", () => {
 
   // ---------- Input validation ----------
 
-
   it("rejects a malformed activityId with a ValidationError", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
-    await expect(
-      service.cancel(USER_ID, "not-a-uuid"),
-    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.cancel(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
+      ValidationError,
+    );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
@@ -81,9 +93,16 @@ describe("EnrollmentService.cancel", () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(null) },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
-    await expectHttpError(service.cancel(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
+    await expectHttpError(
+      service.cancel(USER_ID, ACTIVITY_ID),
+      404,
+      "Activity not found.",
+    );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
@@ -92,10 +111,15 @@ describe("EnrollmentService.cancel", () => {
     async (status) => {
       const { activityRepository, enrollmentRepository } = mockRepositories({
         activity: {
-          findById: vi.fn().mockResolvedValue({ id: ACTIVITY_ID, status, slots: 30 }),
+          findById: vi
+            .fn()
+            .mockResolvedValue({ id: ACTIVITY_ID, status, slots: 30 }),
         },
       });
-      const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+      const service = new EnrollmentService({
+        activityRepository,
+        enrollmentRepository,
+      });
 
       await expectHttpError(
         service.cancel(USER_ID, ACTIVITY_ID),
@@ -114,11 +138,20 @@ describe("EnrollmentService.cancel", () => {
     // contract deliberately makes these indistinguishable.
     const { activityRepository, enrollmentRepository } = mockRepositories({
       enrollment: {
-        cancel: vi.fn().mockRejectedValue(new CustomError(404, "Enrollment not found.")),
+        cancel: vi
+          .fn()
+          .mockRejectedValue(new CustomError(404, "Enrollment not found.")),
       },
     });
-    const service = new EnrollmentService({ activityRepository, enrollmentRepository });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
 
-    await expectHttpError(service.cancel(USER_ID, ACTIVITY_ID), 404, "Enrollment not found.");
+    await expectHttpError(
+      service.cancel(USER_ID, ACTIVITY_ID),
+      404,
+      "Enrollment not found.",
+    );
   });
 });

@@ -17,10 +17,7 @@ export function NotFound() {
         </div>
 
         <div className="flex gap-4 flex-wrap justify-center">
-          <Button
-            onClick={() => navigate("/dashboard")}
-            className="px-6 py-2"
-          >
+          <Button onClick={() => navigate("/dashboard")} className="px-6 py-2">
             Ir para Dashboard
           </Button>
           <Button

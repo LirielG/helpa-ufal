@@ -8,7 +8,7 @@ const mockActions = [
   { id: "2", title: "Slide 2", startDate: "2026-05-10T12:00:00Z" },
   { id: "3", title: "Slide 3", startDate: "2026-05-11T12:00:00Z" },
   { id: "4", title: "Slide 4", startDate: "2026-05-12T12:00:00Z" },
-] as unknown as Action[]
+] as unknown as Action[];
 
 function getVisibleSlideTitle(): string {
   return screen.getByRole("heading").textContent || "";
@@ -43,9 +43,27 @@ describe("HeroBanner", () => {
   it("jumps to the slide picked from the dots and marks it as current", async () => {
     const { user } = render(<HeroBanner actions={mockActions} />);
     await user.click(screen.getByRole("button", { name: "Ir para slide 3" }));
-    
+
     expect(getVisibleSlideTitle()).toBe("Slide 3");
-    expect(screen.getByRole("button", { name: "Ir para slide 3" })).toHaveAttribute("aria-current", "true");
+    expect(
+      screen.getByRole("button", { name: "Ir para slide 3" }),
+    ).toHaveAttribute("aria-current", "true");
+  });
+
+  it("links 'Saiba mais' to the detail screen of the slide currently visible", async () => {
+    const { user } = render(<HeroBanner actions={mockActions} />);
+
+    expect(screen.getByRole("link", { name: "Saiba mais" })).toHaveAttribute(
+      "href",
+      "/activity/1",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Próximo slide" }));
+
+    expect(screen.getByRole("link", { name: "Saiba mais" })).toHaveAttribute(
+      "href",
+      "/activity/2",
+    );
   });
 
   describe("automatic rotation", () => {
@@ -60,10 +78,14 @@ describe("HeroBanner", () => {
     it("advances on its own every five seconds", () => {
       render(<HeroBanner actions={mockActions} />);
 
-      act(() => { vi.advanceTimersByTime(5000); });
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
       expect(getVisibleSlideTitle()).toBe("Slide 2");
 
-      act(() => { vi.advanceTimersByTime(5000); });
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
       expect(getVisibleSlideTitle()).toBe("Slide 3");
     });
 
