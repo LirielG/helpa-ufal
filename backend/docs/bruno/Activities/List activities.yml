@@ -121,9 +121,9 @@ http:
       description: "Page number (default: 1)."
       disabled: true
     - name: limit
-      value: "10"
+      value: "20"
       type: query
-      description: "Items per page (default: 10, max: 50)."
+      description: "Items per page (default: 20, max: 100)."
       disabled: true
     - name: orderBy
       value: created_at
@@ -164,7 +164,7 @@ examples:
           value: "1"
           type: query
         - name: limit
-          value: "10"
+          value: "20"
           type: query
     response:
       status: 200
