@@ -50,3 +50,7 @@ export type ActivityDetailsResponse = {
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
 };
+
+export type ActivityFilterOptions = {
+  areas: string[];
+};

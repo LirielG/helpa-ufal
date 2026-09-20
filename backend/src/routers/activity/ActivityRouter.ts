@@ -23,8 +23,14 @@ router.get("/activities", (req, res, next) =>
   activityController.list(req, res).catch(next),
 );
 
-router.get("/activities/:id", (req, res, next) =>
-  activityController.findById(req, res).catch(next),
+router.get(
+  "/activities/filters",
+  (req, res, next) => activityController.listFilters(req, res).catch(next),
+);
+
+router.get(
+  "/activities/:id",
+  (req, res, next) => activityController.findById(req, res).catch(next),
 );
 
 router.patch("/activities/:id", authMiddleware.auth(), (req, res, next) =>

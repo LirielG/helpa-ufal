@@ -16,6 +16,7 @@ import {
   ActivityFullResponse,
   ActivityResponse,
   ActivityStatus,
+  ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
   ValidationErrorItem,
@@ -138,7 +139,7 @@ class ActivityService implements IActivityService {
 
   public async list(
     filters: IListActivitiesFilters,
-    usuarioId?: string,
+    userId?: string,
   ): Promise<IListActivitiesResponse> {
     const pageRaw = filters.page ?? "1";
     const limitRaw = filters.limit ?? "20";
@@ -227,13 +228,14 @@ class ActivityService implements IActivityService {
     } else if (filters.orderBy === "created_at") {
       sortField = "createdAt";
     }
-
+    const trimmedArea = filters.area?.trim();
     const result = await this._activityRepository.list({
       type: filters.type,
       format: filters.format,
       status: filters.status,
       search: filters.search,
       campus: filters.campus,
+      area: trimmedArea ? trimmedArea : undefined,
       page: pageNum,
       limit: limitNum,
       orderBy: sortField,
@@ -241,6 +243,11 @@ class ActivityService implements IActivityService {
     });
 
     return result;
+  }
+
+  public async listFilterOptions(): Promise<ActivityFilterOptions> {
+    const areas = await this._activityRepository.listDistinctAreas();
+    return { areas };
   }
 
   public async findById(id: string): Promise<ActivityFullResponse> {

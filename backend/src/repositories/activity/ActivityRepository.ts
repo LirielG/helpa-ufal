@@ -125,6 +125,7 @@ class ActivityRepository implements IActivityRepository {
       status,
       search,
       campus,
+      area,
       page,
       limit,
       orderBy,
@@ -137,9 +138,10 @@ class ActivityRepository implements IActivityRepository {
     if (status) whereClause.status = status;
     if (campus) whereClause.campus = campus;
 
-    if (format) {
+    if(format || area){
       whereClause.details = {
-        format: format,
+        ...(format ? { format: format } : {}),
+        ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),
       };
     }
 
@@ -183,6 +185,35 @@ class ActivityRepository implements IActivityRepository {
       activities,
       total,
     };
+  }
+
+  public async listDistinctAreas(): Promise<string[]> {
+    const rows = await this._prisma.activityDetails.groupBy({
+      by: ["area"],
+      where: {
+        activity: {
+          is: {
+            deletedAt: null,
+            status: { not: "CANCELLED" },
+          },
+        },
+      },
+    });
+
+    const areas = rows.map((r) => r.area);
+
+    const canonicalByKey = new Map<string, string>();
+    for (const area of areas) {
+      const key = area.toLowerCase();
+      const current = canonicalByKey.get(key);
+      if (current === undefined || area < current) {
+        canonicalByKey.set(key, area);
+      }
+    }
+
+    return Array.from(canonicalByKey.entries())
+      .sort(([a], [b]) => a.localeCompare(b, "pt-BR"))
+      .map(([, canonicalArea]) => canonicalArea);
   }
 
   public async update(

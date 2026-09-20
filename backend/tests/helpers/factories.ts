@@ -123,6 +123,7 @@ type ActivityOverrides = Partial<{
   endDate: Date;
   slots: number;
   status: ActivityStatus;
+  deletedAt: Date | null;
   description: string;
   area: string;
   format: ActivityFormat;
