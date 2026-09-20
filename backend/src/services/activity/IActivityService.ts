@@ -16,8 +16,8 @@ export interface IActivityService {
   ): Promise<ActivityResponse>;
   list(
     filters: IListActivitiesFilters,
-    usuarioId?: string,
-  ): Promise<IListActivitiesResponse>; // id opcional caso usuario esteja logado
+    userId?: string,
+  ): Promise<IListActivitiesResponse>;
   findById(id: string): Promise<ActivityFullResponse>;
   update(
     id: string,
