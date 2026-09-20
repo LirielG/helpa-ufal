@@ -245,7 +245,7 @@ examples:
       method: GET
       params:
         - name: limit
-          value: "101"
+          value: "51"
           type: query
           description: Exceeds the maximum of 50
     response:
@@ -263,7 +263,7 @@ examples:
             "errors": [
               {
                 "field": "limit",
-                "message": "limit can not exceed 100."
+                "message": "limit can not exceed 50."
               }
             ]
           }
@@ -303,7 +303,7 @@ docs: |-
   | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | |
   | `campus` | Enum of UFAL campus locations | |
   | `format` | Enum: IN_PERSON, ONLINE, HYBRID | |
-  | `page` / `limit` | Pagination | Defaults 1 / 20; `limit` max 100 |
+  | `page` / `limit` | Pagination | Defaults 1 / 10; `limit` max 50 |
   | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | |
 
   `startAfter` / `endBefore` were documented in a previous version of this
