@@ -266,7 +266,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const dbUser = await this._userRepository.findUserById(userId);
+    const dbUser = await this._userRepository.findById(userId);
     const isAuthor = activity.authorId === userId; // Manter sem !!dbUser para passar no teste da issue #148
     const isManager = dbUser?.isManager ?? false;
 
@@ -377,7 +377,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._userRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 
@@ -422,7 +422,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._userRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 

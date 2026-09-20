@@ -17,7 +17,7 @@ function mockRepositories(
   } as unknown as IActivityRepository;
 
   const userRepository = {
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.user,
   } as unknown as IUserRepository;
 
@@ -40,7 +40,7 @@ describe("ActivityService.delete", () => {
     const service = new ActivityService({ activityRepository, userRepository });
 
     await expectHttpError(service.delete("act-1", "anyone"), 404);
-    expect(userRepository.findUserById).not.toHaveBeenCalled();
+    expect(userRepository.findById).not.toHaveBeenCalled();
   });
 
   // ---------- Authorization ----------
@@ -58,7 +58,7 @@ describe("ActivityService.delete", () => {
   it("throws 403 when the token's user no longer exists in the database and is not the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
-      user: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -69,7 +69,7 @@ describe("ActivityService.delete", () => {
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
-      user: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -93,7 +93,7 @@ describe("ActivityService.delete", () => {
   it("a manager can delete another author's activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
-      user: { findUserById: vi.fn().mockResolvedValue({ isManager: true }) },
+      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -104,7 +104,7 @@ describe("ActivityService.delete", () => {
   it("a manager can delete their own activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "manager-9" }) },
-      user: { findUserById: vi.fn().mockResolvedValue({ isManager: true }) },
+      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -116,18 +116,12 @@ describe("ActivityService.delete", () => {
 
   it("does not throw when softDelete returns false (another request deleted first)", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
-      activity_softDelete: vi.fn().mockResolvedValue(false), // fallback
-      activity_override: { softDelete: vi.fn().mockResolvedValue(false) },
-    });
-    // Injeção explícita do mock específico
-    const service = new ActivityService({
-      activityRepository: {
-        ...activityRepository,
+      activity: {
+        findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
         softDelete: vi.fn().mockResolvedValue(false),
       },
-      userRepository,
     });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await expect(service.delete("act-1", "author-1")).resolves.toBeUndefined();
   });

@@ -108,7 +108,7 @@ class EnrollmentService implements IEnrollmentService {
 
   // Token valid and user still exists
   private async assertUserExists(userId: string): Promise<void> {
-    const user = await this._userRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) {
       throw new CustomError(401, "User account not found or inactive.");
     }

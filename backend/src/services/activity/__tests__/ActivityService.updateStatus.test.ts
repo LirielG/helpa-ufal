@@ -63,7 +63,7 @@ function mockRepositories(
   } as unknown as IActivityRepository;
 
   const userRepository = {
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.user,
   } as unknown as IUserRepository;
 
@@ -82,7 +82,7 @@ describe("ActivityService.updateStatus", () => {
       404,
       "Activity not found.",
     );
-    expect(userRepository.findUserById).not.toHaveBeenCalled();
+    expect(userRepository.findById).not.toHaveBeenCalled();
     expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
@@ -105,7 +105,7 @@ describe("ActivityService.updateStatus", () => {
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
-      user: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -124,7 +124,7 @@ describe("ActivityService.updateStatus", () => {
           .fn()
           .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS" })),
       },
-      user: { findUserById: vi.fn().mockResolvedValue({ isManager: true }) },
+      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 

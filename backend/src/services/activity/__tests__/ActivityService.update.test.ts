@@ -73,7 +73,7 @@ function mockRepositories(
   } as unknown as IActivityRepository;
 
   const userRepository = {
-    findUserById: vi.fn().mockImplementation(async (id: string) => {
+    findById: vi.fn().mockImplementation(async (id: string) => {
       if (id === MANAGER) return { isManager: true };
       if (id === AUTHOR || id === THIRD_PARTY) return { isManager: false };
       return null;
@@ -137,7 +137,7 @@ describe("ActivityService.update", () => {
   it("allows a deleted user with a valid token to update (defect pinned until #148)", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
-      user: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 

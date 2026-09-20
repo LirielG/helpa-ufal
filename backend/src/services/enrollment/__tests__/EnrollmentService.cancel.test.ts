@@ -23,7 +23,7 @@ function mockRepositories(
   } as unknown as IActivityRepository;
 
   const userRepository = {
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.user,
   } as unknown as IUserRepository;
 
@@ -54,7 +54,7 @@ describe("EnrollmentService.cancel", () => {
 
   it("throws 401 when the token's user no longer exists in the database", async () => {
     const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      user: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
