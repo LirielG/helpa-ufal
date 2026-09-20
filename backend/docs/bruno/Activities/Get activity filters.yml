@@ -1,5 +1,5 @@
 info:
-  name: Get activity filters (coming soon)
+  name: Get activity filters
   type: http
   seq: 8
   tags:
@@ -83,7 +83,7 @@ docs: |-
     tracked in a follow-up issue.
 
   ## Ordering
-  - Alphabetical, by the case-insensitive key, using database ordering.
+  - Alphabetical.
 
   ## Coherence with the listing
   - Every announced area matches at least one activity in
