@@ -221,7 +221,7 @@ describe("PATCH /activities/:activityId/enrollments/:enrollmentId/attendance", (
     expect(JSON.stringify(response.body)).not.toContain(volunteer.user.email);
   });
 
-  // ---------- 400 - Bad Request (shape of body and path params) ----------
+  // ---------- 400 - Bad Request (body shape) ----------
 
   it("returns 400 when attended has the wrong type, naming the field", async () => {
     const { author, activity, enrollment } = await aHomologableEnrollment();
@@ -285,54 +285,6 @@ describe("PATCH /activities/:activityId/enrollments/:enrollmentId/attendance", (
     // path for it and `field` comes out empty — documented as such.
     expect(response.body.errors).toEqual([
       { field: "", message: 'Unrecognized key: "userId"' },
-    ]);
-  });
-
-  it("returns 400 for a non-UUID activityId, naming the parameter", async () => {
-    const { author, enrollment } = await aHomologableEnrollment();
-
-    const response = await request(app)
-      .patch(attendanceUrl("not-a-uuid", enrollment.id))
-      .set(...authHeader(author.token))
-      .send({ attended: true, workloadHours: 4 });
-
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Validation error.");
-    expect(response.body.errors).toEqual([
-      { field: "activityId", message: "activityId must be a valid UUID." },
-    ]);
-    await expect(attendanceOf(enrollment.id)).resolves.toEqual({
-      attendanceConfirmed: null,
-      confirmedWorkloadHours: 0,
-    });
-  });
-
-  it("returns 400 for a non-UUID enrollmentId, naming the parameter", async () => {
-    const { author, activity } = await aHomologableEnrollment();
-
-    const response = await request(app)
-      .patch(attendanceUrl(activity.id, "not-a-uuid"))
-      .set(...authHeader(author.token))
-      .send({ attended: true, workloadHours: 4 });
-
-    expect(response.status).toBe(400);
-    expect(response.body.errors).toEqual([
-      { field: "enrollmentId", message: "enrollmentId must be a valid UUID." },
-    ]);
-  });
-
-  it("names every malformed path parameter, not just the first", async () => {
-    const { author } = await aHomologableEnrollment();
-
-    const response = await request(app)
-      .patch(attendanceUrl("not-a-uuid", "also-not-a-uuid"))
-      .set(...authHeader(author.token))
-      .send({ attended: true, workloadHours: 4 });
-
-    expect(response.status).toBe(400);
-    expect(response.body.errors).toEqual([
-      { field: "activityId", message: "activityId must be a valid UUID." },
-      { field: "enrollmentId", message: "enrollmentId must be a valid UUID." },
     ]);
   });
 
@@ -497,6 +449,40 @@ describe("PATCH /activities/:activityId/enrollments/:enrollmentId/attendance", (
 
     const response = await request(app)
       .patch(attendanceUrl(activity.id, randomUUID()))
+      .set(...authHeader(author.token))
+      .send({ attended: true, workloadHours: 4 });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Enrollment not found.",
+    });
+  });
+
+  it("returns 404 for a non-UUID activityId, revealing nothing about its shape", async () => {
+    const { author, enrollment } = await aHomologableEnrollment();
+
+    const response = await request(app)
+      .patch(attendanceUrl("not-a-uuid", enrollment.id))
+      .set(...authHeader(author.token))
+      .send({ attended: true, workloadHours: 4 });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
+    await expect(attendanceOf(enrollment.id)).resolves.toEqual({
+      attendanceConfirmed: null,
+      confirmedWorkloadHours: 0,
+    });
+  });
+
+  it("returns 404 for a non-UUID enrollmentId", async () => {
+    const { author, activity } = await aHomologableEnrollment();
+
+    const response = await request(app)
+      .patch(attendanceUrl(activity.id, "not-a-uuid"))
       .set(...authHeader(author.token))
       .send({ attended: true, workloadHours: 4 });
 
@@ -673,7 +659,7 @@ describe("PATCH /activities/:activityId/enrollments/:enrollmentId/attendance", (
     expect(response.status).toBe(401);
   });
 
-  it("answers 401 (not 400) to an unauthenticated request with a malformed id", async () => {
+  it("answers 401 (not 404) to an unauthenticated request with a malformed id", async () => {
     const response = await request(app)
       .patch(attendanceUrl("not-a-uuid", "not-a-uuid"))
       .send({ attended: true, workloadHours: 4 });

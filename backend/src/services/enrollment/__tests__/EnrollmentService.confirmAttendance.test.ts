@@ -462,6 +462,53 @@ describe("EnrollmentService.confirmAttendance", () => {
     );
   });
 
+  it("checks enrollment existence (404) before authorization (403)", async () => {
+    const { service } = aService({
+      enrollment: { findByIdAndActivity: vi.fn().mockResolvedValue(null) },
+    });
+
+    await expectCustomError(
+      service.confirmAttendance(
+        "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
+        ACTIVITY_ID,
+        ENROLLMENT_ID,
+        { attended: true, workloadHours: 4 },
+      ),
+      404,
+      "Enrollment not found.",
+    );
+  });
+
+  it("answers 404 for a non-UUID activityId, without touching the database", async () => {
+    const { service, activityRepository, enrollmentRepository } = aService();
+
+    await expectCustomError(
+      service.confirmAttendance(AUTHOR_ID, "not-a-uuid", ENROLLMENT_ID, {
+        attended: true,
+        workloadHours: 4,
+      }),
+      404,
+      "Activity not found.",
+    );
+    expect(activityRepository.findById).not.toHaveBeenCalled();
+    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for a non-UUID enrollmentId, without touching the database", async () => {
+    const { service, enrollmentRepository } = aService();
+
+    await expectCustomError(
+      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, "not-a-uuid", {
+        attended: true,
+        workloadHours: 4,
+      }),
+      404,
+      "Enrollment not found.",
+    );
+    expect(enrollmentRepository.findByIdAndActivity).not.toHaveBeenCalled();
+    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
+  });
+
   it("checks authorization (403) before the business rules (409)", async () => {
     const { service } = aService({
       activity: {
