@@ -170,7 +170,7 @@ class ActivityRepository implements IActivityRepository {
     };
   }
 
-    public async listDistinctAreas(): Promise<string[]> {
+  public async listDistinctAreas(): Promise<string[]> {
     const rows = await this._prisma.activityDetails.groupBy({
       by: ["area"],
       where: {
@@ -195,7 +195,7 @@ class ActivityRepository implements IActivityRepository {
     }
 
     return Array.from(canonicalByKey.entries())
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .sort(([a], [b]) => a.localeCompare(b, "pt-BR"))
       .map(([, canonicalArea]) => canonicalArea);
   }
 
