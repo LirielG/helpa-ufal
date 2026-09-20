@@ -6,8 +6,10 @@ const router = express.Router();
 const userController = new UserController();
 const authMiddleware = new AuthMiddleware();
 
-router.get("/users/me", authMiddleware.auth({ userTypes: "all" }), (req, res) =>
-  userController.getMe(req, res),
+router.get(
+  "/users/me",
+  authMiddleware.auth({ userTypes: "all" }),
+  (req, res, next) => userController.getMe(req, res).catch(next),
 );
 
 export default router;

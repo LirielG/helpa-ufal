@@ -72,8 +72,8 @@ examples:
             "cndb": "CNDB-9988",
             "createdAt": "2026-01-15T10:30:00.000Z"
           }
-  - name: 401 Missing or invalid token
-    description: 'No credential at all: "No token provided.". Invalid signature or expired token: "Token malformatted, expired or invalid." Both are 401.'
+  - name: 401 Missing token
+    description: No credential at all - neither the session cookie nor an Authorization header.
     response:
       status: 401
       body:
@@ -82,6 +82,17 @@ examples:
           {
             "status": 401,
             "message": "No token provided."
+          }
+  - name: 401 Invalid or expired token
+    description: A credential was sent, but it failed verification - malformed, wrong signature or past its expiry. The three cases share one message on purpose, so the response never tells which one it was.
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Token malformatted, expired or invalid."
           }
   - name: 404 User no longer exists
     response:

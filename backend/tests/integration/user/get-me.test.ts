@@ -109,6 +109,37 @@ describe("GET /users/me", () => {
     expect(response.body.isManager).toBe(true);
   });
 
+  // The route has no id input by design: whatever a caller sends in query,
+  // body or path-like params, the profile that comes back is the token owner's.
+  it("ignores any user id sent in the query or the body", async () => {
+    const owner = await createStudent({ fullName: "Maria Silva" });
+    const other = await createStudent({ fullName: "Outra Pessoa" });
+
+    const response = await request(app)
+      .get(`${meUrl}?userId=${other.user.id}&id=${other.user.id}`)
+      .set(...authHeader(owner.token))
+      .send({ userId: other.user.id, id: other.user.id });
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(owner.user.id);
+    expect(response.body.fullName).toBe("Maria Silva");
+  });
+
+  // The cookie wins over the header, so a Bearer token naming someone else
+  // cannot override the session the browser is actually authenticated with.
+  it("keeps the cookie session when a Bearer token names another user", async () => {
+    const owner = await createStudent();
+    const other = await createStudent();
+
+    const response = await request(app)
+      .get(meUrl)
+      .set(...authCookie(owner.token))
+      .set(...authHeader(other.token));
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(owner.user.id);
+  });
+
   it("accepts the session cookie as well as the Bearer token", async () => {
     const student = await createStudent();
 

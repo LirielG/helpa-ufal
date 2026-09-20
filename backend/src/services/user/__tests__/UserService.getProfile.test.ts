@@ -30,6 +30,7 @@ function aTeacherRow(overrides: Record<string, unknown> = {}) {
   return aStudentRow({
     userType: "TEACHER",
     fullName: "Ricardo Almeida",
+    email: "ricardo.almeida@ufal.br",
     student: null,
     teacher: {
       registrationCode: "1234567",
@@ -68,19 +69,25 @@ describe("UserService.getProfile", () => {
     expect(Object.keys(profile)).not.toContain("passwordHash");
   });
 
-  it("reads the academic fields of a TEACHER from the teacher row", async () => {
+  it("builds the TEACHER profile and drops every internal field", async () => {
     const service = new UserService({
       userRepository: mockRepository(aTeacherRow()),
     });
 
     const profile = await service.getProfile(USER_ID);
 
-    expect(profile).toMatchObject({
+    expect(profile).toEqual({
+      id: USER_ID,
+      fullName: "Ricardo Almeida",
+      email: "ricardo.almeida@ufal.br",
       userType: "TEACHER",
+      isManager: false,
       registrationCode: "1234567",
       course: null,
       cndb: "CNDB-9988",
+      createdAt: CREATED_AT,
     });
+    expect(Object.keys(profile)).not.toContain("passwordHash");
   });
 
   it("asks the repository for the id it was given, and no other", async () => {
