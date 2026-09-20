@@ -29,7 +29,10 @@ router.get(
   (req, res) => enrollmentController.listParticipants(req, res),
 );
 
-// The confirmation route of US 2.8.1 (attendance homologation) joins this
-// router when implemented — the two issues share this file by design.
+router.patch(
+  "/activities/:activityId/enrollments/:enrollmentId/attendance",
+  authMiddleware.auth({ userTypes: "all" }),
+  (req, res) => enrollmentController.confirmAttendance(req, res),
+);
 
 export default router;

@@ -24,3 +24,28 @@ export async function lockActivityForCapacity(
   `;
   return rows[0] ?? null;
 }
+/**
+ * Locks the Activity row and returns, read under that lock, the two values the
+ * attendance decision depends on: the activity status and the workload ceiling
+ * (which lives in activity_details). `FOR UPDATE OF a` locks the Activity row
+ * only — activity_details is read, never locked — so this keeps the lock
+ * ordering rule above: Activity first, always.
+ *
+ * Returns null for an activity that does not exist or was soft-deleted.
+ */
+export async function lockActivityForAttendance(
+  tx: Prisma.TransactionClient,
+  activityId: string,
+): Promise<{ status: ActivityStatus; workloadHours: number } | null> {
+  const rows = await tx.$queryRaw<
+    { status: ActivityStatus; workloadHours: number }[]
+  >`
+    SELECT a.status, d."workloadHours"
+    FROM "Activity" a
+    JOIN "activity_details" d ON d."activityId" = a.id
+    WHERE a.id = ${activityId}
+      AND a."deletedAt" IS NULL
+    FOR UPDATE OF a
+  `;
+  return rows[0] ?? null;
+}

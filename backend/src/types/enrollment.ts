@@ -39,6 +39,23 @@ export type ParticipantResponse = {
   confirmedWorkloadHours: number;
 };
 
+/** Body of the attendance homologation: the outcome only, never the target. */
+export type ConfirmAttendanceInput = {
+  attended: boolean;
+  workloadHours?: number;
+};
+
+/**
+ * Homologation response: the attendance state of the enrollment and nothing else.
+ */
+export type AttendanceResponse = {
+  /** Tri-state: null = not homologated, true = present, false = registered absence. */
+  attendanceConfirmed: boolean | null;
+  /** Significant only when attendanceConfirmed is true; 0 otherwise (structural). */
+  confirmedWorkloadHours: number;
+  updatedAt: Date;
+};
+
 export type ParticipantsListResponse = {
   items: ParticipantResponse[];
   /** Global count of APPROVED enrollments — never affected by the current page. */

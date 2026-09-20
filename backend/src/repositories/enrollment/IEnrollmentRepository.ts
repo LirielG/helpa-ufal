@@ -26,11 +26,25 @@ export interface IEnrollmentRepository {
     activityId: string,
   ): Promise<Enrollment | null>;
 
+  /* Scoped lookup: an enrollment of another activity reads as nonexistent */
+  findByIdAndActivity(
+    enrollmentId: string,
+    activityId: string,
+  ): Promise<Enrollment | null>;
+
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
   enroll(userId: string, activityId: string): Promise<Enrollment>;
 
   /* Atomic transition {APPROVED, PENDING} -> CANCELLED (soft delete) */
   cancel(userId: string, activityId: string): Promise<void>;
+
+  /* Writes the attendance pair atomically, re-checking the guards under lock */
+  confirmAttendance(
+    activityId: string,
+    enrollmentId: string,
+    attendanceConfirmed: boolean,
+    confirmedWorkloadHours: number,
+  ): Promise<Enrollment>;
 
   countApprovedByActivityId(activityId: string): Promise<number>;
 
