@@ -208,10 +208,26 @@ describe("GET /activities — area filter", () => {
     ]);
   });
 
-  // ---------- 401 / 404: intentionally absent ----------
-  // 401: the route is public — it registers no auth middleware.
-  // 404: an unknown area answers 200 with an empty page (see CA3 above); the
-  //      listing route itself always exists.
-  // Format-level 400s for `type`/`status`/`format`/`orderBy` belong to a
-  // general list-validation suite, not to the area filter.
+  // ---------- 401 - Unauthorized (guard) ----------
+  it("is public: answers without any token (and breaks if auth ever becomes required)", async () => {
+    // The listing registers no auth middleware on purpose. Note: a bare
+    // `auth()` without options does NOT require a token in this project —
+    // this guard catches the change that would actually make the route
+    // private: `auth({ userTypes: ... })` or `auth({ manager: ... })`.
+    const { user: author } = await createTeacher();
+    await createActivity(author.id, { area: "Saúde" });
+
+
+    const response = await request(app).get("/activities");
+
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+  });
+
+  // ---------- 404: intentionally absent ----------
+  // An unknown area answers 200 with an empty page (see CA3 above); the
+  // listing route itself always exists. Format-level 400s for
+  // `type`/`format`/`orderBy` belong to a general list-validation suite,
+  // not to the area filter.
 });
