@@ -76,7 +76,7 @@ function spyOnUpdate(onResponse?: () => Promise<void>) {
   return onRequest;
 }
 
-function failUpdate(status: number, body: unknown = {}) {
+function failUpdate(status: number, body: Record<string, any> = {}) {
   server.use(
     http.patch(`${API}/activities/:id`, () =>
       HttpResponse.json(body, { status }),
@@ -122,7 +122,7 @@ describe("EditAction", () => {
 
     expect(await findTitleField()).toHaveValue(action.title);
     expect(screen.getByPlaceholderText(/Descreva os detalhes/)).toHaveValue(
-      action.details.description,
+      action.details!.description,
     );
     expect(screen.getByLabelText("Qtde. de Vagas")).toHaveValue(action.slots);
     expect(screen.getByLabelText("Carga horária")).toHaveValue(20);
@@ -131,7 +131,7 @@ describe("EditAction", () => {
     expect(screen.getByLabelText("Área de atuação")).toHaveValue("Robótica");
     expect(screen.getByLabelText("Campus")).toHaveValue("ARAPIRACA");
     expect(screen.getByLabelText("Link do evento")).toHaveValue(
-      action.details.url,
+      action.details!.url,
     );
     expect(screen.getByLabelText("Logradouro")).toHaveValue(
       ADDRESS.addressLine,
@@ -174,7 +174,7 @@ describe("EditAction", () => {
     await findTitleField();
 
     expect(optionLabels(screen.getByLabelText("Tipo de ação"))).toEqual([
-      "Extensão",
+      "Ação de extensão",
       "Curso ou minicurso",
       "Evento",
       "Palestra",

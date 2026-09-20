@@ -23,30 +23,8 @@ export const FILTER_OPTIONS = {
   ],
 };
 
-export const ACTION_AREAS = [
-  { value: "robotica", label: "Robótica" },
-  { value: "educacao", label: "Educação" },
-  { value: "saude", label: "Saúde" },
-  { value: "meio_ambiente", label: "Meio Ambiente" },
-  { value: "arquitetura", label: "Arquitetura" },
-];
-
-export const ACTION_TYPES = [
-  { value: "oficina", label: "Oficina" },
-  { value: "palestra", label: "Palestra" },
-  { value: "evento", label: "Evento" },
-  { value: "servico", label: "Serviço" },
-  { value: "minicurso", label: "Minicurso" },
-];
-
-export const ACTION_FORMATS = [
-  { value: "presencial", label: "Presencial" },
-  { value: "remoto", label: "Remoto" },
-  { value: "hibrido", label: "Híbrido" },
-];
-
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
-  EXTENSION: "Extensão",
+  EXTENSION: "Ação de extensão",
   COURSE: "Curso ou minicurso",
   EVENT: "Evento",
   LECTURE: "Palestra",
@@ -81,10 +59,6 @@ export const ACTION_CAMPUS_OPTIONS = (
   Object.keys(ACTION_CAMPUS_LABELS) as ActionCampus[]
 ).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
 
-/**
- * `area` is free text in the API and is rendered as-is on the action detail,
- * so the stored value is the label itself.
- */
 export const ACTION_AREA_LABELS = [
   "Robótica",
   "Educação",
