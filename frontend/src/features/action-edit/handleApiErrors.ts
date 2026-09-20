@@ -35,8 +35,7 @@ const FIELD_ALIASES: Record<string, string> = {
   address: "address.addressLine",
 };
 
-const APPROVED_ENROLLMENTS_PATTERN =
-  /approved enrollments \((\d+)\)/i;
+const APPROVED_ENROLLMENTS_PATTERN = /approved enrollments \((\d+)\)/i;
 
 function translateSlotsMessage(apiMessage: string): string {
   const match = apiMessage.match(APPROVED_ENROLLMENTS_PATTERN);

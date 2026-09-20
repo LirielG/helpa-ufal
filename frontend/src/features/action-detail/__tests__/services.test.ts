@@ -9,9 +9,10 @@ describe("enrollInAction", () => {
     it("makes a POST request to /activities/:id/enroll", async () => {
       const actionId = "act-123";
       server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
-          new HttpResponse(null, { status: 201 })
-        )
+        http.post(
+          `${API}/activities/${actionId}/enroll`,
+          () => new HttpResponse(null, { status: 201 }),
+        ),
       );
 
       await expect(enrollInAction(actionId)).resolves.toBeUndefined();
@@ -28,9 +29,9 @@ describe("enrollInAction", () => {
               userId: "user-1",
               createdAt: "2026-09-11T00:00:00Z",
             },
-            { status: 201 }
-          )
-        )
+            { status: 201 },
+          ),
+        ),
       );
 
       await expect(enrollInAction(actionId)).resolves.toBeUndefined();
@@ -44,9 +45,9 @@ describe("enrollInAction", () => {
         http.post(`${API}/activities/${actionId}/enroll`, () =>
           HttpResponse.json(
             { message: "No available slots for this activity." },
-            { status: 409 }
-          )
-        )
+            { status: 409 },
+          ),
+        ),
       );
 
       await expect(enrollInAction(actionId)).rejects.toMatchObject({
@@ -61,9 +62,9 @@ describe("enrollInAction", () => {
         http.post(`${API}/activities/${actionId}/enroll`, () =>
           HttpResponse.json(
             { message: "Activity not found." },
-            { status: 404 }
-          )
-        )
+            { status: 404 },
+          ),
+        ),
       );
 
       await expect(enrollInAction(actionId)).rejects.toMatchObject({
@@ -75,11 +76,8 @@ describe("enrollInAction", () => {
       const actionId = "act-401";
       server.use(
         http.post(`${API}/activities/${actionId}/enroll`, () =>
-          HttpResponse.json(
-            { message: "No token provided." },
-            { status: 401 }
-          )
-        )
+          HttpResponse.json({ message: "No token provided." }, { status: 401 }),
+        ),
       );
 
       await expect(enrollInAction(actionId)).rejects.toMatchObject({
@@ -91,8 +89,8 @@ describe("enrollInAction", () => {
       const actionId = "act-network";
       server.use(
         http.post(`${API}/activities/${actionId}/enroll`, () =>
-          HttpResponse.error()
-        )
+          HttpResponse.error(),
+        ),
       );
 
       await expect(enrollInAction(actionId)).rejects.toMatchObject({

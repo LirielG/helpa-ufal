@@ -7,7 +7,8 @@ export const PROFILE_OPTIONS: ProfileOption[] = [
     color: "green",
     icon: User,
     title: "Docente",
-    description: "Professor ou pesquisador criando e gerenciando ações de extensão.",
+    description:
+      "Professor ou pesquisador criando e gerenciando ações de extensão.",
   },
   {
     type: "student",

@@ -19,13 +19,18 @@ describe("EnrollmentModal", () => {
       const onSuccess = vi.fn();
 
       server.use(
-        http.post(`${API}/activities/act-123/enroll`, () =>
-          new HttpResponse(null, { status: 201 })
-        )
+        http.post(
+          `${API}/activities/act-123/enroll`,
+          () => new HttpResponse(null, { status: 201 }),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={onClose} onSuccess={onSuccess} />
+        <EnrollmentModal
+          action={action}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />,
       );
 
       expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
@@ -49,19 +54,23 @@ describe("EnrollmentModal", () => {
           // Delay to observe loading state
           await new Promise((resolve) => setTimeout(resolve, 100));
           return new HttpResponse(null, { status: 201 });
-        })
+        }),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       // Find and click the confirm button (button with SVG checkmark)
       const buttons = screen.getAllByRole("button");
-      const confirmButton = buttons.find(
-        (btn) => !btn.hasAttribute("aria-label") && !btn.disabled && btn.textContent?.includes("✓")
-      ) || screen.getByRole("button", { name: /Confirmar/i });
-      
+      const confirmButton =
+        buttons.find(
+          (btn) =>
+            !btn.hasAttribute("aria-label") &&
+            !btn.disabled &&
+            btn.textContent?.includes("✓"),
+        ) || screen.getByRole("button", { name: /Confirmar/i });
+
       await user.click(confirmButton);
 
       // Wait for loading state - button should show "Carregando..."
@@ -83,24 +92,26 @@ describe("EnrollmentModal", () => {
         http.post(`${API}/activities/act-409-1/enroll`, () =>
           HttpResponse.json(
             { message: "Activity is not open for enrollment." },
-            { status: 409 }
-          )
-        )
+            { status: 409 },
+          ),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
         expect(
-          screen.getByText("As inscrições para esta ação não estão abertas.")
+          screen.getByText("As inscrições para esta ação não estão abertas."),
         ).toBeInTheDocument();
       });
 
-      expect(screen.getByRole("button", { name: /Tentar novamente/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Tentar novamente/i }),
+      ).toBeInTheDocument();
     });
 
     it("displays pt-BR message for 'already enrolled'", async () => {
@@ -109,20 +120,20 @@ describe("EnrollmentModal", () => {
         http.post(`${API}/activities/act-409-2/enroll`, () =>
           HttpResponse.json(
             { message: "User is already enrolled in this activity." },
-            { status: 409 }
-          )
-        )
+            { status: 409 },
+          ),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
         expect(
-          screen.getByText("Você já está inscrito nesta ação.")
+          screen.getByText("Você já está inscrito nesta ação."),
         ).toBeInTheDocument();
       });
     });
@@ -133,20 +144,20 @@ describe("EnrollmentModal", () => {
         http.post(`${API}/activities/act-409-3/enroll`, () =>
           HttpResponse.json(
             { message: "No available slots for this activity." },
-            { status: 409 }
-          )
-        )
+            { status: 409 },
+          ),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
         expect(
-          screen.getByText("Esta ação não tem mais vagas disponíveis.")
+          screen.getByText("Esta ação não tem mais vagas disponíveis."),
         ).toBeInTheDocument();
       });
     });
@@ -159,20 +170,20 @@ describe("EnrollmentModal", () => {
         http.post(`${API}/activities/act-404/enroll`, () =>
           HttpResponse.json(
             { message: "Activity not found." },
-            { status: 404 }
-          )
-        )
+            { status: 404 },
+          ),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
         expect(
-          screen.getByText(/A ação não foi encontrada/)
+          screen.getByText(/A ação não foi encontrada/),
         ).toBeInTheDocument();
       });
     });
@@ -183,23 +194,23 @@ describe("EnrollmentModal", () => {
       const action = makeActionDetail({ id: "act-net" });
       server.use(
         http.post(`${API}/activities/act-net/enroll`, () =>
-          HttpResponse.error()
-        )
+          HttpResponse.error(),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/Falha de comunicação/)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
       });
 
-      const retryButton = screen.getByRole("button", { name: /Tentar novamente/i });
+      const retryButton = screen.getByRole("button", {
+        name: /Tentar novamente/i,
+      });
       expect(retryButton).toBeInTheDocument();
 
       // Clicking retry should return to confirm step
@@ -211,12 +222,12 @@ describe("EnrollmentModal", () => {
       const action = makeActionDetail({ id: "act-net2" });
       server.use(
         http.post(`${API}/activities/act-net2/enroll`, () =>
-          HttpResponse.error()
-        )
+          HttpResponse.error(),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
@@ -225,7 +236,9 @@ describe("EnrollmentModal", () => {
         expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
       });
 
-      const retryButton = screen.getByRole("button", { name: /Tentar novamente/i });
+      const retryButton = screen.getByRole("button", {
+        name: /Tentar novamente/i,
+      });
       expect(retryButton).not.toBeDisabled();
     });
   });
@@ -235,15 +248,12 @@ describe("EnrollmentModal", () => {
       const action = makeActionDetail({ id: "act-401" });
       server.use(
         http.post(`${API}/activities/act-401/enroll`, () =>
-          HttpResponse.json(
-            { message: "No token provided." },
-            { status: 401 }
-          )
-        )
+          HttpResponse.json({ message: "No token provided." }, { status: 401 }),
+        ),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
@@ -252,7 +262,9 @@ describe("EnrollmentModal", () => {
       // (The session middleware should handle the redirect)
       await waitFor(() => {
         // Should not show error message
-        expect(screen.queryByText(/Erro|Failed|Error/i)).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/Erro|Failed|Error/i),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -263,18 +275,18 @@ describe("EnrollmentModal", () => {
       server.use(
         http.post(`${API}/activities/act-generic-err/enroll`, () => {
           throw new Error("Raw JavaScript Error Message");
-        })
+        }),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
         expect(
-          screen.getByText("Erro ao realizar inscrição. Tente novamente.")
+          screen.getByText("Erro ao realizar inscrição. Tente novamente."),
         ).toBeInTheDocument();
       });
     });
@@ -291,11 +303,11 @@ describe("EnrollmentModal", () => {
           // Simulate a slow request to allow double-click attempt
           await new Promise((resolve) => setTimeout(resolve, 200));
           return new HttpResponse(null, { status: 201 });
-        })
+        }),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
@@ -319,11 +331,11 @@ describe("EnrollmentModal", () => {
         http.post(`${API}/activities/act-disable/enroll`, async () => {
           await new Promise((resolve) => setTimeout(resolve, 100));
           return new HttpResponse(null, { status: 201 });
-        })
+        }),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
+        <EnrollmentModal action={action} onClose={vi.fn()} />,
       );
 
       const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
@@ -347,7 +359,7 @@ describe("EnrollmentModal", () => {
       const onClose = vi.fn();
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={onClose} />
+        <EnrollmentModal action={action} onClose={onClose} />,
       );
 
       const cancelButton = screen.getByRole("button", { name: /Cancelar/i });
@@ -362,9 +374,7 @@ describe("EnrollmentModal", () => {
         startDate: "2026-10-15",
       });
 
-      render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />
-      );
+      render(<EnrollmentModal action={action} onClose={vi.fn()} />);
 
       expect(screen.getByText("Workshop de React")).toBeInTheDocument();
     });

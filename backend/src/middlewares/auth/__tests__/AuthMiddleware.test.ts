@@ -6,7 +6,6 @@ import CustomError from "@/models/error/CustomError.js";
 import { signJwt } from "@/utils/jwt.js";
 import type { AuthenticatedUser } from "@/types/auth.js";
 
-
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const MALFORMED_TOKEN = "this-is-not-a-jwt";
 const RES = {} as Response;
@@ -42,8 +41,10 @@ function mockRequest(
   } = {},
 ): Request {
   const headers: Record<string, string> = {};
-  if (options.bearerToken) headers.authorization = `Bearer ${options.bearerToken}`;
-  if (options.rawAuthorization) headers.authorization = options.rawAuthorization;
+  if (options.bearerToken)
+    headers.authorization = `Bearer ${options.bearerToken}`;
+  if (options.rawAuthorization)
+    headers.authorization = options.rawAuthorization;
 
   const cookies: Record<string, string> = {};
   if (options.cookieToken) cookies.token = options.cookieToken;
@@ -60,7 +61,9 @@ function expectAuthError(fn: () => void, status: number): void {
     fn();
   } catch (error) {
     expect(error).toBeInstanceOf(CustomError);
-    expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
+    expect((error as CustomError & { statusCode: number }).statusCode).toBe(
+      status,
+    );
     return;
   }
   throw new Error(
@@ -125,7 +128,6 @@ describe("AuthMiddleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-
     it("throws 401 for a token with an invalid signature", () => {
       const handler = middleware.auth({ userTypes: "all" });
       const req = mockRequest({ bearerToken: aTokenWithInvalidSignature() });
@@ -181,7 +183,6 @@ describe("AuthMiddleware", () => {
       expect(next).toHaveBeenCalledWith();
       expect(req.user).toBeUndefined();
     });
-
 
     it("calls next and populates req.user with a valid token", () => {
       const handler = middleware.auth();

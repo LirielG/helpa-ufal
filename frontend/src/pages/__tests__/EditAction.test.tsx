@@ -13,7 +13,10 @@ import {
   waitFor,
   within,
 } from "@/test";
-import type { ActionDetail, ActionDetails } from "@/features/action-detail/types";
+import type {
+  ActionDetail,
+  ActionDetails,
+} from "@/features/action-detail/types";
 import type { ActionAddressPayload } from "@/features/action-edit/types";
 import { EditAction } from "../EditAction";
 
@@ -286,7 +289,9 @@ describe("EditAction", () => {
     await user.type(zipCode, "5730");
     await user.click(getSaveButton());
 
-    expect(await screen.findByText("O CEP deve ter 8 dígitos")).toBeInTheDocument();
+    expect(
+      await screen.findByText("O CEP deve ter 8 dígitos"),
+    ).toBeInTheDocument();
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
@@ -329,7 +334,10 @@ describe("EditAction", () => {
     const { user } = renderEditAction();
 
     await findTitleField();
-    await user.selectOptions(screen.getByLabelText("Formato da ação"), "ONLINE");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "ONLINE",
+    );
     await user.click(getSaveButton());
 
     const dialog = await screen.findByRole("dialog");
@@ -354,7 +362,10 @@ describe("EditAction", () => {
     const { user } = renderEditAction();
 
     await findTitleField();
-    await user.selectOptions(screen.getByLabelText("Formato da ação"), "ONLINE");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "ONLINE",
+    );
     await user.click(getSaveButton());
 
     const dialog = await screen.findByRole("dialog");
@@ -451,7 +462,9 @@ describe("EditAction", () => {
     await user.click(getSaveButton());
 
     expect(
-      await screen.findByText("Apenas o autor ou gestor pode editar esta ação."),
+      await screen.findByText(
+        "Apenas o autor ou gestor pode editar esta ação.",
+      ),
     ).toBeInTheDocument();
   });
 

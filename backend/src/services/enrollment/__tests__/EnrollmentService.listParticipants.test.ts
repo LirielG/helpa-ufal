@@ -39,25 +39,21 @@ function mockRepositories(
   } = {},
 ) {
   const activityRepository = {
-    findById: vi
-      .fn()
-      .mockResolvedValue({
-        id: ACTIVITY_ID,
-        authorId: AUTHOR_ID,
-        status: "OPEN",
-      }),
+    findById: vi.fn().mockResolvedValue({
+      id: ACTIVITY_ID,
+      authorId: AUTHOR_ID,
+      status: "OPEN",
+    }),
     findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
   const enrollmentRepository = {
-    findByActivityId: vi
-      .fn()
-      .mockResolvedValue({
-        items: [aParticipant()],
-        total: 1,
-        totalPresent: 0,
-      }),
+    findByActivityId: vi.fn().mockResolvedValue({
+      items: [aParticipant()],
+      total: 1,
+      totalPresent: 0,
+    }),
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 

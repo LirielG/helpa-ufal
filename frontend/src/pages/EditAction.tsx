@@ -135,7 +135,10 @@ export function EditAction() {
               city: action.details.address.city ?? "",
               state: action.details.address.state ?? "",
               zipCode: action.details.address.zipCode
-                ? action.details.address.zipCode.replace(/^(\d{5})(\d)/, "$1-$2")
+                ? action.details.address.zipCode.replace(
+                    /^(\d{5})(\d)/,
+                    "$1-$2",
+                  )
                 : "",
             }
           : EMPTY_ADDRESS,

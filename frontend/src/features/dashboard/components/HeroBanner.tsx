@@ -33,7 +33,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
   const goToSlide = (index: number) => setCurrentSlide(index);
 
   const goToPrevious = () => {
-    setCurrentSlide((prev) => (prev - 1 + featuredActions.length) % featuredActions.length);
+    setCurrentSlide(
+      (prev) => (prev - 1 + featuredActions.length) % featuredActions.length,
+    );
   };
 
   const goToNext = () => {
@@ -41,7 +43,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
   };
 
   if (featuredActions.length === 0) {
-    return <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />;
+    return (
+      <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />
+    );
   }
 
   return (
@@ -75,7 +79,8 @@ export function HeroBanner({ actions }: HeroBannerProps) {
                       {action.title}
                     </h2>
                     <p className="text-lg md:text-xl text-gray-200 line-clamp-3">
-                      {action.details?.description || "Descrição não informada."}
+                      {action.details?.description ||
+                        "Descrição não informada."}
                     </p>
                     <div className="flex items-center gap-4">
                       <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">

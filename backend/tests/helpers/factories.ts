@@ -76,7 +76,11 @@ export async function createStudent(
 
 export async function createTeacher(
   overrides: UserOverrides &
-    Partial<{ course: string; registrationCode: string; cndb: string }> = {},
+    Partial<{
+      course: string | null;
+      registrationCode: string;
+      cndb: string;
+    }> = {},
 ): Promise<AuthenticatedFixture> {
   const { course, registrationCode, cndb, ...userOverrides } = overrides;
 
@@ -88,7 +92,9 @@ export async function createTeacher(
         create: {
           registrationCode: registrationCode ?? unique("siape"),
           cndb: cndb ?? unique("cndb"),
-          course: course ?? "Ciência da Computação",
+          // `?? default` would swallow an explicit null, and a teacher with no
+          // course is a legitimate state of the domain.
+          course: course === undefined ? "Ciência da Computação" : course,
         },
       },
     },
@@ -123,6 +129,7 @@ type ActivityOverrides = Partial<{
   endDate: Date;
   slots: number;
   status: ActivityStatus;
+  deletedAt: Date | null;
   description: string;
   area: string;
   format: ActivityFormat;

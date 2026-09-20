@@ -25,7 +25,6 @@ export function ConfirmFormatModal({
         aria-labelledby="confirm-format-title"
         className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6"
       >
-        
         <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-600 border-2 border-red-500">
           <AlertCircle className="w-8 h-8" />
         </div>
@@ -41,7 +40,8 @@ export function ConfirmFormatModal({
             Você está prestes a alterar o formato da ação para{" "}
             <span className="font-semibold text-gray-800">
               {ACTION_FORMAT_LABELS.ONLINE}
-            </span>.
+            </span>
+            .
           </p>
         </div>
 
@@ -74,7 +74,6 @@ export function ConfirmFormatModal({
             {isLoading ? "Salvando..." : "Confirmar"}
           </Button>
         </div>
-
       </div>
     </div>
   );

@@ -51,8 +51,9 @@ export function Register() {
   });
 
   const onSubmit = async (data: RegisterFields) => {
-    
-    const formattedCourse = data.course?.trim() ? data.course.trim() : undefined;
+    const formattedCourse = data.course?.trim()
+      ? data.course.trim()
+      : undefined;
 
     const payload: RegisterRequest = {
       fullName: data.fullName,

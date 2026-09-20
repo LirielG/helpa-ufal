@@ -32,7 +32,10 @@ describe("handleActionApiErrors", () => {
     it("puts a pt-BR message on the field the API rejected", () => {
       const { setError, setGeneralError } = callWith(
         validationError([
-          { field: "address.zipCode", message: "zipCode must contain exactly 8 digits." },
+          {
+            field: "address.zipCode",
+            message: "zipCode must contain exactly 8 digits.",
+          },
         ]),
       );
 
@@ -52,7 +55,8 @@ describe("handleActionApiErrors", () => {
 
       expect(setError).toHaveBeenCalledWith("startDate", {
         type: "server",
-        message: "A data de início deve ser futura e anterior à de encerramento.",
+        message:
+          "A data de início deve ser futura e anterior à de encerramento.",
       });
     });
 
@@ -88,7 +92,10 @@ describe("handleActionApiErrors", () => {
     it("shows a missing address on the first field of the block", () => {
       const { setError } = callWith(
         validationError([
-          { field: "address", message: "Address is required when format is IN_PERSON." },
+          {
+            field: "address",
+            message: "Address is required when format is IN_PERSON.",
+          },
         ]),
       );
 
@@ -101,8 +108,14 @@ describe("handleActionApiErrors", () => {
     it("assigns one message per rejected field", () => {
       const { setError } = callWith(
         validationError([
-          { field: "title", message: "Too small: expected string to have >=1 characters" },
-          { field: "workloadHours", message: "Too small: expected number to be >=1" },
+          {
+            field: "title",
+            message: "Too small: expected string to have >=1 characters",
+          },
+          {
+            field: "workloadHours",
+            message: "Too small: expected number to be >=1",
+          },
         ]),
       );
 
@@ -119,7 +132,9 @@ describe("handleActionApiErrors", () => {
     });
 
     it("falls back to the general error when no field came back", () => {
-      const { setGeneralError } = callWith(new ApiError(400, "Body cannot be empty."));
+      const { setGeneralError } = callWith(
+        new ApiError(400, "Body cannot be empty."),
+      );
 
       expect(setGeneralError).toHaveBeenCalledWith(GENERIC_ERROR);
     });

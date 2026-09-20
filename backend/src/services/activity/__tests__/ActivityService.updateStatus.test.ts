@@ -8,7 +8,12 @@ import { expectHttpError } from "@/utils/tests.js";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS);
 
-const STATUSES: ActivityStatus[] = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+const STATUSES: ActivityStatus[] = [
+  "OPEN",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+];
 const TERMINAL: ActivityStatus[] = ["COMPLETED", "CANCELLED"];
 
 // Matriz 4x4 derivada da fonte única: 16 casos sem 16 blocos escritos à mão.
@@ -33,7 +38,9 @@ type ActivityRecord = {
   status: string;
 };
 
-function makeActivityRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
+function makeActivityRecord(
+  overrides: Partial<ActivityRecord> = {},
+): ActivityRecord {
   return {
     id: "act-1",
     authorId: "author-1",
@@ -123,7 +130,10 @@ describe("ActivityService.updateStatus", () => {
 
     await service.updateStatus("act-1", "IN_PROGRESS", "manager-9");
 
-    expect(repository.updateStatus).toHaveBeenCalledWith("act-1", "IN_PROGRESS");
+    expect(repository.updateStatus).toHaveBeenCalledWith(
+      "act-1",
+      "IN_PROGRESS",
+    );
   });
 
   // ---------- Transition matrix ----------
@@ -132,8 +142,12 @@ describe("ActivityService.updateStatus", () => {
     "accepts transition $from -> $to",
     async ({ from, to }) => {
       const repository = mockRepository({
-        findById: vi.fn().mockResolvedValue(makeActivityRecord({ status: from })),
-        updateStatus: vi.fn().mockResolvedValue(makeActivityRecord({ status: to })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivityRecord({ status: from })),
+        updateStatus: vi
+          .fn()
+          .mockResolvedValue(makeActivityRecord({ status: to })),
       });
       const service = new ActivityService({ activityRepository: repository });
 
@@ -155,7 +169,9 @@ describe("ActivityService.updateStatus", () => {
     "rejects transition $from -> $to with 409",
     async ({ from, to }) => {
       const repository = mockRepository({
-        findById: vi.fn().mockResolvedValue(makeActivityRecord({ status: from })),
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivityRecord({ status: from })),
       });
       const service = new ActivityService({ activityRepository: repository });
 
@@ -185,7 +201,11 @@ describe("ActivityService.updateStatus", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    const result = await service.updateStatus("act-1", "IN_PROGRESS", "author-1");
+    const result = await service.updateStatus(
+      "act-1",
+      "IN_PROGRESS",
+      "author-1",
+    );
 
     expect(result).toEqual({
       id: updated.id,
@@ -209,12 +229,18 @@ describe("ActivityService.updateStatus", () => {
       findById: vi.fn().mockResolvedValue(makeActivityRecord()),
       updateStatus: vi
         .fn()
-        .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS", slots: 10 })),
+        .mockResolvedValue(
+          makeActivityRecord({ status: "IN_PROGRESS", slots: 10 }),
+        ),
       countApprovedEnrollments: vi.fn().mockResolvedValue(12),
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    const result = await service.updateStatus("act-1", "IN_PROGRESS", "author-1");
+    const result = await service.updateStatus(
+      "act-1",
+      "IN_PROGRESS",
+      "author-1",
+    );
 
     expect(result.availableSlots).toBe(0);
   });

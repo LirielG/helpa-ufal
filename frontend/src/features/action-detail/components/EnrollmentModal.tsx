@@ -21,7 +21,11 @@ interface EnrollmentModalProps {
   onSuccess?: () => void;
 }
 
-export function EnrollmentModal({ action, onClose, onSuccess }: EnrollmentModalProps) {
+export function EnrollmentModal({
+  action,
+  onClose,
+  onSuccess,
+}: EnrollmentModalProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

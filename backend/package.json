@@ -12,7 +12,9 @@
     "test:all": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:db:up": "docker compose up -d postgres-test",
-    "test:db:down": "docker compose stop postgres-test"
+    "test:db:down": "docker compose stop postgres-test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [],
   "author": "",
@@ -46,6 +48,7 @@
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
+    "prettier": "^3.9.8",
     "prisma": "^7.8.0",
     "supertest": "^7.2.2",
     "tsx": "^4.7.1",

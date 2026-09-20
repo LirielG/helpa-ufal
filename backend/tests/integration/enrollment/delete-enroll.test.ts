@@ -136,7 +136,10 @@ describe("DELETE /activities/:id/enroll", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -153,7 +156,10 @@ describe("DELETE /activities/:id/enroll", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 when there is no enrollment for the pair", async () => {
@@ -165,20 +171,28 @@ describe("DELETE /activities/:id/enroll", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Enrollment not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Enrollment not found.",
+    });
   });
 
   it("returns 404 when the enrollment was already canceled", async () => {
     const { activity } = await anOpenActivity();
     const student = await createStudent();
-    await createEnrollment(student.user.id, activity.id, { status: "CANCELLED" });
+    await createEnrollment(student.user.id, activity.id, {
+      status: "CANCELLED",
+    });
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Enrollment not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Enrollment not found.",
+    });
   });
 
   it("returns 404 for another user's enrollment without changing it", async () => {
@@ -194,7 +208,10 @@ describe("DELETE /activities/:id/enroll", () => {
       .set(...authHeader(intruder.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Enrollment not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Enrollment not found.",
+    });
 
     const stored = await prisma.enrollment.findUniqueOrThrow({
       where: {
@@ -226,8 +243,12 @@ describe("DELETE /activities/:id/enroll", () => {
     await createEnrollment(student.user.id, activity.id);
 
     const [first, second] = await Promise.all([
-      request(app).delete(enrollUrl(activity.id)).set(...authHeader(student.token)),
-      request(app).delete(enrollUrl(activity.id)).set(...authHeader(student.token)),
+      request(app)
+        .delete(enrollUrl(activity.id))
+        .set(...authHeader(student.token)),
+      request(app)
+        .delete(enrollUrl(activity.id))
+        .set(...authHeader(student.token)),
     ]);
 
     const statuses = [first.status, second.status].sort();

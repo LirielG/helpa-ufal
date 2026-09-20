@@ -1,11 +1,17 @@
 import type { Request, Response } from "express";
 import ActivityService from "@/services/activity/ActivityService.js";
-import type { IActivityService, IListActivitiesFilters } from "@/services/activity/IActivityService.js";
+import type {
+  IActivityService,
+  IListActivitiesFilters,
+} from "@/services/activity/IActivityService.js";
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
-import { CreateActivitySchema, UpdateActivitySchema, UpdateActivityStatusSchema } from "@/schemas/activity/ActivitySchemas.js";
+import {
+  CreateActivitySchema,
+  UpdateActivitySchema,
+  UpdateActivityStatusSchema,
+} from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
 import { isValidUUID } from "@/utils/uuid.js";
-
 
 type Props = {
   activityService?: IActivityService;
@@ -27,13 +33,18 @@ class ActivityController implements IActivityController {
     res.status(201).json(activity);
   }
 
-  public async list(req: Request, res: Response): Promise<void>{
+  public async list(req: Request, res: Response): Promise<void> {
     const userId = req.user?.id;
 
     const filters = req.query as unknown as IListActivitiesFilters;
 
     const result = await this._activityService.list(filters, userId);
 
+    res.status(200).json(result);
+  }
+
+  public async listFilters(req: Request, res: Response): Promise<void> {
+    const result = await this._activityService.listFilterOptions();
     res.status(200).json(result);
   }
   
@@ -48,7 +59,6 @@ class ActivityController implements IActivityController {
     res.status(200).json(activity);
   }
 
-
   public async update(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
@@ -58,7 +68,8 @@ class ActivityController implements IActivityController {
       throw new CustomError(400, "Invalid id parameter.");
     }
 
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!id || !uuidRegex.test(id)) {
       throw new CustomError(400, "Invalid id parameter. Must be a valid UUID.");
     }
@@ -66,14 +77,13 @@ class ActivityController implements IActivityController {
     const data = UpdateActivitySchema.parse(req.body);
 
     const updatedActivity = await this._activityService.update(
-      id, 
-      req.user.id, 
-      data
+      id,
+      req.user.id,
+      data,
     );
 
     res.status(200).json(updatedActivity);
   }
-
 
   public async updateStatus(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
@@ -82,19 +92,19 @@ class ActivityController implements IActivityController {
 
     // Verificar se id é string (não array)
     if (Array.isArray(id)) {
-        throw new CustomError(400, "Invalid id parameter.");
+      throw new CustomError(400, "Invalid id parameter.");
     }
 
     if (!isValidUUID(id)) {
-    throw new CustomError(400, "Invalid UUID format."); 
+      throw new CustomError(400, "Invalid UUID format.");
     }
 
     const data = UpdateActivityStatusSchema.parse(req.body);
-    
+
     const updatedActivity = await this._activityService.updateStatus(
-        id,
-        data.status,
-        req.user.id
+      id,
+      data.status,
+      req.user.id,
     );
 
     res.status(200).json(updatedActivity);
@@ -117,7 +127,6 @@ class ActivityController implements IActivityController {
 
     res.status(204).send();
   }
-
 }
 
 export default ActivityController;
