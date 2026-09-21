@@ -46,7 +46,6 @@ const AddressSchema = z.object({
   }),
 });
 
-
 const BaseActivitySchema = z.object({
   title: z.string().min(1),
   type: z.enum(ActivityType),
@@ -68,7 +67,7 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      url: z.url().optional() ,
+      url: z.url().optional(),
       address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({

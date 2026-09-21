@@ -96,7 +96,9 @@ describe("PATCH /activities/:id", () => {
       .send({ format: "IN_PERSON" });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe("IN_PERSON activities require an address.");
+    expect(response.body.message).toBe(
+      "IN_PERSON activities require an address.",
+    );
   });
 
   it("returns 400 from Zod schema when sending an invalid URL format", async () => {

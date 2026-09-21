@@ -24,7 +24,7 @@ export interface IActivityRepository {
   findUserById(id: string): Promise<{ isManager: boolean } | null>;
   countApprovedEnrollments(activityId: string): Promise<number>;
   softDelete(id: string): Promise<boolean>;
-  
+
   listDistinctAreas(): Promise<string[]>;
 }
 
