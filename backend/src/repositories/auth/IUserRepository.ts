@@ -10,6 +10,4 @@ export interface IUserRepository {
     data: RegisterInput & { passwordHash: string },
   ): Promise<User>;
 
-  assertUserExists(userId: string): Promise<void>
-
 }
