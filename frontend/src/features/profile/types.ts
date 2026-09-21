@@ -11,3 +11,15 @@ export interface UserActivity {
   status: ActivityStatus;
   workloadHours?: number;
 }
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  userType: "STUDENT" | "TEACHER";
+  isManager: boolean;
+  registrationCode: string;
+  course: string | null;
+  cndb: string | null;
+  createdAt: string;
+}

@@ -10,10 +10,10 @@ import { PersonalDataForm } from "../features/profile/components/PersonalDataFor
 import { CertificatesList } from "../features/profile/components/CertificatesList";
 import { ActionsList } from "../features/profile/components/ActionsList";
 import { getProfile, updateProfile } from "../features/profile/services";
-import type { ProfileTab } from "../features/profile/types";
+import type { ProfileTab, UserProfile } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthStore } from "../stores/authStore";
-import type { UpdateProfileRequest, User } from "../types";
+import type { UpdateProfileRequest } from "../types";
 import bgDashboard from "../assets/bg.svg";
 
 export function Profile() {
@@ -21,7 +21,7 @@ export function Profile() {
   const { logout, user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
 
-  const [profile, setProfile] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -36,7 +36,7 @@ export function Profile() {
   useEffect(() => {
     if (!user) return;
 
-    getProfile(user)
+    getProfile()
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
@@ -52,7 +52,15 @@ export function Profile() {
     try {
       const updated = await updateProfile(profile, data);
       setProfile(updated);
-      setUser(updated);
+      ////alterações feitas aqui fora feitas apenas para não dar erro na Profile.tsx
+      if (user) {
+        setUser({
+          ...user,
+          fullName: updated.fullName,
+          email: updated.email,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       setSaveSuccess(true);
     } catch (error) {
       setSaveError(

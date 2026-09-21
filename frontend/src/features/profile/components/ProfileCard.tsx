@@ -1,21 +1,18 @@
-import type { User } from "../../../types";
+import type { UserProfile } from "../types";
+import { getInitials } from "../../../utils/helpers";
 
 type ProfileCardProps = {
-  user: User;
+  user: UserProfile;
 };
 
 export function ProfileCard({ user }: ProfileCardProps) {
+  const initials = getInitials(user.fullName);
+
   return (
     <section className="bg-white rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <div className="size-16 rounded-full bg-gray-200 overflow-hidden shrink-0">
-          {user.avatarUrl && (
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName}
-              className="w-full h-full object-cover"
-            />
-          )}
+        <div className="size-16 rounded-full bg-[#1B75BB] text-white flex items-center justify-center font-bold text-xl shadow-sm shrink-0 overflow-hidden">
+          {initials}
         </div>
 
         <div>
@@ -30,11 +27,12 @@ export function ProfileCard({ user }: ProfileCardProps) {
                 {user.course}
               </span>
             )}
-            {user.institution && (
+            {/* Esse bloco aqui embaixo pode apagar né? */}
+            {/*user.institution && (
               <span className="p-2 rounded-lg bg-[#ADF7F9]/40 text-[#00A4A8] text-xs font-semibold">
                 {user.institution}
               </span>
-            )}
+            )*/}
           </div>
         </div>
       </div>
@@ -42,7 +40,7 @@ export function ProfileCard({ user }: ProfileCardProps) {
       <div className="shrink-0 text-center">
         <div className="bg-[#ADF7F9] rounded-2xl px-6 py-4 min-w-22">
           <span className="block text-3xl font-bold leading-none text-[#002147]">
-            {String(user.totalHours ?? 0).padStart(2, "0")}
+            00
           </span>
           <span className="block text-[11px] font-medium text-[#002147] mt-1">
             horas

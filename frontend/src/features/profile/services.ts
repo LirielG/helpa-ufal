@@ -1,35 +1,22 @@
 import { api } from "../../services";
-import type { UpdateProfileRequest, User } from "../../types";
-import { delay } from "../../utils";
-import type { ActivityStatus, UserActivity } from "./types";
+import type { UpdateProfileRequest } from "../../types";
+import type { ActivityStatus, UserActivity, UserProfile } from "./types";
 
-const MOCK_PROFILE_EXTRAS = {
-  registrationCode: "2021000000",
-  course: "Curso Exemplo",
-  institution: "UNIESQUINA",
-  totalHours: 0,
-  avatarUrl:
-    "https://ui-avatars.com/api/?name=Perfil&background=3b82f6&color=fff",
-} satisfies Pick<
-  User,
-  "registrationCode" | "course" | "institution" | "totalHours" | "avatarUrl"
->;
-
-export async function getProfile(currentUser: User): Promise<User> {
-  await delay(300);
-  return { ...MOCK_PROFILE_EXTRAS, ...currentUser };
+export async function getProfile(): Promise<UserProfile> {
+  return await api.get<UserProfile>("/users/me");
 }
 
+//alterações feitas aqui fora feitas apenas para não dar erro na Profile.tsx
 export async function updateProfile(
-  currentUser: User,
+  currentUser: UserProfile,
   data: UpdateProfileRequest,
-): Promise<User> {
-  await delay(600);
-  return {
+): Promise<UserProfile> {
+  //delay retirado para cumprimento do requisito 3
+  return await{
     ...currentUser,
     fullName: data.fullName,
     email: data.email,
-    updatedAt: new Date().toISOString(),
+    //updatedAt: new Date().toISOString(),
   };
 }
 

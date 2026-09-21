@@ -10,10 +10,12 @@ import {
   EditProfileSchema,
   type EditProfileFields,
 } from "../../../validators/profile";
-import type { UpdateProfileRequest, User } from "../../../types";
+import type { UpdateProfileRequest } from "../../../types";
+import type { UserProfile } from "../types";
+import { getInitials } from "../../../utils/helpers";
 
 type PersonalDataFormProps = {
-  user: User;
+  user: UserProfile;
   onSubmit: (data: UpdateProfileRequest) => Promise<void>;
   onLogout: () => void;
   isSaving: boolean;
@@ -32,9 +34,7 @@ export function PersonalDataForm({
   onDismissFeedback,
 }: PersonalDataFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
-    user.avatarUrl,
-  );
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -62,13 +62,14 @@ export function PersonalDataForm({
     });
   });
 
-  // Avatar upload is a local preview only until the upload API is ready.
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
+
+  const initials = getInitials(user.fullName);
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -88,13 +89,17 @@ export function PersonalDataForm({
       <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-start">
         <div className="flex justify-center md:justify-start md:pt-2">
           <div className="relative">
-            <div className="size-32 rounded-full bg-gray-200 overflow-hidden">
-              {avatarPreview && (
+            <div className="size-28 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-medium text-3xl leading-none shrink-0 overflow-hidden select-none">
+              {avatarPreview ? (
                 <img
                   src={avatarPreview}
                   alt={user.fullName}
                   className="w-full h-full object-cover"
                 />
+              ) : (
+                <span>
+                  {initials}
+                </span>
               )}
             </div>
             <button
