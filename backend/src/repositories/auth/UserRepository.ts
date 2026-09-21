@@ -2,6 +2,7 @@ import type { PrismaClient, User } from "@prisma/client";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { prisma } from "@/database/prisma.js";
 import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
+import CustomError from "@/models/error/CustomError.js";
 
 type Props = {
   prisma?: PrismaClient;
@@ -12,6 +13,13 @@ class UserRepository implements IUserRepository {
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
+  }
+
+  public async assertUserExists(userId: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new CustomError(401, "User account not found or inactive.");
+    }
   }
 
   public async findByEmail(email: string): Promise<User | null> {
@@ -65,6 +73,7 @@ class UserRepository implements IUserRepository {
       return user;
     });
   }
+
 }
 
 export default UserRepository;

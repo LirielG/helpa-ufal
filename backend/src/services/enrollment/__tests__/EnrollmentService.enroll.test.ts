@@ -77,6 +77,8 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Authentication (contract: 401 before existence/business rules) ----------
 
   it("throws 401 when the token's user no longer exists in the database", async () => {
+    // Ghost user: account removed, token still valid. Checked before anything
+    // else, following the contract's validation order.
     const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
       user: { findById: vi.fn().mockResolvedValue(null) },
     });

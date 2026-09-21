@@ -267,7 +267,7 @@ class ActivityService implements IActivityService {
     }
 
     const dbUser = await this._userRepository.findById(userId);
-    const isAuthor = activity.authorId === userId; // Manter sem !!dbUser para passar no teste da issue #148
+    const isAuthor = !!dbUser && activity.authorId === userId; #148
     const isManager = dbUser?.isManager ?? false;
 
     if (!isAuthor && !isManager) {

@@ -103,6 +103,9 @@ describe("ActivityService.updateStatus", () => {
   });
 
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
+    // Ghost user: a autoria exige usuário vivo no banco. É essa consulta que
+    // a #148 levará ao update — ver o espelho deste caso em
+    // ActivityService.update.test.ts.
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
       user: { findById: vi.fn().mockResolvedValue(null) },
@@ -154,6 +157,12 @@ describe("ActivityService.updateStatus", () => {
     },
   );
 
+  // A mensagem esperada depende da ORIGEM. Origens terminais respondem com a
+  // mensagem do contrato Bruno ("already ... cannot be transitioned.") — o que
+  // EXIGE a guarda de terminal reordenada para antes de isValidTransition
+  // (decisão da equipe; sem a reordenação estes casos falham). Origens não
+  // terminais usam "Cannot transition from X to Y.". Os casos "pede o próprio
+  // status" (COMPLETED→COMPLETED, CANCELLED→CANCELLED) estão cobertos aqui.
   it.each(transitionCases.filter((c) => !c.allowed))(
     "rejects transition $from ->$to with 409",
     async ({ from, to }) => {

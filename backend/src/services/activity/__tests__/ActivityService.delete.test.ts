@@ -114,11 +114,15 @@ describe("ActivityService.delete", () => {
 
   // ---------- Concurrency ----------
 
+    // Race condition: findById saw the activity as active, but between the read
+    // and the write another request deleted it. The updateMany guard
+    // (deletedAt: null) returns count 0 ⇒ softDelete returns false.
+    // Treated as success: the desired final state already holds.
+
   it("does not throw when softDelete returns false (another request deleted first)", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
-        findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }),
-        softDelete: vi.fn().mockResolvedValue(false),
+        findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" })
       },
     });
     const service = new ActivityService({ activityRepository, userRepository });

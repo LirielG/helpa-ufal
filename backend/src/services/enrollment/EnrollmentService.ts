@@ -43,7 +43,7 @@ class EnrollmentService implements IEnrollmentService {
     userId: string,
     activityId: string,
   ): Promise<EnrollmentResponse> {
-    await this.assertUserExists(userId);
+    await this._userRepository.assertUserExists(userId);
 
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
@@ -66,7 +66,7 @@ class EnrollmentService implements IEnrollmentService {
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    await this.assertUserExists(userId);
+    await this._userRepository.assertUserExists(userId);
 
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
@@ -104,14 +104,6 @@ class EnrollmentService implements IEnrollmentService {
       page,
       limit,
     };
-  }
-
-  // Token valid and user still exists
-  private async assertUserExists(userId: string): Promise<void> {
-    const user = await this._userRepository.findById(userId);
-    if (!user) {
-      throw new CustomError(401, "User account not found or inactive.");
-    }
   }
 
   private toEnrollResponse(enrollment: Enrollment): EnrollmentResponse {
