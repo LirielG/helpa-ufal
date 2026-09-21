@@ -134,16 +134,18 @@ describe("ActivityService.update", () => {
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
-  it("allows a deleted user with a valid token to update (defect pinned until #148)", async () => {
+  it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
       user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    await service.update("act-1", AUTHOR, { title: "Novo título" });
-
-    expect(activityRepository.update).toHaveBeenCalledTimes(1);
+    await expectHttpError(
+      service.update("act-1", AUTHOR, { title: "Novo título" }),
+      403,
+    );
+    expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
   // ---------- Status guard ----------
