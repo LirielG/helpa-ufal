@@ -3,6 +3,7 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import {
+  anAddress,
   createActivity,
   createManager,
   createTeacher,
@@ -60,5 +61,66 @@ describe("PATCH /activities/:id", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.title).toBe("Título Atualizado pelo Autor");
+  });
+
+  // ---------- Validação de Formato e Endereço (Issue #209) ----------
+
+  it("returns 200 when changing HYBRID to IN_PERSON on an activity that already has an address saved", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "HYBRID",
+      url: "https://meet.google.com/exemplo",
+      address: anAddress(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ format: "IN_PERSON" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.details.format).toBe("IN_PERSON");
+  });
+
+  it("returns 400 from service when changing ONLINE to IN_PERSON without sending or having a saved address", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: "https://meet.google.com/exemplo",
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ format: "IN_PERSON" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "IN_PERSON activities require an address.",
+    );
+  });
+
+  it("returns 400 from Zod schema when sending an invalid URL format", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: "https://meet.google.com/exemplo",
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ url: "não-é-url" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({
+      status: 400,
+      message: "Validation error.",
+    });
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "url" })]),
+    );
   });
 });
