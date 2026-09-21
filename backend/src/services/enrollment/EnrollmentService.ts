@@ -41,8 +41,7 @@ class EnrollmentService implements IEnrollmentService {
       props?.enrollmentRepository ?? new EnrollmentRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
-    this._userRepository =
-      props?.userRepository ?? new UserRepository();
+    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async enroll(
@@ -66,7 +65,10 @@ class EnrollmentService implements IEnrollmentService {
       throw new CustomError(409, "Activity is not open for enrollment.");
     }
 
-    const enrollment = await this._enrollmentRepository.enroll(userId, activityId);
+    const enrollment = await this._enrollmentRepository.enroll(
+      userId,
+      activityId,
+    );
 
     return this.toEnrollResponse(enrollment);
   }
@@ -305,7 +307,7 @@ class EnrollmentService implements IEnrollmentService {
       },
     };
   }
-  
+
   private toParticipantResponse(
     enrollment: EnrollmentWithParticipant,
   ): ParticipantResponse {

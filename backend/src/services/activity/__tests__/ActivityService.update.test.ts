@@ -126,11 +126,18 @@ describe("ActivityService.update", () => {
 
   it("throws 403 (not 409) when a third party targets a completed activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivity({ status: "COMPLETED" })) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    await expectHttpError(service.update("act-1", THIRD_PARTY, { title: "x" }), 403);
+    await expectHttpError(
+      service.update("act-1", THIRD_PARTY, { title: "x" }),
+      403,
+    );
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
@@ -152,7 +159,11 @@ describe("ActivityService.update", () => {
 
   it("throws 409 when the activity is COMPLETED", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivity({ status: "COMPLETED" })) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -166,7 +177,11 @@ describe("ActivityService.update", () => {
 
   it("throws 409 when the activity is CANCELLED", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivity({ status: "CANCELLED" })) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ status: "CANCELLED" })),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -216,7 +231,11 @@ describe("ActivityService.update", () => {
 
   it("a manager can update their own activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivity({ authorId: "manager-9" })) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ authorId: "manager-9" })),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -245,11 +264,12 @@ describe("ActivityService.update", () => {
   it("skips date validation when no date is sent, even with a past startDate", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
-        findById: vi
-          .fn()
-          .mockResolvedValue(
-            makeActivity({ startDate: daysFromNow(-5), endDate: daysFromNow(-3) }),
-          ),
+        findById: vi.fn().mockResolvedValue(
+          makeActivity({
+            startDate: daysFromNow(-5),
+            endDate: daysFromNow(-3),
+          }),
+        ),
       },
     });
     const service = new ActivityService({ activityRepository, userRepository });

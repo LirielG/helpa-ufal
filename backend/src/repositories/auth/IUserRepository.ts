@@ -22,5 +22,4 @@ export interface IUserRepository {
   createWithSubtype(
     data: RegisterInput & { passwordHash: string },
   ): Promise<User>;
-
 }

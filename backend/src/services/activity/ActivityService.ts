@@ -3,13 +3,26 @@ import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
-import type { CreateActivityInput, UpdateActivityInput, } from "@/schemas/activity/ActivitySchemas.js";
+import type {
+  CreateActivityInput,
+  UpdateActivityInput,
+} from "@/schemas/activity/ActivitySchemas.js";
 import { isValidTransition } from "@/schemas/activity/ActivitySchemas.js";
-import type { IListActivitiesFilters, IListActivitiesResponse, } from "./IActivityService.js";
+import type {
+  IListActivitiesFilters,
+  IListActivitiesResponse,
+} from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
-import { ActivityFullResponse, ActivityResponse, ActivityStatus, ActivityFilterOptions, } from "@/types/activity.js";
-import ValidationError, { ValidationErrorItem, } from "@/models/error/ValidationError.js";
+import {
+  ActivityFullResponse,
+  ActivityResponse,
+  ActivityStatus,
+  ActivityFilterOptions,
+} from "@/types/activity.js";
+import ValidationError, {
+  ValidationErrorItem,
+} from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
@@ -29,8 +42,7 @@ class ActivityService implements IActivityService {
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
-    this._userRepository =
-      props?.userRepository ?? new UserRepository();
+    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async create(
@@ -404,7 +416,11 @@ class ActivityService implements IActivityService {
       }
     }
 
-    const updatedActivity = await this._activityRepository.update(id, data, addressAction);
+    const updatedActivity = await this._activityRepository.update(
+      id,
+      data,
+      addressAction,
+    );
 
     return updatedActivity;
   }

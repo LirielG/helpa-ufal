@@ -138,7 +138,7 @@ class ActivityRepository implements IActivityRepository {
     if (status) whereClause.status = status;
     if (campus) whereClause.campus = campus;
 
-    if(format || area){
+    if (format || area) {
       whereClause.details = {
         ...(format ? { format: format } : {}),
         ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),

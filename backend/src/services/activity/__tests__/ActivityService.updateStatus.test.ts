@@ -140,7 +140,10 @@ describe("ActivityService.updateStatus", () => {
 
     await service.updateStatus("act-1", "IN_PROGRESS", "manager-9");
 
-    expect(activityRepository.updateStatus).toHaveBeenCalledWith("act-1", "IN_PROGRESS");
+    expect(activityRepository.updateStatus).toHaveBeenCalledWith(
+      "act-1",
+      "IN_PROGRESS",
+    );
   });
 
   // ---------- Transition matrix ----------
@@ -150,16 +153,25 @@ describe("ActivityService.updateStatus", () => {
     async ({ from, to }) => {
       const { activityRepository, userRepository } = mockRepositories({
         activity: {
-          findById: vi.fn().mockResolvedValue(makeActivityRecord({ status: from })),
-          updateStatus: vi.fn().mockResolvedValue(makeActivityRecord({ status: to })),
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: from })),
+          updateStatus: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: to })),
         },
       });
-      const service = new ActivityService({ activityRepository, userRepository });
+      const service = new ActivityService({
+        activityRepository,
+        userRepository,
+      });
 
       const result = await service.updateStatus("act-1", to, "author-1");
 
       expect(activityRepository.updateStatus).toHaveBeenCalledWith("act-1", to);
-      expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledTimes(1);
+      expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledTimes(
+        1,
+      );
       expect(result.status).toBe(to);
     },
   );
@@ -175,10 +187,15 @@ describe("ActivityService.updateStatus", () => {
     async ({ from, to }) => {
       const { activityRepository, userRepository } = mockRepositories({
         activity: {
-          findById: vi.fn().mockResolvedValue(makeActivityRecord({ status: from })),
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: from })),
         },
       });
-      const service = new ActivityService({ activityRepository, userRepository });
+      const service = new ActivityService({
+        activityRepository,
+        userRepository,
+      });
 
       const expectedMessage = TERMINAL.includes(from)
         ? `Activity is already ${from} and cannot be transitioned.`
@@ -190,7 +207,9 @@ describe("ActivityService.updateStatus", () => {
         expectedMessage,
       );
       expect(activityRepository.updateStatus).not.toHaveBeenCalled();
-      expect(activityRepository.countApprovedEnrollments).not.toHaveBeenCalled();
+      expect(
+        activityRepository.countApprovedEnrollments,
+      ).not.toHaveBeenCalled();
     },
   );
 
@@ -225,7 +244,9 @@ describe("ActivityService.updateStatus", () => {
       availableSlots: 27,
       status: "IN_PROGRESS",
     });
-    expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledWith("act-1");
+    expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledWith(
+      "act-1",
+    );
   });
 
   it("clamps availableSlots at zero when approved enrollments exceed slots", async () => {
@@ -234,7 +255,9 @@ describe("ActivityService.updateStatus", () => {
         findById: vi.fn().mockResolvedValue(makeActivityRecord()),
         updateStatus: vi
           .fn()
-          .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS", slots: 10 })),
+          .mockResolvedValue(
+            makeActivityRecord({ status: "IN_PROGRESS", slots: 10 }),
+          ),
         countApprovedEnrollments: vi.fn().mockResolvedValue(12),
       },
     });

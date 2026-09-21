@@ -4,7 +4,7 @@ import type {
   UpdateActivityInput,
 } from "@/schemas/activity/ActivitySchemas.js";
 import {
-    ActivityFilterOptions,
+  ActivityFilterOptions,
   ActivityFullResponse,
   ActivityResponse,
   ActivityStatus,
@@ -31,7 +31,7 @@ export interface IActivityService {
     userId: string,
   ): Promise<ActivityResponse>;
   delete(id: string, userId: string): Promise<void>;
-  listFilterOptions(): Promise<ActivityFilterOptions>
+  listFilterOptions(): Promise<ActivityFilterOptions>;
 }
 
 export interface IListActivitiesFilters {

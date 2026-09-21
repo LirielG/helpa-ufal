@@ -70,7 +70,8 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Happy path ----------
 
   it("returns the mapped page to the activity author, with only the DTO fields", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const participant = aParticipant();
     enrollmentRepository.findByActivityId = vi
       .fn()
@@ -118,9 +119,10 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("returns the identical result to a manager who is not the author", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
+      });
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -143,7 +145,8 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("maps registrationCode from Student only: a professor (student = null) gets null", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const professor = aParticipant({
       user: {
         ...aParticipant().user,
@@ -173,13 +176,14 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("passes pagination through to the repository unchanged", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        findByActivityId: vi
-          .fn()
-          .mockResolvedValue({ items: [], total: 42, totalPresent: 7 }),
-      },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          findByActivityId: vi
+            .fn()
+            .mockResolvedValue({ items: [], total: 42, totalPresent: 7 }),
+        },
+      });
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -206,7 +210,8 @@ describe("EnrollmentService.listParticipants", () => {
     // Structurally impossible in production (hours are 0 unless presence is
     // confirmed), but the test pins the reading rule: the service forwards the
     // count instead of deriving it from confirmedWorkloadHours > 0.
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     enrollmentRepository.findByActivityId = vi.fn().mockResolvedValue({
       items: [
         aParticipant({ attendanceConfirmed: null, confirmedWorkloadHours: 4 }),
@@ -231,13 +236,14 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("returns an empty page when the activity has no active enrollments (never 404)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        findByActivityId: vi
-          .fn()
-          .mockResolvedValue({ items: [], total: 0, totalPresent: 0 }),
-      },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          findByActivityId: vi
+            .fn()
+            .mockResolvedValue({ items: [], total: 0, totalPresent: 0 }),
+        },
+      });
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -263,9 +269,10 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Authentication (light hybrid) ----------
 
   it("throws 401 when the credential's user no longer exists, before touching the activity", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        user: { findById: vi.fn().mockResolvedValue(null) },
+      });
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -284,9 +291,10 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Activity existence ----------
 
   it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(null) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        activity: { findById: vi.fn().mockResolvedValue(null) },
+      });
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -304,7 +312,8 @@ describe("EnrollmentService.listParticipants", () => {
   it("throws a plain 404 (not a ValidationError) for a malformed activityId", async () => {
     // Diverges from cancel(), which turns the same input into a 400:
     // this contract treats path identifiers as resource lookups.
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -323,7 +332,8 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Authorization ----------
 
   it("throws 403 for an authenticated user who is neither author nor manager, without querying enrollments", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
       userRepository,
@@ -341,7 +351,8 @@ describe("EnrollmentService.listParticipants", () => {
   it("throws 403 for a volunteer enrolled in the activity (enrollment grants no read access)", async () => {
     // Same code path as the outsider case — the criterion exists to pin that
     // being enrolled is NOT an authorization factor on this route.
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
       userRepository,

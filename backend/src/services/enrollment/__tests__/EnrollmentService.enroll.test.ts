@@ -79,10 +79,15 @@ describe("EnrollmentService.enroll", () => {
   it("throws 401 when the token's user no longer exists in the database", async () => {
     // Ghost user: account removed, token still valid. Checked before anything
     // else, following the contract's validation order.
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      user: { findById: vi.fn().mockResolvedValue(null) },
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        user: { findById: vi.fn().mockResolvedValue(null) },
+      });
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
     });
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),
@@ -96,8 +101,13 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Input validation ----------
 
   it("rejects a malformed activityId with a ValidationError", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
+    });
 
     await expect(service.enroll(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
       ValidationError,
@@ -108,10 +118,15 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Activity existence/state ----------
 
   it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(null) },
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        activity: { findById: vi.fn().mockResolvedValue(null) },
+      });
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
     });
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),
@@ -124,10 +139,17 @@ describe("EnrollmentService.enroll", () => {
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
     "throws 409 when the activity status is %s (not open for enrollment)",
     async (status) => {
-      const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-        activity: { findById: vi.fn().mockResolvedValue(anActivity({ status })) },
+      const { activityRepository, userRepository, enrollmentRepository } =
+        mockRepositories({
+          activity: {
+            findById: vi.fn().mockResolvedValue(anActivity({ status })),
+          },
+        });
+      const service = new EnrollmentService({
+        activityRepository,
+        userRepository,
+        enrollmentRepository,
       });
-      const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
       await expectHttpError(
         service.enroll(USER_ID, ACTIVITY_ID),
@@ -141,8 +163,13 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Happy path ----------
 
   it("creates an enrollment and returns the contract's 201 shape", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
+    });
 
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
@@ -159,10 +186,15 @@ describe("EnrollmentService.enroll", () => {
       createdAt: new Date("2026-06-01T10:00:00.000Z"),
       enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     });
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
+      });
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
     });
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
@@ -173,16 +205,24 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Repository business rules (propagation) ----------
 
   it("propagates 409 when the user is already enrolled", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        enroll: vi
-          .fn()
-          .mockRejectedValue(
-            new CustomError(409, "User is already enrolled in this activity."),
-          ),
-      },
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          enroll: vi
+            .fn()
+            .mockRejectedValue(
+              new CustomError(
+                409,
+                "User is already enrolled in this activity.",
+              ),
+            ),
+        },
+      });
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
     });
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),
@@ -192,16 +232,21 @@ describe("EnrollmentService.enroll", () => {
   });
 
   it("propagates 409 when the activity has no available slots", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        enroll: vi
-          .fn()
-          .mockRejectedValue(
-            new CustomError(409, "No available slots for this activity."),
-          ),
-      },
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          enroll: vi
+            .fn()
+            .mockRejectedValue(
+              new CustomError(409, "No available slots for this activity."),
+            ),
+        },
+      });
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
     });
-    const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     await expectHttpError(
       service.enroll(USER_ID, ACTIVITY_ID),

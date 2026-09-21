@@ -24,9 +24,9 @@ class UserRepository implements IUserRepository {
     return this._prisma.user.findUnique({
       where: { id },
       select: { isManager: true },
-    })
+    });
   }
-  
+
   public async findProfileById(id: string): Promise<UserWithProfile | null> {
     return this._prisma.user.findUnique({
       where: { id },
@@ -85,7 +85,6 @@ class UserRepository implements IUserRepository {
       return user;
     });
   }
-
 }
 
 export default UserRepository;

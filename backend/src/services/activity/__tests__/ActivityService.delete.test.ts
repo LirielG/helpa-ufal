@@ -47,7 +47,11 @@ describe("ActivityService.delete", () => {
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -57,7 +61,11 @@ describe("ActivityService.delete", () => {
 
   it("throws 403 when the token's user no longer exists in the database and is not the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      },
       user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -68,7 +76,11 @@ describe("ActivityService.delete", () => {
 
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      },
       user: { findById: vi.fn().mockResolvedValue(null) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -81,7 +93,11 @@ describe("ActivityService.delete", () => {
 
   it("the author can delete their own activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -92,7 +108,11 @@ describe("ActivityService.delete", () => {
 
   it("a manager can delete another author's activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      },
       user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -103,7 +123,11 @@ describe("ActivityService.delete", () => {
 
   it("a manager can delete their own activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "manager-9" }) },
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "manager-9" }),
+      },
       user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -114,15 +138,17 @@ describe("ActivityService.delete", () => {
 
   // ---------- Concurrency ----------
 
-    // Race condition: findById saw the activity as active, but between the read
-    // and the write another request deleted it. The updateMany guard
-    // (deletedAt: null) returns count 0 ⇒ softDelete returns false.
-    // Treated as success: the desired final state already holds.
+  // Race condition: findById saw the activity as active, but between the read
+  // and the write another request deleted it. The updateMany guard
+  // (deletedAt: null) returns count 0 ⇒ softDelete returns false.
+  // Treated as success: the desired final state already holds.
 
   it("does not throw when softDelete returns false (another request deleted first)", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
-        findById: vi.fn().mockResolvedValue({ id: "act-1", authorId: "author-1" })
+        findById: vi
+          .fn()
+          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -134,7 +160,9 @@ describe("ActivityService.delete", () => {
 describe("ActivityService.list", () => {
   it("maps start_date to startDate and passes it to repository.list", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { list: vi.fn().mockResolvedValue({ activities: [], total: 0 }) },
+      activity: {
+        list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
@@ -149,7 +177,9 @@ describe("ActivityService.list", () => {
 
   it("maps created_at to createdAt and passes it to repository.list", async () => {
     const { activityRepository, userRepository } = mockRepositories({
-      activity: { list: vi.fn().mockResolvedValue({ activities: [], total: 0 }) },
+      activity: {
+        list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+      },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
