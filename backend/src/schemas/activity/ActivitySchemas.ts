@@ -45,7 +45,7 @@ const AddressSchema = z.object({
       "state must be a valid Brazilian state abbreviation (e.g. AL, SP, RJ).",
   }),
 });
-``;
+
 
 const BaseActivitySchema = z.object({
   title: z.string().min(1),
@@ -68,7 +68,7 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      url: z.url(),
+      url: z.url().optional() ,
       address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({
@@ -101,56 +101,25 @@ const UpdateActivityBaseSchema = z
   })
   .partial();
 
+// DIVISÃO DE RESPONSABILIDADE:
+// O UpdateActivitySchema valida apenas o formato e os tipos dos campos no corpo do PATCH.
+// Regras que dependem do estado persistido da atividade (como exigir que IN_PERSON/HYBRID
+// tenham endereço gravado ou que ONLINE/HYBRID tenham URL) pertencem exclusivamente ao ActivityService.
 export const UpdateActivitySchema = UpdateActivityBaseSchema.refine(
   (data) => Object.keys(data).length > 0,
   {
     message: "Body cannot be empty. At least one field must be provided.",
     path: [],
   },
-)
-  .refine(
-    (data) => {
-      if (data.startDate && data.endDate) {
-        return data.startDate < data.endDate;
-      }
-      return true;
-    },
-    { message: "startDate must be before endDate.", path: ["startDate"] },
-  )
-  .superRefine((data, ctx) => {
-    if (data.format === "IN_PERSON" && !data.address) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Address is required when format is IN_PERSON.",
-        path: ["address"],
-      });
+).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
     }
-
-    if (data.format === "ONLINE" && !data.url) {
-      ctx.addIssue({
-        code: "custom",
-        message: "URL is required when format is ONLINE.",
-        path: ["url"],
-      });
-    }
-
-    if (data.format === "HYBRID") {
-      if (!data.url) {
-        ctx.addIssue({
-          code: "custom",
-          message: "URL is required when format is HYBRID.",
-          path: ["url"],
-        });
-      }
-      if (!data.address) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Address is required when format is HYBRID.",
-          path: ["address"],
-        });
-      }
-    }
-  });
+    return true;
+  },
+  { message: "startDate must be before endDate.", path: ["startDate"] },
+);
 
 export type UpdateActivityInput = z.infer<typeof UpdateActivitySchema>;
 
