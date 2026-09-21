@@ -132,6 +132,8 @@ class ActivityRepository implements IActivityRepository {
       order,
     } = filters;
 
+    // deletedAt is the starting clause, not one more filter: a soft-deleted
+    // activity must never reach the feed, whatever the caller asked for.
     const whereClause: any = { deletedAt: null };
 
     if (type) whereClause.type = type;
@@ -162,8 +164,10 @@ class ActivityRepository implements IActivityRepository {
         orderBy: { [orderBy]: order },
         include: {
           details: true,
+          // Counting the approved enrollments in the same query is what keeps
+          // the feed off an N+1: one count per activity would mean one query
+          // per row of the page.
           _count: {
-            // NOVO
             select: {
               enrollments: {
                 where: { status: "APPROVED" },
@@ -175,6 +179,9 @@ class ActivityRepository implements IActivityRepository {
       this._prisma.activity.count({ where: whereClause }),
     ]);
 
+    // availableSlots is derived on every read, never stored. Clamped at 0
+    // because slots can be lowered while enrollments already exist, which
+    // would otherwise surface as a negative number of free places.
     const activities = rawActivities.map((a) => ({
       ...a,
       availableSlots: Math.max(0, a.slots - a._count.enrollments),

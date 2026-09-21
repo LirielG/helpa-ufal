@@ -1,123 +1,232 @@
+# Helpa — Hub Estudantil de Laços, Participação e Ação
 
-# Helpa - Hub Estudantil de Laços, Participação e Ação
+Plataforma de gestão de atividades de extensão e voluntariado da comunidade acadêmica da
+UFAL — Campus Arapiraca. O Helpa centraliza a oferta de vagas em ações de extensão,
+cursos, eventos e palestras, conduz a inscrição do estudante, registra a presença
+homologada pelo gestor da ação e apura as horas complementares que viram certificado.
 
-O Helpa é uma plataforma de gestão de atividades de extensão e voluntariado desenvolvida para a comunidade acadêmica da UFAL - Campus Arapiraca. O sistema visa centralizar a oferta de vagas em projetos, facilitar a inscrição de estudantes e automatizar a contabilização de horas complementares.
+Além das ações criadas dentro da plataforma, o sistema também exibe as ações de extensão
+publicadas no SIGAA da UFAL, coletadas por raspagem e mantidas em cache local —
+veja [`backend/docs/SIGAA.md`](backend/docs/SIGAA.md).
 
-## Tecnologias Utilizadas
+O vocabulário do domínio (ação, inscrição, homologação, denúncia) está em
+[`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
-O projeto utiliza uma arquitetura baseada em TypeScript para garantir segurança e escalabilidade.
+## Stack
 
-### Frontend
-- React + TypeScript: Interface reativa e tipagem estática.
-- Vite: Ferramenta de build de alta performance.
-- Tailwind CSS v4: Estilização via utilitários com plugin oficial para Vite.
+| Camada | Tecnologias |
+| --- | --- |
+| Frontend | React 19, Vite, TypeScript, Tailwind CSS v4, React Router, Zustand, React Hook Form + Zod |
+| Backend | Node.js, Express 5, TypeScript em ESM nativo, Prisma 7, Zod |
+| Banco | PostgreSQL 16 |
+| Testes | Vitest nos dois lados; Testing Library + MSW no frontend, Supertest no backend |
 
-### Backend
-- Node.js + Express: Servidor para a API REST.
-- TypeScript: Tipagem estática em todo o servidor.
-- TSX: Executor de TypeScript para ambiente de desenvolvimento.
+## Pré-requisitos
 
-### Base de Dados
-- PostgreSQL: Banco de dados relacional para integridade de dados e certificados.
+- **Node.js** na versão do [`.nvmrc`](.nvmrc). Com o nvm: `nvm use`.
+- **npm** (o repositório usa `package-lock.json`; não misture com yarn ou pnpm).
+- **Docker** com Compose, para subir o PostgreSQL de desenvolvimento e o de teste.
+  Um PostgreSQL 16 instalado na máquina também serve, desde que o `DATABASE_URL` aponte para ele.
 
-## Estrutura do Repositório
+## Como executar o projeto
 
-O projeto utiliza um modelo de Monorepo para facilitar a gestão do código:
+O backend e o frontend são pacotes independentes, cada um com o seu `package.json`.
+Rode os comandos abaixo dentro da pasta de cada um.
 
+### 1. Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env          # preencha os valores; veja os comentários do arquivo
+docker compose up -d postgres # PostgreSQL de desenvolvimento na porta 5432
+npx prisma migrate dev        # cria o schema e gera o Prisma Client
+npx prisma db seed            # cria o admin e algumas ações de exemplo
+npm run dev
+```
+
+A API sobe em `http://localhost:3333` (ou na porta de `PORT`).
+
+Duas coisas valem saber antes do primeiro `npm run dev`:
+
+- `src/config/env.ts` valida todo o ambiente com Zod **no momento da importação**. Um
+  `.env` incompleto derruba a subida com a lista do que falta, em vez de falhar na
+  primeira requisição que precisava do valor.
+- O seed só roda com `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `ADMIN_FULL_NAME` preenchidos, e
+  a senha precisa passar na mesma política das senhas de usuário: no mínimo 8 caracteres
+  ASCII imprimíveis, com maiúscula, minúscula, dígito e símbolo.
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local    # opcional em desenvolvimento
+npm run dev
+```
+
+A interface sobe em `http://localhost:5173`. Sem `VITE_API_URL`, o frontend cai no
+padrão `http://localhost:3333` em modo de desenvolvimento
+(`frontend/src/config/index.ts`).
+
+O backend só aceita requisições com credencial vinda da origem configurada em
+`CORS_ORIGIN`, que já vem apontada para `http://localhost:5173`. Trocar a porta do Vite
+exige trocar essa variável também.
+
+## Comandos
+
+### `backend/`
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev` | Sobe a API com `tsx watch`. |
+| `npm test` | Suíte unitária (`src/**/__tests__/`). Não precisa de banco. |
+| `npm run test:watch` | Suíte unitária em modo watch. |
+| `npm run test:integration` | Suíte de integração. Precisa do `postgres-test` no ar e **apaga os dados do banco de teste**. |
+| `npm run test:all` | As duas suítes. |
+| `npm run test:coverage` | Cobertura em `coverage/`. |
+| `npm run test:db:up` | Sobe o container `postgres-test` (porta 5433). |
+| `npm run test:db:down` | Para o container `postgres-test`. |
+| `npm run format` / `format:check` | Prettier. |
+| `npx prisma migrate dev` | Aplica as migrations pendentes e regenera o client. |
+| `npx prisma db seed` | Roda `prisma/seed.ts`. |
+| `npx prisma studio` | Abre o navegador de dados do Prisma. |
+
+### `frontend/`
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento do Vite. |
+| `npm run build` | `tsc -b` seguido do build do Vite, em `dist/`. |
+| `npm run preview` | Serve o `dist/` já construído. |
+| `npm run lint` | ESLint em todo o pacote. |
+| `npm test` | Suíte de componentes e serviços (Vitest + Testing Library). |
+| `npm run test:watch` | Suíte em modo watch. |
+| `npm run test:coverage` | Cobertura em `coverage/`. |
+| `npm run format` / `format:check` | Prettier. |
+
+**Não há integração contínua neste repositório.** Nada roda sozinho no push ou no pull
+request, então a verificação antes de pedir revisão é local:
+
+```bash
+cd backend  && npm test && npm run format:check
+cd frontend && npm test && npm run lint && npm run format:check
+```
+
+## Estrutura do repositório
+
+```
 helpa-ufal/
+├── backend/
+│   ├── docs/            documentação da API (coleção Bruno, contrato, banco, SIGAA)
+│   ├── prisma/          schema, migrations e seed
+│   ├── src/             código da API, em camadas
+│   └── tests/           suíte de integração e seus helpers
+├── frontend/
+│   ├── public/
+│   └── src/             código da interface, em feature slices
+├── docs/                documentação que vale para o projeto inteiro
+└── README.md
+```
 
-├── frontend/     # Interface do usuário (React)
+O detalhamento de cada pasta está em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-├── backend/      # API e lógica de negócio (Node.js)
+## Modelo de dados
 
-│   └── docs/     # Documentação da API (coleção do Bruno em backend/docs/bruno)
+O schema completo é [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma), e
+[`backend/docs/DATABASE.md`](backend/docs/DATABASE.md) explica as convenções. As entidades:
 
-└── README.md     # Documentação geral do projeto
+| Entidade | Papel |
+| --- | --- |
+| `User` | Conta de acesso. `userType` é `STUDENT` ou `TEACHER`; `isManager` habilita criar e gerir ações. |
+| `Student` / `Teacher` | Dados específicos do perfil, um por usuário. |
+| `Activity` | A ação em si: título, tipo, campus, período, vagas, status. |
+| `ActivityDetails` | Descrição, área, formato, carga horária e endereço da ação. |
+| `Address` | Endereço, referenciado por ações presenciais e híbridas. |
+| `Enrollment` | Inscrição de um usuário em uma ação, com status, presença e horas homologadas. |
+| `Certificate` | Certificado emitido a partir de uma inscrição concluída. |
+| `ActivityReport` | Denúncia de uma ação, com motivo e resolução. |
+| `SigaaActivity` | Cache das ações raspadas do SIGAA. Não é uma ação do Helpa. |
 
-A documentação das rotas da API é a coleção do Bruno em `backend/docs/bruno`.
-Veja `backend/docs/README.md` para saber como abri-la.
+## Documentação
 
-## Como Executar o Projeto
+| Página | Leia quando |
+| --- | --- |
+| [`AGENTS.md`](AGENTS.md) | Começar a programar no projeto: convenções, camadas e as regras fáceis de errar. |
+| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Um termo do domínio for desconhecido ou dois parecerem a mesma coisa. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Adicionar ou reorganizar uma funcionalidade, nos dois lados. |
+| [`docs/TESTING.md`](docs/TESTING.md) | Escrever testes ou destravar uma suíte que está falhando. |
+| [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) | Preencher um `.env` ou entender o que cada variável controla. |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Tratar de build de produção, deploy ou backup. |
+| [`backend/docs/README.md`](backend/docs/README.md) | Abrir a coleção do Bruno e disparar requisições contra a API. |
+| [`backend/docs/API.md`](backend/docs/API.md) | Mexer em rotas, autenticação, permissões ou formato de resposta. |
+| [`backend/docs/DATABASE.md`](backend/docs/DATABASE.md) | Escrever uma migration, um seed ou uma query não trivial. |
+| [`backend/docs/SIGAA.md`](backend/docs/SIGAA.md) | Trabalhar na integração com o SIGAA ou ela parar de funcionar. |
+| [`frontend/README.md`](frontend/README.md) | Trabalhar na interface. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Saber o que mudou desde a sprint passada. |
 
-### Pré-requisitos
-- Node.js (v22.12.0 ou superior)
-- npm ou yarn
+Nem toda rota da coleção do Bruno já existe no backend — `backend/docs/README.md` diz
+quais são contratos acordados e ainda não implementados.
 
-### 1. Configuração do Frontend
-Dentro da pasta frontend:
-1. npm install
-2. npm run dev
-O frontend estará disponível em http://localhost:5173.
+## Guia de contribuição
 
-### 2. Configuração do Backend
-Dentro da pasta backend:
-1. npm install
-2. npm run dev
-O servidor iniciará em http://localhost:3333.
+### Branches principais
 
-## Modelo de Dados (MVP)
+- **`main`** — produção. Só recebe código estável, revisado e aprovado, e só a partir da
+  `development`, por pull request no fim da sprint.
+- **`development`** — linha de integração. Toda tarefa nasce daqui e volta para cá.
 
-A estrutura inicial da base de dados contempla as seguintes entidades:
+### Fluxo de trabalho
 
-- Usuario: Alunos (voluntários) e Gestores de projetos.
-- Projeto: Entidades de extensão ou eventos.
-- Oportunidade: Vagas específicas abertas pelos projetos.
-- Inscricao: Registro de participação, gestão de voluntariado e certificados.
+Toda tarefa começa pela issue, para que o código fique ligado ao board:
 
-## Gestão Ágil
+1. Abra a issue atribuída a você no board (Backlog Helpa).
+2. Na seção **Development**, na lateral direita da issue, clique em **Create a branch**.
+3. Em **Change branch source**, troque para **`development`**. O padrão sugerido pelo
+   GitHub pode não ser essa branch, e uma branch nascida de `main` gera conflito no PR.
+4. Traga a branch para a sua máquina:
 
-O desenvolvimento é gerido através de Metodologias Ágeis (Scrum), utilizando o GitHub Projects para o acompanhamento de Sprints e Issues.
+   ```bash
+   git fetch origin
+   git checkout nome-da-nova-branch
+   ```
+
+5. Faça commits em *Conventional Commits* (`feat:`, `fix:`, `docs:`, `test:`, `chore:`):
+
+   ```bash
+   git commit -m "feat: valida email no cadastro"
+   ```
+
+6. `git push origin sua-branch` e abra o pull request **apontando para `development`**.
+
+### Regras
+
+- Nenhum PR entra sem revisão de pelo menos uma outra pessoa do time.
+- Conflito é resolvido por quem abriu o PR, na própria branch, antes da revisão final.
+- Rode os testes e o formatador localmente antes de pedir revisão — não há CI para pegar
+  o que passar.
+- Comentários de código e nomes de teste em inglês; texto de interface em pt-BR.
+  O porquê está em [`AGENTS.md`](AGENTS.md).
+
+## Gestão ágil
+
+O desenvolvimento é conduzido em Scrum, com sprints e issues no GitHub Projects:
 https://github.com/users/LirielG/projects/3
 
-## Equipe - UFAL Arapiraca
+## Equipe — UFAL Arapiraca
 
-- Liriel Gomes : Product Owner e Lead Developer
-- ANNY KAROLINY GERMANO FILGUEIRAS
-- ARTHUR VINICIUS DE ALBUQUERQUE OLIVEIRA
-- CARLOS EDUARDO ROCHA NUNES
-- ERIC SOARES DOS SANTOS
-- GABRYEL ADRIANO BORGES DE SOUZA
-- JESSICA PEREIRA DA SILVA
-- JOAO VICTOR RODRIGUES ALVES
-- KAROL CIRILO SANTANA
-- LUCAS RAMOS DE OLIVEIRA
-- MAIKY ARAUJO BRITO
+- Liriel Gomes — Product Owner e Lead Developer
+- Anny Karoliny Germano Filgueiras
+- Arthur Vinicius de Albuquerque Oliveira
+- Carlos Eduardo Rocha Nunes
+- Eric Soares dos Santos
+- Gabryel Adriano Borges de Souza
+- Jessica Pereira da Silva
+- Joao Victor Rodrigues Alves
+- Karol Cirilo Santana
+- Lucas Ramos de Oliveira
+- Maiky Araujo Brito
 
------------------------------------
-## Guia de Contribuição
+## Licença
 
-### 🛠️ Fluxo de Versionamento Git - Projeto Helpa
-
-Para garantir a integridade do código e facilitar a colaboração entre os times de Frontend e Backend, adotaremos o seguinte padrão de ramificação (*branching*):
-
-#### 1. As Branches Principais
-* **`main`**: É a nossa branch de produção. Ela contém apenas código estável, revisado e aprovado. Ninguém deve fazer *commit* direto nela. Ela só recebe atualizações vindas da `develop` através de Pull Requests oficiais no final de cada sprint.
-* **`develop`**: É a nossa "linha de montagem". Todos os novos recursos e correções devem ser integrados aqui primeiro. É a branch padrão de onde as novas tarefas devem nascer.
-
-#### 2. Fluxo de Trabalho (Criando a partir da Issue)
-Para garantir que todo o código esteja rastreado e vinculado ao Kanban, cada desenvolvedor deve iniciar sua tarefa seguindo estes passos diretamente no GitHub:
-
-1.  **Acessar a Tarefa:** Abra a Issue que foi atribuída a você no nosso *board* (Backlog Helpa).
-2.  **Criar a Branch:** No menu lateral direito da Issue, vá até a seção **Development** e clique em **"Create a branch"**.
-3.  **Configurar a Origem:** * O GitHub vai sugerir um nome automático (ex: `15-tela-login`). Pode mantê-lo.
-    * **⚠️ Atenção:** Certifique-se de mudar a opção **"Change branch source"** para a branch `develop`. A branch nova *precisa* nascer da develop!
-4.  **Sincronizar Localmente:** O GitHub mostrará dois comandos. Copie e cole no seu terminal para baixar a branch para a sua máquina:
-    ```bash
-    git fetch origin
-    git checkout nome-da-nova-branch
-    ```
-5.  **Desenvolver e Comitar:** Faça seus commits com mensagens claras, utilizando o padrão *Conventional Commits* (ex: `feat:`, `fix:`, `docs:`):
-    ```bash
-    git commit -m "feat: implementa validação de email no cadastro"
-    ```
-6.  **Enviar e Abrir PR:** Envie suas alterações para o GitHub (`git push origin sua-branch`) e abra um **Pull Request (PR)** apontando de volta para a branch `develop`.
-
-#### 3. Regras de Ouro
-* **Revisão de Pares:** Nenhum PR deve ser aprovado sem que pelo menos um outro membro da equipe revise o código.
-* **Conflitos:** Caso haja conflitos, o responsável pela tarefa deve resolvê-los na sua branch local antes de finalizar o PR.
-
-#### 4. Responsabilidades (Sprint 2)
-* **Liriel (Scrum Master):** Revisão final dos PRs e merge da `develop` para a `main` ao final da sprint.
-* **Membros da Equipe:** Criar as branches usando o botão das Issues, garantindo que a origem seja a `develop`, e solicitar revisões.
-
-***
+MIT — veja [`LICENSE`](LICENSE).

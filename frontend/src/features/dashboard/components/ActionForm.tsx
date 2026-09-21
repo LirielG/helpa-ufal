@@ -43,6 +43,9 @@ export function ActionRegister({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
 
+  // Stays mounted while a confirmation is open: the parent flips isOpen to
+  // false as soon as the action is created, and unmounting here would take the
+  // success dialog down with it.
   if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
 
   const handleNext = async (e: React.FormEvent) => {
@@ -72,6 +75,21 @@ export function ActionRegister({
 
       const cleanZipCode = zipCode.replace(/\D/g, "");
 
+      // TODO: several fields below are placeholders, not decisions. The form
+      // collects less than POST /activities requires, so the gaps are filled
+      // here to get a valid request through. Each one needs either a field in
+      // the form or a rule change on the API:
+      //
+      //   url        the API demands one for ONLINE and HYBRID; the form has
+      //              no link field, so every action points at the campus site
+      //   campus     hardcoded to ARAPIRACA; the form has no campus selector
+      //   start/end  the form asks for a single day and it is stretched into
+      //              08:00-18:00, so a multi-day action cannot be created here
+      //   district   always "Centro"
+      //   zipCode    "00000000" when left blank, which passes the 8-digit check
+      //
+      // Do not "clean these up" without adding the corresponding input: the
+      // request stops validating and the screen fails with a 400.
       const payload = {
         title,
         description: description.trim() || "Descrição não informada.",
@@ -85,6 +103,9 @@ export function ActionRegister({
         workloadHours: Number(workload),
         format: formatMap[format] || "IN_PERSON",
 
+        // The API rejects an address on an ONLINE activity and demands one on
+        // the other two formats, so the block is omitted entirely rather than
+        // sent empty.
         ...(format !== "remoto" &&
           city && {
             address: {
@@ -118,6 +139,10 @@ export function ActionRegister({
 
       if (onSuccess) onSuccess();
     } catch (error) {
+      // TODO: replace the alert and show the API's per-field errors on the
+      // fields, the way features/action-edit/handleApiErrors.ts already does
+      // for editing. Today a 400 tells the user nothing about which field is
+      // wrong, and the two steps of the form are already closed by then.
       console.error("Erro ao criar ação:", error);
       alert(
         "Não foi possível criar a ação. Verifique os dados e tente novamente.",

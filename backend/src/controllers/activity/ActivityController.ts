@@ -90,7 +90,6 @@ class ActivityController implements IActivityController {
 
     const { id } = req.params;
 
-    // Verificar se id é string (não array)
     if (Array.isArray(id)) {
       throw new CustomError(400, "Invalid id parameter.");
     }

@@ -23,10 +23,14 @@ import ValidationError, {
 } from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 
-const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
+// Sanity ceilings, not academic rules: nothing in the extension regulations
+// caps an activity at a year. They exist so a typo (a date in 2126, 100000
+// slots) is rejected at creation instead of reaching the feed and the
+// pagination. Widen them if a real activity ever needs it.
+const MAX_ACTIVITY_DURATION_DAYS = 365;
 const MAX_SLOTS = 10_000;
 const MAX_WORKLOAD_HOURS = 8_760; // hours in a year
-const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
+const MAX_FUTURE_START_DAYS = 365;
 
 type Props = {
   activityRepository?: IActivityRepository;
@@ -52,6 +56,13 @@ class ActivityService implements IActivityService {
       (data.startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     const durationHours = durationDays * 24;
 
+    // Errors are thrown in batches — dates first, then capacity — and each
+    // batch short-circuits the next. A request that is wrong on both reports
+    // only the dates, and the second round trip reports the rest. That is
+    // deliberate: the capacity rules are derived from the dates (workloadHours
+    // is compared against the duration), so validating them against dates that
+    // were just rejected would produce a message about a period the activity
+    // will not have.
     const dateErrors = [];
 
     if (data.startDate <= now) {
@@ -172,9 +183,13 @@ class ActivityService implements IActivityService {
       throw new ValidationError(paginationErrors);
     }
 
-    // filtros
     const filterErrors = [];
 
+    // TODO: these three lists duplicate the Prisma enums (ActivityType,
+    // ActivityFormat, ActivityStatus). Adding a value to the schema without
+    // adding it here makes the filter reject an activity the feed already
+    // shows, and nothing fails at compile time. Deriving them from the enums
+    // requires the error message to keep listing the accepted values.
     const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
     const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
     const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
@@ -385,6 +400,11 @@ class ActivityService implements IActivityService {
       }
     }
 
+    // From here on the rules run against the format the activity will END UP
+    // with, which is the one in the body or, when the body omits it, the one
+    // already saved. UpdateActivitySchema can only see the body, so a request
+    // that changes only the url of an activity that is already ONLINE reaches
+    // this point without the schema having checked anything.
     const finalFormat = data.format ?? activity.details?.format;
 
     if (
@@ -399,11 +419,17 @@ class ActivityService implements IActivityService {
     const hasExistingAddress = !!activity.details?.address;
 
     if (finalFormat === "ONLINE") {
-      data.address = null; // ignora endereço enviado se virou online
+      // An online activity has no place, so an address in the body is dropped
+      // rather than rejected: the edit screen keeps the address block filled
+      // while the user switches the format, and sending it back is not an error.
+      data.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
         addressAction = hasExistingAddress ? "UPDATE" : "CREATE";
+        // Only demand an address when the format is CHANGING. Editing the title
+        // of an IN_PERSON activity that somehow has no address must not fail on
+        // a field the request never mentioned.
       } else if (!hasExistingAddress && data.format) {
         throw new CustomError(
           400,
@@ -445,6 +471,12 @@ class ActivityService implements IActivityService {
 
     const currentStatus = activity.status;
 
+    // Terminal states are checked BEFORE the transition table, although the
+    // table already rejects them (their lists of allowed targets are empty).
+    // The order is what decides the message: "is already COMPLETED" tells the
+    // caller the activity is closed, while "cannot transition from COMPLETED to
+    // COMPLETED" reads like a bad request. Reordering these two breaks the
+    // cases covered in ActivityService.updateStatus.test.ts.
     if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
       throw new CustomError(
         409,
@@ -461,7 +493,7 @@ class ActivityService implements IActivityService {
 
     const updated = await this._activityRepository.updateStatus(
       activityId,
-      newStatus as any,
+      newStatus,
     );
 
     const approvedCount =

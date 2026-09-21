@@ -134,6 +134,8 @@ export function EditAction() {
               district: action.details.address.district ?? "",
               city: action.details.address.city ?? "",
               state: action.details.address.state ?? "",
+              // The API stores eight bare digits; the field shows the hyphen
+              // the user expects. toAddressPayload strips it again on save.
               zipCode: action.details.address.zipCode
                 ? action.details.address.zipCode.replace(
                     /^(\d{5})(\d)/,

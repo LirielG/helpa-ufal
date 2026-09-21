@@ -19,6 +19,8 @@ export function toActivityReportResponse(
     category: report.category,
     description: report.description,
     createdAt: report.createdAt,
-    // resolvedAt e resolvedById omitidos até Sprint 5
+    // resolvedAt and resolvedById are left out: moderation has no route and no
+    // screen yet, and exposing the fields now would publish a contract nothing
+    // can fill.
   };
 }

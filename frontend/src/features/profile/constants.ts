@@ -1,7 +1,13 @@
 import type { UserActivity } from "./types";
 
+/**
+ * TODO: nothing imports this. It was the stand-in for the profile screen while
+ * the API had no route for a user's activities, and it still shows the shape
+ * the screen expects. Delete it once the real listing lands, or wire it into a
+ * test fixture — leaving unused mock data in src invites someone to render it.
+ */
 export const MOCK_ACTIVITIES: UserActivity[] = [
-  // Inscritas
+  // Enrolled
   {
     id: "i1",
     title: "Preservação Ambiental - Plantio de Mudas",
@@ -38,7 +44,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     date: "14/06/2026",
     status: "enrolled",
   },
-  // Concluídas
+  // Completed
   {
     id: "c1",
     title: "Alfabetização Digital para Idosos",
@@ -79,7 +85,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     status: "completed",
     workloadHours: 12,
   },
-  // Gerenciadas
+  // Managed
   {
     id: "g1",
     title: "Campanha de Arrecadação de Agasalhos",

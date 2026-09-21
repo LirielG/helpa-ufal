@@ -49,8 +49,8 @@ describe("POST /auth/register", () => {
     const response = await request(app).post(REGISTER_URL).send(payload);
 
     expect(response.status).toBe(201);
-    // Contrato novo: o corpo É o UserResponse. O toEqual exato reprova
-    // qualquer campo extra (token, passwordHash) ou envelope { user }.
+    // The body IS the UserResponse. An exact toEqual is what fails the test on
+    // any extra field (token, passwordHash) or on a { user } envelope.
     expect(response.body).toEqual({
       id: expect.any(String),
       fullName: payload.fullName,
@@ -88,7 +88,6 @@ describe("POST /auth/register", () => {
   });
 
   it("does NOT send a Set-Cookie header", async () => {
-    // AC central da refatoração.
     const response = await request(app)
       .post(REGISTER_URL)
       .send(aStudentPayload());
@@ -98,8 +97,9 @@ describe("POST /auth/register", () => {
   });
 
   it("leaves the client unauthenticated: protected route right after register → 401", async () => {
-    // O agente persiste cookies: se o register setasse o cookie de sessão,
-    // a sonda voltaria autenticada (404 de atividade inexistente, não 401).
+    // The agent keeps cookies between requests: if register set the session
+    // cookie, the probe would come back authenticated (404 for a nonexistent
+    // activity) instead of 401.
     const agent = request.agent(app);
     await agent.post(REGISTER_URL).send(aStudentPayload()).expect(201);
 
@@ -109,7 +109,7 @@ describe("POST /auth/register", () => {
   });
 
   it("the created account can authenticate via login (register → login → protected)", async () => {
-    // Prova o AC "cadastro continua funcionando": o fluxo completo do usuário.
+    // The whole user flow, end to end.
     const payload = aStudentPayload();
     await request(app).post(REGISTER_URL).send(payload).expect(201);
 
@@ -123,9 +123,9 @@ describe("POST /auth/register", () => {
       .set(...authHeader(login.body.token))
       .send(probeBody);
 
-    expect(probe.status).toBe(404); // autenticado (não 401): conta funcional
-    // Guarda anti-false-pass: o 404 precisa vir do ErrorHandler (JSON),
-    // não do 404 default do Express (HTML, corpo vazio).
+    expect(probe.status).toBe(404); // authenticated, not 401: the account works
+    // Guards against a false pass: the 404 has to come from ErrorHandler (JSON),
+    // not from Express's default 404 (HTML, empty body).
     expect(probe.body).toMatchObject({ status: 404 });
   });
 

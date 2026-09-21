@@ -123,7 +123,9 @@ model Activity {
   status    ActivityStatus  @default(OPEN)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
-  deletedAt DateTime?       
+  /// Soft delete. Every Activity query must filter deletedAt: null —
+  /// a deleted activity answers 404 as if it had never existed.
+  deletedAt DateTime?
 
   @@index([type])
   @@index([authorId])
@@ -156,9 +158,11 @@ model Enrollment {
   userId              String
   activityId          String
   status              EnrollmentStatus
-  /// Tri-state: null = nada dito | true = presente | false = faltou.
+  /// Tri-state: null = nobody has decided yet | true = present | false = absent.
+  /// null and false are not the same thing: one is silence, the other a decision.
   attendanceConfirmed Boolean?
-  /// Horas homologadas. Só significativo quando attendanceConfirmed = true.
+  /// Hours homologated for this enrollment. Only meaningful when
+  /// attendanceConfirmed is true; 0 otherwise, by construction.
   confirmedWorkloadHours Int       @default(0)
   isModerator         Boolean          @default(false)
   enrolledAt          DateTime         @default(now())

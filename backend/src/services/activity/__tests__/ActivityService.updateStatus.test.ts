@@ -80,7 +80,7 @@ describe("ActivityService.updateStatus", () => {
       404,
       "Activity not found.",
     );
-    // Existência é verificada antes de qualquer consulta de usuário.
+    // Existence is checked before any user lookup.
     expect(repository.findUserById).not.toHaveBeenCalled();
     expect(repository.updateStatus).not.toHaveBeenCalled();
   });
@@ -102,9 +102,9 @@ describe("ActivityService.updateStatus", () => {
   });
 
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
-    // Ghost user: a autoria exige usuário vivo no banco. É essa consulta que
-    // a #148 levará ao update — ver o espelho deste caso em
-    // ActivityService.update.test.ts.
+    // Ghost user: authorship requires a user that still exists in the
+    // database, so a valid token alone is not enough. The mirror of this case
+    // lives in ActivityService.update.test.ts.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivityRecord()),
       findUserById: vi.fn().mockResolvedValue(null),
@@ -159,12 +159,12 @@ describe("ActivityService.updateStatus", () => {
     },
   );
 
-  // A mensagem esperada depende da ORIGEM. Origens terminais respondem com a
-  // mensagem do contrato Bruno ("already ... cannot be transitioned.") — o que
-  // EXIGE a guarda de terminal reordenada para antes de isValidTransition
-  // (decisão da equipe; sem a reordenação estes casos falham). Origens não
-  // terminais usam "Cannot transition from X to Y.". Os casos "pede o próprio
-  // status" (COMPLETED→COMPLETED, CANCELLED→CANCELLED) estão cobertos aqui.
+  // The expected message depends on the SOURCE status. Terminal sources answer
+  // with the Bruno contract message ("already ... cannot be transitioned."),
+  // which REQUIRES the terminal guard to run before isValidTransition — these
+  // cases fail if the two are swapped. Non-terminal sources get "Cannot
+  // transition from X to Y.". Asking for the status an activity already has
+  // (COMPLETED->COMPLETED, CANCELLED->CANCELLED) is covered here too.
   it.each(transitionCases.filter((c) => !c.allowed))(
     "rejects transition $from -> $to with 409",
     async ({ from, to }) => {
@@ -192,7 +192,7 @@ describe("ActivityService.updateStatus", () => {
   // ---------- availableSlots recalculation ----------
 
   it("returns availableSlots recalculated from approved enrollments", async () => {
-    // Espelha o exemplo do contrato Bruno: slots 40, 13 inscrições aprovadas.
+    // Mirrors the example in the Bruno contract: 40 slots, 13 approved.
     const updated = makeActivityRecord({ status: "IN_PROGRESS" });
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivityRecord()),
@@ -223,8 +223,9 @@ describe("ActivityService.updateStatus", () => {
   });
 
   it("clamps availableSlots at zero when approved enrollments exceed slots", async () => {
-    // Estado inconsistente possível enquanto availableSlots não tem fonte
-    // única (issue separada); o Math.max(0, ...) protege a resposta.
+    // Slots can be lowered below the number of approved enrollments, so the
+    // subtraction can go negative; Math.max(0, ...) keeps that out of the
+    // response.
     const repository = mockRepository({
       findById: vi.fn().mockResolvedValue(makeActivityRecord()),
       updateStatus: vi

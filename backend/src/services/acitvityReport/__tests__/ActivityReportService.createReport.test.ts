@@ -24,7 +24,7 @@ const REPORT_REASONS = [
 ] as const;
 
 // Mirrors toActivityReportResponse: fields come from the persisted row, and
-// moderation fields (resolvedAt/resolvedById) stay out until Sprint 5.
+// moderation fields (resolvedAt/resolvedById) stay out while no route fills them.
 function reportFactory(
   activityId: string,
   userId: string,

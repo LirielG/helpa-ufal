@@ -5,13 +5,13 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
 
-// Route contract: POST /auth/logout — 204 e limpeza do cookie de sessão.
+// Route contract: POST /auth/logout — 204 and the session cookie cleared.
 
 const LOGOUT_URL = "/auth/logout";
 const LOGIN_URL = "/auth/login";
 
-// Sonda de autenticação — rota protegida EXISTENTE (ver post-register.test.ts
-// para o porquê de não usarmos /activities/:id/enroll).
+// Authentication probe: a protected route that EXISTS (post-register.test.ts
+// explains why /activities/:id/enroll is not used here).
 const probeUrl = () => `/activities/${randomUUID()}/reports`;
 const probeBody = { category: "SPAM" };
 
@@ -40,7 +40,7 @@ describe("POST /auth/logout", () => {
   });
 
   it("is public and idempotent: 204 even without a session", async () => {
-    // AuthRouter não aplica middleware ao logout — caracterização do comportamento.
+    // AuthRouter attaches no middleware to logout: this pins that behaviour.
     const response = await request(app).post(LOGOUT_URL);
 
     expect(response.status).toBe(204);
