@@ -76,7 +76,7 @@ function spyOnUpdate(onResponse?: () => Promise<void>) {
   return onRequest;
 }
 
-function failUpdate(status: number, body: Record<string, any> = {}) {
+function failUpdate(status: number, body: Record<string, unknown> = {}) {
   server.use(
     http.patch(`${API}/activities/:id`, () =>
       HttpResponse.json(body, { status }),
