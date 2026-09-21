@@ -81,7 +81,7 @@ class AuthService implements IAuthService {
       updatedAt: newUser.updatedAt,
     };
 
-    return userResponse; 
-    }
+    return userResponse;
   }
-  export default AuthService;
+}
+export default AuthService;

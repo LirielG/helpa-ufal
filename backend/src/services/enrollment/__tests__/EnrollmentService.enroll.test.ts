@@ -99,9 +99,9 @@ describe("EnrollmentService.enroll", () => {
     const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
-    await expect(
-      service.enroll(USER_ID, "not-a-uuid"),
-    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.enroll(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
+      ValidationError,
+    );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
@@ -113,7 +113,11 @@ describe("EnrollmentService.enroll", () => {
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
-    await expectHttpError(service.enroll(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      404,
+      "Activity not found.",
+    );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
@@ -173,7 +177,9 @@ describe("EnrollmentService.enroll", () => {
       enrollment: {
         enroll: vi
           .fn()
-          .mockRejectedValue(new CustomError(409, "User is already enrolled in this activity.")),
+          .mockRejectedValue(
+            new CustomError(409, "User is already enrolled in this activity."),
+          ),
       },
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
@@ -190,7 +196,9 @@ describe("EnrollmentService.enroll", () => {
       enrollment: {
         enroll: vi
           .fn()
-          .mockRejectedValue(new CustomError(409, "No available slots for this activity.")),
+          .mockRejectedValue(
+            new CustomError(409, "No available slots for this activity."),
+          ),
       },
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });

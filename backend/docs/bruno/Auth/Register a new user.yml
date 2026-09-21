@@ -222,7 +222,7 @@ examples:
             "status": 409,
             "message": "This value is already in use."
           }
-  
+
   - name: 409 - Registration code already in use
     description: Registration code already in use.
     request:

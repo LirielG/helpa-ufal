@@ -1,0 +1,157 @@
+info:
+  name: Get user's profile
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me"
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Student profile
+    description: Valid token belonging to a STUDENT user. cndb is null — the field only exists on Teacher.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000010",
+            "fullName": "Maria Silva",
+            "email": "maria@aluno.ufal.br",
+            "userType": "STUDENT",
+            "isManager": false,
+            "registrationCode": "20240012345",
+            "course": "Ciência da Computação",
+            "cndb": null,
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 200 Teacher profile
+    description: Valid token belonging to a TEACHER user. registrationCode and cndb come from the Teacher row.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000020",
+            "fullName": "Ricardo Almeida",
+            "email": "ricardo.almeida@ufal.br",
+            "userType": "TEACHER",
+            "isManager": false,
+            "registrationCode": "1234567",
+            "course": "Engenharia de Software",
+            "cndb": "CNDB-9988",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 200 Teacher with no course
+    description: A teacher with no course attached is a legitimate state — course comes as null, never as an error.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000021",
+            "fullName": "Ricardo Almeida",
+            "email": "ricardo.almeida@ufal.br",
+            "userType": "TEACHER",
+            "isManager": true,
+            "registrationCode": "1234567",
+            "course": null,
+            "cndb": "CNDB-9988",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 401 Missing token
+    description: No credential at all - neither the session cookie nor an Authorization header.
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "No token provided."
+          }
+  - name: 401 Invalid or expired token
+    description: A credential was sent, but it failed verification - malformed, wrong signature or past its expiry. The three cases share one message on purpose, so the response never tells which one it was.
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Token malformatted, expired or invalid."
+          }
+  - name: 404 User no longer exists
+    response:
+      status: 404
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "User not found."
+          }
+
+docs: |-
+  # GET /users/me — Profile data
+
+  Returns the registration data of the authenticated user.
+  Powers the **Personal Data** section of the Profile screen.
+
+  ## Authentication
+  - Hybrid, like the rest of the API: httpOnly session cookie (web frontend) or
+    `Authorization: Bearer` (Bruno and scripts). Both resolve the same way.
+  - The `userId` is extracted exclusively from the token — never from `params`, `query` or `body`.
+    There is no way to ask this route for someone else's profile.
+
+  ## Field mapping (DTO → database)
+  | Field              | Source |
+  |--------------------|--------|
+  | `id`               | `User.id` |
+  | `fullName`         | `User.fullName` |
+  | `email`            | `User.email` |
+  | `userType`         | `User.userType` (enum `STUDENT` \| `TEACHER`, untranslated) |
+  | `isManager`        | `User.isManager` |
+  | `registrationCode` | `Student.registrationCode` or `Teacher.registrationCode` (per `userType`) |
+  | `course`           | `Student.course` or `Teacher.course` — **may be `null` for `TEACHER`** |
+  | `cndb`             | `Teacher.cndb` — always `null` for `STUDENT` |
+  | `createdAt`        | `User.createdAt` |
+
+  ## Business rules
+  - Flat response: the academic fields are flattened into the payload instead of being nested
+    under `student`/`teacher`, and every key is always present — `null` reads as "does not apply
+    to this profile". The shape does not change with `userType`.
+  - `passwordHash` and other internal fields are never serialized: the repository `select` does
+    not even load them, and the service maps the DTO field by field.
+  - `registrationCode`, `course`, `cndb` and `userType` are read-only here (see PATCH /users/me).
+  - Participation totals (e.g. hours) are not part of this payload — actions and hours are
+    leaving the profile screen.
+  - `updatedAt` is not returned; the profile screen has no use for it.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 401    | Missing credential, invalid signature or expired token |
+  | 404    | The user from the token no longer exists |
+  | 500    | The user exists but has no `Student`/`Teacher` row (broken database invariant) |
+
+  > **Intentional divergence:** the enrollment routes answer `401` when the token's user is gone
+  > (`EnrollmentService.requireUser`), because there the status also hides whether someone else's
+  > resource exists. Here the resource *is* the token owner, so there is nothing to conceal and
+  > "valid credential, resource gone" is exactly `404`.
+
+  > Error body aligned with the rest of the API: `{ status, message }`, plus an
+  > `errors` array on validation failures.

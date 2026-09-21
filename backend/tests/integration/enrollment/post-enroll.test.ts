@@ -56,9 +56,8 @@ describe("POST /activities/:id/enroll", () => {
       status: "CANCELLED",
       enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
       attendanceConfirmed: true,
-      confirmedWorkloadHours: 8,        // novo
+      confirmedWorkloadHours: 8, // novo
     });
-
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
@@ -73,8 +72,8 @@ describe("POST /activities/:id/enroll", () => {
       where: { id: canceled.id },
     });
     expect(stored.status).toBe("APPROVED");
-    expect(stored.attendanceConfirmed).toBeNull();   // era: toBe(false)
-    expect(stored.confirmedWorkloadHours).toBe(0);   // novo
+    expect(stored.attendanceConfirmed).toBeNull(); // era: toBe(false)
+    expect(stored.confirmedWorkloadHours).toBe(0); // novo
     expect(stored.enrolledAt.getTime()).toBeGreaterThan(
       new Date("2026-01-01T00:00:00.000Z").getTime(),
     );
@@ -167,7 +166,10 @@ describe("POST /activities/:id/enroll", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -185,9 +187,12 @@ describe("POST /activities/:id/enroll", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
-  }); 
-  
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
+  });
+
   // ---------- 409 - Conflict ----------
 
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
@@ -253,7 +258,6 @@ describe("POST /activities/:id/enroll", () => {
     });
   });
 
-
   // ---------- Concurrency ----------
 
   it("never exceeds slots under concurrent enrollments", async () => {
@@ -270,7 +274,9 @@ describe("POST /activities/:id/enroll", () => {
 
     const results = await Promise.allSettled(
       students.map((s) =>
-        request(app).post(enrollUrl(activity.id)).set(...authHeader(s.token)),
+        request(app)
+          .post(enrollUrl(activity.id))
+          .set(...authHeader(s.token)),
       ),
     );
 

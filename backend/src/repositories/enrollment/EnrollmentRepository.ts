@@ -2,10 +2,17 @@
 import { Prisma, type Enrollment, type PrismaClient } from "@prisma/client";
 import type {
   EnrollmentWithActivity,
+  EnrollmentWithParticipant,
   IEnrollmentRepository,
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
-import { lockActivityForCapacity } from "@/repositories/enrollment/locks.js";
-import { ENROLLMENT_INITIAL_STATUS } from "@/types/enrollment.js";
+import {
+  lockActivityForAttendance,
+  lockActivityForCapacity,
+} from "@/repositories/enrollment/locks.js";
+import {
+  ACTIVE_ENROLLMENT_STATUS,
+  ENROLLMENT_INITIAL_STATUS,
+} from "@/types/enrollment.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
 
@@ -18,6 +25,56 @@ class EnrollmentRepository implements IEnrollmentRepository {
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
+  }
+
+  public async findByActivityId(
+    activityId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    items: EnrollmentWithParticipant[];
+    total: number;
+    totalPresent: number;
+  }> {
+    // Only active enrollments occupy slots and appear in the list — CANCELLED
+    // rows stay hidden from items, total and totalPresent alike.
+    const where = { activityId, status: ACTIVE_ENROLLMENT_STATUS };
+
+    const [items, total, totalPresent] = await this._prisma.$transaction([
+      this._prisma.enrollment.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ enrolledAt: "asc" }, { id: "asc" }],
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              student: { select: { registrationCode: true } },
+            },
+          },
+        },
+      }),
+      this._prisma.enrollment.count({ where }),
+      this._prisma.enrollment.count({
+        where: { ...where, attendanceConfirmed: true },
+      }),
+    ]);
+
+    return { items, total, totalPresent };
+  }
+
+  public async findByIdAndActivity(
+    enrollmentId: string,
+    activityId: string,
+  ): Promise<Enrollment | null> {
+    // findFirst, not findUnique by id: an enrollment of ANOTHER activity must
+    // be indistinguishable from one that does not exist at all.
+    return this._prisma.enrollment.findFirst({
+      where: { id: enrollmentId, activityId },
+    });
   }
 
   public async findByUserAndActivity(
@@ -51,7 +108,10 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (existing && existing.status !== "CANCELLED") {
-        throw new CustomError(409, "User is already enrolled in this activity.");
+        throw new CustomError(
+          409,
+          "User is already enrolled in this activity.",
+        );
       }
 
       const approvedCount = await tx.enrollment.count({
@@ -73,8 +133,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
             // createdAt is left untouched by Prisma/Postgres and keeps the
             // original creation date of the record.
             enrolledAt: new Date(),
-            attendanceConfirmed: null,     
-            confirmedWorkloadHours: 0,     
+            attendanceConfirmed: null,
+            confirmedWorkloadHours: 0,
           },
         });
       }
@@ -88,13 +148,16 @@ class EnrollmentRepository implements IEnrollmentRepository {
           },
         });
       } catch (error) {
-        // Defense-in-depth against execution outside of the lock 
+        // Defense-in-depth against execution outside of the lock
         // (e.g., another transaction that did not go through lockActivityForCapacity).
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          throw new CustomError(409, "User is already enrolled in this activity.");
+          throw new CustomError(
+            409,
+            "User is already enrolled in this activity.",
+          );
         }
         throw error;
       }
@@ -102,8 +165,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    // Atomic transition: two concurrent cancellations result in one success 
-    // and one 404, with no race window. 
+    // Atomic transition: two concurrent cancellations result in one success
+    // and one 404, with no race window.
     // Accepts APPROVED and PENDING
     const result = await this._prisma.enrollment.updateMany({
       where: { userId, activityId, status: { in: ["APPROVED", "PENDING"] } },
@@ -113,6 +176,63 @@ class EnrollmentRepository implements IEnrollmentRepository {
     if (result.count === 0) {
       throw new CustomError(404, "Enrollment not found.");
     }
+  }
+
+  public async confirmAttendance(
+    activityId: string,
+    enrollmentId: string,
+    attendanceConfirmed: boolean,
+    confirmedWorkloadHours: number,
+  ): Promise<Enrollment> {
+    return this._prisma.$transaction(async (tx) => {
+      // Lock BEFORE any read: status and workload ceiling are re-read under
+      // the lock, so a concurrent status transition or a workload edit cannot
+      // slip between the Service's checks and this write. The Service's own
+      // checks stay as a fast path; these are the authoritative ones.
+      const activity = await lockActivityForAttendance(tx, activityId);
+      if (!activity) {
+        throw new CustomError(404, "Activity not found.");
+      }
+
+      if (activity.status !== "COMPLETED") {
+        throw new CustomError(
+          409,
+          "Attendance can only be confirmed for completed activities.",
+        );
+      }
+
+      if (
+        attendanceConfirmed &&
+        confirmedWorkloadHours > activity.workloadHours
+      ) {
+        throw new CustomError(
+          422,
+          "workloadHours must be an integer between 1 and the activity's workload hours.",
+        );
+      }
+
+      // The pair travels in a single statement — there is no path that
+      // writes one column without the other. The where clause carries the
+      // guards, so an enrollment that stopped being APPROVED (or never
+      // belonged to this activity) is simply not written.
+      const result = await tx.enrollment.updateMany({
+        where: {
+          id: enrollmentId,
+          activityId,
+          status: ACTIVE_ENROLLMENT_STATUS,
+        },
+        data: { attendanceConfirmed, confirmedWorkloadHours },
+      });
+
+      if (result.count === 0) {
+        throw new CustomError(
+          409,
+          "Only approved enrollments can have attendance confirmed.",
+        );
+      }
+
+      return tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } });
+    });
   }
 
   public async countApprovedByActivityId(activityId: string): Promise<number> {

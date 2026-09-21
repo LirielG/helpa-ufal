@@ -450,7 +450,7 @@ describe("ActivityService.list", () => {
     await expect(service.list({})).resolves.toBe(repoResult);
   });
 
-  it("ignores the usuarioId parameter (currently unused)", async () => {
+  it("ignores the userId parameter (currently unused)", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 

@@ -1,15 +1,15 @@
 import CustomError from "@/models/error/CustomError.js";
 
 export type ValidationErrorItem = {
-  field:   string;
+  field: string;
   message: string;
 };
 
 class ValidationError extends CustomError {
   private _errors: ValidationErrorItem[];
 
-  constructor(errors: ValidationErrorItem[]) {
-    super(400, "Validation error.");
+  constructor(errors: ValidationErrorItem[], message = "Validation error.") {
+    super(400, message);
     this._errors = errors;
   }
 

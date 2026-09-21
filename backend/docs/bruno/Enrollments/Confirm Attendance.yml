@@ -148,7 +148,7 @@ examples:
             "updatedAt": "2026-08-30T19:02:00.000Z"
           }
   - name: 400 - Malformed body
-    description: Body is not valid JSON or has wrong types (e.g., attended as string). The message is owned by the ErrorHandler ("Validation error."); field messages come from the Zod issues and are pinned by the integration tests. Semantic violations (range, ceiling, fractional hours, attended/workloadHours combination) return 422 instead.
+    description: 'The body is the only 400 of this route. It fails when a field has the wrong type (e.g., attended as string) or attended is missing. Any field beyond attended and workloadHours is refused too — an id in the body is a second source of truth for the target, which lives in the path — with an empty field name, since the unknown key belongs to the object and not to one of its properties (message: Unrecognized key: "userId"). The message is owned by the ErrorHandler ("Validation error."); field messages come from the Zod issues and are pinned by the integration tests. Malformed path ids return 404, and semantic violations (range, ceiling, fractional hours, attended/workloadHours combination) return 422.'
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/:enrollmentId/attendance"
       method: PATCH
@@ -188,7 +188,7 @@ examples:
             ]
           }
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Token header is missing, invalid or expired.
+    description: 'No credential at all (neither session cookie nor Bearer token). An invalid or expired credential returns the same 401, with the message "Token malformatted, expired or invalid." instead.'
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/:enrollmentId/attendance"
       method: PATCH
@@ -212,7 +212,7 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
   - name: 401 - User not found
     description: Token is valid, but the user it identifies no longer exists or is inactive.
@@ -282,7 +282,7 @@ examples:
             "message": "Only the activity creator or a manager can confirm attendance."
           }
   - name: 404 - Activity not found
-    description: Activity not found, soft-deleted, or id is not a valid UUID (non-UUID returns 404, aligned with the other enrollment contracts).
+    description: Activity not found, soft-deleted or named by a non-UUID id. A malformed id is a lookup that finds nothing, so it answers exactly this 404 — the three cases are indistinguishable from the outside.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/:enrollmentId/attendance"
       method: PATCH
@@ -291,7 +291,7 @@ examples:
           value: Bearer {{apiKey}}
       params:
         - name: activityId
-          value: not-a-uuid
+          value: ""
           type: path
           description: Activity UUID
         - name: enrollmentId
@@ -319,7 +319,7 @@ examples:
             "message": "Activity not found."
           }
   - name: 404 - Enrollment not found
-    description: No enrollment with this id in this activity. An enrollment belonging to another activity returns the same 404 — the two cases are indistinguishable, so the existence of other activities' enrollments is never revealed.
+    description: No enrollment with this id in this activity. An enrollment belonging to another activity, or a non-UUID enrollmentId, returns the same 404 — the cases are indistinguishable, so the existence of other activities' enrollments is never revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/:enrollmentId/attendance"
       method: PATCH
@@ -467,7 +467,7 @@ examples:
             "message": "workloadHours must be an integer between 1 and the activity's workload hours."
           }
   - name: 422 - Invalid attended/workloadHours combination
-    description: attended=true requires workloadHours; attended=false forbids it. Either violation returns 422 and nothing is changed.
+    description: 'attended=true requires workloadHours; attended=false forbids it. Either violation returns 422 and nothing is changed. The symmetric case answers: { "status": 422, "message": "workloadHours must be omitted when attended is false." }'
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/:enrollmentId/attendance"
       method: PATCH
@@ -546,14 +546,14 @@ docs: |-
   - Route: PATCH /activities/:activityId/enrollments/:enrollmentId/attendance. The target enrollment is identified exclusively by the path — the body carries only the homologation outcome.
   - Body: { attended: boolean, workloadHours?: number }. attended=true requires workloadHours (integer, 1..activity's workloadHours); attended=false forbids it and stores 0.
   - The homologating user is resolved exclusively from the JWT token (never from params, query or body), and must still exist and be active in the database (light hybrid authentication). Requires auth({ userTypes: "all" }) — plain auth() without options does not enforce a token.
-  - Validation order: authentication (401) → existence of activity and enrollment (404) → authorization (403) → business rules (409/422). Note: a malformed body fails parsing (400) before existence checks, because body validation runs at the controller.
+  - Validation order: authentication (401) → body shape (400) → existence of activity and enrollment (404) → authorization (403) → business rules (409/422). The body shape is checked at the controller, so it precedes every existence check.
   - Authorization: only the activity creator or a manager (isManager). The enrolled volunteer can never homologate their own attendance (403).
   - Only COMPLETED activities accept homologation; only APPROVED enrollments can be homologated. Both violations return 409.
   - The pair (attendanceConfirmed, confirmedWorkloadHours) is written together, in a single atomic operation: (true, n >= 1) or (false, 0). No path updates one without the other.
   - Correction is free: re-sending overwrites the previous values. Success is always 200 with the current state — no 201/200 distinction.
   - Validation and write run in the same transaction.
   - Enrollment not found in this activity — including an enrollment id from another activity — returns the same 404, so the existence of other activities' enrollments is never revealed.
-  - Non-UUID ids return 404, aligned with the other enrollment contracts (the enroll/cancel implementations will be aligned in #83/#84).
+  - Non-UUID ids return 404, like any other identifier that resolves to nothing: an identifier in the path is a resource lookup, never operator input. This follows GET /activities/:activityId/enrollments; DELETE /activities/:id/enroll still answers 400 for the same input, and realigning it is out of scope here.
   - Error shapes: 400 carries { status, message, errors[] } (Zod); all other errors carry { status, message } with a single descriptive message.
   - The response exposes only attendanceConfirmed, confirmedWorkloadHours and updatedAt — never passwordHash, volunteer personal data or internal database fields.
   - Reading rule for consumers: always discriminate by attendanceConfirmed (null = not homologated | true = present | false = absent), never by confirmedWorkloadHours — 0 is ambiguous by construction.

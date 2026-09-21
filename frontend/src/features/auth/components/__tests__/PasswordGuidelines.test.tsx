@@ -32,9 +32,13 @@ describe("PasswordGuidelines", () => {
   it("marks a requirement as met once satisfied", () => {
     render(<PasswordGuidelines password="12345678" />);
 
-    expect(screen.getByText("Pelo menos 8 caracteres")).toHaveClass("text-green-700");
+    expect(screen.getByText("Pelo menos 8 caracteres")).toHaveClass(
+      "text-green-700",
+    );
     // Still missing uppercase/lowercase/symbol.
-    expect(screen.getByText("Uma letra maiúscula")).toHaveClass("text-gray-600");
+    expect(screen.getByText("Uma letra maiúscula")).toHaveClass(
+      "text-gray-600",
+    );
   });
 
   it("marks every requirement as met for a fully valid password", () => {
@@ -53,9 +57,13 @@ describe("PasswordGuidelines", () => {
 
   it("re-evaluates as the password prop changes", () => {
     const { rerender } = render(<PasswordGuidelines password="abc" />);
-    expect(screen.getByText("Uma letra maiúscula")).toHaveClass("text-gray-600");
+    expect(screen.getByText("Uma letra maiúscula")).toHaveClass(
+      "text-gray-600",
+    );
 
     rerender(<PasswordGuidelines password="Abc" />);
-    expect(screen.getByText("Uma letra maiúscula")).toHaveClass("text-green-700");
+    expect(screen.getByText("Uma letra maiúscula")).toHaveClass(
+      "text-green-700",
+    );
   });
 });

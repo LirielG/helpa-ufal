@@ -2,7 +2,7 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
 
 /**
  * Maps enrollment API errors to user-friendly messages in Portuguese.
- * 
+ *
  * Returns null for 401 Unauthorized — the session middleware handles the redirect
  * and no error message should be displayed in the modal.
  */

@@ -1,6 +1,11 @@
-import type { ActivityStatus, ActivityType, CampusLocation } from "./activity.js";
+import type {
+  ActivityStatus,
+  ActivityType,
+  CampusLocation,
+} from "./activity.js";
 
-export type EnrollmentStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export type EnrollmentStatus =
+  "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
 // Occupies a slot and counts as an active registration.
 // Remains "APPROVED" even when an approval workflow is in place.
@@ -18,10 +23,48 @@ export type EnrollmentResponse = {
   createdAt: Date;
 };
 
+// Exactly these 8 fields — never a spread of the Prisma object, because the
+// repository's include carries user.passwordHash along.
+export type ParticipantResponse = {
+  enrollmentId: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  /** Only student.registrationCode is exposed; professors get null by minimization. */
+  registrationCode: string | null;
+  status: EnrollmentStatus;
+  /** Tri-state: null = not homologated, true = present, false = registered absence. */
+  attendanceConfirmed: boolean | null;
+  /** Significant only when attendanceConfirmed is true; 0 otherwise (structural). */
+  confirmedWorkloadHours: number;
+};
 
+/** Body of the attendance homologation: the outcome only, never the target. */
+export type ConfirmAttendanceInput = {
+  attended: boolean;
+  workloadHours?: number;
+};
 
+/**
+ * Homologation response: the attendance state of the enrollment and nothing else.
+ */
+export type AttendanceResponse = {
+  /** Tri-state: null = not homologated, true = present, false = registered absence. */
+  attendanceConfirmed: boolean | null;
+  /** Significant only when attendanceConfirmed is true; 0 otherwise (structural). */
+  confirmedWorkloadHours: number;
+  updatedAt: Date;
+};
 
-
+export type ParticipantsListResponse = {
+  items: ParticipantResponse[];
+  /** Global count of APPROVED enrollments — never affected by the current page. */
+  total: number;
+  page: number;
+  limit: number;
+  /** Count of attendanceConfirmed = true across ALL enrollments of the activity. */
+  totalPresent: number;
+};
 
 // ---------------------------------------------------------------------------
 // Epic 3 ("Registered Actions" tab) — PROVISIONAL

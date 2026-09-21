@@ -47,7 +47,10 @@ describe("EnrollmentService.cancel", () => {
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
     await expect(service.cancel(USER_ID, ACTIVITY_ID)).resolves.toBeUndefined();
-    expect(enrollmentRepository.cancel).toHaveBeenCalledWith(USER_ID, ACTIVITY_ID);
+    expect(enrollmentRepository.cancel).toHaveBeenCalledWith(
+      USER_ID,
+      ACTIVITY_ID,
+    );
   });
 
   // ---------- Authentication ----------
@@ -73,9 +76,9 @@ describe("EnrollmentService.cancel", () => {
     const { activityRepository, userRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
-    await expect(
-      service.cancel(USER_ID, "not-a-uuid"),
-    ).rejects.toBeInstanceOf(ValidationError);
+    await expect(service.cancel(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
+      ValidationError,
+    );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
@@ -87,7 +90,11 @@ describe("EnrollmentService.cancel", () => {
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
-    await expectHttpError(service.cancel(USER_ID, ACTIVITY_ID), 404, "Activity not found.");
+    await expectHttpError(
+      service.cancel(USER_ID, ACTIVITY_ID),
+      404,
+      "Activity not found.",
+    );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
@@ -96,7 +103,9 @@ describe("EnrollmentService.cancel", () => {
     async (status) => {
       const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
         activity: {
-          findById: vi.fn().mockResolvedValue({ id: ACTIVITY_ID, status, slots: 30 }),
+          findById: vi
+            .fn()
+            .mockResolvedValue({ id: ACTIVITY_ID, status, slots: 30 }),
         },
       });
       const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
@@ -115,11 +124,17 @@ describe("EnrollmentService.cancel", () => {
   it("propagates 404 when there is no cancelable enrollment for the pair", async () => {
     const { activityRepository, userRepository, enrollmentRepository } = mockRepositories({
       enrollment: {
-        cancel: vi.fn().mockRejectedValue(new CustomError(404, "Enrollment not found.")),
+        cancel: vi
+          .fn()
+          .mockRejectedValue(new CustomError(404, "Enrollment not found.")),
       },
     });
     const service = new EnrollmentService({ activityRepository, userRepository, enrollmentRepository });
 
-    await expectHttpError(service.cancel(USER_ID, ACTIVITY_ID), 404, "Enrollment not found.");
+    await expectHttpError(
+      service.cancel(USER_ID, ACTIVITY_ID),
+      404,
+      "Enrollment not found.",
+    );
   });
 });

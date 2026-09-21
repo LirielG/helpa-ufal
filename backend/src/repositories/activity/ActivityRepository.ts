@@ -1,7 +1,14 @@
-import type { PrismaClient, Activity, ActivityStatus} from "@prisma/client";
-import type { IActivityRepository, IRepositoryListActivitiesFilters, IRepositoryListActivitiesResponse } from "@/repositories/activity/IActivityRepository.js";
-import type { CreateActivityInput, UpdateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
-import { prisma } from "@/database/prisma.js";    
+import type { PrismaClient, Activity, ActivityStatus } from "@prisma/client";
+import type {
+  IActivityRepository,
+  IRepositoryListActivitiesFilters,
+  IRepositoryListActivitiesResponse,
+} from "@/repositories/activity/IActivityRepository.js";
+import type {
+  CreateActivityInput,
+  UpdateActivityInput,
+} from "@/schemas/activity/ActivitySchemas.js";
+import { prisma } from "@/database/prisma.js";
 import { ActivityFullResponse } from "@/types/activity.js";
 
 type Props = {
@@ -19,19 +26,17 @@ class ActivityRepository implements IActivityRepository {
     authorId: string,
     data: CreateActivityInput,
   ): Promise<Activity> {
-    
     return this._prisma.$transaction(async (tx) => {
-
       const activity = await tx.activity.create({
         data: {
           authorId,
-          title:     data.title,
-          type:      data.type,
-          campus:    data.campus,
+          title: data.title,
+          type: data.type,
+          campus: data.campus,
           startDate: data.startDate,
-          endDate:   data.endDate,
-          slots:     data.slots,
-          status:    "OPEN",
+          endDate: data.endDate,
+          slots: data.slots,
+          status: "OPEN",
         },
       });
 
@@ -44,12 +49,12 @@ class ActivityRepository implements IActivityRepository {
 
       await tx.activityDetails.create({
         data: {
-          activityId:    activity.id,
-          description:   data.description,
-          area:          data.area,
-          format:        data.format,
+          activityId: activity.id,
+          description: data.description,
+          area: data.area,
+          format: data.format,
           workloadHours: data.workloadHours,
-          url:           data.url ?? null,
+          url: data.url ?? null,
           addressId,
         },
       });
@@ -79,56 +84,68 @@ class ActivityRepository implements IActivityRepository {
     if (!result) return null;
 
     return {
-      id:        result.id,
-      authorId:  result.authorId,
-      title:     result.title,
-      type:      result.type,
-      campus:    result.campus,
+      id: result.id,
+      authorId: result.authorId,
+      title: result.title,
+      type: result.type,
+      campus: result.campus,
       startDate: result.startDate,
-      endDate:   result.endDate,
-      slots:     result.slots,
+      endDate: result.endDate,
+      slots: result.slots,
       availableSlots: Math.max(0, result.slots - approvedCount),
-      status:    result.status,
-      details:   result.details
+      status: result.status,
+      details: result.details
         ? {
-            description:   result.details.description,
-            area:          result.details.area,
-            format:        result.details.format,
-            url:           result.details.url ?? null,
+            description: result.details.description,
+            area: result.details.area,
+            format: result.details.format,
+            url: result.details.url ?? null,
             workloadHours: result.details.workloadHours,
-            address:       result.details.address
+            address: result.details.address
               ? {
-                  id:          result.details.address.id,
+                  id: result.details.address.id,
                   addressLine: result.details.address.addressLine,
-                  district:    result.details.address.district,
-                  zipCode:     result.details.address.zipCode,
-                  city:        result.details.address.city,
-                  state:       result.details.address.state,
+                  district: result.details.address.district,
+                  zipCode: result.details.address.zipCode,
+                  city: result.details.address.city,
+                  state: result.details.address.state,
                 }
               : null,
           }
         : null,
     };
   }
-  
+
   public async list(
-    filters: IRepositoryListActivitiesFilters
+    filters: IRepositoryListActivitiesFilters,
   ): Promise<IRepositoryListActivitiesResponse> {
-    const {type, format, status, search, campus, page, limit, orderBy, order} = filters;
+    const {
+      type,
+      format,
+      status,
+      search,
+      campus,
+      area,
+      page,
+      limit,
+      orderBy,
+      order,
+    } = filters;
 
     const whereClause: any = { deletedAt: null };
 
-    if(type)whereClause.type = type;
-    if(status)whereClause.status = status;
-    if(campus)whereClause.campus = campus;
+    if (type) whereClause.type = type;
+    if (status) whereClause.status = status;
+    if (campus) whereClause.campus = campus;
 
-    if(format){
+    if(format || area){
       whereClause.details = {
-        format: format,
+        ...(format ? { format: format } : {}),
+        ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),
       };
     }
 
-    if(search){
+    if (search) {
       whereClause.title = {
         contains: search,
         mode: "insensitive",
@@ -169,13 +186,41 @@ class ActivityRepository implements IActivityRepository {
     };
   }
 
+  public async listDistinctAreas(): Promise<string[]> {
+    const rows = await this._prisma.activityDetails.groupBy({
+      by: ["area"],
+      where: {
+        activity: {
+          is: {
+            deletedAt: null,
+            status: { not: "CANCELLED" },
+          },
+        },
+      },
+    });
+
+    const areas = rows.map((r) => r.area);
+
+    const canonicalByKey = new Map<string, string>();
+    for (const area of areas) {
+      const key = area.toLowerCase();
+      const current = canonicalByKey.get(key);
+      if (current === undefined || area < current) {
+        canonicalByKey.set(key, area);
+      }
+    }
+
+    return Array.from(canonicalByKey.entries())
+      .sort(([a], [b]) => a.localeCompare(b, "pt-BR"))
+      .map(([, canonicalArea]) => canonicalArea);
+  }
+
   public async update(
     id: string,
     data: UpdateActivityInput,
-    addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE"
+    addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE",
   ): Promise<ActivityFullResponse> {
     return await this._prisma.$transaction(async (tx) => {
-      
       const activityData = {
         title: data.title,
         type: data.type,
@@ -198,7 +243,7 @@ class ActivityRepository implements IActivityRepository {
       if (addressAction === "DELETE") {
         addressUpdateQuery = {
           address: {
-            delete: true, 
+            delete: true,
           },
         };
       } else if (addressAction === "CREATE" && data.address) {
@@ -251,10 +296,22 @@ class ActivityRepository implements IActivityRepository {
     });
   }
 
-  public async updateStatus(id: string, status: ActivityStatus): Promise<Activity> {
+  public async updateStatus(
+    id: string,
+    status: ActivityStatus,
+  ): Promise<Activity> {
     return this._prisma.activity.update({
       where: { id },
       data: { status },
+    });
+  }
+
+  public async findUserById(
+    id: string,
+  ): Promise<{ isManager: boolean } | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: { isManager: true },
     });
   }
 
@@ -266,7 +323,7 @@ class ActivityRepository implements IActivityRepository {
       },
     });
   }
-  
+
   public async softDelete(id: string): Promise<boolean> {
     const result = await this._prisma.activity.updateMany({
       where: { id, deletedAt: null },

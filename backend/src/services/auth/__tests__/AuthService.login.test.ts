@@ -109,5 +109,4 @@ describe("AuthService.login", () => {
     ]);
     expect(payload.exp - payload.iat).toBe(3600);
   });
-
 });

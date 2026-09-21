@@ -13,11 +13,15 @@ export async function expectHttpError(
     await promise;
   } catch (error) {
     expect(error).toBeInstanceOf(CustomError);
-    expect((error as CustomError & { statusCode: number }).statusCode).toBe(status);
+    expect((error as CustomError & { statusCode: number }).statusCode).toBe(
+      status,
+    );
     if (message) expect((error as CustomError).message).toBe(message);
     return;
   }
-  throw new Error(`Expected a CustomError with status ${status}, but nothing was thrown.`);
+  throw new Error(
+    `Expected a CustomError with status ${status}, but nothing was thrown.`,
+  );
 }
 
 async function catchError(promise: Promise<unknown>): Promise<unknown> {

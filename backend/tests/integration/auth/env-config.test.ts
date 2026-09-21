@@ -56,7 +56,9 @@ describe("CORS_ORIGIN (criterion 2)", () => {
       .set("Access-Control-Request-Method", "POST");
 
     expect(response.status).toBe(204);
-    expect(response.headers["access-control-allow-origin"]).toBe(DEFAULT_ORIGIN);
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      DEFAULT_ORIGIN,
+    );
   });
 });
 

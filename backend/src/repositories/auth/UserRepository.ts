@@ -1,5 +1,8 @@
 import type { PrismaClient, User } from "@prisma/client";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type {
+  IUserRepository,
+  UserWithProfile,
+} from "@/repositories/auth/IUserRepository.js";
 import { prisma } from "@/database/prisma.js";
 import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
 type Props = {
@@ -21,6 +24,24 @@ class UserRepository implements IUserRepository {
     return this._prisma.user.findUnique({
       where: { id },
       select: { isManager: true },
+    })
+  }
+  
+  public async findProfileById(id: string): Promise<UserWithProfile | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        userType: true,
+        isManager: true,
+        createdAt: true,
+        student: { select: { registrationCode: true, course: true } },
+        teacher: {
+          select: { registrationCode: true, course: true, cndb: true },
+        },
+      },
     });
   }
 

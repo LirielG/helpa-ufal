@@ -10,9 +10,9 @@ import { env } from "@/config/env.js";
 // falls back to a generic message instead of ever echoing the raw field
 // name (which could leak internal/DB-only column names).
 const UNIQUE_FIELD_MESSAGES: Record<string, string> = {
-  email:            "Email already in use.",
+  email: "Email already in use.",
   registrationCode: "Registration code already in use.",
-  cndb:             "CNDB already in use.",
+  cndb: "CNDB already in use.",
 };
 
 class ErrorHandler {
@@ -28,10 +28,10 @@ class ErrorHandler {
     }
 
     res.status(400).json({
-      status:  400,
+      status: 400,
       message: "Validation error.",
-      errors:  err.issues.map((e) => ({
-        field:   e.path.join("."),
+      errors: err.issues.map((e) => ({
+        field: e.path.join("."),
         message: e.message,
       })),
     });
@@ -49,9 +49,9 @@ class ErrorHandler {
     }
 
     res.status(400).json({
-      status:  400,
+      status: 400,
       message: err.message,
-      errors:  err.errors,
+      errors: err.errors,
     });
   }
 
@@ -83,8 +83,7 @@ class ErrorHandler {
     // this project's Prisma setup produces.
     const meta = err.meta as Record<string, unknown> | undefined;
     const driverAdapterError = meta?.driverAdapterError as
-      | { cause?: { constraint?: { fields?: unknown } } }
-      | undefined;
+      { cause?: { constraint?: { fields?: unknown } } } | undefined;
 
     const rawCandidates: unknown[] = [
       meta?.target,
@@ -93,7 +92,9 @@ class ErrorHandler {
 
     const fields: string[] = rawCandidates.flatMap((candidate) => {
       if (Array.isArray(candidate)) {
-        return candidate.filter((item): item is string => typeof item === "string");
+        return candidate.filter(
+          (item): item is string => typeof item === "string",
+        );
       }
       return typeof candidate === "string" ? [candidate] : [];
     });
@@ -108,7 +109,7 @@ class ErrorHandler {
     // Intentionally only { status, message }: no `meta`, no constraint/table
     // name, no stack — nothing here should let internal schema details leak.
     res.status(409).json({
-      status:  409,
+      status: 409,
       message,
     });
   }
@@ -121,7 +122,7 @@ class ErrorHandler {
   ): void {
     if (err instanceof CustomError) {
       res.status(err.statusCode).json({
-        status:  err.statusCode,
+        status: err.statusCode,
         message: err.message,
       });
       return;
@@ -133,7 +134,7 @@ class ErrorHandler {
         : undefined;
 
     res.status(500).json({
-      status:  500,
+      status: 500,
       message: "Internal server error.",
       stack,
     });

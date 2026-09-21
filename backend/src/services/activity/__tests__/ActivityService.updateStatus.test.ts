@@ -9,7 +9,12 @@ import { expectHttpError } from "@/utils/tests.js";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS);
 
-const STATUSES: ActivityStatus[] = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+const STATUSES: ActivityStatus[] = [
+  "OPEN",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+];
 const TERMINAL: ActivityStatus[] = ["COMPLETED", "CANCELLED"];
 
 const transitionCases = STATUSES.flatMap((from) =>
@@ -33,7 +38,9 @@ type ActivityRecord = {
   status: string;
 };
 
-function makeActivityRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
+function makeActivityRecord(
+  overrides: Partial<ActivityRecord> = {},
+): ActivityRecord {
   return {
     id: "act-1",
     authorId: "author-1",
@@ -200,7 +207,11 @@ describe("ActivityService.updateStatus", () => {
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    const result = await service.updateStatus("act-1", "IN_PROGRESS", "author-1");
+    const result = await service.updateStatus(
+      "act-1",
+      "IN_PROGRESS",
+      "author-1",
+    );
 
     expect(result).toEqual({
       id: updated.id,
@@ -229,7 +240,11 @@ describe("ActivityService.updateStatus", () => {
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    const result = await service.updateStatus("act-1", "IN_PROGRESS", "author-1");
+    const result = await service.updateStatus(
+      "act-1",
+      "IN_PROGRESS",
+      "author-1",
+    );
 
     expect(result.availableSlots).toBe(0);
   });

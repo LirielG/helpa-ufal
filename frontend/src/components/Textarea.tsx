@@ -26,11 +26,13 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
 
-        {helperText && !error ? <p className="mt-1 text-sm text-gray-500">{helperText}</p> : null}
+        {helperText && !error ? (
+          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        ) : null}
         {error ? <p className="mt-1 text-sm text-red-500">{error}</p> : null}
       </div>
     );
-  }
+  },
 );
 
 Textarea.displayName = "Textarea";

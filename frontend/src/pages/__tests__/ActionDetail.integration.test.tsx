@@ -41,9 +41,10 @@ describe("ActionDetail Integration", () => {
           return HttpResponse.json(updatedAction);
         }
       }),
-      http.post(`${API}/activities/${actionId}/enroll`, () =>
-        new HttpResponse(null, { status: 201 })
-      )
+      http.post(
+        `${API}/activities/${actionId}/enroll`,
+        () => new HttpResponse(null, { status: 201 }),
+      ),
     );
 
     const { user } = render(<ActionDetail />, {
@@ -54,7 +55,7 @@ describe("ActionDetail Integration", () => {
     // Wait for initial load
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /Inscrever-se/i })
+        screen.getByRole("button", { name: /Inscrever-se/i }),
       ).toBeInTheDocument();
     });
 
@@ -74,7 +75,8 @@ describe("ActionDetail Integration", () => {
     const buttons = screen.getAllByRole("button");
     const confirmButton = buttons.find(
       (btn) =>
-        btn.textContent?.includes("✓") || btn.textContent?.includes("Confirmar")
+        btn.textContent?.includes("✓") ||
+        btn.textContent?.includes("Confirmar"),
     );
     if (confirmButton) {
       await user.click(confirmButton);
@@ -99,8 +101,8 @@ describe("ActionDetail Integration", () => {
 
     server.use(
       http.get(`${API}/activities/${actionId}`, () =>
-        HttpResponse.json(action)
-      )
+        HttpResponse.json(action),
+      ),
     );
 
     const { user } = render(<ActionDetail />, {
@@ -111,7 +113,7 @@ describe("ActionDetail Integration", () => {
     // Wait for page to load
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /Inscrever-se/i })
+        screen.getByRole("button", { name: /Inscrever-se/i }),
       ).toBeInTheDocument();
     });
 
@@ -135,8 +137,8 @@ describe("ActionDetail Integration", () => {
 
     server.use(
       http.get(`${API}/activities/${actionId}`, () =>
-        HttpResponse.json(action)
-      )
+        HttpResponse.json(action),
+      ),
     );
 
     render(<ActionDetail />, {
@@ -146,11 +148,15 @@ describe("ActionDetail Integration", () => {
 
     // Wait for load
     await waitFor(() => {
-      expect(screen.getByText("0 disponíveis / 20 no total")).toBeInTheDocument();
+      expect(
+        screen.getByText("0 disponíveis / 20 no total"),
+      ).toBeInTheDocument();
     });
 
     // Button should be disabled with "Vagas esgotadas" text
-    const enrollButton = screen.getByRole("button", { name: /Vagas esgotadas/i });
+    const enrollButton = screen.getByRole("button", {
+      name: /Vagas esgotadas/i,
+    });
     expect(enrollButton).toBeDisabled();
   });
 });

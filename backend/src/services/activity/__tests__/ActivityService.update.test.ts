@@ -327,7 +327,10 @@ describe("ActivityService.update", () => {
 
     expect(error).toBeInstanceOf(ValidationError);
     expect((error as ValidationError).errors).toEqual([
-      { field: "endDate", message: "Activity duration cannot exceed 365 days." },
+      {
+        field: "endDate",
+        message: "Activity duration cannot exceed 365 days.",
+      },
     ]);
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
@@ -367,7 +370,9 @@ describe("ActivityService.update", () => {
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    const error = await captureError(service.update("act-1", AUTHOR, { slots: 10 }));
+    const error = await captureError(
+      service.update("act-1", AUTHOR, { slots: 10 }),
+    );
 
     expect(error).toBeInstanceOf(ValidationError);
     expect((error as ValidationError).errors).toEqual([
@@ -410,7 +415,8 @@ describe("ActivityService.update", () => {
     expect((error as ValidationError).errors).toEqual([
       {
         field: "workloadHours",
-        message: "workloadHours cannot exceed the total duration of the activity.",
+        message:
+          "workloadHours cannot exceed the total duration of the activity.",
       },
     ]);
     expect(activityRepository.update).not.toHaveBeenCalled();
@@ -568,7 +574,10 @@ describe("ActivityService.update", () => {
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
-    await service.update("act-1", AUTHOR, { format: "IN_PERSON", address: ADDRESS });
+    await service.update("act-1", AUTHOR, {
+      format: "IN_PERSON",
+      address: ADDRESS,
+    });
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
