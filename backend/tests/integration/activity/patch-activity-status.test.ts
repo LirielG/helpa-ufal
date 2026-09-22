@@ -7,6 +7,26 @@ import { createTeacher, createStudent, createManager, createActivity } from "../
 import { authHeader } from "../../helpers/auth.js";
 
 describe("PATCH /activities/:id/status", () => {
+
+  it("returns 400 when status is not a valid enum value", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { status: "OPEN" });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}/status`)
+      .set(...authHeader(author.token))
+      .send({ status: "NOT_A_STATUS" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation error.");
+        expect(response.body.errors).toEqual([
+      {
+        field: "status",
+        message: 'Invalid option: expected one of "IN_PROGRESS"|"COMPLETED"|"CANCELLED"',
+      },
+    ]);
+  });
+
   it("returns 401 without a token", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
@@ -105,6 +125,24 @@ describe("PATCH /activities/:id/status", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
+
+  it("returns 404 for a soft-deleted activity", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      deletedAt: new Date(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}/status`)
+      .set(...authHeader(author.token))
+      .send({ status: "IN_PROGRESS" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+  });
+
+  
 
   it("returns 403 for a valid token of a deleted user (ghost user)", async () => {
     const author = await createTeacher();
