@@ -247,7 +247,7 @@ examples:
         - name: limit
           value: "101"
           type: query
-          description: Exceeds the maximum of 50
+          description: Exceeds the maximum of 100
     response:
       status: 400
       statusText: Bad Request
