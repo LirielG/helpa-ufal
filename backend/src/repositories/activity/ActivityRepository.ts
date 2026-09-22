@@ -306,15 +306,6 @@ class ActivityRepository implements IActivityRepository {
     });
   }
 
-  public async findUserById(
-    id: string,
-  ): Promise<{ isManager: boolean } | null> {
-    return this._prisma.user.findUnique({
-      where: { id },
-      select: { isManager: true },
-    });
-  }
-
   public async countApprovedEnrollments(activityId: string): Promise<number> {
     return this._prisma.enrollment.count({
       where: {
