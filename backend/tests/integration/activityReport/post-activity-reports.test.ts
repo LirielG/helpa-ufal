@@ -101,8 +101,23 @@ describe("POST /activities/:id/reports", () => {
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
 
-  // Acréscimo ao checklist original da issue #126 — confirmado em
-  // ActivityReportService.createReport (activity.authorId === requesterId).
+  it("returns 404 for a soft-deleted activity", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      deletedAt: new Date(),
+    });
+    const reporter = await createStudent();
+
+    const response = await request(app)
+      .post(`/activities/${activity.id}/reports`)
+      .set(...authHeader(reporter.token))
+      .send({ category: "SPAM", description: "Activity was soft-deleted." });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+  });
+
   it("returns 403 when the activity author tries to report their own activity", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
