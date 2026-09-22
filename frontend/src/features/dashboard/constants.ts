@@ -23,6 +23,9 @@ export const FILTER_OPTIONS = {
   ],
 };
 
+/*** `area` is free text in the API and is rendered as-is on the action detail,
+ * so the stored value is the label itself.
+ */
 export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   EXTENSION: "Ação de extensão",
   COURSE: "Curso ou minicurso",

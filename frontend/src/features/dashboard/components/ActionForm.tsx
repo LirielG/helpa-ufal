@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
 import {
   ACTION_AREA_OPTIONS,
@@ -6,11 +9,122 @@ import {
   ACTION_FORMAT_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
 } from "../constants";
-import { X, ArrowRight, ArrowLeft, Check, Eye, Loader2, ChevronDown } from "lucide-react";
+import {
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Eye,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 import { api } from "../../../services/api";
-import { ApiError } from "../../../services/apiError";
-import { useFormErrors } from "../../../hooks";
+import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type { ActionType, ActionFormat, ActionCampus } from "../types";
+
+const addressSchema = z.object({
+  addressLine: z.string().min(1, "Informe o logradouro."),
+  district: z.string().min(1, "Informe o bairro."),
+  zipCode: z
+    .string()
+    .regex(/^\d{5}-?\d{3}$/, "O CEP deve ter 8 dígitos."),
+  city: z.string().min(1, "Informe a cidade."),
+  state: z
+    .string()
+    .length(2, "Informe uma UF válida (ex.: AL)."),
+});
+
+const baseSchema = z.object({
+  title: z.string().min(1, "Informe um título válido."),
+  description: z.string().optional(),
+  area: z.string().min(1, "Informe uma área de atuação válida."),
+  type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] as const, {
+    error: "Selecione um tipo de ação válido.",
+  }),
+  campus: z.enum(
+    ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] as const,
+    { error: "Selecione um campus válido." },
+  ),
+  startDate: z
+    .string()
+    .min(1, "A data de início é obrigatória.")
+    .refine(
+      (v) => new Date(v) >= new Date(new Date().toISOString().split("T")[0]),
+      { message: "A data de início deve ser futura." },
+    ),
+  startTime: z.string().min(1, "Informe o horário de início."),
+  endDate: z.string().min(1, "A data de encerramento é obrigatória."),
+  endTime: z.string().min(1, "Informe o horário de encerramento."),
+  workloadHours: z.coerce
+    .number({ error: "Informe a carga horária." })
+    .int()
+    .min(1, "Informe uma carga horária válida.")
+    .max(8760, "A carga horária não pode exceder 8.760 h."),
+  slots: z.coerce
+    .number({ error: "Informe o número de vagas." })
+    .int()
+    .min(1, "Informe pelo menos 1 vaga.")
+    .max(10000, "O máximo é 10.000 vagas."),
+  format: z.enum(["IN_PERSON", "ONLINE", "HYBRID"] as const, {
+    error: "Selecione um formato de ação válido.",
+  }),
+  url: z.string().optional(),
+  address: addressSchema.optional(),
+});
+
+const formSchema = baseSchema
+  .refine(
+    (d) =>
+      new Date(`${d.endDate}T${d.endTime}`) >
+      new Date(`${d.startDate}T${d.startTime}`),
+    {
+      message: "A data de encerramento deve ser posterior à de início.",
+      path: ["endDate"],
+    },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "ONLINE" && d.format !== "HYBRID") ||
+      (!!d.url && d.url.trim() !== ""),
+    {
+      message:
+        "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+      path: ["url"],
+    },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
+      !!d.address?.addressLine,
+    { message: "Informe o logradouro.", path: ["address.addressLine"] },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
+      !!d.address?.district,
+    { message: "Informe o bairro.", path: ["address.district"] },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
+      !!d.address?.zipCode,
+    { message: "O CEP deve ter 8 dígitos.", path: ["address.zipCode"] },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") || !!d.address?.city,
+    { message: "Informe a cidade.", path: ["address.city"] },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
+      !!d.address?.state,
+    { message: "Informe uma UF válida (ex.: AL).", path: ["address.state"] },
+  );
+
+type FormValues = z.input<typeof formSchema>;
+
+const STEP1_FIELDS = new Set<string>(["title", "description", "area", "type"]);
 
 interface CreateActivityPayload {
   title: string;
@@ -37,49 +151,12 @@ interface CreateActivityResponse {
   id: string;
 }
 
-function toISOString(date: string, time: string): string {
-  return new Date(`${date}T${time}:00`).toISOString();
-}
-
-function stripMask(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
-const STEP1_ERROR_FIELDS = new Set(["title", "area", "type"]);
-
-const FIELD_MESSAGES_PT: Record<string, string> = {
-  title: "Título obrigatório.",
-  description: "Descrição obrigatória.",
-  type: "Tipo de ação obrigatório.",
-  campus: "Campus obrigatório.",
-  area: "Área de atuação obrigatória.",
-  startDate: "Data de início inválida ou no passado.",
-  endDate: "Data de encerramento deve ser posterior à data de início.",
-  slots: "Número de vagas inválido (máx. 10.000).",
-  workloadHours: "Carga horária não pode exceder a duração total da ação.",
-  format: "Formato obrigatório.",
-  url: "URL obrigatória para ações on-line ou híbridas.",
-  "address.addressLine": "Logradouro obrigatório.",
-  "address.district": "Bairro obrigatório.",
-  "address.zipCode": "CEP deve ter exatamente 8 dígitos.",
-  "address.city": "Cidade obrigatória.",
-  "address.state": "Estado deve ser uma sigla válida (ex: AL).",
-};
-
-function ptMessage(field: string, fallback: string): string {
-  return FIELD_MESSAGES_PT[field] ?? fallback;
-}
-
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return <p className="text-xs text-red-500 mt-1">{message}</p>;
-}
-
-function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {children}
-    </label>
+    <p className="text-xs text-red-500 mt-1" role="alert">
+      {message}
+    </p>
   );
 }
 
@@ -108,162 +185,177 @@ interface ActionRegisterProps {
   onSuccess?: () => void;
 }
 
-export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterProps) {
+export function ActionRegister({
+  isOpen,
+  onClose,
+  onSuccess,
+}: ActionRegisterProps) {
   const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-  const { errors, setErrorsFromArray, addError, clearAllErrors } = useFormErrors();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    reset,
+    trigger,
+    formState: { errors, isSubmitting, isDirty },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      campus: "ARAPIRACA",
+      startTime: "08:00",
+      endTime: "18:00",
+    },
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [area, setArea] = useState("");
-  const [type, setType] = useState<ActionType | "">("");
-
-  const [campus, setCampus] = useState<ActionCampus>("ARAPIRACA");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("08:00");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("18:00");
-  const [workload, setWorkload] = useState("");
-  const [spots, setSpots] = useState("");
-  const [format, setFormat] = useState<ActionFormat | "">("");
-  const [url, setUrl] = useState("");
-  const [addressLine, setAddressLine] = useState("");
-  const [district, setDistrict] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
+  const format = watch("format");
+  const startDate = watch("startDate");
 
   const needsUrl = format === "ONLINE" || format === "HYBRID";
   const needsAddress = format === "IN_PERSON" || format === "HYBRID";
 
-  const isDirty =
-    title.trim() !== "" || description.trim() !== "" || area !== "" ||
-    type !== "" || startDate !== "" || endDate !== "" || workload !== "" ||
-    spots !== "" || format !== "" || url.trim() !== "" ||
-    addressLine.trim() !== "" || district.trim() !== "" ||
-    zipCode.trim() !== "" || city.trim() !== "" || state.trim() !== "";
-
-  const today = new Date().toISOString().split("T")[0];
-
-  function resetForm() {
-    setTitle(""); setDescription(""); setArea(""); setType("");
-    setCampus("ARAPIRACA"); setStartDate(""); setStartTime("08:00");
-    setEndDate(""); setEndTime("18:00"); setWorkload(""); setSpots("");
-    setFormat(""); setUrl(""); setAddressLine(""); setDistrict("");
-    setZipCode(""); setCity(""); setState("");
-    clearAllErrors();
-    setStep(1);
-  }
+  useEffect(() => {
+    setGeneralError(null);
+  }, [step]);
 
   function handleCancelClick() {
-    if (!isDirty) { onClose(); return; }
+    if (!isDirty) {
+      onClose();
+      return;
+    }
     setShowCancelConfirm(true);
   }
 
   function handleDiscard() {
-    resetForm();
+    reset();
+    setStep(1);
+    setGeneralError(null);
     setShowCancelConfirm(false);
     onClose();
   }
 
-  async function handleNext(e: React.FormEvent) {
-    e.preventDefault();
-    clearAllErrors();
-
-    if (step === 1) { setStep(2); return; }
-
-    setIsLoading(true);
-    try {
-      const payload: CreateActivityPayload = {
-        title,
-        description: description.trim() || "Descrição não informada.",
-        type: type as ActionType,
-        campus,
-        area,
-        startDate: toISOString(startDate, startTime),
-        endDate: toISOString(endDate, endTime),
-        slots: Number(spots),
-        workloadHours: Number(workload),
-        format: format as ActionFormat,
-        ...(needsUrl && url.trim() ? { url: url.trim() } : {}),
-        ...(needsAddress ? {
-          address: {
-            addressLine,
-            district,
-            zipCode: stripMask(zipCode),
-            city,
-            state: state.toUpperCase(),
-          },
-        } : {}),
-      };
-
-      await api.post<CreateActivityResponse>("/activities", payload);
-      resetForm();
-      setShowSuccessConfirm(true);
-      if (onSuccess) onSuccess();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 401) return;
-        if (err.status === 400 && err.errors?.length) {
-          const translated = err.errors.map((e) => ({
-            field: e.field,
-            message: ptMessage(e.field, e.message),
-          }));
-          setErrorsFromArray(translated);
-          if (translated.some((e) => STEP1_ERROR_FIELDS.has(e.field))) setStep(1);
-          return;
-        }
-        if (err.status === 0) {
-          addError("_network", "Erro de conexão. Verifique sua internet e tente novamente.");
-          return;
-        }
-      }
-      addError("_network", "Não foi possível criar a ação. Tente novamente.");
-    } finally {
-      setIsLoading(false);
+  async function handleStep1Next() {
+    setGeneralError(null);
+    const isValid = await trigger(["title", "description", "area", "type"], {
+      shouldFocus: true,
+    });
+    if (isValid) {
+      setStep(2);
     }
   }
 
+  const onSubmit = handleSubmit(
+    async (data) => {
+      setGeneralError(null);
+
+      try {
+        const payload: CreateActivityPayload = {
+          title: data.title,
+          description: data.description?.trim() || "Descrição não informada.",
+          type: data.type as ActionType,
+          campus: data.campus as ActionCampus,
+          area: data.area,
+          startDate: new Date(
+            `${data.startDate}T${data.startTime}:00`,
+          ).toISOString(),
+          endDate: new Date(
+            `${data.endDate}T${data.endTime}:00`,
+          ).toISOString(),
+          slots: data.slots as number,
+          workloadHours: data.workloadHours as number,
+          format: data.format as ActionFormat,
+          ...(needsUrl && data.url?.trim() ? { url: data.url.trim() } : {}),
+          ...(needsAddress && data.address
+            ? {
+                address: {
+                  addressLine: data.address.addressLine,
+                  district: data.address.district,
+                  zipCode: data.address.zipCode.replace(/\D/g, ""),
+                  city: data.address.city,
+                  state: data.address.state.toUpperCase(),
+                },
+              }
+            : {}),
+        };
+
+        await api.post<CreateActivityResponse>("/activities", payload);
+
+        reset();
+        setStep(1);
+        setShowSuccessConfirm(true);
+        if (onSuccess) onSuccess();
+      } catch (err: any) {
+        handleCreateActionApiErrors(err, setError, setGeneralError);
+        if (err?.errors && Array.isArray(err.errors)) {
+          const step1HasError = err.errors.some((e: any) =>
+            STEP1_FIELDS.has(e.field),
+          );
+          if (step1HasError) setStep(1);
+        }
+      }
+    },
+    (validationErrors) => {
+      const step1HasError = Object.keys(validationErrors).some((k) =>
+        STEP1_FIELDS.has(k),
+      );
+      if (step1HasError) setStep(1);
+    },
+  );
+
   if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm p-4">
       <div className="bg-[#E8EDF2] rounded-2xl w-full max-w-2xl flex shadow-2xl overflow-hidden">
-
         <div className="w-[220px] shrink-0 bg-[#0A2540] text-white flex flex-col justify-between py-8 px-7 relative overflow-hidden">
           <div className="flex flex-col gap-8 z-10 relative">
             <p className="text-sm font-semibold tracking-wide">
               Vamos criar uma ação?
             </p>
-
             <div className="flex flex-col gap-6">
               <div className="flex items-start gap-3">
-                <div className={`size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-sm mt-0.5 transition-colors ${
-                  step === 1 ? "bg-white text-[#0A2540]" : "bg-white/20 text-white"
-                }`}>
+                <div
+                  className={`size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-sm mt-0.5 transition-colors ${
+                    step === 1
+                      ? "bg-white text-[#0A2540]"
+                      : "bg-white/20 text-white"
+                  }`}
+                >
                   1
                 </div>
                 <div>
-                  <p className="font-semibold text-sm leading-tight">Identificação</p>
+                  <p className="font-semibold text-sm leading-tight">
+                    Identificação
+                  </p>
                   <p className="text-xs text-white/60 leading-tight mt-0.5">
                     Dê um nome para a sua ação
                   </p>
                 </div>
               </div>
-
               <div className="flex items-start gap-3">
-                <div className={`size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-sm mt-0.5 transition-colors ${
-                  step === 2
-                    ? "bg-white text-[#0A2540]"
-                    : "border-2 border-white/30 text-white/30"
-                }`}>
+                <div
+                  className={`size-7 rounded-full shrink-0 flex items-center justify-center font-bold text-sm mt-0.5 transition-colors ${
+                    step === 2
+                      ? "bg-white text-[#0A2540]"
+                      : "border-2 border-white/30 text-white/30"
+                  }`}
+                >
                   2
                 </div>
                 <div>
-                  <p className={`font-semibold text-sm leading-tight ${step === 2 ? "text-white" : "text-white/30"}`}>
+                  <p
+                    className={`font-semibold text-sm leading-tight ${
+                      step === 2 ? "text-white" : "text-white/30"
+                    }`}
+                  >
                     Logística
                   </p>
                   <p className="text-xs text-white/40 leading-tight mt-0.5">
@@ -273,19 +365,20 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
               </div>
             </div>
           </div>
-
           <div className="flex justify-center mt-8 opacity-10 pointer-events-none select-none">
             <img src={helpaBlueLogo} alt="" className="h-28 w-auto" />
           </div>
         </div>
 
         <div className="flex-1 bg-white rounded-r-2xl flex flex-col">
-          <form onSubmit={handleNext} className="flex flex-col h-full">
+          <form onSubmit={onSubmit} className="flex flex-col h-full" noValidate>
             <div className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
-
-              {errors._network && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-                  {errors._network}
+              {generalError && (
+                <div
+                  className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3"
+                  role="alert"
+                >
+                  {generalError}
                 </div>
               )}
 
@@ -296,59 +389,79 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                   </h2>
 
                   <div>
-                    <Label>Título da ação</Label>
+                    <label
+                      htmlFor="title"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Título da ação
+                    </label>
                     <input
+                      id="title"
                       type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
                       placeholder="Digite o título da sua ação"
                       className={inputCls(!!errors.title)}
-                      required
+                      {...register("title")}
                     />
-                    <FieldError message={errors.title} />
+                    <FieldError message={errors.title?.message} />
                   </div>
 
                   <div>
-                    <Label>
+                    <label
+                      htmlFor="description"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Descrição completa{" "}
-                      <span className="text-gray-400 font-normal">(opcional)</span>
-                    </Label>
+                      <span className="text-gray-400 font-normal">
+                        (opcional)
+                      </span>
+                    </label>
                     <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      id="description"
                       placeholder="Descreva a sua ação"
                       rows={4}
-                      className={`${inputCls()} resize-none`}
+                      className={`${inputCls(!!errors.description)} resize-none`}
+                      {...register("description")}
                     />
+                    <FieldError message={errors.description?.message} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
+                      <label
+                        htmlFor="area"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Área de atuação
+                      </label>
                       <SelectWrapper>
                         <select
-                          value={area}
-                          onChange={(e) => setArea(e.target.value)}
+                          id="area"
                           className={selectCls(!!errors.area)}
-                          required
+                          {...register("area")}
                         >
                           <option value="">Área de atuação</option>
                           {ACTION_AREA_OPTIONS.map((item) => (
-                            <option key={item.value} value={item.value}>
+                            <option key={item.value} value={item.label}>
                               {item.label}
                             </option>
                           ))}
                         </select>
                       </SelectWrapper>
-                      <FieldError message={errors.area} />
+                      <FieldError message={errors.area?.message} />
                     </div>
 
                     <div>
+                      <label
+                        htmlFor="type"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Tipo da ação
+                      </label>
                       <SelectWrapper>
                         <select
-                          value={type}
-                          onChange={(e) => setType(e.target.value as ActionType)}
+                          id="type"
                           className={selectCls(!!errors.type)}
-                          required
+                          {...register("type")}
                         >
                           <option value="">Tipo da ação</option>
                           {ACTION_TYPE_OPTIONS.map((item) => (
@@ -358,7 +471,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                           ))}
                         </select>
                       </SelectWrapper>
-                      <FieldError message={errors.type} />
+                      <FieldError message={errors.type?.message} />
                     </div>
                   </div>
                 </div>
@@ -371,12 +484,17 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                   </h2>
 
                   <div>
+                    <label
+                      htmlFor="campus"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Campus
+                    </label>
                     <SelectWrapper>
                       <select
-                        value={campus}
-                        onChange={(e) => setCampus(e.target.value as ActionCampus)}
+                        id="campus"
                         className={selectCls(!!errors.campus)}
-                        required
+                        {...register("campus")}
                       >
                         <option value="" disabled>
                           Digite o campus em que ocorrerá a sua ação
@@ -388,105 +506,142 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                         ))}
                       </select>
                     </SelectWrapper>
-                    <FieldError message={errors.campus} />
+                    <FieldError message={errors.campus?.message} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Carga horária total</Label>
+                      <label
+                        htmlFor="workloadHours"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Carga horária total
+                      </label>
                       <input
+                        id="workloadHours"
                         type="number"
-                        value={workload}
-                        onChange={(e) => setWorkload(e.target.value)}
                         placeholder="ex: 12"
                         min="1"
                         max="8760"
                         className={inputCls(!!errors.workloadHours)}
-                        required
+                        {...register("workloadHours")}
                       />
-                      <FieldError message={errors.workloadHours} />
+                      <FieldError message={errors.workloadHours?.message} />
                     </div>
 
                     <div>
-                      <Label>Número de vagas</Label>
+                      <label
+                        htmlFor="slots"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Número de vagas
+                      </label>
                       <input
+                        id="slots"
                         type="number"
-                        value={spots}
-                        onChange={(e) => setSpots(e.target.value)}
                         placeholder="ex: 12"
                         min="1"
                         max="10000"
                         className={inputCls(!!errors.slots)}
-                        required
+                        {...register("slots")}
                       />
-                      <FieldError message={errors.slots} />
+                      <FieldError message={errors.slots?.message} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Horário</Label>
+                    <fieldset>
+                      <legend className="block text-sm font-medium text-gray-700 mb-1">
+                        Horário
+                      </legend>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Início</p>
+                          <label
+                            htmlFor="startTime"
+                            className="block text-xs text-gray-500 mb-1"
+                          >
+                            Início
+                          </label>
                           <input
+                            id="startTime"
                             type="time"
-                            value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            className={inputCls()}
+                            className={inputCls(!!errors.startTime)}
+                            {...register("startTime")}
                           />
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Fim</p>
+                          <label
+                            htmlFor="endTime"
+                            className="block text-xs text-gray-500 mb-1"
+                          >
+                            Fim
+                          </label>
                           <input
+                            id="endTime"
                             type="time"
-                            value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            className={inputCls()}
+                            className={inputCls(!!errors.endTime)}
+                            {...register("endTime")}
                           />
                         </div>
                       </div>
-                    </div>
+                    </fieldset>
 
-                    <div>
-                      <Label>Data</Label>
+                    <fieldset>
+                      <legend className="block text-sm font-medium text-gray-700 mb-1">
+                        Data
+                      </legend>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Início</p>
+                          <label
+                            htmlFor="startDate"
+                            className="block text-xs text-gray-500 mb-1"
+                          >
+                            Início
+                          </label>
                           <input
+                            id="startDate"
                             type="date"
-                            value={startDate}
                             min={today}
-                            onChange={(e) => setStartDate(e.target.value)}
                             className={inputCls(!!errors.startDate)}
-                            required
+                            {...register("startDate")}
                           />
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-1">Fim</p>
+                          <label
+                            htmlFor="endDate"
+                            className="block text-xs text-gray-500 mb-1"
+                          >
+                            Fim
+                          </label>
                           <input
+                            id="endDate"
                             type="date"
-                            value={endDate}
                             min={startDate || today}
-                            onChange={(e) => setEndDate(e.target.value)}
                             className={inputCls(!!errors.endDate)}
-                            required
+                            {...register("endDate")}
                           />
                         </div>
                       </div>
                       {(errors.startDate || errors.endDate) && (
-                        <FieldError message={errors.startDate ?? errors.endDate} />
+                        <p className="text-xs text-red-500 mt-1" role="alert">
+                          {errors.startDate?.message ?? errors.endDate?.message}
+                        </p>
                       )}
-                    </div>
+                    </fieldset>
                   </div>
 
                   <div className="w-1/2">
+                    <label
+                      htmlFor="format"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Formato da ação
+                    </label>
                     <SelectWrapper>
                       <select
-                        value={format}
-                        onChange={(e) => setFormat(e.target.value as ActionFormat)}
+                        id="format"
                         className={selectCls(!!errors.format)}
-                        required
+                        {...register("format")}
                       >
                         <option value="">Formato da ação</option>
                         {ACTION_FORMAT_OPTIONS.map((item) => (
@@ -496,101 +651,133 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                         ))}
                       </select>
                     </SelectWrapper>
-                    <FieldError message={errors.format} />
+                    <FieldError message={errors.format?.message} />
                   </div>
 
                   {needsUrl && (
                     <div>
-                      <Label>Link para o evento</Label>
+                      <label
+                        htmlFor="url"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Link para o evento
+                      </label>
                       <input
+                        id="url"
                         type="url"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        placeholder="Ex: meet.google.com/abc-defg-hij"
+                        placeholder="Ex: https://meet.google.com/abc-defg-hij"
                         className={inputCls(!!errors.url)}
-                        required
+                        {...register("url")}
                       />
-                      <FieldError message={errors.url} />
+                      <FieldError message={errors.url?.message} />
                     </div>
                   )}
 
                   {needsAddress && (
-                    <div className="flex flex-col gap-4">
-                      <h3 className="text-sm font-semibold text-[#0A2540]">
+                    <fieldset className="flex flex-col gap-4">
+                      <legend className="text-sm font-semibold text-[#0A2540]">
                         Endereço
-                      </h3>
+                      </legend>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Logradouro</Label>
+                          <label
+                            htmlFor="address.addressLine"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Logradouro
+                          </label>
                           <input
+                            id="address.addressLine"
                             type="text"
-                            value={addressLine}
-                            onChange={(e) => setAddressLine(e.target.value)}
                             placeholder="ex: Rua Dois"
-                            className={inputCls(!!errors["address.addressLine"])}
-                            required
+                            className={inputCls(!!errors.address?.addressLine)}
+                            {...register("address.addressLine")}
                           />
-                          <FieldError message={errors["address.addressLine"]} />
+                          <FieldError
+                            message={errors.address?.addressLine?.message}
+                          />
                         </div>
 
                         <div>
-                          <Label>Bairro</Label>
+                          <label
+                            htmlFor="address.district"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Bairro
+                          </label>
                           <input
+                            id="address.district"
                             type="text"
-                            value={district}
-                            onChange={(e) => setDistrict(e.target.value)}
                             placeholder="ex: Bairro Jardim"
-                            className={inputCls(!!errors["address.district"])}
-                            required
+                            className={inputCls(!!errors.address?.district)}
+                            {...register("address.district")}
                           />
-                          <FieldError message={errors["address.district"]} />
+                          <FieldError
+                            message={errors.address?.district?.message}
+                          />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-12 gap-3">
                         <div className="col-span-4">
-                          <Label>CEP</Label>
+                          <label
+                            htmlFor="address.zipCode"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            CEP
+                          </label>
                           <input
+                            id="address.zipCode"
                             type="text"
-                            value={zipCode}
-                            onChange={(e) => setZipCode(e.target.value)}
                             placeholder="00000-000"
                             maxLength={9}
-                            className={inputCls(!!errors["address.zipCode"])}
-                            required
+                            className={inputCls(!!errors.address?.zipCode)}
+                            {...register("address.zipCode")}
                           />
-                          <FieldError message={errors["address.zipCode"]} />
+                          <FieldError
+                            message={errors.address?.zipCode?.message}
+                          />
                         </div>
 
                         <div className="col-span-5">
-                          <Label>Cidade</Label>
+                          <label
+                            htmlFor="address.city"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Cidade
+                          </label>
                           <input
+                            id="address.city"
                             type="text"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
                             placeholder="ex: Bom Jesus"
-                            className={inputCls(!!errors["address.city"])}
-                            required
+                            className={inputCls(!!errors.address?.city)}
+                            {...register("address.city")}
                           />
-                          <FieldError message={errors["address.city"]} />
+                          <FieldError message={errors.address?.city?.message} />
                         </div>
 
                         <div className="col-span-3">
-                          <Label>Estado</Label>
+                          <label
+                            htmlFor="address.state"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Estado
+                          </label>
                           <input
+                            id="address.state"
                             type="text"
-                            value={state}
-                            onChange={(e) => setState(e.target.value)}
                             placeholder="ex: AL"
                             maxLength={2}
-                            className={`${inputCls(!!errors["address.state"])} uppercase`}
-                            required
+                            className={`${inputCls(!!errors.address?.state)} uppercase`}
+                            {...register("address.state")}
                           />
-                          <FieldError message={errors["address.state"]} />
+                          <FieldError
+                            message={errors.address?.state?.message}
+                          />
                         </div>
                       </div>
-                    </div>
+                    </fieldset>
                   )}
                 </div>
               )}
@@ -600,7 +787,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
               <button
                 type="button"
                 onClick={handleCancelClick}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-red-900 transition-colors disabled:opacity-50"
               >
                 <X className="size-3.5" /> Cancelar
@@ -611,7 +798,7 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="px-5 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1B75BB] transition-colors disabled:opacity-50"
                   >
                     <ArrowLeft className="size-3.5" /> Voltar
@@ -620,7 +807,8 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
 
                 {step === 1 ? (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleStep1Next}
                     className="px-6 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1B75BB] transition-colors"
                   >
                     Próximo <ArrowRight className="size-3.5" />
@@ -628,13 +816,17 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
                 ) : (
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     className="px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-green-800 transition-colors disabled:opacity-50"
                   >
-                    {isLoading ? (
-                      <><Loader2 className="size-4 animate-spin" /> Criando...</>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> Criando...
+                      </>
                     ) : (
-                      <>Criar ação <Check className="size-3.5 stroke-[3]" /></>
+                      <>
+                        Criar ação <Check className="size-3.5 stroke-[3]" />
+                      </>
                     )}
                   </button>
                 )}
@@ -687,7 +879,10 @@ export function ActionRegister({ isOpen, onClose, onSuccess }: ActionRegisterPro
             </h3>
             <button
               type="button"
-              onClick={() => { setShowSuccessConfirm(false); onClose(); }}
+              onClick={() => {
+                setShowSuccessConfirm(false);
+                onClose();
+              }}
               className="w-full bg-[#0A2540] text-white py-3 px-6 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#1B75BB] transition-colors"
             >
               <Eye className="size-4" /> Visualizar no feed
