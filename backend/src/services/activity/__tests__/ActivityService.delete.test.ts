@@ -35,6 +35,8 @@ describe("ActivityService.delete", () => {
     expect(activityRepository.softDelete).not.toHaveBeenCalled();
   });
 
+  // Existence is checked before permission, keeping the behavior symmetric
+  // with GET (a deleted activity is invisible to everyone).
   it("throws 404 (not 403) when the activity does not exist, even for a non-author", async () => {
     const { activityRepository, userRepository } = mockRepositories();
     const service = new ActivityService({ activityRepository, userRepository });
@@ -59,6 +61,9 @@ describe("ActivityService.delete", () => {
     expect(activityRepository.softDelete).not.toHaveBeenCalled();
   });
 
+  // Ghost user: account removed/deactivated, token still valid.
+  // This is the main reason for using the fresh database value
+  // instead of the JWT claim.
   it("throws 403 when the token's user no longer exists in the database and is not the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
@@ -74,6 +79,8 @@ describe("ActivityService.delete", () => {
     expect(activityRepository.softDelete).not.toHaveBeenCalled();
   });
 
+  // The authorship check requires a live user record: a deleted account
+  // must not operate on the system, regardless of what the token says.
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
@@ -121,6 +128,7 @@ describe("ActivityService.delete", () => {
     expect(activityRepository.softDelete).toHaveBeenCalledWith("act-1");
   });
 
+  // Intersection of both permissions: the rule must not be ambiguous here.
   it("a manager can delete their own activity", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {

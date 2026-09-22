@@ -437,7 +437,7 @@ class ActivityService implements IActivityService {
     }
 
     const user = await this._userRepository.findById(userId);
-    const isAuthor = !!user && activity.authorId === userId;
+    const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
     const isManager = user?.isManager ?? false;
 
     if (!isAuthor && !isManager) {

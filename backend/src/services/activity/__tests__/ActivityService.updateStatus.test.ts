@@ -17,6 +17,7 @@ const STATUSES: ActivityStatus[] = [
 ];
 const TERMINAL: ActivityStatus[] = ["COMPLETED", "CANCELLED"];
 
+// 4x4 matrix derived from the single source: 16 cases without 16 handwritten blocks.
 const transitionCases = STATUSES.flatMap((from) =>
   STATUSES.map((to) => ({
     from,
@@ -80,6 +81,7 @@ function mockRepositories(
 describe("ActivityService.updateStatus", () => {
   // ---------- Activity lookup ----------
 
+  // Existence is verified before any user query.
   it("throws 404 when the activity does not exist or was deleted", async () => {
     const { activityRepository, userRepository } = mockRepositories();
     const service = new ActivityService({ activityRepository, userRepository });
@@ -196,7 +198,6 @@ describe("ActivityService.updateStatus", () => {
         activityRepository,
         userRepository,
       });
-
       const expectedMessage = TERMINAL.includes(from)
         ? `Activity is already ${from} and cannot be transitioned.`
         : `Cannot transition from ${from} to ${to}.`;
@@ -215,6 +216,7 @@ describe("ActivityService.updateStatus", () => {
 
   // ---------- availableSlots recalculation ----------
 
+  // Mirrors the Bruno contract example: 40 slots, 13 approved registrations.
   it("returns availableSlots recalculated from approved enrollments", async () => {
     const updated = makeActivityRecord({ status: "IN_PROGRESS" });
     const { activityRepository, userRepository } = mockRepositories({
@@ -249,6 +251,8 @@ describe("ActivityService.updateStatus", () => {
     );
   });
 
+  // Inconsistent state possible while availableSlots lacks a single
+  // source of truth (separate issue); Math.max(0, ...) safeguards the result.
   it("clamps availableSlots at zero when approved enrollments exceed slots", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
