@@ -37,8 +37,6 @@ describe("POST /activities/:id/reports", () => {
   });
 
   it("returns 409 for a duplicate report from the same user on the same activity", async () => {
-    // Confirmado em ActivityReportService.createReport via
-    // findByUserAndActivity + mensagem exata.
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
     const reporter = await createStudent();
@@ -73,6 +71,22 @@ describe("POST /activities/:id/reports", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
+  });
+
+  it("returns 400 when the activity id is not a valid UUID", async () => {
+    const reporter = await createStudent();
+
+    const response = await request(app)
+      .post("/activities/not-a-uuid/reports")
+      .set(...authHeader(reporter.token))
+      .send({ category: "SPAM", description: "Invalid id." });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      message: "Validation error.",
+      errors: [{ field: "id", message: "id must be a valid UUID." }],
+    });
   });
 
   it("returns 404 for a non-existent activity", async () => {
