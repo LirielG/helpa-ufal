@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
-import { createTeacher, anAddress } from "../../helpers/factories.js";
+import { createTeacher, createStudent } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
 
@@ -51,23 +51,31 @@ describe("POST /activities", () => {
     expect(response.status).toBe(401);
   });
 
-  it("creates an activity for a teacher and persists it with authorId from the token", async () => {
-    const author = await createTeacher();
+  it.each([
+    ["student", createStudent],
+    ["teacher", createTeacher],
+  ] as const)(
+    "creates an activity for a %s and persists it with authorId from the token",
+    async (_role, createUser) => {
+      // authMiddleware.auth() (no options) requires a valid token but does not
+      // restrict by userType/isManager: any authenticated user create an action.
+      const author = await createUser();
 
-    const response = await request(app)
-      .post("/activities")
-      .set(...authHeader(author.token))
-      .send(validPayload());
+      const response = await request(app)
+        .post("/activities")
+        .set(...authHeader(author.token))
+        .send(validPayload());
 
-    expect(response.status).toBe(201);
-    expect(response.body.authorId).toBe(author.user.id);
-    expect(response.body.status).toBe("OPEN");
-    expect(response.body.availableSlots).toBe(response.body.slots);
+      expect(response.status).toBe(201);
+      expect(response.body.authorId).toBe(author.user.id);
+      expect(response.body.status).toBe("OPEN");
+      expect(response.body.availableSlots).toBe(response.body.slots);
 
-    const persisted = await request(app).get(`/activities/${response.body.id}`);
-    expect(persisted.status).toBe(200);
-    expect(persisted.body.authorId).toBe(author.user.id);
-  });
+      const persisted = await request(app).get(`/activities/${response.body.id}`);
+      expect(persisted.status).toBe(200);
+      expect(persisted.body.authorId).toBe(author.user.id);
+    },
+  );
 
   it("ignores an authorId sent in the body — authorship always comes from the token", async () => {
     // ActivityService.create(authorId, data) receives authorId as a separate
