@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 const AUTHOR_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -39,14 +40,19 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
 function mockRepositories(
   overrides: {
     activity?: Record<string, unknown>;
+    user?: Record<string, unknown>;
     enrollment?: Record<string, unknown>;
   } = {},
 ) {
   const activityRepository = {
     findById: vi.fn().mockResolvedValue(anActivity()),
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.activity,
   } as unknown as IActivityRepository;
+
+  const userRepository = {
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
+    ...overrides.user,
+  } as unknown as IUserRepository;
 
   const enrollmentRepository = {
     findByIdAndActivity: vi.fn().mockResolvedValue(anEnrollment()),
@@ -70,23 +76,26 @@ function mockRepositories(
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 
-  return { activityRepository, enrollmentRepository };
+  return { activityRepository, userRepository, enrollmentRepository };
 }
 
 function aService(overrides: Parameters<typeof mockRepositories>[0] = {}): {
   service: EnrollmentService;
   activityRepository: IActivityRepository;
+  userRepository: IUserRepository;
   enrollmentRepository: IEnrollmentRepository;
 } {
-  const { activityRepository, enrollmentRepository } =
+  const { activityRepository, userRepository, enrollmentRepository } =
     mockRepositories(overrides);
 
   return {
     service: new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     }),
     activityRepository,
+    userRepository,
     enrollmentRepository,
   };
 }
@@ -291,8 +300,8 @@ describe("EnrollmentService.confirmAttendance", () => {
 
   it("allows a manager who is not the author", async () => {
     const { service, enrollmentRepository } = aService({
-      activity: {
-        findUserById: vi.fn().mockResolvedValue({ isManager: true }),
+      user: {
+        findById: vi.fn().mockResolvedValue({ isManager: true }),
       },
     });
 
@@ -335,7 +344,7 @@ describe("EnrollmentService.confirmAttendance", () => {
 
   it("rejects a token whose user no longer exists, before anything else", async () => {
     const { service, activityRepository, enrollmentRepository } = aService({
-      activity: { findUserById: vi.fn().mockResolvedValue(null) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
 
     await expectCustomError(

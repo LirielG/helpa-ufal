@@ -138,7 +138,7 @@ class ActivityRepository implements IActivityRepository {
     if (status) whereClause.status = status;
     if (campus) whereClause.campus = campus;
 
-    if(format || area){
+    if (format || area) {
       whereClause.details = {
         ...(format ? { format: format } : {}),
         ...(area ? { area: { equals: area, mode: "insensitive" } } : {}),
@@ -163,7 +163,6 @@ class ActivityRepository implements IActivityRepository {
         include: {
           details: true,
           _count: {
-            // NOVO
             select: {
               enrollments: {
                 where: { status: "APPROVED" },
@@ -307,15 +306,6 @@ class ActivityRepository implements IActivityRepository {
     });
   }
 
-  public async findUserById(
-    id: string,
-  ): Promise<{ isManager: boolean } | null> {
-    return this._prisma.user.findUnique({
-      where: { id },
-      select: { isManager: true },
-    });
-  }
-
   public async countApprovedEnrollments(activityId: string): Promise<number> {
     return this._prisma.enrollment.count({
       where: {
@@ -334,4 +324,5 @@ class ActivityRepository implements IActivityRepository {
     return result.count > 0;
   }
 }
+
 export default ActivityRepository;
