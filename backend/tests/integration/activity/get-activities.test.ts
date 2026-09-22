@@ -4,15 +4,15 @@ import { app } from "@/app.js";
 import { createTeacher, createStudent, createActivity, createEnrollment } from "../../helpers/factories.js";
 
 /**
- * Escopo deste arquivo: itens do checklist da issue #126 para GET
- * /activities que NÃO são o filtro `area` (esse já está integralmente
- * coberto por list-activities.test.ts — não duplicado aqui).
- *
- * Limites e mensagens confirmados em ActivityService.list: `limit` máximo
- * real é 100 (não 50, como o contrato Bruno documentava antes da correção
- * registrada em List-activities.yml); `page`/`limit` inválidos usam
- * "page must be a positive integer." / "limit can not exceed 100.".
- */
+* Scope of this file: checklist items for issue #126 regarding the GET
+* /activities endpoint, excluding the `area` filter (which is already fully
+* covered by list-activities.test.ts and is not duplicated here). 
+*
+* Limits and messages confirmed in ActivityService.list: the actual maximum
+* `limit` is 100 (not 50, as the Bruno contract documented prior to the fix
+* recorded in List-activities.yml); invalid `page`/`limit` values ​​trigger
+* "page must be a positive integer." / "limit can not exceed 100.". 
+*/
 
 describe("GET /activities", () => {
   it("is public: answers without any token", async () => {

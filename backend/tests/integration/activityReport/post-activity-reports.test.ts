@@ -101,7 +101,7 @@ describe("POST /activities/:id/reports", () => {
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
 
-  it("returns 404 for a soft-deleted activity", async () => {
+    it("returns 404 for a soft-deleted activity", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, {
       status: "OPEN",

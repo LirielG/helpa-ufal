@@ -106,10 +106,6 @@ describe("PATCH /activities/:id/status", () => {
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
 
-  // Confirmado em ActivityService.updateStatus (comentário no próprio código:
-  // "A valid JWT of a deleted/deactivated user must not authorize anything.").
-  // Não é mais uma suposição: user=null => isAuthor=false, isManager=false
-  // => mesmo caminho de erro de um terceiro sem permissão (403).
   it("returns 403 for a valid token of a deleted user (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });

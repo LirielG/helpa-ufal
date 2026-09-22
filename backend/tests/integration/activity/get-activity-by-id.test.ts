@@ -76,8 +76,7 @@ describe("GET /activities/:id", () => {
     expect(response.body.availableSlots).toBe(8);
   });
 
-  it("returns 400 when id is not a valid UUID", async () => {
-    // Confirmado em ActivityService.findById: ValidationError com field "id".
+  it("returns 404 when id is not a valid UUID", async () => {
     const response = await request(app).get("/activities/not-a-uuid");
 
     expect(response.status).toBe(400);

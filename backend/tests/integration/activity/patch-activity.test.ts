@@ -23,11 +23,11 @@ describe("PATCH /activities/:id", () => {
     expect(response.status).toBe(401);
   });
 
-  // TODO(#148): comportamento atual (403 com a mesma mensagem usada para
-  // "sem permissão") fixado como caracterização. ActivityService.update usa
-  // o mesmo caminho de erro para "usuário fantasma" e para "terceiro sem
-  // permissão" — rever em #148 se um usuário apagado deveria ter um status
-  // ou mensagem distintos (ex.: 401) em vez de cair no 403 genérico.
+  // TODO(#148): current behavior (403 with the same message used for
+  // "no permission") established as the baseline. ActivityService.update uses
+  // the same error path for "ghost user" and "unauthorized third party" —
+  // revisit in #148 whether a deleted user should have a distinct status
+  // or message (e.g., 401) instead of falling back to the generic 403.
   it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
