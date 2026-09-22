@@ -12,6 +12,44 @@ import {
 import { authHeader } from "../../helpers/auth.js";
 
 describe("PATCH /activities/:id", () => {
+
+  it("returns 400 for an empty body", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      message: "Validation error.",
+      errors: [
+        {
+          field: "",
+          message: "Body cannot be empty. At least one field must be provided.",
+        },
+      ],
+    });
+  });
+
+    it("returns 400 when id is not a valid UUID", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .patch("/activities/not-a-uuid")
+      .set(...authHeader(author.token))
+      .send({ title: "Tentativa com id inválido" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      message: "Invalid id parameter. Must be a valid UUID.",
+    });
+  });
+
   it("returns 401 without a token", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
@@ -139,7 +177,7 @@ describe("PATCH /activities/:id", () => {
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
 
-  it.each(["COMPLETED", "CANCELLED"])(
+  it.each(["COMPLETED", "CANCELLED"] as const)(
     "returns 409 when the activity status is %s",
     async (status) => {
       const author = await createTeacher();
