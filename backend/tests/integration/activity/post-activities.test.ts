@@ -3,14 +3,16 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, anAddress } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
+import { daysFromNow } from "../../helpers/dates.js";
+
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
     title: "Oficina de Introdução à Programação",
     type: "EXTENSION",
     campus: "ARAPIRACA",
-    startDate: "2027-08-01T08:00:00.000Z",
-    endDate: "2027-08-15T12:00:00.000Z",
+    startDate: daysFromNow(30).toISOString(),
+    endDate: daysFromNow(44).toISOString(),
     slots: 40,
     description: "Introdução à lógica de programação para iniciantes.",
     area: "Tecnologia",
@@ -151,8 +153,8 @@ describe("POST /activities", () => {
       .set(...authHeader(author.token))
       .send(
         validPayload({
-          startDate: "2027-08-15T12:00:00.000Z",
-          endDate: "2027-08-01T08:00:00.000Z",
+          startDate: daysFromNow(44).toISOString(),
+          endDate: daysFromNow(30).toISOString(),
         }),
       );
 
@@ -201,14 +203,16 @@ describe("POST /activities", () => {
 
   it("returns 400 when workloadHours exceeds the activity duration in hours", async () => {
     const author = await createTeacher();
+    const start = daysFromNow(30);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2hours
 
     const response = await request(app)
       .post("/activities")
       .set(...authHeader(author.token))
       .send(
         validPayload({
-          startDate: "2027-08-01T08:00:00.000Z",
-          endDate: "2027-08-01T10:00:00.000Z", // 2h duration
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
           workloadHours: 20, // way above 2h
         }),
       );
