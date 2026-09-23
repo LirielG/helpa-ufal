@@ -6,13 +6,13 @@ export async function getProfile(): Promise<UserProfile> {
   return await api.get<UserProfile>("/users/me");
 }
 
-//alterações feitas aqui fora feitas apenas para não dar erro na Profile.tsx
+//Changes made here were done solely to avoid errors in Profile.tsx
 export async function updateProfile(
   currentUser: UserProfile,
   data: UpdateProfileRequest,
 ): Promise<UserProfile> {
-  //delay retirado para cumprimento do requisito 3
-  return await{
+  //Delay removed to meet requirement 3.
+  return {
     ...currentUser,
     fullName: data.fullName,
     email: data.email,

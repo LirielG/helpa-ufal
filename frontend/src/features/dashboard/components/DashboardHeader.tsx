@@ -17,9 +17,10 @@ export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
     navigate("/login");
   };
 
-  const initials = getInitials(user?.fullName);
-  //se for deixar o nome comleto retirar a linha debaixo
-  const firstName = user?.fullName ? user.fullName.trim().split(" ")[0] : "Perfil";
+  const initials = getInitials(user?.fullName) || "P";
+  const firstName = user?.fullName
+    ? user.fullName.trim().split(" ")[0]
+    : "Perfil";
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -53,15 +54,11 @@ export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
               className="flex items-center gap-2 cursor-pointer"
               aria-label="Abrir perfil"
             >
-              <div className="size-8 rounded-full bg-[#3B82F6] text-white flex items-center justify-center text-xs font-semibold leading-none shrink-0 overflow-hidden select-nonen">
-                <span>
-                  {initials}
-                </span>
+              <div className="size-8 rounded-full bg-[#3B82F6] text-white flex items-center justify-center text-xs font-semibold leading-none shrink-0 overflow-hidden select-none">
+                <span>{initials}</span>
               </div>
               <span className="hidden md:inline text-sm font-medium text-gray-700">
                 {firstName}
-                {/* se usar o nome completo:
-                user?.fullName ?? "Perfil"*/}
               </span>
             </button>
 

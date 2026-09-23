@@ -31,6 +31,16 @@ export function Profile() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    getProfile()
+      .then((data) => setProfile(data))
+      .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
+      .finally(() => setIsLoading(false));
+  };
+
   // ProtectedRoute keeps a signed-out visitor from ever reaching this screen,
   // so the guard below only exists to narrow `User | null`.
   useEffect(() => {
@@ -52,7 +62,7 @@ export function Profile() {
     try {
       const updated = await updateProfile(profile, data);
       setProfile(updated);
-      ////alterações feitas aqui fora feitas apenas para não dar erro na Profile.tsx
+      ////Changes made here were done solely to avoid errors in Profile.tsx
       if (user) {
         setUser({
           ...user,
@@ -97,7 +107,16 @@ export function Profile() {
           )}
 
           {!isLoading && loadError && (
-            <Alert type="error" message={loadError} />
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
+              <Alert type="error" message={loadError} />
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer"
+              >
+                Tentar novamente
+              </button>
+            </div>
           )}
 
           {!isLoading && !loadError && profile && (

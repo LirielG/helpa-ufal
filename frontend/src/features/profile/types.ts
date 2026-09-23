@@ -1,3 +1,5 @@
+import type { UserType } from "@/types";
+
 export type ProfileTab = "personal" | "certificates" | "actions";
 
 export type ActivityStatus = "enrolled" | "completed" | "managed";
@@ -16,7 +18,7 @@ export interface UserProfile {
   id: string;
   fullName: string;
   email: string;
-  userType: "STUDENT" | "TEACHER";
+  userType: UserType;
   isManager: boolean;
   registrationCode: string;
   course: string | null;

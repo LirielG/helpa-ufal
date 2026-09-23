@@ -34,7 +34,9 @@ export function PersonalDataForm({
   onDismissFeedback,
 }: PersonalDataFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
+    undefined,
+  );
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -62,6 +64,7 @@ export function PersonalDataForm({
     });
   });
 
+  // Avatar upload is a local preview only until the upload API is ready.
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -97,9 +100,7 @@ export function PersonalDataForm({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span>
-                  {initials}
-                </span>
+                <span>{initials}</span>
               )}
             </div>
             <button
