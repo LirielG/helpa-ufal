@@ -72,7 +72,7 @@ export function PersonalDataForm({
     }
   };
 
-  const initials = getInitials(user.fullName);
+  const initials = getInitials(user.fullName) || "P";
 
   return (
     <form onSubmit={submit} className="space-y-5">

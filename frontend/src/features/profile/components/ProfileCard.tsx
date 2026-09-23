@@ -6,7 +6,7 @@ type ProfileCardProps = {
 };
 
 export function ProfileCard({ user }: ProfileCardProps) {
-  const initials = getInitials(user.fullName);
+  const initials = getInitials(user.fullName) || "P";
 
   return (
     <section className="bg-white rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4">
