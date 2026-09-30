@@ -67,7 +67,6 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      url: z.url().optional(),
       address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({
@@ -78,7 +77,7 @@ export const CreateActivitySchema = z
   ])
   .refine(
     (data) => data.startDate < data.endDate,
-    { message: "startDate must be before endDate.", path: ["startDate"] }, // não tenho certeza se deixo esse tratamento aqui
+    { message: "startDate must be before endDate.", path: ["startDate"] },
   );
 
 export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
@@ -95,12 +94,12 @@ const UpdateActivityBaseSchema = z
     area: z.string().trim().min(1),
     workloadHours: z.number().int().min(1),
     format: z.enum(["IN_PERSON", "ONLINE", "HYBRID"]),
-    url: z.string().url().nullable().optional(),
+    url: z.url().nullable().optional(),
     address: AddressSchema.nullable().optional(),
   })
   .partial();
 
-// DIVISÃO DE RESPONSABILIDADE:
+// DIVISION OF RESPONSIBILITY:
 // O UpdateActivitySchema valida apenas o formato e os tipos dos campos no corpo do PATCH.
 // Regras que dependem do estado persistido da atividade (como exigir que IN_PERSON/HYBRID
 // tenham endereço gravado ou que ONLINE/HYBRID tenham URL) pertencem exclusivamente ao ActivityService.
