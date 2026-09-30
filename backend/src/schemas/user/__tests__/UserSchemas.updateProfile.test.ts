@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
+import { Prisma } from "@prisma/client";
+import registrationPolicyMessage from "@/../tests/helpers/password-policy.js"
 
 const IMMUTABLE = "This field cannot be updated.";
 const EMPTY_BODY = "At least one updatable field must be provided.";
 const CURRENT_REQUIRED = "Current password is required to set a new password.";
-const POLICY_MESSAGE =
-  "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.";
-
+const POLICY_MESSAGE = registrationPolicyMessage();
 const VALID_NEW_PASSWORD = "Nova@1234";
 const CURRENT_PASSWORD = "Senha@123";
 
@@ -24,15 +24,17 @@ function toErrors(result: ReturnType<typeof parse>) {
   }));
 }
 
-const IMMUTABLE_KEYS: Array<[string, unknown]> = [
-  ["email", "novo@ufal.br"],
-  ["userType", "TEACHER"],
-  ["isManager", true],
-  ["registrationCode", "999999"],
-  ["cndb", "CNDB-0001"],
-  ["id", "7c9e6679-7425-40de-944b-e07fc1f90ae7"],
-  ["createdAt", "2020-01-01T00:00:00.000Z"],
-];
+
+// Every persisted column that is not editable here. Derived from the Prisma
+// model, so a new column (e.g. tokenVersion) is covered automatically.
+// course has its own tests per userType.
+const PROTECTED_COLUMNS = [
+  ...new Set([
+    ...Object.values(Prisma.UserScalarFieldEnum),
+    ...Object.values(Prisma.StudentScalarFieldEnum),
+    ...Object.values(Prisma.TeacherScalarFieldEnum),
+  ]),
+].filter((column) => column !== "fullName" && column !== "course");
 
 describe.each<UserType>(["STUDENT", "TEACHER"])(
   "updateProfileSchemaFor(%s) — rules shared by both profiles",
@@ -160,7 +162,7 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
       expect(parse(userType, input).success).toBe(false);
     });
 
-    it.each(IMMUTABLE_KEYS)(
+    it.each(PROTECTED_COLUMNS)(
       "rejects %s next to a valid fullName, reporting only that key",
       (key, value) => {
         const errors = toErrors(
@@ -171,7 +173,7 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
       },
     );
 
-    it.each(IMMUTABLE_KEYS)("rejects %s sent alone", (key, value) => {
+    it.each(PROTECTED_COLUMNS)("rejects %s sent alone", (key, value) => {
       const errors = toErrors(parse(userType, { [key]: value }));
 
       expect(errors).toEqual(
