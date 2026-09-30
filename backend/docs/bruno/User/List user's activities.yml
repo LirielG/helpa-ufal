@@ -1,0 +1,242 @@
+info:
+  name: List user's activities
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me/activities"
+  params:
+    - name: filter
+      value: enrolled
+      type: query
+      description: enrolled | completed | managed (required)
+    - name: page
+      value: "1"
+      type: query
+      description: Current page (integer >= 1, default 1)
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: Items per page (integer 1-50, default 20)
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+examples:
+  - name: 200 filter=enrolled
+    description: Approved enrollment in an activity with status OPEN or IN_PROGRESS.
+    response:
+      status: 200
+      body: |-
+        {
+          "data": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000030",
+              "title": "Lagoon Cleanup Volunteer Day",
+              "description": "Volunteer action to collect waste...",
+              "location": "Rua da Lagoa, 100, Pontal da Barra, Maceió - AL",
+              "startDate": "2026-08-20T14:00:00.000Z",
+              "status": "OPEN",
+              "category": "EXTENSION",
+              "workloadHours": 8
+            }
+          ],
+          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+        }
+
+  - name: 200 filter=completed
+    description: Approved enrollment, attendance confirmed (true), and activity status COMPLETED.
+    response:
+      status: 200
+      body: |-
+        {
+          "data": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000032",
+              "title": "Academic Writing Lecture",
+              "description": "Lecture on scientific writing.",
+              "location": "Av. Manoel Severino Barbosa, s/n, Bom Sucesso, Arapiraca - AL",
+              "startDate": "2026-06-10T13:00:00.000Z",
+              "status": "COMPLETED",
+              "category": "LECTURE",
+              "workloadHours": 4
+            }
+          ],
+          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+        }
+
+  - name: 200 filter=managed
+    description: Activities created by the user (Activity.authorId = userId), in any status.
+    response:
+      status: 200
+      body: |-
+        {
+          "data": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000031",
+              "title": "Intro to Programming Workshop",
+              "description": "Programming logic for beginners.",
+              "location": "Av. Manoel Severino Barbosa, s/n, Bom Sucesso, Arapiraca - AL",
+              "startDate": "2026-08-01T08:00:00.000Z",
+              "status": "IN_PROGRESS",
+              "category": "COURSE",
+              "workloadHours": 20
+            }
+          ],
+          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+        }
+
+  - name: 200 Activity without details
+    description: The activity has no ActivityDetails. description, location and workloadHours come as null, never as an error.
+    response:
+      status: 200
+      body: |-
+        {
+          "data": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000033",
+              "title": "Study Group",
+              "description": null,
+              "location": null,
+              "startDate": "2026-09-05T18:00:00.000Z",
+              "status": "OPEN",
+              "category": "OTHER",
+              "workloadHours": null
+            }
+          ],
+          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+        }
+
+  - name: 200 Empty list
+    description: No activity matches the filter, or page is beyond the last one. Never 404. total is the real total.
+    response:
+      status: 200
+      body: |-
+        { "data": [], "meta": { "total": 0, "page": 1, "limit": 20, "totalPages": 0 } }
+
+  - name: 400 Missing or invalid filter
+    response:
+      status: 400
+      body: |-
+        {
+          "status": 400,
+          "message": "Validation error.",
+          "errors": [
+            { "field": "filter", "message": "Must be one of: enrolled, completed, managed." }
+          ]
+        }
+
+  - name: 400 Invalid page or limit
+    description: Fail-collect - every invalid parameter gets its own entry. Messages come from Zod.
+    response:
+      status: 400
+      body: |-
+        {
+          "status": 400,
+          "message": "Validation error.",
+          "errors": [
+            { "field": "page", "message": "<Zod message>" },
+            { "field": "limit", "message": "<Zod message>" }
+          ]
+        }
+
+  - name: 401 Missing token
+    description: No credential at all - neither the session cookie nor an Authorization header.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "No token provided." }
+
+  - name: 401 Invalid or expired token
+    description: A credential was sent but failed verification - malformed, wrong signature or past its expiry. One message on purpose, so the response never tells which one it was.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "Token malformatted, expired or invalid." }
+
+  - name: 404 User no longer exists
+    description: Valid credential, but the user from the token is gone. Same answer as GET /users/me.
+    response:
+      status: 404
+      body: |-
+        { "status": 404, "message": "User not found." }
+
+docs: |-
+  # GET /users/me/activities — Enrolled, completed and managed activities
+
+  Lists the activities linked to the authenticated user according to the chosen filter,
+  in three groups: `enrolled`, `completed` and `managed`. The consuming screen is not
+  defined yet.
+
+  ## Authentication
+  - Hybrid, like the rest of the API: httpOnly session cookie (web frontend) or
+    `Authorization: Bearer` (Bruno and scripts). Both resolve the same way.
+  - The `userId` is extracted exclusively from the token — never from `params`, `query` or
+    `body`. There is no way to ask this route for someone else's activities.
+
+  ## Query params
+  | Param  | Type | Required        | Description |
+  |--------|------|-----------------|-------------|
+  | filter | enum | yes             | `enrolled` \| `completed` \| `managed` |
+  | page   | int  | no (default 1)  | Integer >= 1 |
+  | limit  | int  | no (default 20) | Integer between 1 and 50. Above 50 is 400 (never silently capped) |
+
+  Unknown query params are ignored.
+
+  ## Filter matrix (all with `Activity.deletedAt IS NULL`)
+  | filter      | Rule |
+  |-------------|------|
+  | `enrolled`  | `Enrollment.status = APPROVED` for the user AND `Activity.status` in (`OPEN`, `IN_PROGRESS`) |
+  | `completed` | `Enrollment.status = APPROVED` AND `Enrollment.attendanceConfirmed = true` AND `Activity.status = COMPLETED` |
+  | `managed`   | `Activity.authorId = userId`, in any `Activity.status` (including `CANCELLED` and `COMPLETED`). Moderators (`Enrollment.isModerator`) are not included unless they are the author |
+
+  `Enrollment.attendanceConfirmed` is tri-state (`null` = not recorded, `true` = present,
+  `false` = absent). Only `true` qualifies for `completed`.
+
+  `enrolled` and `completed` are mutually exclusive: `Activity.status` separates them.
+  `managed` may overlap with the other two when the author is also enrolled in their own
+  activity. The activity then appears in each filter it matches, never duplicated within
+  one response.
+
+  ## Field mapping (DTO → database)
+  | Field           | Source |
+  |-----------------|--------|
+  | `id`            | `Activity.id` |
+  | `title`         | `Activity.title` |
+  | `description`   | `ActivityDetails.description` — `null` when the activity has no details |
+  | `startDate`     | `Activity.startDate` |
+  | `status`        | `Activity.status` (enum `OPEN` \| `IN_PROGRESS` \| `COMPLETED` \| `CANCELLED`) |
+  | `category`      | `Activity.type` (enum `EXTENSION` \| `COURSE` \| `EVENT` \| `LECTURE` \| `OTHER`) |
+  | `workloadHours` | `ActivityDetails.workloadHours` — `null` when the activity has no details |
+  | `location`      | `ActivityDetails → Address`, built as `"{addressLine}, {district}, {city} - {state}"`. `zipCode` is not included. `null` when the activity has no `ActivityDetails` or the details have no `Address` (for example, online activities) |
+
+  Every key is always present; `null` reads as "does not apply to this activity".
+
+  ## Business rules
+  - The user only sees their own history.
+  - `PENDING` or `REJECTED` enrollments never appear in any filter.
+  - Soft-deleted activities (`deletedAt != null`) never appear in any filter.
+  - Ordering: `startDate` descending, ties broken by `id`, so pagination is deterministic.
+  - Empty result: 200 with `data: []`, `total: 0`, `totalPages: 0`. A `page` beyond the last
+    one is also 200 with `data: []` and the real `total`.
+
+  ## Validation order
+  1. Authentication (401)
+  2. Query params (400 — fail-collect: every invalid param appears in `errors[]`)
+  3. The user exists (404)
+
+  Validation messages for `page` and `limit` come from Zod and are not part of the contract.
+  The message for `filter` is fixed: "Must be one of: enrolled, completed, managed."
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400 | Missing or invalid `filter`; invalid `page` or `limit` (including `limit` > 50) |
+  | 401 | Missing credential, invalid signature, malformed or expired token |
+  | 404 | The user from the token no longer exists |
+
+  > Error body aligned with the rest of the API: `{ status, message }`, plus an `errors`
+  > array on validation failures (400 only).
