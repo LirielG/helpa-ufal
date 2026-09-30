@@ -16,6 +16,10 @@ import {
   signToken,
 } from "../../helpers/auth.js";
 
+import { Prisma } from "@prisma/client";
+import registrationPolicyMessage from "../../helpers/password-policy.js";
+import { randomUUID } from "node:crypto";
+
 /**
  * Spec for issue #95 (PATCH /users/me).
  * Route contract: docs/bruno/User/Update user's profile.yml.
@@ -31,6 +35,7 @@ import {
  * Deliberately NOT covered (registered debt): malformed JSON answers 500 until
  * the guard planned in #146 lands.
  */
+
 const meUrl = "/users/me";
 const loginUrl = "/auth/login";
 const logoutUrl = "/auth/logout";
@@ -40,12 +45,22 @@ const NEW_PASSWORD = "Nova@1234";
 const IMMUTABLE = "This field cannot be updated.";
 const EMPTY_BODY = "At least one updatable field must be provided.";
 const CURRENT_REQUIRED = "Current password is required to set a new password.";
-const POLICY_MESSAGE =
-  "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.";
+const POLICY_MESSAGE = registrationPolicyMessage();
 const REVOKED_TOKEN_BODY = {
   status: 401,
   message: "Token malformatted, expired or invalid.",
 };
+
+// Every persisted column that is not editable here. Derived from the Prisma
+// model, so a new column (e.g. tokenVersion) is covered automatically.
+// course has its own tests per userType.
+const PROTECTED_COLUMNS = [
+  ...new Set([
+    ...Object.values(Prisma.UserScalarFieldEnum),
+    ...Object.values(Prisma.StudentScalarFieldEnum),
+    ...Object.values(Prisma.TeacherScalarFieldEnum),
+  ]),
+].filter((column) => column !== "fullName" && column !== "course");
 
 function validationError(errors: Array<{ field: string; message: string }>) {
   return { status: 400, message: "Validation error.", errors };
@@ -232,37 +247,24 @@ describe("PATCH /users/me", () => {
   // ---------- Immutable fields ----------
 
   describe("fields outside the whitelist", () => {
-    it.each([
-      ["email", "novo@ufal.br"],
-      ["userType", "TEACHER"],
-      ["isManager", true],
-      ["registrationCode", "999999"],
-      ["cndb", "CNDB-0001"],
-      ["id", "7c9e6679-7425-40de-944b-e07fc1f90ae7"],
-      ["createdAt", "2020-01-01T00:00:00.000Z"],
-      ["surprise", "unknown key"],
-    ])("rejects %s with 400 and persists nothing, not even the valid fullName sent with it", async (field, value) => {
-      const student = await createStudent({ fullName: "Maria Silva" });
-      const before = await readUser(student.user.id);
+    it.each([...PROTECTED_COLUMNS, "surprise"])(
+      "rejects %s with 400 and persists nothing, not even the valid fullName sent with it",
+      async (field) => {
+        const student = await createStudent({ fullName: "Maria Silva" });
+        const before = await readUser(student.user.id);
 
-      const response = await patchMe(student.token, {
-        fullName: "Should Not Apply",
-        [field]: value,
-      });
+        const response = await patchMe(student.token, {
+          fullName: "Should Not Apply",
+          [field]: "attempted-value",
+        });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(
-        validationError([{ field, message: IMMUTABLE }]),
-      );
-      const after = await readUser(student.user.id);
-      expect(after.fullName).toBe("Maria Silva");
-      expect(after.email).toBe(before.email);
-      expect(after.userType).toBe("STUDENT");
-      expect(after.isManager).toBe(false);
-      expect(after.student?.registrationCode).toBe(
-        before.student?.registrationCode,
-      );
-    });
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual(
+          validationError([{ field, message: IMMUTABLE }]),
+        );
+        expect(await readUser(student.user.id)).toEqual(before);
+      },
+    );
 
     it("rejects cndb and registrationCode sent by a TEACHER", async () => {
       const teacher = await createTeacher({
@@ -431,14 +433,15 @@ describe("PATCH /users/me", () => {
     });
 
     it("hashes with the same cost as registration", async () => {
-      const email = `cost-${Date.now()}@ufal.br`;
+      const unique = randomUUID().slice(0, 8);
+      const email = `cost-${unique}@ufal.br`;
       const registered = await request(app).post(registerUrl).send({
         userType: "STUDENT",
         fullName: "Custo Bcrypt",
         email,
         password: DEFAULT_PASSWORD,
         course: "Ciência da Computação",
-        registrationCode: `cost-${Date.now()}`,
+        registrationCode: `cost-${unique}`,
       });
       expect(registered.status).toBe(201);
       const before = await prisma.user.findUniqueOrThrow({ where: { email } });
