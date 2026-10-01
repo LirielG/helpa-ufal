@@ -390,13 +390,11 @@ class ActivityService implements IActivityService {
     }
 
     const finalFormat = data.format ?? activity.details?.format;
+    // `url: null` clears the stored url, so only an absent field falls back to it.
+    const finalUrl = data.url !== undefined ? data.url : activity.details?.url;
 
-    if (
-      (finalFormat === "ONLINE" || finalFormat === "HYBRID") &&
-      !data.url &&
-      !activity.details?.url
-    ) {
-      throw new CustomError(400, `${finalFormat} activities require a url.`);
+    if (finalFormat === "HYBRID" && !finalUrl) {
+      throw new CustomError(400, "HYBRID activities require a url.");
     }
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";

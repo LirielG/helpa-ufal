@@ -444,16 +444,103 @@ describe("ActivityService.update", () => {
 
   // ---------- Format, url and address ----------
 
-  it("rejects ONLINE when no url is sent and none is stored", async () => {
+  it("accepts ONLINE when no url is sent and none is stored", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await service.update("act-1", AUTHOR, { format: "ONLINE" });
+
+    expect(activityRepository.update).toHaveBeenCalledWith(
+      "act-1",
+      expect.objectContaining({ format: "ONLINE" }),
+      "DELETE",
+    );
+  });
+
+  it("accepts editing an ONLINE activity that has no url stored", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          makeActivity({
+            details: { workloadHours: 8, format: "ONLINE", address: null },
+          }),
+        ),
+      },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await service.update("act-1", AUTHOR, { title: "Novo título" });
+
+    expect(activityRepository.update).toHaveBeenCalledWith(
+      "act-1",
+      expect.objectContaining({ title: "Novo título" }),
+      "NONE",
+    );
+  });
+
+  it("accepts clearing the url of an ONLINE activity", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          makeActivity({
+            details: {
+              workloadHours: 8,
+              format: "ONLINE",
+              url: "https://meet.example.com/turma2",
+              address: null,
+            },
+          }),
+        ),
+      },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await service.update("act-1", AUTHOR, { url: null });
+
+    expect(activityRepository.update).toHaveBeenCalledWith(
+      "act-1",
+      expect.objectContaining({ url: null }),
+      "NONE",
+    );
+  });
+
+  it("rejects HYBRID when no url is sent and none is stored", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
     const service = new ActivityService({ activityRepository, userRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { format: "ONLINE" }),
+      service.update("act-1", AUTHOR, { format: "HYBRID" }),
       400,
-      "ONLINE activities require a url.",
+      "HYBRID activities require a url.",
+    );
+    expect(activityRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects clearing the url of a HYBRID activity", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          makeActivity({
+            details: {
+              workloadHours: 8,
+              format: "HYBRID",
+              url: "https://meet.example.com/turma2",
+              address: ADDRESS,
+            },
+          }),
+        ),
+      },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await expectHttpError(
+      service.update("act-1", AUTHOR, { url: null }),
+      400,
+      "HYBRID activities require a url.",
     );
     expect(activityRepository.update).not.toHaveBeenCalled();
   });

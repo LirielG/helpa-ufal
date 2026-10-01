@@ -153,6 +153,35 @@ describe("POST /activities", () => {
     });
   });
 
+  it("creates an ONLINE activity without a url", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ format: "ONLINE", url: undefined }));
+
+    expect(response.status).toBe(201);
+
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.format).toBe("ONLINE");
+    expect(persisted.body.details.url).toBeNull();
+  });
+
+  it("returns 400 when format is ONLINE with a malformed url", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ format: "ONLINE", url: "url-invalida" }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "url" }),
+    ]);
+  });
+
   it("returns 400 when endDate is not after startDate", async () => {
     const author = await createTeacher();
 

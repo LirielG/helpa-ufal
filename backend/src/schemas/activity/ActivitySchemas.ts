@@ -45,7 +45,6 @@ const AddressSchema = z.object({
       "state must be a valid Brazilian state abbreviation (e.g. AL, SP, RJ).",
   }),
 });
-``;
 
 const BaseActivitySchema = z.object({
   title: z.string().min(1),
@@ -68,7 +67,6 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      url: z.url(),
       address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({
@@ -79,7 +77,7 @@ export const CreateActivitySchema = z
   ])
   .refine(
     (data) => data.startDate < data.endDate,
-    { message: "startDate must be before endDate.", path: ["startDate"] }, // não tenho certeza se deixo esse tratamento aqui
+    { message: "startDate must be before endDate.", path: ["startDate"] },
   );
 
 export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
@@ -96,61 +94,30 @@ const UpdateActivityBaseSchema = z
     area: z.string().trim().min(1),
     workloadHours: z.number().int().min(1),
     format: z.enum(["IN_PERSON", "ONLINE", "HYBRID"]),
-    url: z.string().url().nullable().optional(),
+    url: z.url().nullable().optional(),
     address: AddressSchema.nullable().optional(),
   })
   .partial();
 
+// A PATCH body is partial, so this schema only validates the shape of the fields sent.
+// Rules that depend on the stored activity (IN_PERSON/HYBRID need an address, HYBRID
+// needs a url) live in ActivityService.update, which merges the body with the saved state.
+// Do not reintroduce them here: Zod runs before the activity is read from the database.
 export const UpdateActivitySchema = UpdateActivityBaseSchema.refine(
   (data) => Object.keys(data).length > 0,
   {
     message: "Body cannot be empty. At least one field must be provided.",
     path: [],
   },
-)
-  .refine(
-    (data) => {
-      if (data.startDate && data.endDate) {
-        return data.startDate < data.endDate;
-      }
-      return true;
-    },
-    { message: "startDate must be before endDate.", path: ["startDate"] },
-  )
-  .superRefine((data, ctx) => {
-    if (data.format === "IN_PERSON" && !data.address) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Address is required when format is IN_PERSON.",
-        path: ["address"],
-      });
+).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate < data.endDate;
     }
-
-    if (data.format === "ONLINE" && !data.url) {
-      ctx.addIssue({
-        code: "custom",
-        message: "URL is required when format is ONLINE.",
-        path: ["url"],
-      });
-    }
-
-    if (data.format === "HYBRID") {
-      if (!data.url) {
-        ctx.addIssue({
-          code: "custom",
-          message: "URL is required when format is HYBRID.",
-          path: ["url"],
-        });
-      }
-      if (!data.address) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Address is required when format is HYBRID.",
-          path: ["address"],
-        });
-      }
-    }
-  });
+    return true;
+  },
+  { message: "startDate must be before endDate.", path: ["startDate"] },
+);
 
 export type UpdateActivityInput = z.infer<typeof UpdateActivitySchema>;
 
