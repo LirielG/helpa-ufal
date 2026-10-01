@@ -51,7 +51,7 @@ export function ActionDetail() {
 
   return (
     <DashboardShell
-      header={<DashboardHeader onOpenRegister={() => navigate("/dashboard")} />}
+      header={<DashboardHeader />}
       footer={<Footer />}
     >
       {isLoading && (

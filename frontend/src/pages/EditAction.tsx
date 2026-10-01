@@ -234,7 +234,7 @@ export function EditAction() {
   if (isLoadingAction) {
     return (
       <DashboardShell
-        header={<DashboardHeader onOpenRegister={() => {}} />}
+        header={<DashboardHeader />}
         footer={<Footer />}
       >
         <div className="flex-1 flex items-center justify-center py-20">
@@ -247,7 +247,7 @@ export function EditAction() {
   if (notFound) {
     return (
       <DashboardShell
-        header={<DashboardHeader onOpenRegister={() => {}} />}
+        header={<DashboardHeader />}
         footer={<Footer />}
       >
         <div className="flex-1 flex items-center justify-center py-20">
@@ -259,7 +259,7 @@ export function EditAction() {
 
   return (
     <DashboardShell
-      header={<DashboardHeader onOpenRegister={() => {}} />}
+      header={<DashboardHeader />}
       footer={<Footer />}
       containerStyle={{ backgroundColor: "#E0F6F6" }}
     >

@@ -2,18 +2,29 @@ import { Plus, LogOut } from "lucide-react";
 import { useNavigate } from "react-router";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
+import { useActionRegister } from "../../../hooks/useActionRegister";
 
 interface DashboardHeaderProps {
-  onOpenRegister: () => void;
+  onOpenRegister?: () => void;
 }
 
 export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { openRegisterModal } = useActionRegister();
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
+  };
+
+  const handleCreateAction = () => {
+    if (onOpenRegister){
+      onOpenRegister();
+    }
+    else{
+      openRegisterModal();
+    }
   };
 
   return (
@@ -35,7 +46,7 @@ export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
 
           <div className="flex items-center gap-5">
             <button
-              onClick={onOpenRegister}
+              onClick={handleCreateAction}
               className="flex items-center gap-2 px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <Plus className="size-5" />
