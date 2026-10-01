@@ -99,10 +99,10 @@ const UpdateActivityBaseSchema = z
   })
   .partial();
 
-// DIVISION OF RESPONSIBILITY:
-// O UpdateActivitySchema valida apenas o formato e os tipos dos campos no corpo do PATCH.
-// Regras que dependem do estado persistido da atividade (como exigir que IN_PERSON/HYBRID
-// tenham endereço gravado ou que ONLINE/HYBRID tenham URL) pertencem exclusivamente ao ActivityService.
+// A PATCH body is partial, so this schema only validates the shape of the fields sent.
+// Rules that depend on the stored activity (IN_PERSON/HYBRID need an address, HYBRID
+// needs a url) live in ActivityService.update, which merges the body with the saved state.
+// Do not reintroduce them here: Zod runs before the activity is read from the database.
 export const UpdateActivitySchema = UpdateActivityBaseSchema.refine(
   (data) => Object.keys(data).length > 0,
   {

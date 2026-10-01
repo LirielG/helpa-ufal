@@ -221,7 +221,7 @@ describe("PATCH /activities/:id", () => {
     expect(persisted.body.slots).toBe(15);
   });
 
-  // ---------- Validação de Formato e Endereço (Issue #209) ----------
+  // ---------- Format, url and address against the stored state ----------
 
   it("returns 200 when changing HYBRID to IN_PERSON on an activity that already has an address saved", async () => {
     const author = await createTeacher();
@@ -280,5 +280,42 @@ describe("PATCH /activities/:id", () => {
     expect(response.body.errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ field: "url" })]),
     );
+  });
+
+  it("returns 200 when editing an ONLINE activity that has no url saved", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: null,
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ title: "Título Atualizado" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe("Título Atualizado");
+  });
+
+  it("returns 400 when clearing the url of a HYBRID activity and keeps the saved url", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "HYBRID",
+      url: "https://meet.google.com/exemplo",
+      address: anAddress(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ url: null });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("HYBRID activities require a url.");
+
+    const persisted = await request(app).get(`/activities/${activity.id}`);
+    expect(persisted.body.details.url).toBe("https://meet.google.com/exemplo");
   });
 });
