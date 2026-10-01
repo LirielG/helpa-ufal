@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { allowedTransitions } from "@/schemas/activity/ActivitySchemas.js";
 import type { ActivityStatus } from "@/types/activity.js";
 import { expectHttpError } from "@/utils/tests.js";
@@ -16,7 +17,7 @@ const STATUSES: ActivityStatus[] = [
 ];
 const TERMINAL: ActivityStatus[] = ["COMPLETED", "CANCELLED"];
 
-// Matriz 4x4 derivada da fonte única: 16 casos sem 16 blocos escritos à mão.
+// 4x4 matrix derived from the single source: 16 cases without 16 handwritten blocks.
 const transitionCases = STATUSES.flatMap((from) =>
   STATUSES.map((to) => ({
     from,
@@ -56,81 +57,92 @@ function makeActivityRecord(
   };
 }
 
-function mockRepository(
-  overrides: Partial<IActivityRepository> = {},
-): IActivityRepository {
-  return {
+function mockRepositories(
+  overrides: {
+    activity?: Partial<IActivityRepository>;
+    user?: Partial<IUserRepository>;
+  } = {},
+) {
+  const activityRepository = {
     findById: vi.fn().mockResolvedValue(null),
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     updateStatus: vi.fn().mockResolvedValue(makeActivityRecord()),
     countApprovedEnrollments: vi.fn().mockResolvedValue(0),
-    ...overrides,
+    ...overrides.activity,
   } as unknown as IActivityRepository;
+
+  const userRepository = {
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
+    ...overrides.user,
+  } as unknown as IUserRepository;
+
+  return { activityRepository, userRepository };
 }
 
 describe("ActivityService.updateStatus", () => {
   // ---------- Activity lookup ----------
 
+  // Existence is verified before any user query.
   it("throws 404 when the activity does not exist or was deleted", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await expectHttpError(
       service.updateStatus("act-1", "IN_PROGRESS", "user-1"),
       404,
       "Activity not found.",
     );
-    // Existência é verificada antes de qualquer consulta de usuário.
-    expect(repository.findUserById).not.toHaveBeenCalled();
-    expect(repository.updateStatus).not.toHaveBeenCalled();
+    expect(userRepository.findById).not.toHaveBeenCalled();
+    expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
-    const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivityRecord()),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await expectHttpError(
       service.updateStatus("act-1", "IN_PROGRESS", "user-2"),
       403,
       "Forbidden. Requester is not the author or a manager.",
     );
-    expect(repository.updateStatus).not.toHaveBeenCalled();
+    expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
   it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
     // Ghost user: a autoria exige usuário vivo no banco. É essa consulta que
     // a #148 levará ao update — ver o espelho deste caso em
     // ActivityService.update.test.ts.
-    const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivityRecord()),
-      findUserById: vi.fn().mockResolvedValue(null),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
+      user: { findById: vi.fn().mockResolvedValue(null) },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await expectHttpError(
       service.updateStatus("act-1", "IN_PROGRESS", "author-1"),
       403,
     );
-    expect(repository.updateStatus).not.toHaveBeenCalled();
+    expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
   it("a manager (checked in the database) can transition another author's activity", async () => {
-    const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivityRecord()),
-      findUserById: vi.fn().mockResolvedValue({ isManager: true }),
-      updateStatus: vi
-        .fn()
-        .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS" })),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(makeActivityRecord()),
+        updateStatus: vi
+          .fn()
+          .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS" })),
+      },
+      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await service.updateStatus("act-1", "IN_PROGRESS", "manager-9");
 
-    expect(repository.updateStatus).toHaveBeenCalledWith(
+    expect(activityRepository.updateStatus).toHaveBeenCalledWith(
       "act-1",
       "IN_PROGRESS",
     );
@@ -139,22 +151,29 @@ describe("ActivityService.updateStatus", () => {
   // ---------- Transition matrix ----------
 
   it.each(transitionCases.filter((c) => c.allowed))(
-    "accepts transition $from -> $to",
+    "accepts transition $from ->$to",
     async ({ from, to }) => {
-      const repository = mockRepository({
-        findById: vi
-          .fn()
-          .mockResolvedValue(makeActivityRecord({ status: from })),
-        updateStatus: vi
-          .fn()
-          .mockResolvedValue(makeActivityRecord({ status: to })),
+      const { activityRepository, userRepository } = mockRepositories({
+        activity: {
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: from })),
+          updateStatus: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: to })),
+        },
       });
-      const service = new ActivityService({ activityRepository: repository });
+      const service = new ActivityService({
+        activityRepository,
+        userRepository,
+      });
 
       const result = await service.updateStatus("act-1", to, "author-1");
 
-      expect(repository.updateStatus).toHaveBeenCalledWith("act-1", to);
-      expect(repository.countApprovedEnrollments).toHaveBeenCalledTimes(1);
+      expect(activityRepository.updateStatus).toHaveBeenCalledWith("act-1", to);
+      expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledTimes(
+        1,
+      );
       expect(result.status).toBe(to);
     },
   );
@@ -166,15 +185,19 @@ describe("ActivityService.updateStatus", () => {
   // terminais usam "Cannot transition from X to Y.". Os casos "pede o próprio
   // status" (COMPLETED→COMPLETED, CANCELLED→CANCELLED) estão cobertos aqui.
   it.each(transitionCases.filter((c) => !c.allowed))(
-    "rejects transition $from -> $to with 409",
+    "rejects transition $from ->$to with 409",
     async ({ from, to }) => {
-      const repository = mockRepository({
-        findById: vi
-          .fn()
-          .mockResolvedValue(makeActivityRecord({ status: from })),
+      const { activityRepository, userRepository } = mockRepositories({
+        activity: {
+          findById: vi
+            .fn()
+            .mockResolvedValue(makeActivityRecord({ status: from })),
+        },
       });
-      const service = new ActivityService({ activityRepository: repository });
-
+      const service = new ActivityService({
+        activityRepository,
+        userRepository,
+      });
       const expectedMessage = TERMINAL.includes(from)
         ? `Activity is already ${from} and cannot be transitioned.`
         : `Cannot transition from ${from} to ${to}.`;
@@ -184,22 +207,26 @@ describe("ActivityService.updateStatus", () => {
         409,
         expectedMessage,
       );
-      expect(repository.updateStatus).not.toHaveBeenCalled();
-      expect(repository.countApprovedEnrollments).not.toHaveBeenCalled();
+      expect(activityRepository.updateStatus).not.toHaveBeenCalled();
+      expect(
+        activityRepository.countApprovedEnrollments,
+      ).not.toHaveBeenCalled();
     },
   );
 
   // ---------- availableSlots recalculation ----------
 
+  // Mirrors the Bruno contract example: 40 slots, 13 approved registrations.
   it("returns availableSlots recalculated from approved enrollments", async () => {
-    // Espelha o exemplo do contrato Bruno: slots 40, 13 inscrições aprovadas.
     const updated = makeActivityRecord({ status: "IN_PROGRESS" });
-    const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivityRecord()),
-      updateStatus: vi.fn().mockResolvedValue(updated),
-      countApprovedEnrollments: vi.fn().mockResolvedValue(13),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(makeActivityRecord()),
+        updateStatus: vi.fn().mockResolvedValue(updated),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(13),
+      },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const result = await service.updateStatus(
       "act-1",
@@ -219,22 +246,26 @@ describe("ActivityService.updateStatus", () => {
       availableSlots: 27,
       status: "IN_PROGRESS",
     });
-    expect(repository.countApprovedEnrollments).toHaveBeenCalledWith("act-1");
+    expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledWith(
+      "act-1",
+    );
   });
 
+  // Inconsistent state possible while availableSlots lacks a single
+  // source of truth (separate issue); Math.max(0, ...) safeguards the result.
   it("clamps availableSlots at zero when approved enrollments exceed slots", async () => {
-    // Estado inconsistente possível enquanto availableSlots não tem fonte
-    // única (issue separada); o Math.max(0, ...) protege a resposta.
-    const repository = mockRepository({
-      findById: vi.fn().mockResolvedValue(makeActivityRecord()),
-      updateStatus: vi
-        .fn()
-        .mockResolvedValue(
-          makeActivityRecord({ status: "IN_PROGRESS", slots: 10 }),
-        ),
-      countApprovedEnrollments: vi.fn().mockResolvedValue(12),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(makeActivityRecord()),
+        updateStatus: vi
+          .fn()
+          .mockResolvedValue(
+            makeActivityRecord({ status: "IN_PROGRESS", slots: 10 }),
+          ),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(12),
+      },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const result = await service.updateStatus(
       "act-1",
