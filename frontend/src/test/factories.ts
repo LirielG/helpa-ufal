@@ -1,8 +1,9 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
 import type { Action } from "@/features/dashboard/types";
-import type { ActionDetail } from "@/features/action-detail/types";
+import type { ActionDetail, Enrollment } from "@/features/action-detail/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
+
 
 let counter = 0;
 
@@ -145,3 +146,27 @@ export function makeRegisterRequest(
     ...overrides,
   };
 }
+
+/**
+ * Factory for Enrollment items returned by GET /activities/:id/enrollments.
+ *
+ * Default values reflect the pre-#146 state: attendanceConfirmed is null and
+ * confirmedWorkloadHours is 0 — the structural "nothing recorded yet" state,
+ * not an error. Tests that exercise the #146 flow should override these.
+ */
+export function makeEnrollment(
+  overrides: Partial<Enrollment> = {},
+): Enrollment {
+  return {
+    enrollmentId: unique("enrollment"),
+    userId: unique("user"),
+    fullName: "Voluntário de Teste",
+    email: `${unique("vol")}@ufal.br`,
+    registrationCode: unique("mat"),
+    status: "ENROLLED",
+    attendanceConfirmed: null,
+    confirmedWorkloadHours: 0,
+    ...overrides,
+  };
+}
+
