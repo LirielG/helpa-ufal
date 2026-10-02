@@ -56,6 +56,7 @@ function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
   return {
+    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     create: vi
       .fn()
       .mockImplementation((authorId: string, data: CreateActivityInput) =>
@@ -68,6 +69,22 @@ function mockRepository(
 describe("ActivityService.create", () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // ---------- Author existence (ghost user) ----------
+
+  it("throws 403 when the token's user no longer exists in the database", async () => {
+    const repository = mockRepository({
+      findUserById: vi.fn().mockResolvedValue(null),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expectCustomError(
+      service.create(AUTHOR_ID, validInput()),
+      403,
+      "You do not have permission to create an activity.",
+    );
+    expect(repository.create).not.toHaveBeenCalled();
   });
 
   // ---------- Block 1: dates (ValidationError, accumulated) ----------

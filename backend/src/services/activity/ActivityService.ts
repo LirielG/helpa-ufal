@@ -44,6 +44,15 @@ class ActivityService implements IActivityService {
     authorId: string,
     data: CreateActivityInput,
   ): Promise<ActivityResponse> {
+    const author = await this._activityRepository.findUserById(authorId);
+
+    if (!author) {
+      throw new CustomError(
+        403,
+        "You do not have permission to create an activity.",
+      );
+    }
+
     const now = new Date();
     const durationDays =
       (data.endDate.getTime() - data.startDate.getTime()) /
