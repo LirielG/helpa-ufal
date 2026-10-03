@@ -233,10 +233,7 @@ export function EditAction() {
 
   if (isLoadingAction) {
     return (
-      <DashboardShell
-        header={<DashboardHeader />}
-        footer={<Footer />}
-      >
+      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
         <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-gray-500">Carregando...</p>
         </div>
@@ -246,10 +243,7 @@ export function EditAction() {
 
   if (notFound) {
     return (
-      <DashboardShell
-        header={<DashboardHeader />}
-        footer={<Footer />}
-      >
+      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
         <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-gray-500">Ação não encontrada.</p>
         </div>

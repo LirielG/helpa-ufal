@@ -1,6 +1,6 @@
 import { useActionRegister } from "../../../hooks/useActionRegister";
-import { useState, type ReactNode } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 import { ActionRegister } from "./ActionForm";
 
 type DashboardShellProps = {
@@ -16,28 +16,29 @@ export function DashboardShell({
   footer,
   containerStyle,
 }: DashboardShellProps) {
-
   const navigate = useNavigate();
-  const location = useLocation();
-  const  [wasCreated, setWasCreated] = useState(false);
+  const [wasCreated, setWasCreated] = useState(false);
 
   const { isOpen, closeRegisterModal, onSuccessCallback } = useActionRegister();
+
+  useEffect(() => closeRegisterModal, [closeRegisterModal]);
 
   const handleSuccess = () => {
     setWasCreated(true);
 
-    if(onSuccessCallback){
+    if (onSuccessCallback) {
       onSuccessCallback();
     }
   };
 
   const handleClose = () => {
+    const shouldGoToFeed = wasCreated && !onSuccessCallback;
     closeRegisterModal();
+    setWasCreated(false);
 
-    if (wasCreated && location.pathname !== "/" && location.pathname !=="/dashboard"){
+    if (shouldGoToFeed) {
       navigate("/dashboard");
     }
-    setWasCreated(false);
   };
 
   return (
@@ -52,9 +53,9 @@ export function DashboardShell({
       {footer && <footer>{footer}</footer>}
 
       <ActionRegister
-        isOpen = {isOpen}
-        onClose = {handleClose}
-        onSuccess = {handleSuccess}
+        isOpen={isOpen}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
       />
     </div>
   );

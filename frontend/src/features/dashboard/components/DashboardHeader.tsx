@@ -4,11 +4,7 @@ import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 
-interface DashboardHeaderProps {
-  onOpenRegister?: () => void;
-}
-
-export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
+export function DashboardHeader() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { openRegisterModal } = useActionRegister();
@@ -19,12 +15,7 @@ export function DashboardHeader({ onOpenRegister }: DashboardHeaderProps) {
   };
 
   const handleCreateAction = () => {
-    if (onOpenRegister){
-      onOpenRegister();
-    }
-    else{
-      openRegisterModal();
-    }
+    openRegisterModal();
   };
 
   return (

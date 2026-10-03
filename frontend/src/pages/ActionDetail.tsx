@@ -50,10 +50,7 @@ export function ActionDetail() {
   };
 
   return (
-    <DashboardShell
-      header={<DashboardHeader />}
-      footer={<Footer />}
-    >
+    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       {isLoading && (
         <div className="flex-1 flex items-center justify-center min-h-[60vh]">
           <p className="text-gray-500 text-lg">Carregando...</p>

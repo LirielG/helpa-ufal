@@ -66,10 +66,7 @@ export function Profile() {
   };
 
   return (
-    <DashboardShell
-      header={<DashboardHeader />}
-      footer={<Footer />}
-    >
+    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       <div
         className="w-full flex-1"
         style={{
