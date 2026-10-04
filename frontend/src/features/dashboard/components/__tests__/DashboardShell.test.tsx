@@ -1,18 +1,18 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { screen, act, waitFor, fireEvent } from "@testing-library/react";
+import {
+  screen,
+  act,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { useLocation } from "react-router";
 import { render, http, HttpResponse, server } from "@/test";
 import { useActionRegisterStore } from "@/stores/actionRegisterStore";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
-import DashboardDefault, * as DashboardModule from "@/pages/Dashboard";
-
-const Dashboard = DashboardDefault || DashboardModule.Dashboard;
-
-vi.mock("../HeroBanner", () => ({
-  HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>,
-}));
+import { Dashboard } from "@/pages/Dashboard";
 
 vi.mock("@/features/dashboard/components/HeroBanner", () => ({
   HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>,
@@ -20,7 +20,13 @@ vi.mock("@/features/dashboard/components/HeroBanner", () => ({
 
 function LocationTracker() {
   const location = useLocation();
-  return <div data-testid="current-pathname">{location.pathname}</div>;
+  return (
+    <>
+      <div data-testid="current-pathname">{location.pathname}</div>
+      {/* The key changes on every navigation, even to the same path. */}
+      <div data-testid="current-location-key">{location.key}</div>
+    </>
+  );
 }
 
 function DummyPage({ title }: { title: string }) {
@@ -37,61 +43,81 @@ function DummyPage({ title }: { title: string }) {
 function DashboardWithLocation() {
   return (
     <>
-      <Dashboard />
+      <Dashboard debounceMs={0} />
       <LocationTracker />
     </>
   );
 }
 
+// The Dashboard has filters labelled like the form fields, so queries are
+// scoped to the modal.
+function registerDialog() {
+  return within(screen.getByRole("dialog", { name: "Criar uma ação" }));
+}
+
 async function fillStep1(user: UserEvent) {
   await user.type(
-    screen.getByPlaceholderText("Digite o título da sua ação"),
+    registerDialog().getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
   );
+  await user.selectOptions(
+    registerDialog().getByLabelText(/Área de atuação/i),
+    "Educação",
+  );
+  await user.selectOptions(
+    registerDialog().getByLabelText(/Tipo da ação/i),
+    "EXTENSION",
+  );
 
-  const selects = screen.getAllByRole("combobox");
-  await user.selectOptions(selects[0], "Educação");
-  await user.selectOptions(selects[1], "EXTENSION");
-
-  await user.click(screen.getByRole("button", { name: /Próximo/i }));
+  await user.click(registerDialog().getByRole("button", { name: /Próximo/i }));
 
   await waitFor(() => {
     expect(
-      screen.getByRole("heading", { name: "Conte-nos onde e quando será" }),
+      registerDialog().getByRole("heading", {
+        name: "Conte-nos onde e quando será",
+      }),
     ).toBeInTheDocument();
   });
 }
 
 async function fillStep2(user: UserEvent) {
-  const selects = screen.getAllByRole("combobox");
-  await user.selectOptions(selects[0], "ARAPIRACA");
-  await user.selectOptions(selects[1], "ONLINE");
-
-  const numberInputs = screen.getAllByRole("spinbutton");
-  await user.type(numberInputs[0], "4");
-  await user.type(numberInputs[1], "50");
+  await user.selectOptions(
+    registerDialog().getByLabelText(/^Campus/i),
+    "ARAPIRACA",
+  );
+  await user.selectOptions(
+    registerDialog().getByLabelText(/Formato da ação/i),
+    "ONLINE",
+  );
+  await user.type(registerDialog().getByLabelText(/Carga horária total/i), "4");
+  await user.type(registerDialog().getByLabelText(/Número de vagas/i), "50");
 
   await user.type(
-    screen.getByPlaceholderText(/Ex: https:\/\/meet.google.com/i),
+    registerDialog().getByPlaceholderText(/Ex: https:\/\/meet.google.com/i),
     "https://meet.google.com/abc",
   );
 
-  const startDateInput = screen.getByLabelText(/Início/i, {
-    selector: 'input[type="date"]',
-  });
-  const endDateInput = screen.getByLabelText(/Fim/i, {
-    selector: 'input[type="date"]',
-  });
-
-  fireEvent.change(startDateInput, { target: { value: "2026-10-10" } });
-  fireEvent.change(endDateInput, { target: { value: "2026-10-10" } });
+  fireEvent.change(
+    registerDialog().getByLabelText(/Início/i, {
+      selector: 'input[type="date"]',
+    }),
+    {
+      target: { value: "2026-10-10" },
+    },
+  );
+  fireEvent.change(
+    registerDialog().getByLabelText(/Fim/i, { selector: 'input[type="date"]' }),
+    {
+      target: { value: "2026-10-10" },
+    },
+  );
 }
 
 describe("DashboardShell", () => {
   beforeEach(() => {
     server.use(
       http.get("*/activities", () => {
-        return HttpResponse.json({ content: [] });
+        return HttpResponse.json({ activities: [], total: 0 });
       }),
     );
     act(() => {
@@ -221,7 +247,7 @@ describe("DashboardShell", () => {
     expect(input).toHaveValue("Texto em edição");
   });
 
-  it("remains on /profile upon successful action creation from /profile", async () => {
+  it("takes the user to the feed after creating an action from /profile", async () => {
     server.use(
       http.post("*/activities", () => {
         return HttpResponse.json({ id: "nova-acao-123" }, { status: 201 });
@@ -254,7 +280,7 @@ describe("DashboardShell", () => {
     );
 
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
-      "/profile",
+      "/dashboard",
     );
   });
 
@@ -264,7 +290,7 @@ describe("DashboardShell", () => {
     server.use(
       http.get("*/activities", () => {
         getActivitiesCount++;
-        return HttpResponse.json({ content: [] });
+        return HttpResponse.json({ activities: [], total: 0 });
       }),
       http.post("*/activities", () => {
         return HttpResponse.json({ id: "nova-acao-123" }, { status: 201 });
@@ -276,7 +302,8 @@ describe("DashboardShell", () => {
       path: "*",
     });
 
-    const initialGetCount = getActivitiesCount;
+    await waitFor(() => expect(getActivitiesCount).toBe(1));
+    const locationKey = screen.getByTestId("current-location-key").textContent;
 
     const createButton = screen.getByRole("button", {
       name: /criar uma ação/i,
@@ -293,31 +320,16 @@ describe("DashboardShell", () => {
         screen.getByText("Sua ação foi registrada com sucesso!"),
       ).toBeInTheDocument();
     });
+    await waitFor(() => expect(getActivitiesCount).toBe(2));
 
     await user.click(
       screen.getByRole("button", { name: /Visualizar no feed/i }),
     );
 
-    await waitFor(() => {
-      expect(getActivitiesCount).toBeGreaterThan(initialGetCount);
-    });
-    expect(screen.getByTestId("current-pathname")).toHaveTextContent(
-      "/dashboard",
+    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(screen.getByTestId("current-location-key")).toHaveTextContent(
+      locationKey!,
     );
-  });
-
-  it("triggers modal state from header without requiring custom onOpenRegister prop", async () => {
-    const { user } = render(<DashboardHeader />, {
-      route: "/profile",
-      path: "*",
-    });
-
-    const createButton = screen.getByRole("button", {
-      name: /criar uma ação/i,
-    });
-    await user.click(createButton);
-
-    expect(useActionRegisterStore.getState().isOpen).toBe(true);
   });
 
   it("closes the register modal automatically when DashboardShell unmounts", () => {

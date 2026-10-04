@@ -14,7 +14,7 @@ import bgDashboard from "../assets/bg.svg";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { fetchActions } from "../features/dashboard/services";
 import type { FilterOptions, Action } from "../features/dashboard/types";
-import { useActionRegisterStore } from "../stores/actionRegisterStore";
+import { useActionRegister } from "../hooks/useActionRegister";
 
 interface DashboardProps {
   /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
@@ -97,13 +97,13 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
       });
   }, [requestFilters, page]);
 
-  useEffect(() => {
-    useActionRegisterStore.setState({ onSuccessCallback: loadActions });
+  const { setOnSuccessCallback } = useActionRegister();
 
-    return () => {
-      useActionRegisterStore.setState({ onSuccessCallback: undefined });
-    };
-  }, [loadActions]);
+  useEffect(() => {
+    setOnSuccessCallback(loadActions);
+
+    return () => setOnSuccessCallback(undefined);
+  }, [loadActions, setOnSuccessCallback]);
 
   useEffect(() => {
     let mounted = true;

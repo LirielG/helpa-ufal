@@ -11,11 +11,15 @@ export function useActionRegister() {
   const closeRegisterModal = useActionRegisterStore(
     (state) => state.closeRegisterModal,
   );
+  const setOnSuccessCallback = useActionRegisterStore(
+    (state) => state.setOnSuccessCallback,
+  );
 
   return {
     isOpen,
     onSuccessCallback,
     openRegisterModal,
     closeRegisterModal,
+    setOnSuccessCallback,
   };
 }

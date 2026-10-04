@@ -314,7 +314,12 @@ export function ActionRegister({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm p-4">
-      <div className="bg-[#E8EDF2] rounded-2xl w-full max-w-2xl flex shadow-2xl overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Criar uma ação"
+        className="bg-[#E8EDF2] rounded-2xl w-full max-w-2xl flex shadow-2xl overflow-hidden"
+      >
         <div className="w-[220px] shrink-0 bg-[#0A2540] text-white flex flex-col justify-between py-8 px-7 relative overflow-hidden">
           <div className="flex flex-col gap-8 z-10 relative">
             <p className="text-sm font-semibold tracking-wide">

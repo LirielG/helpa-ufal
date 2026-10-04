@@ -14,10 +14,6 @@ export function DashboardHeader() {
     navigate("/login");
   };
 
-  const handleCreateAction = () => {
-    openRegisterModal();
-  };
-
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3">
@@ -37,7 +33,7 @@ export function DashboardHeader() {
 
           <div className="flex items-center gap-5">
             <button
-              onClick={handleCreateAction}
+              onClick={openRegisterModal}
               className="flex items-center gap-2 px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <Plus className="size-5" />
