@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
@@ -11,6 +11,8 @@ import { ActionDescription } from "../features/action-detail/components/ActionDe
 import { ActionInfoCard } from "../features/action-detail/components/ActionInfoCard";
 import { EnrollmentModal } from "../features/action-detail/components/EnrollmentModal";
 import { getActionById } from "../features/action-detail/services";
+import { ReportActionButton } from "../features/report/components/ReportActionButton";
+import { ReportActionModal } from "../features/report/ReportActionModal";
 import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
 import type { ActionDetail as ActionDetailType } from "../features/action-detail/types";
@@ -18,12 +20,21 @@ import type { ActionDetail as ActionDetailType } from "../features/action-detail
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [action, setAction] = useState<ActionDetailType | null>(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  // No route tells whether the user already reported this action, so this
+  // only reflects what happened while the page is open; a reload falls back
+  // to the 409 shown by the modal.
+  const [isReported, setIsReported] = useState(false);
+
+  // Stable references: the modal's effect depends on onClose.
+  const closeReportModal = useCallback(() => setShowReportModal(false), []);
+  const markReported = useCallback(() => setIsReported(true), []);
 
   useEffect(() => {
     if (!id) return;
@@ -117,6 +128,15 @@ export function ActionDetail() {
                         : "Inscrever-se"}
                     </Button>
                   )}
+
+                  {/* The API answers 401 to visitors and 403 to the author. */}
+                  {isAuthenticated && user?.id !== action.authorId && (
+                    <ReportActionButton
+                      reported={isReported}
+                      onClick={() => setShowReportModal(true)}
+                      className="self-center"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -129,6 +149,13 @@ export function ActionDetail() {
               onSuccess={handleEnrollmentSuccess}
             />
           )}
+
+          <ReportActionModal
+            open={showReportModal}
+            actionId={action.id}
+            onClose={closeReportModal}
+            onReported={markReported}
+          />
         </>
       )}
     </DashboardShell>

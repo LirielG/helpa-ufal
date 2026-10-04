@@ -18,13 +18,6 @@ export interface User {
   isManager: boolean;
   createdAt: string;
   updatedAt: string;
-  // Optional profile fields. Not returned by the current auth endpoints yet —
-  // populated by the (mocked) profile service. Optional to keep login/register intact.
-  registrationCode?: string;
-  course?: string;
-  institution?: string;
-  avatarUrl?: string;
-  totalHours?: number;
 }
 
 export interface UpdateProfileRequest {

@@ -1,5 +1,7 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -30,14 +32,17 @@ const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
 
 type Props = {
   activityRepository?: IActivityRepository;
+  userRepository?: IUserRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
+  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async create(
@@ -172,7 +177,6 @@ class ActivityService implements IActivityService {
       throw new ValidationError(paginationErrors);
     }
 
-    // filtros
     const filterErrors = [];
 
     const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
@@ -277,7 +281,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const dbUser = await this._activityRepository.findUserById(userId);
+    const dbUser = await this._userRepository.findById(userId);
     const isAuthor = !!dbUser && activity.authorId === userId;
     const isManager = dbUser?.isManager ?? false;
 
@@ -386,20 +390,18 @@ class ActivityService implements IActivityService {
     }
 
     const finalFormat = data.format ?? activity.details?.format;
+    // `url: null` clears the stored url, so only an absent field falls back to it.
+    const finalUrl = data.url !== undefined ? data.url : activity.details?.url;
 
-    if (
-      (finalFormat === "ONLINE" || finalFormat === "HYBRID") &&
-      !data.url &&
-      !activity.details?.url
-    ) {
-      throw new CustomError(400, `${finalFormat} activities require a url.`);
+    if (finalFormat === "HYBRID" && !finalUrl) {
+      throw new CustomError(400, "HYBRID activities require a url.");
     }
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";
     const hasExistingAddress = !!activity.details?.address;
 
     if (finalFormat === "ONLINE") {
-      data.address = null; // ignora endereço enviado se virou online
+      data.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -432,7 +434,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
     const isManager = user?.isManager ?? false;
 
@@ -490,7 +492,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 

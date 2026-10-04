@@ -9,17 +9,17 @@ import { PersonalDataForm } from "../features/profile/components/PersonalDataFor
 import { CertificatesList } from "../features/profile/components/CertificatesList";
 import { ActionsList } from "../features/profile/components/ActionsList";
 import { getProfile, updateProfile } from "../features/profile/services";
-import type { ProfileTab } from "../features/profile/types";
+import type { ProfileTab, UserProfile } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthStore } from "../stores/authStore";
-import type { UpdateProfileRequest, User } from "../types";
+import type { UpdateProfileRequest } from "../types";
 import bgDashboard from "../assets/bg.svg";
 
 export function Profile() {
   const { logout, user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
 
-  const [profile, setProfile] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -29,12 +29,22 @@ export function Profile() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    getProfile()
+      .then((data) => setProfile(data))
+      .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
+      .finally(() => setIsLoading(false));
+  };
+
   // ProtectedRoute keeps a signed-out visitor from ever reaching this screen,
   // so the guard below only exists to narrow `User | null`.
   useEffect(() => {
     if (!user) return;
 
-    getProfile(user)
+    getProfile()
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
@@ -50,7 +60,15 @@ export function Profile() {
     try {
       const updated = await updateProfile(profile, data);
       setProfile(updated);
-      setUser(updated);
+      ////Changes made here were done solely to avoid errors in Profile.tsx
+      if (user) {
+        setUser({
+          ...user,
+          fullName: updated.fullName,
+          email: updated.email,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       setSaveSuccess(true);
     } catch (error) {
       setSaveError(
@@ -84,7 +102,16 @@ export function Profile() {
           )}
 
           {!isLoading && loadError && (
-            <Alert type="error" message={loadError} />
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
+              <Alert type="error" message={loadError} />
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer"
+              >
+                Tentar novamente
+              </button>
+            </div>
           )}
 
           {!isLoading && !loadError && profile && (

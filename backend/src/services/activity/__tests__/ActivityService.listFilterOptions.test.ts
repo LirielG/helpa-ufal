@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 
-
 function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
@@ -12,7 +11,6 @@ function mockRepository(
   } as unknown as IActivityRepository;
 }
 
-
 describe("ActivityService.listFilterOptions", () => {
   it("returns the repository's distinct areas under the `areas` key", async () => {
     const repository = mockRepository({
@@ -20,9 +18,7 @@ describe("ActivityService.listFilterOptions", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-
     const options = await service.listFilterOptions();
-
 
     expect(options).toEqual({ areas: ["Educação", "Saúde"] });
     expect(repository.listDistinctAreas).toHaveBeenCalledOnce();

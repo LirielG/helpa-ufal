@@ -5,7 +5,6 @@ info:
   tags:
     - Activities
 
-
 http:
   method: GET
   url: "{{baseUrl}}/activities"
@@ -146,14 +145,12 @@ http:
       description: "Sort direction: asc or desc (default: desc)."
       disabled: true
 
-
 settings:
   encodeUrl: true
   timeout: 0
   followRedirects: true
   maxRedirects: 5
   forwardAuthorizationHeader: true
-
 
 examples:
   - name: 200 Filtered by area and format
@@ -245,9 +242,9 @@ examples:
       method: GET
       params:
         - name: limit
-          value: "51"
+          value: "101"
           type: query
-          description: Exceeds the maximum of 50
+          description: Exceeds the maximum of 100
     response:
       status: 400
       statusText: Bad Request
@@ -263,7 +260,7 @@ examples:
             "errors": [
               {
                 "field": "limit",
-                "message": "limit can not exceed 50."
+                "message": "limit can not exceed 100."
               }
             ]
           }
@@ -281,7 +278,6 @@ examples:
             "status": 0,
             "message": ""
           }
-
 
 docs: |-
   # GET /activities — List activities
@@ -303,7 +299,7 @@ docs: |-
   | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | |
   | `campus` | Enum of UFAL campus locations | |
   | `format` | Enum: IN_PERSON, ONLINE, HYBRID | |
-  | `page` / `limit` | Pagination | Defaults 1 / 10; `limit` max 50 |
+  | `page` / `limit` | Pagination | Defaults 1 / 20; `limit` max 100 |
   | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | |
 
   `startAfter` / `endBefore` were documented in a previous version of this

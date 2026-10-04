@@ -30,9 +30,7 @@ describe("GET /activities — area filter", () => {
     await createActivity(author.id, { area: "Saúde" });
 
     for (const area of ["saúde", "SAÚDE", "  saúde  "]) {
-      const response = await request(app)
-        .get("/activities")
-        .query({ area });
+      const response = await request(app).get("/activities").query({ area });
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(1);
@@ -72,9 +70,7 @@ describe("GET /activities — area filter", () => {
     await createActivity(author.id, { area: "Educação" });
 
     for (const area of ["", "   "]) {
-      const response = await request(app)
-        .get("/activities")
-        .query({ area });
+      const response = await request(app).get("/activities").query({ area });
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(2);
@@ -217,9 +213,7 @@ describe("GET /activities — area filter", () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
-
     const response = await request(app).get("/activities");
-
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);

@@ -1,6 +1,8 @@
 // src/services/enrollment/EnrollmentService.ts
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type {
   EnrollmentWithActivity,
@@ -26,17 +28,20 @@ import {
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
   activityRepository?: IActivityRepository;
+  userRepository?: IUserRepository;
 };
 
 class EnrollmentService implements IEnrollmentService {
   private _enrollmentRepository: IEnrollmentRepository;
   private _activityRepository: IActivityRepository;
+  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async enroll(
@@ -266,7 +271,7 @@ class EnrollmentService implements IEnrollmentService {
 
   // Token valid and user still exists
   private async requireUser(userId: string): Promise<{ isManager: boolean }> {
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) {
       throw new CustomError(401, "User account not found or inactive.");
     }
