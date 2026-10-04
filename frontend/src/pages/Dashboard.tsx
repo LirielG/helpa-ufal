@@ -8,13 +8,13 @@ import {
   type FeedKey,
 } from "../features/dashboard/components/FeedTabs";
 import { HelpaFeed } from "../features/dashboard/components/HelpaFeed";
-import { ActionRegister } from "../features/dashboard/components/ActionForm";
 import { SigaaFeed } from "../features/sigaa/components/SigaaFeed";
 import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { fetchActions } from "../features/dashboard/services";
 import type { FilterOptions, Action } from "../features/dashboard/types";
+import { useActionRegister } from "../hooks/useActionRegister";
 
 interface DashboardProps {
   /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
@@ -26,7 +26,6 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   const feed: FeedKey =
     searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [actions, setActions] = useState<Action[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -98,6 +97,14 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
       });
   }, [requestFilters, page]);
 
+  const { setOnSuccessCallback } = useActionRegister();
+
+  useEffect(() => {
+    setOnSuccessCallback(loadActions);
+
+    return () => setOnSuccessCallback(undefined);
+  }, [loadActions, setOnSuccessCallback]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -122,12 +129,7 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   };
 
   return (
-    <DashboardShell
-      header={
-        <DashboardHeader onOpenRegister={() => setIsRegisterOpen(true)} />
-      }
-      footer={<Footer />}
-    >
+    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       <HeroBanner actions={actions} />
 
       <div
@@ -160,12 +162,6 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
           )}
         </div>
       </div>
-
-      <ActionRegister
-        isOpen={isRegisterOpen}
-        onClose={() => setIsRegisterOpen(false)}
-        onSuccess={loadActions}
-      />
     </DashboardShell>
   );
 }
