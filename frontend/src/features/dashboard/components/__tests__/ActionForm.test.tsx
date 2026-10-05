@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@/test";
 import { ActionRegister } from "../ActionForm";
 import { http, HttpResponse, server } from "@/test";
+import type { UserEvent } from "@testing-library/user-event";
 
-async function fillStep1(user: any) {
+async function fillStep1(user: UserEvent) {
   await user.type(
     screen.getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
@@ -22,7 +23,7 @@ async function fillStep1(user: any) {
   });
 }
 
-async function fillStep2(user: any) {
+async function fillStep2(user: UserEvent) {
   const selects = screen.getAllByRole("combobox");
   await user.selectOptions(selects[0], "ARAPIRACA");
   await user.selectOptions(selects[1], "ONLINE");
@@ -36,11 +37,15 @@ async function fillStep2(user: any) {
     "https://meet.google.com/abc",
   );
 
-  const dateInputs = document.querySelectorAll('input[type="date"]');
-  if (dateInputs.length >= 2) {
-    fireEvent.change(dateInputs[0], { target: { value: "2026-10-10" } });
-    fireEvent.change(dateInputs[1], { target: { value: "2026-10-10" } });
-  }
+  fireEvent.change(
+    screen.getByLabelText("Início", { selector: "#startDate" }),
+    {
+      target: { value: "2026-10-10" },
+    },
+  );
+  fireEvent.change(screen.getByLabelText("Fim", { selector: "#endDate" }), {
+    target: { value: "2026-10-10" },
+  });
 }
 
 describe("ActionRegister", () => {

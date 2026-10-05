@@ -19,6 +19,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { api } from "../../../services/api";
+import { ApiError } from "../../../services/apiError";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type { ActionType, ActionFormat, ActionCampus } from "../types";
 
@@ -290,13 +291,13 @@ export function ActionRegister({
         setStep(1);
         setShowSuccessConfirm(true);
         if (onSuccess) onSuccess();
-      } catch (err: any) {
+      } catch (err) {
         handleCreateActionApiErrors(err, setError, setGeneralError);
-        if (err?.errors && Array.isArray(err.errors)) {
-          const step1HasError = err.errors.some((e: any) =>
-            STEP1_FIELDS.has(e.field),
-          );
-          if (step1HasError) setStep(1);
+        if (
+          err instanceof ApiError &&
+          err.errors.some((e) => STEP1_FIELDS.has(e.field))
+        ) {
+          setStep(1);
         }
       }
     },
