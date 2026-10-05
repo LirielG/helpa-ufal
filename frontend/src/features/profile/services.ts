@@ -1,6 +1,12 @@
 import { api } from "../../services";
 import type { UpdateProfileRequest } from "../../types";
-import type { ActivityStatus, UserActivity, UserProfile } from "./types";
+import type {
+  ActivityStatus,
+  ActivityStatusTransition,
+  UpdateActivityStatusResponse,
+  UserActivity,
+  UserProfile,
+} from "./types";
 
 export async function getProfile(): Promise<UserProfile> {
   return await api.get<UserProfile>("/users/me");
@@ -32,4 +38,14 @@ export async function fetchUserActivities(
   );
 
   return Array.isArray(response) ? response : (response?.data ?? []);
+}
+
+// Stub so the #179 tests compile; the implementation replaces it.
+export async function updateActivityStatus(
+  id: string,
+  status: ActivityStatusTransition,
+): Promise<UpdateActivityStatusResponse> {
+  void id;
+  void status;
+  throw new Error("not implemented");
 }

@@ -10,6 +10,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UNIESQUINA - Xique-Xique, BA",
     date: "09/05/2026",
     status: "enrolled",
+    activityStatus: "OPEN",
   },
   {
     id: "i2",
@@ -19,6 +20,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFOB - Barreiras, BA",
     date: "22/05/2026",
     status: "enrolled",
+    activityStatus: "OPEN",
   },
   {
     id: "i3",
@@ -28,6 +30,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFAL - Arapiraca, AL",
     date: "03/06/2026",
     status: "enrolled",
+    activityStatus: "OPEN",
   },
   {
     id: "i4",
@@ -37,6 +40,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFPB - João Pessoa, PB",
     date: "14/06/2026",
     status: "enrolled",
+    activityStatus: "OPEN",
   },
   // Concluídas
   {
@@ -47,6 +51,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFRN - Natal, RN",
     date: "12/01/2026",
     status: "completed",
+    activityStatus: "COMPLETED",
     workloadHours: 24,
   },
   {
@@ -57,6 +62,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFPB - Bayeux, PB",
     date: "14/03/2026",
     status: "completed",
+    activityStatus: "COMPLETED",
     workloadHours: 20,
   },
   {
@@ -67,6 +73,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFRN - Mossoró, RN",
     date: "19/02/2026",
     status: "completed",
+    activityStatus: "COMPLETED",
     workloadHours: 16,
   },
   {
@@ -77,6 +84,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFAL - Maceió, AL",
     date: "28/02/2026",
     status: "completed",
+    activityStatus: "COMPLETED",
     workloadHours: 12,
   },
   // Gerenciadas
@@ -88,6 +96,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UNIESQUINA - Xique-Xique, BA",
     date: "01/06/2026",
     status: "managed",
+    activityStatus: "OPEN",
   },
   {
     id: "g2",
@@ -97,6 +106,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFAL - Arapiraca, AL",
     date: "18/07/2026",
     status: "managed",
+    activityStatus: "OPEN",
   },
   {
     id: "g3",
@@ -106,6 +116,7 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFOB - Barreiras, BA",
     date: "05/08/2026",
     status: "managed",
+    activityStatus: "OPEN",
   },
   {
     id: "g4",
@@ -115,5 +126,6 @@ export const MOCK_ACTIVITIES: UserActivity[] = [
     location: "UFPB - João Pessoa, PB",
     date: "20/08/2026",
     status: "managed",
+    activityStatus: "OPEN",
   },
 ];

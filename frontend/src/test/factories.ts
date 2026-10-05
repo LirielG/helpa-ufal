@@ -114,9 +114,22 @@ export function makeUserActivity(
     location: "Campus Arapiraca",
     date: "2026-03-10",
     status: "enrolled",
+    activityStatus: "OPEN",
     workloadHours: 20,
     ...overrides,
   };
+}
+
+/** An action the signed-in user manages, as listed in the "managed" sub-tab. */
+export function makeManagedActivity(
+  overrides: Partial<UserActivity> = {},
+): UserActivity {
+  return makeUserActivity({
+    title: "Campanha de Arrecadação de Agasalhos",
+    status: "managed",
+    activityStatus: "OPEN",
+    ...overrides,
+  });
 }
 
 export const DEFAULT_PASSWORD = "Senha@123";
