@@ -32,6 +32,15 @@ export const handlers = [
     () => new HttpResponse(null, { status: 204 }),
   ),
 
+  http.get(`${API}/users/me`, () =>
+    HttpResponse.json({
+      ...makeUser(),
+      registrationCode: "2026000001",
+      course: "Ciência da Computação",
+      cndb: null,
+    }),
+  ),
+
   http.get(`${API}/activities`, () =>
     HttpResponse.json({
       activities: [makeAction()],
