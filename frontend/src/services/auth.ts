@@ -1,6 +1,7 @@
 import type {
   LoginRequest,
   LoginResponse,
+  MeResponse,
   RegisterRequest,
   RegisterResponse,
 } from "../types";
@@ -22,5 +23,11 @@ export const authService = {
 
   logout(): Promise<void> {
     return api.post<void>("/auth/logout", undefined, AUTH_REQUEST);
+  },
+
+  // Unlike the routes above, a 401 here does mean the session ended, so it
+  // keeps the client's default handling: the same path as any other request.
+  me(): Promise<MeResponse> {
+    return api.get<MeResponse>("/users/me");
   },
 };
