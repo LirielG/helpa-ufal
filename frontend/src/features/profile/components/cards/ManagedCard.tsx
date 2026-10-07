@@ -1,12 +1,17 @@
-import { MapPin, Calendar, Pencil } from "lucide-react";
+import { MapPin, Calendar, Pencil, Users } from "lucide-react";
 import type { UserActivity } from "../../types";
 
 type ManagedCardProps = {
   activity: UserActivity;
   onEdit: (id: string) => void;
+  onManageEnrollments: (id: string) => void;
 };
 
-export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
+export function ManagedCard({
+  activity,
+  onEdit,
+  onManageEnrollments,
+}: ManagedCardProps) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 transition-all hover:shadow-md flex items-center justify-between gap-4">
       <div className="flex flex-col gap-3 min-w-0">
@@ -27,14 +32,24 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => onEdit(activity.id)}
-        aria-label="Editar atividade"
-        className="shrink-0 border border-gray-300 rounded-lg p-2 text-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
-      >
-        <Pencil className="size-4" />
-      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => onManageEnrollments(activity.id)}
+          aria-label="Gerenciar inscritos"
+          className="border border-gray-300 rounded-lg p-2 text-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
+        >
+          <Users className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onEdit(activity.id)}
+          aria-label="Editar atividade"
+          className="border border-gray-300 rounded-lg p-2 text-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
+        >
+          <Pencil className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

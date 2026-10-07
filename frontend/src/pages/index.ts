@@ -5,3 +5,5 @@ export { ActionDetail } from "./ActionDetail";
 export { EditAction } from "./EditAction";
 export { Profile } from "./Profile";
 export { NotFound } from "./NotFound";
+export { EnrollmentsPage } from "./EnrollmentsPage";
+
