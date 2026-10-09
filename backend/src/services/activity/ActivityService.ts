@@ -124,6 +124,10 @@ class ActivityService implements IActivityService {
       throw new CustomError(400, "HYBRID activities require a url.");
     }
 
+    if (data.format === "ONLINE") {
+      data.address = undefined;
+    }
+
     const newActivity = await this._activityRepository.create(authorId, data);
 
     const activityResponse: ActivityResponse = {
