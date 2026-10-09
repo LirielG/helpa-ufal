@@ -67,7 +67,6 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({
       format: z.literal("HYBRID"),
