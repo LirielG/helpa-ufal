@@ -260,6 +260,23 @@ describe("ActivityService.create", () => {
     );
   });
 
+  it("discards address silently when format is ONLINE", async () => {
+  const repository = mockRepository();
+  const service = new ActivityService({ activityRepository: repository });
+
+  const input = validInput({
+    format: "ONLINE",
+    address: validAddress,
+  });
+
+  await service.create(AUTHOR_ID, input);
+
+  expect(repository.create).toHaveBeenCalledWith(
+    AUTHOR_ID,
+    expect.objectContaining({ address: undefined }),
+  );
+});
+
   it("reports only the address error when HYBRID misses both address and url", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
