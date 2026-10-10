@@ -1,4 +1,4 @@
-import type { UserType } from "@/types";
+export type { UserProfile } from "@/types/profile";
 
 export type ProfileTab = "personal" | "certificates" | "actions";
 
@@ -12,16 +12,4 @@ export interface UserActivity {
   date: string;
   status: ActivityStatus;
   workloadHours?: number;
-}
-
-export interface UserProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  userType: UserType;
-  isManager: boolean;
-  registrationCode: string;
-  course: string | null;
-  cndb: string | null;
-  createdAt: string;
 }

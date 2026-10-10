@@ -17,7 +17,8 @@ export interface User {
   userType: UserType;
   isManager: boolean;
   createdAt: string;
-  updatedAt: string;
+  /** Absent once the session is verified: `GET /users/me` does not return it. */
+  updatedAt?: string;
 }
 
 export interface UpdateProfileRequest {
