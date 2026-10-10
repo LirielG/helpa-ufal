@@ -192,6 +192,22 @@ describe("session verification on load", () => {
     expect(persistedUser()).toEqual(user);
   });
 
+  // Keeps the default `/users/me` fixture honest: it answers for the session, so
+  // the check must not swap the signed-in user for a freshly made one.
+  it("keeps the identity of the stored user when the default fixture answers", async () => {
+    const user = await reloadWithStoredUser();
+
+    render(<AppRoutes />, { route: "/profile" });
+
+    await waitFor(() =>
+      expect(useAuthStore.getState().isSessionVerified).toBe(true),
+    );
+
+    const verified = useAuthStore.getState().user;
+    expect(verified?.id).toBe(user.id);
+    expect(verified?.email).toBe(user.email);
+  });
+
   // Criterion 6
   it("shows the user data from the server response, not from localStorage", async () => {
     const user = await reloadWithStoredUser({ fullName: "Nome Antigo" });
