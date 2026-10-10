@@ -1,10 +1,10 @@
 import type {
   LoginRequest,
   LoginResponse,
-  MeResponse,
   RegisterRequest,
   RegisterResponse,
 } from "../types";
+import type { UserProfile } from "../types/profile";
 import { api } from "./api";
 
 // A 401 on these routes means the credentials were rejected, not that a session
@@ -27,7 +27,7 @@ export const authService = {
 
   // Unlike the routes above, a 401 here does mean the session ended, so it
   // keeps the client's default handling: the same path as any other request.
-  me(): Promise<MeResponse> {
-    return api.get<MeResponse>("/users/me");
+  me(): Promise<UserProfile> {
+    return api.get<UserProfile>("/users/me");
   },
 };

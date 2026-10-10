@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { authService } from "../services";
+import { ApiError, authService, notifySessionExpired } from "../services";
 import type { LoginRequest, RegisterRequest, User } from "../types";
 
 type AuthStore = {
@@ -108,11 +108,16 @@ export const useAuthStore = create<AuthStore>()(
               },
             });
           })
-          .catch(() => {
+          .catch((error) => {
             // A 401 was already handled by the HTTP client's session-expiry
-            // handler, which drops the user and goes to the login screen. Any
-            // other failure (no response, 5xx) proves nothing about the
-            // session, so the stored user is kept.
+            // handler. The backend answers 404 when the token is still valid
+            // but the account is gone, which also ends the session; the same
+            // handler drops the user and goes to the login screen. Any other
+            // failure (no response, 5xx) proves nothing about the session, so
+            // the stored user is kept.
+            if (error instanceof ApiError && error.status === 404) {
+              notifySessionExpired();
+            }
           })
           .finally(() => {
             pendingVerification = null;

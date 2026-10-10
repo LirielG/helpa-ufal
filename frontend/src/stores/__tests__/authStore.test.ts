@@ -168,6 +168,19 @@ describe("authStore", () => {
       expect(store().isSessionVerified).toBe(true);
     });
 
+    it("drops the session through the central handler when the account is gone (404)", async () => {
+      signIn();
+      const onExpired = vi.fn();
+      const unsubscribe = setSessionExpiredHandler(onExpired);
+      countMeRequests(() => new HttpResponse(null, { status: 404 }));
+
+      await store().verifySession();
+      unsubscribe();
+
+      expect(onExpired).toHaveBeenCalledOnce();
+      expect(store().isSessionVerified).toBe(true);
+    });
+
     it("keeps the user when the request gets no response", async () => {
       const user = signIn();
       countMeRequests(() => HttpResponse.error());

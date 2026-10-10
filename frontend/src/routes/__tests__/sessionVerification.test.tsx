@@ -12,7 +12,7 @@ import {
   waitFor,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
-import type { MeResponse, User } from "@/types";
+import type { UserProfile, User } from "@/types";
 import { AppRoutes } from "../AppRoutes";
 
 const STORAGE_KEY = "helpa-auth";
@@ -36,7 +36,7 @@ function persistedUser(): User | null {
   return raw ? JSON.parse(raw).state.user : null;
 }
 
-function meResponse(user: User, overrides: Partial<MeResponse> = {}) {
+function meResponse(user: User, overrides: Partial<UserProfile> = {}) {
   return {
     id: user.id,
     email: user.email,
@@ -114,6 +114,17 @@ describe("session verification on load", () => {
   it("sends the user to login and clears localStorage when the cookie is gone", async () => {
     await reloadWithStoredUser();
     countSessionChecks(unauthorized);
+
+    render(<AppRoutes />, { route: "/dashboard" });
+
+    expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(persistedUser()).toBeNull();
+  });
+
+  it("sends the user to login when the token is valid but the account is gone (404)", async () => {
+    await reloadWithStoredUser();
+    countSessionChecks(() => new HttpResponse(null, { status: 404 }));
 
     render(<AppRoutes />, { route: "/dashboard" });
 

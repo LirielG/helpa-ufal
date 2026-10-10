@@ -21,16 +21,6 @@ export interface User {
   updatedAt?: string;
 }
 
-/**
- * `GET /users/me`. Carries the academic fields too, but the auth store only
- * keeps what `User` describes.
- */
-export type MeResponse = Omit<User, "updatedAt"> & {
-  registrationCode: string;
-  course: string | null;
-  cndb: string | null;
-};
-
 export interface UpdateProfileRequest {
   fullName: string;
   email: string;
