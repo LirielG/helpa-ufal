@@ -29,6 +29,20 @@ type ActivitiesResponse =
   | { data?: UserActivity[] }
   | PaginatedResponse<Action>;
 
+/**
+ * TEMPORARY WORKAROUND — remove in #118, do not keep.
+ *
+ * `GET /activities` ignores `filter` and returns the paginated public listing,
+ * so the "managed" tab is approximated here by keeping the actions whose
+ * `authorId` is the signed-in user. Two consequences until the real route lands:
+ * - only the first 50 actions of the public listing are considered; a managed
+ *   action beyond that does not show up;
+ * - "enrolled" and "completed" return nothing, as there is no source for them.
+ *
+ * The replacement is `GET /users/me/activities` (#60), wired into this tab by
+ * #118. When that lands, delete the `authorId` filter and the Action →
+ * UserActivity mapping below and consume the endpoint's response directly.
+ */
 export async function fetchUserActivities(
   filter: ActivityStatus,
 ): Promise<UserActivity[]> {
