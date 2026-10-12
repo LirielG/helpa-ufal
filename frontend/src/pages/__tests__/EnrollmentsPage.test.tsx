@@ -73,11 +73,19 @@ describe("EnrollmentsPage", () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/2/)).toBeInTheDocument();
+        expect(
+          screen.getByText((_content, element) => {
+            return (
+              element?.tagName.toLowerCase() === "span" &&
+              element?.textContent?.includes("2 inscritos")
+            );
+          }),
+        ).toBeInTheDocument();
       });
     });
 
     it("renders normally with attendanceConfirmed null and confirmedWorkloadHours 0 (pre-#146 state)", async () => {
+
       // This is the structural state before #146 is delivered.
       // The page must NOT treat it as an error.
       const enrollment = makeEnrollment({
