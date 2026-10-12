@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ApiError } from "@/services/apiError";
-import { fetchEnrollments } from "./enrollmentService";
-import { getEnrollmentsErrorMessage } from "./enrollmentErrors";
+import { fetchEnrollments } from "./services";
+import { getEnrollmentsErrorMessage } from "./errors";
 import type { EnrollmentsResponse } from "./types";
 
 const PAGE_LIMIT = 20;

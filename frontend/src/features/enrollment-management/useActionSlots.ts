@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getActionById } from "./services";
+import { getActionById } from "@/features/action-detail/services";
 
 /**
  * Lightweight hook that fetches only the slot counts (slots / availableSlots)

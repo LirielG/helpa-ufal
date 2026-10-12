@@ -1,6 +1,7 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
 import type { Action } from "@/features/dashboard/types";
-import type { ActionDetail, Enrollment } from "@/features/action-detail/types";
+import type { ActionDetail } from "@/features/action-detail/types";
+import type { Enrollment } from "@/features/enrollment-management/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 

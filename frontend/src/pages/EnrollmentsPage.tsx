@@ -5,10 +5,10 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { Alert } from "@/components/Alert";
 import { Pagination } from "@/components/Pagination";
-import { EnrollmentTable } from "@/features/action-detail/components/EnrollmentTable";
-import { EnrollmentListHeader } from "@/features/action-detail/components/EnrollmentListHeader";
-import { useEnrollments } from "@/features/action-detail/useEnrollments";
-import { useActionSlots } from "@/features/action-detail/useActionSlots";
+import { EnrollmentTable } from "@/features/enrollment-management/components/EnrollmentTable";
+import { EnrollmentListHeader } from "@/features/enrollment-management/components/EnrollmentListHeader";
+import { useEnrollments } from "@/features/enrollment-management/useEnrollments";
+import { useActionSlots } from "@/features/enrollment-management/useActionSlots";
 
 /**
  * Page that displays the list of volunteers enrolled in an activity.
