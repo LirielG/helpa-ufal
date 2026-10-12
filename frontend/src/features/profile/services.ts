@@ -1,17 +1,20 @@
-import { api } from "../../services";
+import { api, authService } from "../../services";
 import type { UpdateProfileRequest } from "../../types";
 import type {
   ActivityStatus,
   ActivityStatusTransition,
   UpdateActivityStatusRequest,
   UserActivity,
-  UserProfile,
 } from "./types";
+import type { UserProfile } from "../../types/profile";
 import type { Action } from "../dashboard/types";
 import type { ActionDetail } from "../action-detail/types";
 
+// The one `/users/me` client lives on authService; the profile screen asks for
+// the same resource through it, so the session check and this screen cannot
+// drift apart on the response shape.
 export async function getProfile(): Promise<UserProfile> {
-  return await api.get<UserProfile>("/users/me");
+  return authService.me();
 }
 
 //Changes made here were done solely to avoid errors in Profile.tsx
