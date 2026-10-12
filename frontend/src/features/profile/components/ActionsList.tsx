@@ -4,6 +4,7 @@ import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
+import { useNavigate } from "react-router";
 
 const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
   { id: "enrolled", label: "Atividades Inscritas" },
@@ -12,6 +13,7 @@ const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
 ];
 
 export function ActionsList() {
+  const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +37,8 @@ export function ActionsList() {
   }, [activeSubTab]);
 
   const handleEdit = (id: string) => {
-    console.log(`Editar atividade ${id}`);
+    //console.log(`Editar atividade ${id}`);
+    navigate(`/activities/${id}/edit`);
   };
 
   const isManaged = activeSubTab === "managed";

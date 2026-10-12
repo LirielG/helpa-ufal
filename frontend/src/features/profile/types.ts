@@ -1,5 +1,5 @@
 import type { UserType } from "@/types";
-import type { Action, ActionStatus } from "@/features/dashboard/types";
+import type { ActionStatus } from "@/features/dashboard/types";
 
 export type ProfileTab = "personal" | "certificates" | "actions";
 
@@ -23,8 +23,6 @@ export type ActivityStatusTransition = Exclude<ActionStatus, "OPEN">;
 export interface UpdateActivityStatusRequest {
   status: ActivityStatusTransition;
 }
-
-export type UpdateActivityStatusResponse = Action;
 
 export interface UserProfile {
   id: string;
