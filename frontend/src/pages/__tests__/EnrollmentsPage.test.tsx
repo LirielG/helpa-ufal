@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@/test/render";
-import { http, HttpResponse, server } from "@/test/http";
-import { makeActionDetail, makeEnrollment } from "@/test/factories";
+import {
+  API,
+  http,
+  HttpResponse,
+  makeActionDetail,
+  makeEnrollment,
+  render,
+  screen,
+  server,
+  waitFor,
+} from "@/test";
 
 import { EnrollmentsPage } from "@/pages/EnrollmentsPage";
 
-const API = process.env.VITE_API_URL || "http://localhost:3333/api";
 
 /** Renders EnrollmentsPage mounted at the route /activity/act-1/enrollments. */
 function renderPage() {

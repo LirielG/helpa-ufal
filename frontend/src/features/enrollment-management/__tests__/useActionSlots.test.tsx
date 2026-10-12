@@ -1,10 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { http, HttpResponse, server } from "@/test/http";
-import { makeActionDetail } from "@/test/factories";
+import { API, http, HttpResponse, makeActionDetail, server } from "@/test";
 import { useActionSlots } from "../useActionSlots";
 
-const API = process.env.VITE_API_URL || "http://localhost:3333/api";
 
 describe("useActionSlots", () => {
   it("exposes the slot counts of the activity", async () => {

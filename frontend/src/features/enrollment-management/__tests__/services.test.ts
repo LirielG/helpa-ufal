@@ -1,10 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { ApiError } from "@/services/apiError";
-import { http, HttpResponse, server } from "@/test/http";
-import { makeEnrollment } from "@/test/factories";
+import { API, http, HttpResponse, makeEnrollment, server } from "@/test";
 import { fetchEnrollments } from "../services";
 
-const API = process.env.VITE_API_URL || "http://localhost:3333/api";
 
 describe("fetchEnrollments", () => {
   it("requests the activity's enrollments with page and limit", async () => {
