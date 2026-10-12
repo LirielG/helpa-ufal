@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { config } from "@/config";
+import { useAuthStore } from "@/stores/authStore";
 import {
   makeAction,
   makeActionDetail,
@@ -32,14 +33,19 @@ export const handlers = [
     () => new HttpResponse(null, { status: 204 }),
   ),
 
-  http.get(`${API}/users/me`, () =>
-    HttpResponse.json({
-      ...makeUser(),
+  // `GET /users/me` answers for the session, so it echoes the user the test
+  // signed in instead of minting a new one: the session check must not swap
+  // the logged-in user mid-test.
+  http.get(`${API}/users/me`, () => {
+    const user = useAuthStore.getState().user ?? makeUser();
+
+    return HttpResponse.json({
+      ...user,
       registrationCode: "2026000001",
       course: "Ciência da Computação",
       cndb: null,
-    }),
-  ),
+    });
+  }),
 
   http.get(`${API}/activities`, () =>
     HttpResponse.json({
