@@ -311,6 +311,46 @@ describe("EnrollmentsPage", () => {
     });
   });
 
+  describe("retry after a failed page change", () => {
+    it("retries the page that failed, not the last page that loaded", async () => {
+      const requestedPages: string[] = [];
+      let page2Attempts = 0;
+
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, ({ request }) => {
+          const page = new URL(request.url).searchParams.get("page") ?? "1";
+          requestedPages.push(page);
+
+          if (page === "2") {
+            page2Attempts += 1;
+            if (page2Attempts === 1) return HttpResponse.error();
+          }
+
+          return HttpResponse.json({
+            items: [makeEnrollment({ fullName: `Pessoa da página ${page}` })],
+            total: 25,
+            page: Number(page),
+            limit: 20,
+            totalPresent: 0,
+          });
+        }),
+      );
+
+      const { user } = renderPage();
+
+      await screen.findByText("Pessoa da página 1");
+      await user.click(screen.getByRole("button", { name: "Próxima página" }));
+
+      // Page 2 fails: the error state replaces the list.
+      await screen.findByText(/Falha de comunicação/);
+
+      await user.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+
+      expect(await screen.findByText("Pessoa da página 2")).toBeInTheDocument();
+      expect(requestedPages).toEqual(["1", "2", "2"]);
+    });
+  });
+
   describe("vacancy line", () => {
     const listResponse = () =>
       HttpResponse.json({

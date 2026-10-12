@@ -26,13 +26,16 @@ export function useEnrollments(activityId: string) {
    */
   const runLoad = useCallback(
     async (targetPage: number) => {
+      // Record the page being requested up front, not on success: if this
+      // request fails, the retry button calls goToPage(page) and must ask for
+      // the page that failed, not the last one that happened to load.
+      setPage(targetPage);
       setIsLoading(true);
       setError(null);
 
       try {
         const result = await fetchEnrollments(activityId, targetPage, PAGE_LIMIT);
         setData(result);
-        setPage(targetPage);
       } catch (err) {
         const message =
           err instanceof ApiError
