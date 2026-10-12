@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiError } from "@/services/apiError";
 import { fetchEnrollments } from "./services";
 import { getEnrollmentsErrorMessage } from "./errors";
@@ -20,12 +20,21 @@ export function useEnrollments(activityId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Clicking quickly between pages fires overlapping requests that can settle
+  // out of order. Only the newest one may touch the screen, so a late response
+  // can neither overwrite the current page nor erase a fresher error.
+  const latestRequest = useRef(0);
+
   /**
    * Shared async fetch implementation.
    * Declared outside useEffect so it can also be exposed as goToPage.
    */
   const runLoad = useCallback(
     async (targetPage: number) => {
+      latestRequest.current += 1;
+      const requestId = latestRequest.current;
+      const isCurrent = () => requestId === latestRequest.current;
+
       // Record the page being requested up front, not on success: if this
       // request fails, the retry button calls goToPage(page) and must ask for
       // the page that failed, not the last one that happened to load.
@@ -35,8 +44,12 @@ export function useEnrollments(activityId: string) {
 
       try {
         const result = await fetchEnrollments(activityId, targetPage, PAGE_LIMIT);
+        if (!isCurrent()) return;
+
         setData(result);
       } catch (err) {
+        if (!isCurrent()) return;
+
         const message =
           err instanceof ApiError
             ? getEnrollmentsErrorMessage(err)
@@ -44,7 +57,7 @@ export function useEnrollments(activityId: string) {
         // null means 401 — middleware redirects, we stay silent
         setError(message);
       } finally {
-        setIsLoading(false);
+        if (isCurrent()) setIsLoading(false);
       }
     },
     [activityId],
@@ -59,6 +72,12 @@ export function useEnrollments(activityId: string) {
     }
 
     void initialLoad();
+
+    // Unmounting, or moving to another activity, abandons whatever is in
+    // flight: bumping the counter makes its isCurrent() false.
+    return () => {
+      latestRequest.current += 1;
+    };
   }, [runLoad]);
 
   const totalPages = data ? Math.ceil(data.total / PAGE_LIMIT) : 0;

@@ -15,9 +15,11 @@ export function useActionSlots(activityId: string) {
   useEffect(() => {
     if (!activityId) return;
 
+    let active = true;
+
     getActionById(activityId)
       .then((action) => {
-        if (action) {
+        if (active && action) {
           setSlots(action.slots);
           setAvailableSlots(action.availableSlots);
         }
@@ -25,6 +27,10 @@ export function useActionSlots(activityId: string) {
       .catch(() => {
         // Non-critical: enrollment list is still shown without slot counts.
       });
+
+    return () => {
+      active = false;
+    };
   }, [activityId]);
 
   return { slots, availableSlots };
