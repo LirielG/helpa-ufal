@@ -1,8 +1,8 @@
 import { Calendar, MapPin, Clock, Check, X } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 
-// Copy agreed in the "Decisões" section of #179. The cancel title must not be
-// "Confirmar cancelamento", which the enrollment cancellation modal uses.
+// The cancel title must not be "Confirmar cancelamento", which the enrollment
+// cancellation modal uses.
 const CANCEL_COPY = {
   title: "Cancelar ação",
   body: "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
