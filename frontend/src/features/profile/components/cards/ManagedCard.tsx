@@ -1,12 +1,33 @@
+import { useRef, useState } from "react";
 import { MapPin, Calendar, Pencil, Trash2 } from "lucide-react";
-import type { UserActivity } from "../../types";
-import { useState, useRef } from "react";
-import type { ActionStatus } from "../../../dashboard/types";
-import type { ActivityStatusTransition } from "../../types";
+import type { ActionStatus } from "@/features/dashboard/types";
+import { ApiError } from "@/services/apiError";
+import type { ActivityStatusTransition, UserActivity } from "../../types";
 import { updateActivityStatus, getActivityById } from "../../services";
-import { ApiError } from "../../../../services/apiError";
-import { ConfirmStatusModal } from "../cards/ConfirmStatusModal";
-import { DeleteActionModal } from "../cards/DeleteActionModal";
+import { ConfirmStatusModal } from "./ConfirmStatusModal";
+import { DeleteActionModal } from "./DeleteActionModal";
+
+// The current status first, then only the transitions the backend accepts.
+const STATUS_OPTIONS: Record<
+  ActionStatus,
+  { value: ActionStatus; label: string }[]
+> = {
+  OPEN: [
+    { value: "OPEN", label: "Aberta" },
+    { value: "IN_PROGRESS", label: "Em andamento" },
+    { value: "CANCELLED", label: "Cancelada" },
+  ],
+  IN_PROGRESS: [
+    { value: "IN_PROGRESS", label: "Em andamento" },
+    { value: "COMPLETED", label: "Concluída" },
+    { value: "CANCELLED", label: "Cancelada" },
+  ],
+  COMPLETED: [{ value: "COMPLETED", label: "Concluída" }],
+  CANCELLED: [{ value: "CANCELLED", label: "Cancelada" }],
+};
+
+const NOT_FOUND_MESSAGE =
+  "Esta ação não foi encontrada. Ela pode ter sido removida.";
 
 type ManagedCardProps = {
   activity: UserActivity;
@@ -37,28 +58,26 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
     currentStatus === "COMPLETED" || currentStatus === "CANCELLED";
   const isLocked = errorState?.isLocked === true;
 
-  const getAvailableOptions = (
-    status: ActionStatus,
-  ): { value: ActionStatus; label: string }[] => {
-    switch (status) {
-      case "OPEN":
-        return [
-          { value: "OPEN", label: "Aberta" },
-          { value: "IN_PROGRESS", label: "Em andamento" },
-          { value: "CANCELLED", label: "Cancelada" },
-        ];
-      case "IN_PROGRESS":
-        return [
-          { value: "IN_PROGRESS", label: "Em andamento" },
-          { value: "COMPLETED", label: "Concluída" },
-          { value: "CANCELLED", label: "Cancelada" },
-        ];
-      case "COMPLETED":
-        return [{ value: "COMPLETED", label: "Concluída" }];
-      case "CANCELLED":
-        return [{ value: "CANCELLED", label: "Cancelada" }];
-      default:
-        return [];
+  const reloadAfterConflict = async () => {
+    setErrorState({
+      message:
+        "O status desta ação foi alterado em outro lugar. Exibindo o status atual.",
+    });
+    try {
+      const updated = await getActivityById(activity.id);
+      setCurrentStatus(updated.status);
+    } catch (err: unknown) {
+      const status = err instanceof ApiError ? err.status : undefined;
+      if (status === 401) return;
+
+      setErrorState({
+        message:
+          status === 404
+            ? NOT_FOUND_MESSAGE
+            : "Não foi possível carregar o status atual. Recarregue a página.",
+        // A stale status would only offer transitions that end in another 409.
+        isLocked: true,
+      });
     }
   };
 
@@ -74,57 +93,19 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
       await updateActivityStatus(activity.id, targetStatus);
       setCurrentStatus(targetStatus);
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        if (err.status === 401) {
-          return;
-        }
+      const status = err instanceof ApiError ? err.status : undefined;
 
-        if (err.status === 403) {
-          setErrorState({
-            message: "Você não tem permissão para alterar o status desta ação.",
-          });
-        } else if (err.status === 404) {
-          setErrorState({
-            message:
-              "Esta ação não foi encontrada. Ela pode ter sido removida.",
-            isLocked: true,
-          });
-        } else if (err.status === 409) {
-          setErrorState({
-            message:
-              "O status desta ação foi alterado em outro lugar. Exibindo o status atual.",
-          });
-          try {
-            const updated = await getActivityById(activity.id);
-            setCurrentStatus(updated.status);
-          } catch (reloadErr: unknown) {
-            if (reloadErr instanceof ApiError && reloadErr.status === 401) {
-              return;
-            }
-            if (reloadErr instanceof ApiError && reloadErr.status === 404) {
-              setErrorState({
-                message:
-                  "Esta ação não foi encontrada. Ela pode ter sido removida.",
-                isLocked: true,
-              });
-            } else {
-              // The status on screen is stale, and its transitions would only
-              // trigger another 409.
-              setErrorState({
-                message:
-                  "Não foi possível carregar o status atual. Recarregue a página.",
-                isLocked: true,
-              });
-            }
-          }
-        } else {
-          setErrorState({
-            message:
-              "Não foi possível alterar o status. Verifique sua conexão e tente novamente.",
-            canRetry: true,
-            retryStatus: targetStatus,
-          });
-        }
+      // The HTTP client already ends the session and redirects to /login.
+      if (status === 401) return;
+
+      if (status === 403) {
+        setErrorState({
+          message: "Você não tem permissão para alterar o status desta ação.",
+        });
+      } else if (status === 404) {
+        setErrorState({ message: NOT_FOUND_MESSAGE, isLocked: true });
+      } else if (status === 409) {
+        await reloadAfterConflict();
       } else {
         setErrorState({
           message:
@@ -187,17 +168,16 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
               htmlFor={`status-select-${activity.id}`}
               className="text-xs font-medium text-gray-700"
             >
-              Status:
+              Status
             </label>
             <select
               id={`status-select-${activity.id}`}
-              aria-label="Status"
               value={currentStatus}
               onChange={handleSelectChange}
               disabled={isLoading || isTerminal || isLocked}
               className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {getAvailableOptions(currentStatus).map((opt) => (
+              {STATUS_OPTIONS[currentStatus].map((opt) => (
                 <option
                   key={opt.value}
                   value={opt.value}
