@@ -1,6 +1,20 @@
 import { Calendar, MapPin, Clock, Check, X } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 
+// Copy agreed in the "Decisões" section of #179. The cancel title must not be
+// "Confirmar cancelamento", which the enrollment cancellation modal uses.
+const CANCEL_COPY = {
+  title: "Cancelar ação",
+  body: "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
+  backOut: "Manter ação",
+};
+
+const COMPLETE_COPY = {
+  title: "Concluir ação",
+  body: "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
+  backOut: "Voltar",
+};
+
 type ConfirmStatusModalProps = {
   activity: UserActivity;
   pendingStatus: ActivityStatusTransition;
@@ -17,11 +31,12 @@ export function ConfirmStatusModal({
   onCancel,
 }: ConfirmStatusModalProps) {
   const isCompleted = pendingStatus === "COMPLETED";
+  const copy = isCompleted ? COMPLETE_COPY : CANCEL_COPY;
 
   return (
     <div
       role="dialog"
-      aria-label={isCompleted ? "Concluir ação" : "Cancelar ação"}
+      aria-label={copy.title}
       className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 backdrop-blur-xs"
     >
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl gap-4">
@@ -36,9 +51,7 @@ export function ConfirmStatusModal({
         )}
 
         <div>
-          <h3 className="text-xl font-bold text-[#0A2540]">
-            {isCompleted ? "Concluir ação" : "Cancelar ação"}
-          </h3>
+          <h3 className="text-xl font-bold text-[#0A2540]">{copy.title}</h3>
           <p className="text-xs text-gray-600 mt-1">
             {isCompleted
               ? "Você está prestes a confirmar a conclusão da ação:"
@@ -57,36 +70,38 @@ export function ConfirmStatusModal({
               <MapPin className="size-3.5 text-gray-800" />
               {activity.location}
             </span>
-            <span className="flex items-center gap-2">
-              <Clock className="size-3.5 text-gray-800" />
-              {activity.workloadHours ?? 40} horas
-            </span>
+            {activity.workloadHours !== undefined && (
+              <span className="flex items-center gap-2">
+                <Clock className="size-3.5 text-gray-800" />
+                {activity.workloadHours} horas
+              </span>
+            )}
           </div>
         </div>
 
         <div className="bg-[#FFF8E7] border border-[#F5E0B3] rounded-xl p-3 text-xs text-gray-800 text-left w-full leading-relaxed">
-          <strong>Atenção:</strong> Ao confirmar, você está ciente que a ação
-          não poderá ser reaberta. Os inscritos não serão avisados
-          automaticamente.
+          <strong>Atenção:</strong> {copy.body}
         </div>
 
         <div className="flex items-center justify-between gap-3 w-full mt-1">
           <button
             type="button"
             onClick={onCancel}
-            aria-label={isCompleted ? "Voltar" : "Manter ação"}
-            className="bg-[#C81A17] hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
           >
-            Cancelar
+            {copy.backOut}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            aria-label={isCompleted ? "Concluir ação" : "Cancelar ação"}
-            className="bg-[#0066FF] hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors disabled:opacity-50 cursor-pointer"
+            className={`${
+              isCompleted
+                ? "bg-[#0066FF] hover:bg-blue-700"
+                : "bg-[#C81A17] hover:bg-red-700"
+            } text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors disabled:opacity-50 cursor-pointer`}
           >
-            {isCompleted ? "Confirmar" : "Confirmar"}
+            {copy.title}
           </button>
         </div>
       </div>

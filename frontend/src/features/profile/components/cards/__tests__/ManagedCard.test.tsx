@@ -172,6 +172,61 @@ describe("ManagedCard status control", () => {
     });
   });
 
+  describe("confirmation modal", () => {
+    it.each([
+      [
+        "OPEN",
+        "Cancelada",
+        "Cancelar ação",
+        "Manter ação",
+        "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
+      ],
+      [
+        "IN_PROGRESS",
+        "Concluída",
+        "Concluir ação",
+        "Voltar",
+        "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
+      ],
+    ] as const)(
+      "shows the %s → %s copy and buttons whose visible text matches their name",
+      async (status, option, confirm, backOut, body) => {
+        const { user } = renderCard(managed(status));
+
+        await user.selectOptions(statusSelect(), option);
+
+        const dialog = screen.getByRole("dialog", { name: confirm });
+        expect(
+          within(dialog).getByText(body, { exact: false }),
+        ).toBeInTheDocument();
+        // Voice control users say what they see; a button reading "Cancelar"
+        // that keeps the action would do the opposite of what they asked.
+        expect(
+          within(dialog).getByRole("button", { name: confirm }),
+        ).toHaveTextContent(new RegExp(`^${confirm}$`));
+        expect(
+          within(dialog).getByRole("button", { name: backOut }),
+        ).toHaveTextContent(new RegExp(`^${backOut}$`));
+      },
+    );
+
+    it("shows the workload only when the action has one", async () => {
+      const { user } = renderCard(
+        makeManagedActivity({
+          id: ACTION_ID,
+          activityStatus: "OPEN",
+          workloadHours: undefined,
+        }),
+      );
+
+      await user.selectOptions(statusSelect(), "Cancelada");
+
+      expect(
+        within(screen.getByRole("dialog")).queryByText(/horas/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("cancelling an action", () => {
     it("asks for confirmation in a modal titled 'Cancelar ação'", async () => {
       recordPatches(respondWithStatus("CANCELLED"));
