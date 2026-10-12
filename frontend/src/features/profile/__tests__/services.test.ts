@@ -2,9 +2,26 @@ import { describe, expect, it } from "vitest";
 import { API, http, HttpResponse, server } from "@/test/http";
 import { makeAction } from "@/test/factories";
 import { ApiError } from "@/services/apiError";
-import { updateActivityStatus } from "../services";
+import { fetchUserActivities, updateActivityStatus } from "../services";
 
 const ACTION_ID = "act-status";
+
+describe("fetchUserActivities", () => {
+  it("rejects with an ApiError so the list can show its loading error", async () => {
+    server.use(
+      http.get(`${API}/activities`, () =>
+        HttpResponse.json(
+          { status: 500, message: "Internal server error." },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    await expect(fetchUserActivities("managed")).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
+});
 
 describe("updateActivityStatus", () => {
   it("sends PATCH /activities/:id/status with only the status in the body", async () => {
