@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   API,
+  delay,
   http,
   HttpResponse,
   makeActionDetail,
@@ -10,6 +11,7 @@ import {
   server,
   waitFor,
 } from "@/test";
+
 
 import { EnrollmentsPage } from "@/pages/EnrollmentsPage";
 
@@ -412,12 +414,29 @@ describe("EnrollmentsPage", () => {
   });
 
   describe("loading state", () => {
-    it("shows loading indicator while fetching", () => {
-      // The default handler is delayed via msw; the component should show
-      // "Carregando inscritos…" before the response arrives.
+    it("shows loading indicator while fetching", async () => {
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, async () => {
+          await delay(100);
+          return HttpResponse.json({
+            items: [],
+            total: 0,
+            page: 1,
+            limit: 20,
+            totalPresent: 0,
+          });
+        }),
+      );
+
       renderPage();
 
       expect(screen.getByText(/Carregando inscritos/)).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Carregando inscritos/),
+        ).not.toBeInTheDocument();
+      });
     });
   });
 });
