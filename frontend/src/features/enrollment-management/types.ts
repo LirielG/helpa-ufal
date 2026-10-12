@@ -1,10 +1,10 @@
 /**
- * Tri-state attendance flag returned by #145:
+ * Tri-state attendance flag:
  * - null  = not recorded yet (structural state, not an error)
  * - true  = presence confirmed
  * - false = absence recorded
  *
- * Never render null as "absent" — see migration note in #150.
+ * Never render null as "absent".
  */
 export type AttendanceStatus = null | true | false;
 
@@ -24,7 +24,7 @@ export interface Enrollment {
   confirmedWorkloadHours: number;
 }
 
-/** Response envelope from GET /activities/:activityId/enrollments (#145). */
+/** Response envelope from GET /activities/:activityId/enrollments. */
 export interface EnrollmentsResponse {
   items: Enrollment[];
   total: number;

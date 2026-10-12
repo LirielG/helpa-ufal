@@ -86,10 +86,8 @@ describe("EnrollmentsPage", () => {
       });
     });
 
-    it("renders normally with attendanceConfirmed null and confirmedWorkloadHours 0 (pre-#146 state)", async () => {
-
-      // This is the structural state before #146 is delivered.
-      // The page must NOT treat it as an error.
+    it("renders normally with attendanceConfirmed null and confirmedWorkloadHours 0", async () => {
+      // The page must NOT treat unrecorded attendance as an error.
       const enrollment = makeEnrollment({
         attendanceConfirmed: null,
         confirmedWorkloadHours: 0,

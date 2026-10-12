@@ -32,7 +32,6 @@ export function EnrollmentsPage() {
       footer={<Footer />}
     >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-        {/* Page title + back navigation */}
         <div className="flex items-center gap-4">
           <Button
             variant="secondary"
@@ -44,14 +43,12 @@ export function EnrollmentsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Inscritos</h1>
         </div>
 
-        {/* Loading state */}
         {isLoading && (
           <p className="text-gray-500 text-center py-12" role="status">
             Carregando inscritos…
           </p>
         )}
 
-        {/* Error state — null error = 401, middleware already redirected */}
         {!isLoading && error !== null && error !== undefined && (
           <div className="space-y-4">
             <Alert type="error" message={error} />
@@ -65,7 +62,6 @@ export function EnrollmentsPage() {
           </div>
         )}
 
-        {/* Content — renders normally even when attendanceConfirmed is null */}
         {!isLoading && error === null && data && (
           <>
             <EnrollmentListHeader
@@ -75,7 +71,6 @@ export function EnrollmentsPage() {
             />
 
             {data.items.length === 0 ? (
-              /* Empty state */
               <div className="text-center py-16 text-gray-500">
                 <p className="text-lg font-medium">Nenhum inscrito ainda.</p>
                 <p className="text-sm mt-1">

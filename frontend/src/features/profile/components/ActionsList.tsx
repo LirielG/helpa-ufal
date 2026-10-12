@@ -44,7 +44,6 @@ export function ActionsList() {
 
   const isManaged = activeSubTab === "managed";
 
-
   return (
     <div className="space-y-6">
       <nav className="flex items-center gap-2 border-b border-gray-200">

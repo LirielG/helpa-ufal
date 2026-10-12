@@ -151,9 +151,8 @@ export function makeRegisterRequest(
 /**
  * Factory for Enrollment items returned by GET /activities/:id/enrollments.
  *
- * Default values reflect the pre-#146 state: attendanceConfirmed is null and
- * confirmedWorkloadHours is 0 — the structural "nothing recorded yet" state,
- * not an error. Tests that exercise the #146 flow should override these.
+ * Default values have attendanceConfirmed as null and confirmedWorkloadHours as 0
+ * — the structural "nothing recorded yet" state, not an error.
  */
 export function makeEnrollment(
   overrides: Partial<Enrollment> = {},
@@ -170,4 +169,3 @@ export function makeEnrollment(
     ...overrides,
   };
 }
-

@@ -62,7 +62,7 @@ export const handlers = [
     }),
   ),
 
-  // Default happy-path handler for the enrollment list endpoint (#145).
+  // Default happy-path handler for the enrollment list endpoint.
   // Tests that need error scenarios override this with server.use(...).
   http.get(`${API}/activities/:id/enrollments`, () =>
     HttpResponse.json({

@@ -71,7 +71,6 @@ export function AppRoutes() {
         }
       />
 
-
       <Route
         path="/profile"
         element={
