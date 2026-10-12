@@ -70,8 +70,8 @@ export function EnrollmentsPage() {
           <>
             <EnrollmentListHeader
               total={data.total}
-              slots={slots ?? data.total}
-              availableSlots={availableSlots ?? 0}
+              slots={slots}
+              availableSlots={availableSlots}
             />
 
             {data.items.length === 0 ? (

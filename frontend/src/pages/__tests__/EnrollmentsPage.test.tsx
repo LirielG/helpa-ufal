@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/render";
 import { http, HttpResponse, server } from "@/test/http";
-import { makeEnrollment } from "@/test/factories";
+import { makeActionDetail, makeEnrollment } from "@/test/factories";
 
 import { EnrollmentsPage } from "@/pages/EnrollmentsPage";
 
@@ -308,6 +308,51 @@ describe("EnrollmentsPage", () => {
       expect(
         screen.queryByRole("navigation", { name: /Paginação/i }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("vacancy line", () => {
+    const listResponse = () =>
+      HttpResponse.json({
+        items: [makeEnrollment({ fullName: "Maria Silva" })],
+        total: 3,
+        page: 1,
+        limit: 20,
+        totalPresent: 0,
+      });
+
+    it("shows the filled/total slots once the action is loaded", async () => {
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, listResponse),
+        http.get(`${API}/activities/:id`, () =>
+          HttpResponse.json(
+            makeActionDetail({ id: "act-1", slots: 10, availableSlots: 7 }),
+          ),
+        ),
+      );
+
+      renderPage();
+
+      expect(
+        await screen.findByText(/3 \/ 10 vagas preenchidas/),
+      ).toBeInTheDocument();
+    });
+
+    it("omits the vacancy line, instead of showing N / N, when the slot lookup fails", async () => {
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, listResponse),
+        http.get(`${API}/activities/:id`, () =>
+          HttpResponse.json({ message: "boom" }, { status: 500 }),
+        ),
+      );
+
+      renderPage();
+
+      await waitFor(() => {
+        expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/vagas preenchidas/)).not.toBeInTheDocument();
     });
   });
 
