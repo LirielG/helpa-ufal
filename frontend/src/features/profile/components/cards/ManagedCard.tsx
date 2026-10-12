@@ -26,7 +26,7 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
 
   const [errorState, setErrorState] = useState<{
     message: string;
-    isNotFound?: boolean;
+    isLocked?: boolean;
     canRetry?: boolean;
     retryStatus?: ActivityStatusTransition;
   } | null>(null);
@@ -35,7 +35,7 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
 
   const isTerminal =
     currentStatus === "COMPLETED" || currentStatus === "CANCELLED";
-  const isNotFound = errorState?.isNotFound === true;
+  const isLocked = errorState?.isLocked === true;
 
   const getAvailableOptions = (
     status: ActionStatus,
@@ -87,7 +87,7 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
           setErrorState({
             message:
               "Esta ação não foi encontrada. Ela pode ter sido removida.",
-            isNotFound: true,
+            isLocked: true,
           });
         } else if (err.status === 409) {
           setErrorState({
@@ -98,11 +98,22 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
             const updated = await getActivityById(activity.id);
             setCurrentStatus(updated.status);
           } catch (reloadErr: unknown) {
+            if (reloadErr instanceof ApiError && reloadErr.status === 401) {
+              return;
+            }
             if (reloadErr instanceof ApiError && reloadErr.status === 404) {
               setErrorState({
                 message:
                   "Esta ação não foi encontrada. Ela pode ter sido removida.",
-                isNotFound: true,
+                isLocked: true,
+              });
+            } else {
+              // The status on screen is stale, and its transitions would only
+              // trigger another 409.
+              setErrorState({
+                message:
+                  "Não foi possível carregar o status atual. Recarregue a página.",
+                isLocked: true,
               });
             }
           }
@@ -183,7 +194,7 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
               aria-label="Status"
               value={currentStatus}
               onChange={handleSelectChange}
-              disabled={isLoading || isTerminal || isNotFound}
+              disabled={isLoading || isTerminal || isLocked}
               className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {getAvailableOptions(currentStatus).map((opt) => (

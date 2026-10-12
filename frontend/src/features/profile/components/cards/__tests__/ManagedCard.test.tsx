@@ -22,6 +22,8 @@ const NOT_FOUND_MESSAGE =
   "Esta ação não foi encontrada. Ela pode ter sido removida.";
 const CONFLICT_MESSAGE =
   "O status desta ação foi alterado em outro lugar. Exibindo o status atual.";
+const RELOAD_FAILED_MESSAGE =
+  "Não foi possível carregar o status atual. Recarregue a página.";
 const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
 
@@ -417,6 +419,30 @@ describe("ManagedCard status control", () => {
       await waitFor(() =>
         expect(screen.getByRole("alert")).toHaveTextContent(NOT_FOUND_MESSAGE),
       );
+      expect(statusSelect()).toBeDisabled();
+    });
+
+    it("stops offering transitions when the reload after a 409 fails", async () => {
+      recordPatches(
+        respondWithError(
+          409,
+          "Activity is already CANCELLED and cannot be transitioned.",
+        ),
+      );
+      server.use(
+        http.get(`${API}/activities/${ACTION_ID}`, () => HttpResponse.error()),
+      );
+      const { user } = renderCard(managed("OPEN"));
+
+      await user.selectOptions(statusSelect(), "Em andamento");
+
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          RELOAD_FAILED_MESSAGE,
+        ),
+      );
+      // The displayed status is stale, so offering its transitions again
+      // would only lead to another 409.
       expect(statusSelect()).toBeDisabled();
     });
 
