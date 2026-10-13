@@ -51,8 +51,10 @@ function editableAction(
 }
 
 function mockAction(action: ActionDetail = editableAction()) {
+  // The literal id, not `:id`: an override on `:id` would also answer
+  // GET /activities/filters, which the area field calls.
   server.use(
-    http.get(`${API}/activities/:id`, () => HttpResponse.json(action)),
+    http.get(`${API}/activities/${ACTION_ID}`, () => HttpResponse.json(action)),
   );
 
   return action;
@@ -114,6 +116,30 @@ function optionLabels(select: HTMLElement) {
     .map((option) => option.textContent);
 }
 
+function getAreaField() {
+  return screen.getByLabelText("Área de atuação");
+}
+
+/**
+ * The area field is free text with a `<datalist>` of suggestions, so the
+ * suggestions are the options of the list the input points to.
+ */
+function areaSuggestions(): string[] {
+  const datalist = (getAreaField() as HTMLInputElement).list;
+
+  if (!datalist) return [];
+
+  return within(datalist)
+    .queryAllByRole("option", { hidden: true })
+    .map((option) => (option as HTMLOptionElement).value);
+}
+
+function serveAreas(areas: string[]) {
+  server.use(
+    http.get(`${API}/activities/filters`, () => HttpResponse.json({ areas })),
+  );
+}
+
 describe("EditAction", () => {
   it("loads the action from the API into the form", async () => {
     const action = mockAction();
@@ -166,7 +192,7 @@ describe("EditAction", () => {
     expect(screen.queryByText(/respons[áa]vel/i)).not.toBeInTheDocument();
   });
 
-  it("offers the type, format, area and campus vocabulary closed in #171", async () => {
+  it("offers the type, format and campus vocabulary closed in #171", async () => {
     mockAction();
 
     renderEditAction();
@@ -184,13 +210,6 @@ describe("EditAction", () => {
       "Presencial",
       "On-line",
       "Híbrido",
-    ]);
-    expect(optionLabels(screen.getByLabelText("Área de atuação"))).toEqual([
-      "Robótica",
-      "Educação",
-      "Saúde",
-      "Meio Ambiente",
-      "Arquitetura",
     ]);
     expect(optionLabels(screen.getByLabelText("Campus"))).toEqual([
       "UFAL - Campus Maceió",
@@ -295,7 +314,7 @@ describe("EditAction", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
-  it("keeps an action editable when its area is outside the closed list", async () => {
+  it("keeps an action editable when its area is outside the suggestions", async () => {
     mockAction(editableAction({ area: "Tecnologia e Inovação" }));
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
@@ -313,6 +332,84 @@ describe("EditAction", () => {
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith({ title: "Oficina de Robótica" }),
     );
+  });
+
+  it("suggests the areas returned by GET /activities/filters and nothing else", async () => {
+    mockAction();
+    serveAreas(["Robótica Educacional", "Saúde", "Saude"]);
+
+    renderEditAction();
+
+    await findTitleField();
+
+    await waitFor(() =>
+      expect(areaSuggestions()).toEqual([
+        "Robótica Educacional",
+        "Saúde",
+        "Saude",
+      ]),
+    );
+  });
+
+  it("sends a typed area that is not among the suggestions", async () => {
+    mockAction();
+    serveAreas(["Robótica", "Saúde"]);
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "Astronomia Amadora");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+  });
+
+  it("trims the spaces around the area before sending it", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "  Astronomia Amadora  ");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+  });
+
+  it("still saves the area when the suggestions fail to load", async () => {
+    mockAction();
+    server.use(
+      http.get(`${API}/activities/filters`, () =>
+        HttpResponse.json(
+          { message: "Internal server error." },
+          { status: 500 },
+        ),
+      ),
+    );
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "Astronomia Amadora");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
   });
 
   it("makes no request and stays on the form when nothing changed", async () => {
@@ -536,7 +633,7 @@ describe("EditAction", () => {
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(
       http.get(
-        `${API}/activities/:id`,
+        `${API}/activities/${ACTION_ID}`,
         () => new HttpResponse(null, { status: 404 }),
       ),
     );

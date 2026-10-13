@@ -60,7 +60,7 @@ async function fillStep1(user: UserEvent) {
     registerDialog().getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
   );
-  await user.selectOptions(
+  await user.type(
     registerDialog().getByLabelText(/Área de atuação/i),
     "Educação",
   );

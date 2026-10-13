@@ -1,18 +1,49 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@/test";
+import { render, screen, waitFor, fireEvent, within } from "@/test";
 import { ActionRegister } from "../ActionForm";
-import { futureDateInput, http, HttpResponse, server } from "@/test";
+import { API, futureDateInput, http, HttpResponse, server } from "@/test";
 import type { UserEvent } from "@testing-library/user-event";
 
-async function fillStep1(user: UserEvent) {
+function getAreaField() {
+  return screen.getByLabelText("Área de atuação");
+}
+
+/**
+ * The area field is free text with a `<datalist>` of suggestions, so the
+ * suggestions are the options of the list the input points to.
+ */
+function areaSuggestions(): string[] {
+  const datalist = (getAreaField() as HTMLInputElement).list;
+
+  if (!datalist) return [];
+
+  return within(datalist)
+    .queryAllByRole("option", { hidden: true })
+    .map((option) => (option as HTMLOptionElement).value);
+}
+
+/** Replaces the create handler with a spy over the request body. */
+function spyOnCreate() {
+  const onRequest = vi.fn();
+
+  server.use(
+    http.post(`${API}/activities`, async ({ request }) => {
+      onRequest(await request.json());
+      return HttpResponse.json({ id: "nova-acao-123" }, { status: 201 });
+    }),
+  );
+
+  return onRequest;
+}
+
+async function fillStep1(user: UserEvent, area = "Educação") {
   await user.type(
     screen.getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
   );
 
-  const selects = screen.getAllByRole("combobox");
-  await user.selectOptions(selects[0], "Educação");
-  await user.selectOptions(selects[1], "EXTENSION");
+  await user.type(getAreaField(), area);
+  await user.selectOptions(screen.getByLabelText("Tipo da ação"), "EXTENSION");
 
   await user.click(screen.getByRole("button", { name: /Próximo/i }));
 
@@ -173,6 +204,117 @@ describe("ActionRegister", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Não foi possível criar a ação. Tente novamente.",
       );
+    });
+  });
+
+  describe("area field", () => {
+    function serveAreas(areas: string[]) {
+      server.use(
+        http.get(`${API}/activities/filters`, () =>
+          HttpResponse.json({ areas }),
+        ),
+      );
+    }
+
+    async function createWithArea(user: UserEvent, area: string) {
+      await fillStep1(user, area);
+      await fillStep2(user);
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+    }
+
+    it("suggests the areas returned by GET /activities/filters and nothing else", async () => {
+      serveAreas(["Robótica Educacional", "Saúde", "Saude"]);
+
+      render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await waitFor(() =>
+        expect(areaSuggestions()).toEqual([
+          "Robótica Educacional",
+          "Saúde",
+          "Saude",
+        ]),
+      );
+    });
+
+    it("creates the action with an area that is not among the suggestions", async () => {
+      serveAreas(["Educação", "Saúde"]);
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await createWithArea(user, "Astronomia Amadora");
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ area: "Astronomia Amadora" }),
+        ),
+      );
+      expect(
+        await screen.findByText("Sua ação foi registrada com sucesso!"),
+      ).toBeInTheDocument();
+    });
+
+    it("sends a chosen suggestion exactly as suggested", async () => {
+      serveAreas(["Saúde da Família", "Meio Ambiente"]);
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await waitFor(() => expect(areaSuggestions()).toHaveLength(2));
+      const [suggestion] = areaSuggestions();
+
+      await createWithArea(user, suggestion);
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ area: "Saúde da Família" }),
+        ),
+      );
+    });
+
+    it("trims the spaces around the area before sending it", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await createWithArea(user, "  Astronomia Amadora  ");
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ area: "Astronomia Amadora" }),
+        ),
+      );
+    });
+
+    it("still creates the action when the suggestions fail to load", async () => {
+      server.use(
+        http.get(`${API}/activities/filters`, () =>
+          HttpResponse.json(
+            { message: "Internal server error." },
+            { status: 500 },
+          ),
+        ),
+      );
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await createWithArea(user, "Astronomia Amadora");
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ area: "Astronomia Amadora" }),
+        ),
+      );
+      expect(
+        await screen.findByText("Sua ação foi registrada com sucesso!"),
+      ).toBeInTheDocument();
     });
   });
 });
