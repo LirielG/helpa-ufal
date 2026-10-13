@@ -37,13 +37,10 @@ async function fillStep2(user: UserEvent) {
     "https://meet.google.com/abc",
   );
 
-  fireEvent.change(
-    screen.getByLabelText("Início", { selector: "#startDate" }),
-    {
-      target: { value: futureDateInput() },
-    },
-  );
-  fireEvent.change(screen.getByLabelText("Fim", { selector: "#endDate" }), {
+  fireEvent.change(screen.getByLabelText("Data de início"), {
+    target: { value: futureDateInput() },
+  });
+  fireEvent.change(screen.getByLabelText("Data de encerramento"), {
     target: { value: futureDateInput() },
   });
 }
@@ -174,5 +171,43 @@ describe("ActionRegister", () => {
         "Não foi possível criar a ação. Tente novamente.",
       );
     });
+  });
+
+  it("labels the fields the same way as the edit form", async () => {
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    expect(screen.getByLabelText("Tipo da ação")).toBeInTheDocument();
+
+    await fillStep1(user);
+
+    for (const label of [
+      "Número de vagas",
+      "Data de início",
+      "Data de encerramento",
+      "Horário de início",
+      "Horário de encerramento",
+    ]) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("shows the link field only for online and hybrid actions", async () => {
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user);
+    const format = screen.getByLabelText("Formato da ação");
+
+    await user.selectOptions(format, "IN_PERSON");
+    expect(screen.queryByLabelText(/link/i)).not.toBeInTheDocument();
+
+    await user.selectOptions(format, "ONLINE");
+    expect(screen.getByLabelText("Link para o evento")).toBeInTheDocument();
+
+    await user.selectOptions(format, "HYBRID");
+    expect(screen.getByLabelText("Link para o evento")).toBeInTheDocument();
   });
 });
