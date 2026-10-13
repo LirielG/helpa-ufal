@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { render, http, HttpResponse, server } from "@/test";
+import { render, futureDateInput, http, HttpResponse, server } from "@/test";
 import { useActionRegisterStore } from "@/stores/actionRegisterStore";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
@@ -102,13 +102,13 @@ async function fillStep2(user: UserEvent) {
       selector: 'input[type="date"]',
     }),
     {
-      target: { value: "2026-10-10" },
+      target: { value: futureDateInput() },
     },
   );
   fireEvent.change(
     registerDialog().getByLabelText(/Fim/i, { selector: 'input[type="date"]' }),
     {
-      target: { value: "2026-10-10" },
+      target: { value: futureDateInput() },
     },
   );
 }

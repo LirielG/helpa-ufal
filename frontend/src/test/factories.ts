@@ -158,3 +158,13 @@ export function makeRegisterRequest(
     ...overrides,
   };
 }
+
+/**
+ * A `YYYY-MM-DD` value for date inputs, `daysAhead` days from now. Forms that
+ * reject past dates need this instead of a fixed date, which expires.
+ */
+export function futureDateInput(daysAhead = 30): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  return date.toISOString().split("T")[0];
+}

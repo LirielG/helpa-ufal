@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@/test";
 import { ActionRegister } from "../ActionForm";
-import { http, HttpResponse, server } from "@/test";
+import { futureDateInput, http, HttpResponse, server } from "@/test";
 import type { UserEvent } from "@testing-library/user-event";
 
 async function fillStep1(user: UserEvent) {
@@ -40,11 +40,11 @@ async function fillStep2(user: UserEvent) {
   fireEvent.change(
     screen.getByLabelText("Início", { selector: "#startDate" }),
     {
-      target: { value: "2026-10-10" },
+      target: { value: futureDateInput() },
     },
   );
   fireEvent.change(screen.getByLabelText("Fim", { selector: "#endDate" }), {
-    target: { value: "2026-10-10" },
+    target: { value: futureDateInput() },
   });
 }
 
