@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -17,7 +16,6 @@ import type { UpdateProfileRequest } from "../types";
 import bgDashboard from "../assets/bg.svg";
 
 export function Profile() {
-  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -86,10 +84,7 @@ export function Profile() {
   };
 
   return (
-    <DashboardShell
-      header={<DashboardHeader onOpenRegister={() => navigate("/dashboard")} />}
-      footer={<Footer />}
-    >
+    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       <div
         className="w-full flex-1"
         style={{

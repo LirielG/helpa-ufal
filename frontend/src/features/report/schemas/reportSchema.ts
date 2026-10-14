@@ -1,20 +1,22 @@
 import { z } from "zod";
-import { REPORT_REASONS } from "../constants/reportReasons";
+import { REPORT_REASONS, type ReportReason } from "../constants/reportReasons";
+
+export const REPORT_DESCRIPTION_MAX_LENGTH = 500;
 
 const reportReasonValues = REPORT_REASONS.map((reason) => reason.value) as [
-  string,
-  ...string[],
+  ReportReason,
+  ...ReportReason[],
 ];
 
 export const reportSchema = z.object({
-  reasons: z
-    .array(z.enum(reportReasonValues))
-    .min(1, "Selecione ao menos um motivo"),
-  details: z
+  category: z.enum(reportReasonValues, { error: "Selecione um motivo" }),
+  description: z
     .string()
     .trim()
-    .min(1, "Descreva o motivo da denúncia")
-    .max(1000, "Limite de 1000 caracteres"),
+    .max(
+      REPORT_DESCRIPTION_MAX_LENGTH,
+      `Limite de ${REPORT_DESCRIPTION_MAX_LENGTH} caracteres`,
+    ),
 });
 
 export type ReportFormValues = z.infer<typeof reportSchema>;

@@ -1,12 +1,22 @@
-import { api } from "../../services";
+import { api, authService } from "../../services";
 import { useAuthStore } from "../../stores/authStore";
 import type { UpdateProfileRequest } from "../../types";
 import { formatDate } from "../../utils/date";
+import type {
+  ActivityStatus,
+  ActivityStatusTransition,
+  UpdateActivityStatusRequest,
+  UserActivity,
+} from "./types";
+import type { UserProfile } from "../../types/profile";
 import type { Action, PaginatedResponse } from "../dashboard/types";
-import type { ActivityStatus, UserActivity, UserProfile } from "./types";
+import type { ActionDetail } from "../action-detail/types";
 
+// The one `/users/me` client lives on authService; the profile screen asks for
+// the same resource through it, so the session check and this screen cannot
+// drift apart on the response shape.
 export async function getProfile(): Promise<UserProfile> {
-  return await api.get<UserProfile>("/users/me");
+  return authService.me();
 }
 
 //Changes made here were done solely to avoid errors in Profile.tsx
@@ -90,9 +100,25 @@ export async function fetchUserActivities(
         location: action.campus ? `Campus ${action.campus}` : "Local não informado",
         date: formatDate(action.startDate),
         status: filter,
+        activityStatus: action.status,
         workloadHours: action.details?.workloadHours,
       };
     });
 
   return mappedList;
+}
+
+export async function updateActivityStatus(
+  id: string,
+  status: ActivityStatusTransition,
+): Promise<Omit<Action, "details">> {
+  const body: UpdateActivityStatusRequest = { status };
+  return await api.patch<Omit<Action, "details">>(
+    `/activities/${id}/status`,
+    body,
+  );
+}
+
+export async function getActivityById(id: string): Promise<ActionDetail> {
+  return await api.get<ActionDetail>(`/activities/${id}`);
 }

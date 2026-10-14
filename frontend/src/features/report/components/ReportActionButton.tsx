@@ -3,12 +3,19 @@ import { useId } from "react";
 type ReportActionButtonProps = {
   onClick: () => void;
   disabled?: boolean;
+  /**
+   * The user has already reported this action. Uses aria-disabled rather than
+   * disabled so the button stays focusable: the modal returns focus to it on
+   * close, and a disabled button would drop focus to <body>.
+   */
+  reported?: boolean;
   className?: string;
 };
 
 export function ReportActionButton({
   onClick,
   disabled = false,
+  reported = false,
   className = "",
 }: ReportActionButtonProps) {
   const maskId = useId();
@@ -16,19 +23,19 @@ export function ReportActionButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={reported ? undefined : onClick}
       disabled={disabled}
-      aria-label="Denunciar ação"
-      title="Denunciar ação"
+      aria-disabled={reported || undefined}
       className={[
-        "inline-flex h-8 w-8 items-center justify-center cursor-pointer",
-        "transition-transform duration-200 hover:scale-105",
+        "inline-flex items-center justify-center gap-2 rounded-lg px-2 py-1 cursor-pointer",
+        "text-sm font-medium text-[#d93636] transition hover:underline",
         "focus:outline-none focus:ring-2 focus:ring-red-200",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
+        "disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline",
+        "aria-disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:no-underline",
         className,
       ].join(" ")}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
         <defs>
           <mask id={maskId}>
             <rect x="0" y="0" width="24" height="24" fill="#ffffff" />
@@ -42,6 +49,7 @@ export function ReportActionButton({
           mask={`url(#${maskId})`}
         />
       </svg>
+      {reported ? "Ação denunciada" : "Denunciar ação"}
     </button>
   );
 }
