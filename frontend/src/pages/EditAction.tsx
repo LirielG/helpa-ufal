@@ -27,7 +27,7 @@ import type {
   ActionAddressPayload,
   UpdateActionPayload,
 } from "../features/action-edit/types";
-import { toInputDate } from "../utils";
+import { toInputDate, toInputTime } from "../utils";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -121,6 +121,8 @@ export function EditAction() {
         description: action.details?.description ?? "",
         startDate: toInputDate(action.startDate),
         endDate: toInputDate(action.endDate),
+        startTime: toInputTime(action.startDate),
+        endTime: toInputTime(action.endDate),
         type: action.type,
         slots: action.slots,
         format: action.details?.format,
@@ -157,11 +159,20 @@ export function EditAction() {
 
     if (dirtyFields.title) payload.title = data.title;
     if (dirtyFields.description) payload.description = data.description;
-    if (dirtyFields.startDate) {
-      payload.startDate = new Date(`${data.startDate}T00:00:00`).toISOString();
-    }
-    if (dirtyFields.endDate) {
-      payload.endDate = new Date(`${data.endDate}T23:59:59.999`).toISOString();
+    if (
+      dirtyFields.startDate ||
+      dirtyFields.startTime ||
+      dirtyFields.endDate ||
+      dirtyFields.endTime
+    ) {
+      payload.startDate = new Date(
+        `${data.startDate}T${data.startTime}:00`,
+      ).toISOString();
+      //}
+      //if (dirtyFields.endDate || dirtyFields.endTime) {
+      payload.endDate = new Date(
+        `${data.endDate}T${data.endTime}:00`,
+      ).toISOString();
     }
     if (dirtyFields.type) payload.type = data.type;
     if (dirtyFields.slots) payload.slots = data.slots;
@@ -293,27 +304,76 @@ export function EditAction() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  size="sm"
-                  type="date"
-                  label="Data de início"
-                  error={errors.startDate?.message}
-                  {...register("startDate")}
-                />
-                <Input
-                  size="sm"
-                  type="date"
-                  label="Data de encerramento"
-                  error={errors.endDate?.message}
-                  {...register("endDate")}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <fieldset>
+                  <legend className="block text-sm font-medium text-gray-700 mb-1">
+                    Horário
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Início
+                      </label>
+                      <Input
+                        size="sm"
+                        type="time"
+                        aria-label="Horário de início"
+                        error={errors.startTime?.message}
+                        {...register("startTime")}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Fim
+                      </label>
+                      <Input
+                        size="sm"
+                        type="time"
+                        aria-label="Horário de encerramento"
+                        error={errors.endTime?.message}
+                        {...register("endTime")}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend className="block text-sm font-medium text-gray-700 mb-1">
+                    Data
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Início
+                      </label>
+                      <Input
+                        size="sm"
+                        type="date"
+                        aria-label="Data de início"
+                        error={errors.startDate?.message}
+                        {...register("startDate")}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Fim
+                      </label>
+                      <Input
+                        size="sm"
+                        type="date"
+                        aria-label="Data de encerramento"
+                        error={errors.endDate?.message}
+                        {...register("endDate")}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <Select
                   size="sm"
-                  label="Tipo de ação"
+                  label="Tipo da ação"
                   options={ACTION_TYPE_OPTIONS}
                   error={errors.type?.message}
                   {...register("type")}
@@ -323,7 +383,7 @@ export function EditAction() {
                   type="number"
                   min={1}
                   placeholder="0"
-                  label="Qtde. de Vagas"
+                  label="Número de vagas"
                   error={errors.slots?.message}
                   {...register("slots")}
                 />
@@ -356,13 +416,15 @@ export function EditAction() {
                   error={errors.area?.message}
                   {...register("area")}
                 />
-                <Input
-                  size="sm"
-                  label="Link do evento"
-                  placeholder="(Opcional para presencial)"
-                  error={errors.url?.message}
-                  {...register("url")}
-                />
+                {currentFormat !== "IN_PERSON" && (
+                  <Input
+                    size="sm"
+                    label="Link para o evento"
+                    placeholder="Ex: https://meet.google.com/abc-defg-hij"
+                    error={errors.url?.message}
+                    {...register("url")}
+                  />
+                )}
               </div>
             </div>
 
