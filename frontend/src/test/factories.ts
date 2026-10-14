@@ -1,8 +1,10 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
 import type { Action } from "@/features/dashboard/types";
 import type { ActionDetail } from "@/features/action-detail/types";
+import type { Enrollment } from "@/features/enrollment-management/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
+
 
 let counter = 0;
 
@@ -155,6 +157,28 @@ export function makeRegisterRequest(
     userType: "STUDENT",
     course: "Ciência da Computação",
     registrationCode: unique("mat"),
+    ...overrides,
+  };
+}
+
+/**
+ * Factory for Enrollment items returned by GET /activities/:id/enrollments.
+ *
+ * Default values have attendanceConfirmed as null and confirmedWorkloadHours as 0
+ * — the structural "nothing recorded yet" state, not an error.
+ */
+export function makeEnrollment(
+  overrides: Partial<Enrollment> = {},
+): Enrollment {
+  return {
+    enrollmentId: unique("enrollment"),
+    userId: unique("user"),
+    fullName: "Voluntário de Teste",
+    email: `${unique("vol")}@ufal.br`,
+    registrationCode: unique("mat"),
+    status: "ENROLLED",
+    attendanceConfirmed: null,
+    confirmedWorkloadHours: 0,
     ...overrides,
   };
 }

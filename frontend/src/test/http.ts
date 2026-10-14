@@ -5,9 +5,11 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   makeAction,
   makeActionDetail,
+  makeEnrollment,
   makeSigaaActivity,
   makeUser,
 } from "./factories";
+
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -72,6 +74,18 @@ export const handlers = [
       total: 1,
       page: 1,
       limit: 10,
+    }),
+  ),
+
+  // Default happy-path handler for the enrollment list endpoint.
+  // Tests that need error scenarios override this with server.use(...).
+  http.get(`${API}/activities/:id/enrollments`, () =>
+    HttpResponse.json({
+      items: [makeEnrollment()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPresent: 0,
     }),
   ),
 ];

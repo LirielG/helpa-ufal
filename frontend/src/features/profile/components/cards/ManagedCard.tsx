@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MapPin, Calendar, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Calendar, Pencil, Trash2, Users } from "lucide-react";
 import type { ActionStatus } from "@/features/dashboard/types";
 import { ApiError } from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
@@ -32,9 +32,14 @@ const NOT_FOUND_MESSAGE =
 type ManagedCardProps = {
   activity: UserActivity;
   onEdit: (id: string) => void;
+  onManageEnrollments: (id: string) => void;
 };
 
-export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
+export function ManagedCard({
+  activity,
+  onEdit,
+  onManageEnrollments,
+}: ManagedCardProps) {
   const [currentStatus, setCurrentStatus] = useState<ActionStatus>(
     activity.activityStatus,
   );
@@ -205,6 +210,14 @@ export function ManagedCard({ activity, onEdit }: ManagedCardProps) {
               className="text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
               <Pencil className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onManageEnrollments(activity.id)}
+              aria-label="Gerenciar inscritos"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            >
+              <Users className="size-4" />
             </button>
           </div>
         </div>

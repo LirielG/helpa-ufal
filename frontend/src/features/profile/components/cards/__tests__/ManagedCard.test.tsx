@@ -7,12 +7,14 @@ import {
   makeActionDetail,
   makeManagedActivity,
   makeManager,
+  makeUserActivity,
 } from "@/test/factories";
 import { signIn } from "@/test/auth";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import type { ActionStatus } from "@/features/dashboard/types";
 import type { UserActivity } from "../../../types";
 import { ManagedCard } from "../ManagedCard";
+import { EnrolledCard } from "../EnrolledCard";
 
 const ACTION_ID = "act-managed";
 
@@ -37,11 +39,19 @@ function SessionProbe() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderCard(activity: UserActivity, onEdit = vi.fn()) {
+function renderCard(
+  activity: UserActivity,
+  onEdit = vi.fn(),
+  onManageEnrollments = vi.fn(),
+) {
   return render(
     <>
       <SessionProbe />
-      <ManagedCard activity={activity} onEdit={onEdit} />
+      <ManagedCard
+        activity={activity}
+        onEdit={onEdit}
+        onManageEnrollments={onManageEnrollments}
+      />
     </>,
     { route: "/profile" },
   );
@@ -519,5 +529,45 @@ describe("ManagedCard status control", () => {
     await user.click(screen.getByRole("button", { name: "Editar atividade" }));
 
     expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
+  });
+});
+
+describe("ManagedCard enrollments entry point", () => {
+  it("opens the enrollment list without triggering edit", async () => {
+    const onEdit = vi.fn();
+    const onManageEnrollments = vi.fn();
+    const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
+
+    await user.click(screen.getByRole("button", { name: "Gerenciar inscritos" }));
+
+    expect(onManageEnrollments).toHaveBeenCalledWith(ACTION_ID);
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it("keeps the edit button separate from the manage button", async () => {
+    const onEdit = vi.fn();
+    const onManageEnrollments = vi.fn();
+    const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
+
+    await user.click(screen.getByRole("button", { name: "Editar atividade" }));
+
+    expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
+    expect(onManageEnrollments).not.toHaveBeenCalled();
+  });
+});
+
+describe("EnrolledCard", () => {
+  it("does not render the manage enrollments button for actions the user did not create", () => {
+    const activity = makeUserActivity({
+      id: "act-2",
+      title: "Plantio de Árvores",
+      status: "enrolled",
+    });
+
+    render(<EnrolledCard activity={activity} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Gerenciar inscritos" }),
+    ).not.toBeInTheDocument();
   });
 });
