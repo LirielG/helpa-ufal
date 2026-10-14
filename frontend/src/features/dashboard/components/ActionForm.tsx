@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
 import {
-  ACTION_AREA_OPTIONS,
   ACTION_TYPE_OPTIONS,
   ACTION_FORMAT_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
@@ -22,17 +21,14 @@ import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type { ActionType, ActionFormat, ActionCampus } from "../types";
+import { fetchAreaSuggestions } from "../services";
 
 const addressSchema = z.object({
   addressLine: z.string().min(1, "Informe o logradouro."),
   district: z.string().min(1, "Informe o bairro."),
-  zipCode: z
-    .string()
-    .regex(/^\d{5}-?\d{3}$/, "O CEP deve ter 8 dígitos."),
+  zipCode: z.string().regex(/^\d{5}-?\d{3}$/, "O CEP deve ter 8 dígitos."),
   city: z.string().min(1, "Informe a cidade."),
-  state: z
-    .string()
-    .length(2, "Informe uma UF válida (ex.: AL)."),
+  state: z.string().length(2, "Informe uma UF válida (ex.: AL)."),
 });
 
 const baseSchema = z.object({
@@ -43,7 +39,15 @@ const baseSchema = z.object({
     error: "Selecione um tipo de ação válido.",
   }),
   campus: z.enum(
-    ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] as const,
+    [
+      "MACEIO",
+      "ARAPIRACA",
+      "PALMEIRA",
+      "PENEDO",
+      "RIO_LARGO",
+      "DELMIRO_GOUVEIA",
+      "SANTANA_IPANEMA",
+    ] as const,
     { error: "Selecione um campus válido." },
   ),
   startDate: z
@@ -118,8 +122,7 @@ const formSchema = baseSchema
   )
   .refine(
     (d) =>
-      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
-      !!d.address?.state,
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") || !!d.address?.state,
     { message: "Informe uma UF válida (ex.: AL).", path: ["address.state"] },
   );
 
@@ -195,6 +198,20 @@ export function ActionRegister({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    fetchAreaSuggestions().then((suggestions) => {
+      if (isMounted) setAreaSuggestions(suggestions);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   const {
     register,
@@ -261,13 +278,11 @@ export function ActionRegister({
           description: data.description?.trim() || "Descrição não informada.",
           type: data.type as ActionType,
           campus: data.campus as ActionCampus,
-          area: data.area,
+          area: data.area.trim(),
           startDate: new Date(
             `${data.startDate}T${data.startTime}:00`,
           ).toISOString(),
-          endDate: new Date(
-            `${data.endDate}T${data.endTime}:00`,
-          ).toISOString(),
+          endDate: new Date(`${data.endDate}T${data.endTime}:00`).toISOString(),
           slots: data.slots as number,
           workloadHours: data.workloadHours as number,
           format: data.format as ActionFormat,
@@ -439,20 +454,19 @@ export function ActionRegister({
                       >
                         Área de atuação
                       </label>
-                      <SelectWrapper>
-                        <select
-                          id="area"
-                          className={selectCls(!!errors.area)}
-                          {...register("area")}
-                        >
-                          <option value="">Área de atuação</option>
-                          {ACTION_AREA_OPTIONS.map((item) => (
-                            <option key={item.value} value={item.label}>
-                              {item.label}
-                            </option>
-                          ))}
-                        </select>
-                      </SelectWrapper>
+                      <input
+                        id="area"
+                        type="text"
+                        list="area-suggestions"
+                        placeholder="Digite ou selecione a área"
+                        className={inputCls(!!errors.area)}
+                        {...register("area")}
+                      />
+                      <datalist id="area-suggestions">
+                        {areaSuggestions.map((area) => (
+                          <option key={area} value={area} />
+                        ))}
+                      </datalist>
                       <FieldError message={errors.area?.message} />
                     </div>
 

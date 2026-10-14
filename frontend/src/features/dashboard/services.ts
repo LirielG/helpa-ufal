@@ -52,3 +52,12 @@ export async function fetchActions(
     totalPages: Math.max(1, Math.ceil(response.total / limit)),
   };
 }
+
+export async function fetchAreaSuggestions(): Promise<string[]> {
+  try {
+    const response = await api.get<{ areas: string[] }>("/activities/filters");
+    return response.areas ?? [];
+  } catch {
+    return [];
+  }
+}
