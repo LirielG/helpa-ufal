@@ -26,13 +26,9 @@ import type { ActionType, ActionFormat, ActionCampus } from "../types";
 const addressSchema = z.object({
   addressLine: z.string().min(1, "Informe o logradouro."),
   district: z.string().min(1, "Informe o bairro."),
-  zipCode: z
-    .string()
-    .regex(/^\d{5}-?\d{3}$/, "O CEP deve ter 8 dígitos."),
+  zipCode: z.string().regex(/^\d{5}-?\d{3}$/, "O CEP deve ter 8 dígitos."),
   city: z.string().min(1, "Informe a cidade."),
-  state: z
-    .string()
-    .length(2, "Informe uma UF válida (ex.: AL)."),
+  state: z.string().length(2, "Informe uma UF válida (ex.: AL)."),
 });
 
 const baseSchema = z.object({
@@ -43,7 +39,15 @@ const baseSchema = z.object({
     error: "Selecione um tipo de ação válido.",
   }),
   campus: z.enum(
-    ["MACEIO", "ARAPIRACA", "PALMEIRA", "PENEDO", "RIO_LARGO", "DELMIRO_GOUVEIA", "SANTANA_IPANEMA"] as const,
+    [
+      "MACEIO",
+      "ARAPIRACA",
+      "PALMEIRA",
+      "PENEDO",
+      "RIO_LARGO",
+      "DELMIRO_GOUVEIA",
+      "SANTANA_IPANEMA",
+    ] as const,
     { error: "Selecione um campus válido." },
   ),
   startDate: z
@@ -118,8 +122,7 @@ const formSchema = baseSchema
   )
   .refine(
     (d) =>
-      (d.format !== "IN_PERSON" && d.format !== "HYBRID") ||
-      !!d.address?.state,
+      (d.format !== "IN_PERSON" && d.format !== "HYBRID") || !!d.address?.state,
     { message: "Informe uma UF válida (ex.: AL).", path: ["address.state"] },
   );
 
@@ -265,9 +268,7 @@ export function ActionRegister({
           startDate: new Date(
             `${data.startDate}T${data.startTime}:00`,
           ).toISOString(),
-          endDate: new Date(
-            `${data.endDate}T${data.endTime}:00`,
-          ).toISOString(),
+          endDate: new Date(`${data.endDate}T${data.endTime}:00`).toISOString(),
           slots: data.slots as number,
           workloadHours: data.workloadHours as number,
           format: data.format as ActionFormat,
@@ -571,6 +572,7 @@ export function ActionRegister({
                           <input
                             id="startTime"
                             type="time"
+                            aria-label="Horário de início"
                             className={inputCls(!!errors.startTime)}
                             {...register("startTime")}
                           />
@@ -585,6 +587,7 @@ export function ActionRegister({
                           <input
                             id="endTime"
                             type="time"
+                            aria-label="Horário de encerramento"
                             className={inputCls(!!errors.endTime)}
                             {...register("endTime")}
                           />
@@ -608,6 +611,7 @@ export function ActionRegister({
                             id="startDate"
                             type="date"
                             min={today}
+                            aria-label="Data de início"
                             className={inputCls(!!errors.startDate)}
                             {...register("startDate")}
                           />
@@ -622,6 +626,7 @@ export function ActionRegister({
                           <input
                             id="endDate"
                             type="date"
+                            aria-label="Data de encerramento"
                             min={startDate || today}
                             className={inputCls(!!errors.endDate)}
                             {...register("endDate")}
