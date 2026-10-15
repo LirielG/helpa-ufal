@@ -68,9 +68,9 @@ export const ActionEditSchema = z
     format: z.enum(["ONLINE", "IN_PERSON", "HYBRID"], {
       message: "Selecione o formato da ação",
     }),
-    // Free text, like the API: an action created before the closed list of #171
-    // still has to be editable.
-    area: z.string().trim().min(1, "Selecione uma área de atuação"),
+    // Free text, like the API: suggestions help reuse an existing spelling,
+    // but any area is accepted.
+    area: z.string().trim().min(1, "Informe uma área de atuação"),
     campus: z.enum(
       [
         "MACEIO",

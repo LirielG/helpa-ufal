@@ -291,6 +291,29 @@ describe("ActionRegister", () => {
       );
     });
 
+    it("rejects an area made only of spaces", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await user.type(
+        screen.getByPlaceholderText("Digite o título da sua ação"),
+        "Mutirão de Saúde",
+      );
+      await user.type(getAreaField(), "   ");
+      await user.selectOptions(
+        screen.getByLabelText("Tipo da ação"),
+        "EXTENSION",
+      );
+      await user.click(screen.getByRole("button", { name: /Próximo/i }));
+
+      expect(
+        await screen.findByText("Informe uma área de atuação válida."),
+      ).toBeInTheDocument();
+      expect(onCreate).not.toHaveBeenCalled();
+    });
+
     it("still creates the action when the suggestions fail to load", async () => {
       server.use(
         http.get(`${API}/activities/filters`, () =>

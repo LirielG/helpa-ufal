@@ -34,7 +34,7 @@ const addressSchema = z.object({
 const baseSchema = z.object({
   title: z.string().min(1, "Informe um título válido."),
   description: z.string().optional(),
-  area: z.string().min(1, "Informe uma área de atuação válida."),
+  area: z.string().trim().min(1, "Informe uma área de atuação válida."),
   type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] as const, {
     error: "Selecione um tipo de ação válido.",
   }),
