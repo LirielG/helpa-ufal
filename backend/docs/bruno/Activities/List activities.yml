@@ -295,12 +295,15 @@ docs: |-
   |-------|-------|-------|
   | `search` | Partial, case-insensitive, on `title` | Combines with the other filters |
   | `area` | Exact, case-insensitive, on `details.area` | Empty value = no filtering, never a 400. Valid values: `GET /activities/filters` |
-  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED | |
-  | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | |
-  | `campus` | Enum of UFAL campus locations | |
-  | `format` | Enum: IN_PERSON, ONLINE, HYBRID | |
-  | `page` / `limit` | Pagination | Defaults 1 / 20; `limit` max 100 |
-  | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | |
+  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED | Present-and-empty (`?status=`) is a 400, not "no filter" |
+  | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | Present-and-empty (`?type=`) is a 400, not "no filter" |
+  | `campus` | Enum: MACEIO, ARAPIRACA, PALMEIRA, PENEDO, RIO_LARGO, DELMIRO_GOUVEIA, SANTANA_IPANEMA | Case-sensitive. Unknown or empty value is a 400 on `campus` |
+  | `format` | Enum: IN_PERSON, ONLINE, HYBRID | Present-and-empty (`?format=`) is a 400, not "no filter" |
+  | `page` / `limit` | Pagination | Defaults 1 / 20 when ABSENT; `limit` max 100. Integers only: `10.9`, `20abc` and an empty value are a 400 |
+  | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | Present-and-empty is a 400 |
+
+  A parameter that is **absent** takes its default or means "no filter". A
+  parameter that is **present but empty** is a validation error.
 
   `startAfter` / `endBefore` were documented in a previous version of this
   contract but are **not implemented**; they return when a route actually

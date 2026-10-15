@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { CampusLocation } from "@prisma/client";
 import ActivityService from "../ActivityService.js";
 import type { IListActivitiesFilters } from "../IActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
@@ -109,14 +110,60 @@ describe("ActivityService.list", () => {
     );
   });
 
-  it("silently truncates a non-integer limit ('10.9' becomes 10)", async () => {
+  // Issue #210: used to be "silently truncates a non-integer limit ('10.9'
+  // becomes 10)". The expectation flipped on purpose — this is the record of
+  // the decision that fractional / suffixed numbers are now rejected.
+  it.each(["10.9", "20abc", "1e2", "-5", "+5", " 5", ""])(
+    "rejects the non-integer limit %j with an error in the 'limit' field",
+    async (limit) => {
+      const repository = mockRepository();
+      const service = new ActivityService({ activityRepository: repository });
+
+      const error = await captureValidationError(service.list({ limit }));
+
+      expect(error.errors).toEqual([
+        { field: "limit", message: "limit must be a positive integer." },
+      ]);
+      expect(repository.list).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["2.5", "1abc", "1e1", "-1", "+1", " 1", ""])(
+    "rejects the non-integer page %j with an error in the 'page' field",
+    async (page) => {
+      const repository = mockRepository();
+      const service = new ActivityService({ activityRepository: repository });
+
+      const error = await captureValidationError(service.list({ page }));
+
+      expect(error.errors).toEqual([
+        { field: "page", message: "page must be a positive integer." },
+      ]);
+      expect(repository.list).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a repeated limit (?limit=1&limit=2 arrives as an array)", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ limit: "10.9" });
+    const error = await captureValidationError(
+      service.list({ limit: ["1", "2"] } as unknown as IListActivitiesFilters),
+    );
+
+    expect(error.errors).toEqual([
+      { field: "limit", message: "limit must be a positive integer." },
+    ]);
+  });
+
+  it("still applies the defaults when page and limit are ABSENT (not empty)", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ page: undefined, limit: undefined });
 
     expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 10 }),
+      expect.objectContaining({ page: 1, limit: 20 }),
     );
   });
 
@@ -279,14 +326,71 @@ describe("ActivityService.list", () => {
     expect(repository.list).not.toHaveBeenCalled();
   });
 
-  it("treats an empty type ('') as missing and passes it through as-is", async () => {
+  // Issue #210: used to be "treats an empty type ('') as missing and passes it
+  // through as-is". A PRESENT-but-empty filter is now a validation error;
+  // only an ABSENT one (undefined) means "no filter".
+  it.each(["type", "format", "status", "campus", "order", "orderBy"] as const)(
+    "rejects an empty '%s' with an error in that field (present-and-empty is not absent)",
+    async (field) => {
+      const repository = mockRepository();
+      const service = new ActivityService({ activityRepository: repository });
+
+      const error = await captureValidationError(
+        service.list({ [field]: "" } as IListActivitiesFilters),
+      );
+
+      expect(error.errors).toHaveLength(1);
+      expect(error.errors[0].field).toBe(field);
+      expect(repository.list).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the exact message format for an empty type", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ type: "" });
+    const error = await captureValidationError(service.list({ type: "" }));
+
+    expect(error.errors).toEqual([
+      {
+        field: "type",
+        message:
+          "type must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
+      },
+    ]);
+  });
+
+  it("treats an ABSENT type (undefined) as no filter and does not filter by it", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ type: undefined });
 
     expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "" }),
+      expect.objectContaining({ type: undefined }),
+    );
+  });
+
+  it("rejects a repeated filter (?type=COURSE&type=EVENT arrives as an array)", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureValidationError(
+      service.list({ type: ["COURSE", "EVENT"] } as unknown as IListActivitiesFilters),
+    );
+
+    expect(error.errors).toHaveLength(1);
+    expect(error.errors[0].field).toBe("type");
+  });
+
+  it("keeps 'area' and 'search' free-text: empty values are NOT errors", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ area: "", search: "" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({ area: undefined, search: "" }),
     );
   });
 
@@ -371,18 +475,75 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("passes search and campus to the repository without validation", async () => {
+  // Issue #211: used to be "passes search and campus to the repository without
+  // validation". `search` is free text and stays unvalidated by decision;
+  // `campus` is a DB enum column and is now validated against CampusLocation.
+  it("passes search to the repository without validation (free text)", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ search: "  robótica  ", campus: "NAO_E_UM_CAMPUS" });
+    await service.list({ search: "  robótica  " });
 
     expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({
-        search: "  robótica  ",
-        campus: "NAO_E_UM_CAMPUS",
-      }),
+      expect.objectContaining({ search: "  robótica  " }),
     );
+  });
+
+  it.each(Object.values(CampusLocation))(
+    "forwards the valid campus %s to the repository",
+    async (campus) => {
+      const repository = mockRepository();
+      const service = new ActivityService({ activityRepository: repository });
+
+      await service.list({ campus });
+
+      expect(repository.list).toHaveBeenCalledWith(
+        expect.objectContaining({ campus }),
+      );
+    },
+  );
+
+  it.each(["INVALIDO", "maceio", "MACEIÓ", "Arapiraca", " ARAPIRACA", "NAO_E_UM_CAMPUS"])(
+    "rejects the campus %j with an error in the 'campus' field (never reaches the repository)",
+    async (campus) => {
+      const repository = mockRepository();
+      const service = new ActivityService({ activityRepository: repository });
+
+      const error = await captureValidationError(service.list({ campus }));
+
+      expect(error.errors).toEqual([
+        {
+          field: "campus",
+          message: `campus must be one of the following: ${Object.values(CampusLocation).join(", ")}.`,
+        },
+      ]);
+      expect(repository.list).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lists every campus of the Prisma enum in the message (derived, not hand-written)", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureValidationError(
+      service.list({ campus: "INVALIDO" }),
+    );
+
+    for (const campus of Object.values(CampusLocation)) {
+      expect(error.errors[0].message).toContain(campus);
+    }
+  });
+
+  it("aggregates an invalid campus and an invalid type into a single ValidationError with two items", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureValidationError(
+      service.list({ type: "INVALIDO", campus: "INVALIDO" }),
+    );
+
+    expect(error.errors.map((e) => e.field)).toEqual(["type", "campus"]);
+    expect(repository.list).not.toHaveBeenCalled();
   });
 
   it("does not pass unknown parameters (startAfter/endBefore) to the repository", async () => {

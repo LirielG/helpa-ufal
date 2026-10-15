@@ -139,3 +139,136 @@ describe("GET /activities", () => {
     expect(ids).not.toContain(deleted.id);
   });
 });
+
+/**
+ * Issues #210 (empty filter / fractional pagination) and #211 (invalid
+ * campus). These replace the old "accepted silently" behavior with a 400 in
+ * the offending field, keeping the existing `{ field, message }` format.
+ */
+describe("GET /activities — strict query validation", () => {
+  // ---------- #210: present-and-empty filter ----------
+  it("returns 400 on the 'type' field for an empty ?type=", async () => {
+    const response = await request(app).get("/activities?type=");
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation error.");
+    expect(response.body.errors).toEqual([
+      {
+        field: "type",
+        message:
+          "type must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
+      },
+    ]);
+  });
+
+  it.each(["format", "status", "campus", "order", "orderBy", "page", "limit"])(
+    "returns 400 on the '%s' field for an empty ?%s=",
+    async (field) => {
+      const response = await request(app).get(`/activities?${field}=`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toHaveLength(1);
+      expect(response.body.errors[0].field).toBe(field);
+    },
+  );
+
+  it("still returns 200 and does NOT filter by type when 'type' is absent", async () => {
+    const author = await createTeacher();
+    await createActivity(author.user.id, { type: "COURSE" });
+    await createActivity(author.user.id, { type: "EVENT" });
+
+    const response = await request(app).get("/activities");
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(2);
+  });
+
+  // ---------- #210: fractional / suffixed pagination ----------
+  it("returns 400 on the 'limit' field for a fractional ?limit=10.9", async () => {
+    const response = await request(app).get("/activities?limit=10.9");
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      { field: "limit", message: "limit must be a positive integer." },
+    ]);
+  });
+
+  it("returns 400 on the 'limit' field for a suffixed ?limit=20abc", async () => {
+    const response = await request(app).get("/activities?limit=20abc");
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      { field: "limit", message: "limit must be a positive integer." },
+    ]);
+  });
+
+  it("returns 400 on the 'page' field for a fractional ?page=1.5", async () => {
+    const response = await request(app).get("/activities?page=1.5");
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      { field: "page", message: "page must be a positive integer." },
+    ]);
+  });
+
+  it("still returns 200 for a valid ?limit=20", async () => {
+    const response = await request(app).get("/activities?limit=20");
+
+    expect(response.status).toBe(200);
+  });
+
+  // ---------- #211: invalid campus ----------
+  it("returns 400 (not 500) on the 'campus' field for an unknown campus", async () => {
+    const response = await request(app).get("/activities?campus=INVALIDO");
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation error.");
+    expect(response.body.errors).toHaveLength(1);
+    expect(response.body.errors[0].field).toBe("campus");
+    expect(response.body.errors[0].message).toContain("ARAPIRACA");
+  });
+
+  it.each(["maceio", "MACEIÓ"])(
+    "returns 400 (not 500) for the campus spelling %j that is not a CampusLocation member",
+    async (campus) => {
+      const response = await request(app)
+        .get("/activities")
+        .query({ campus });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors[0].field).toBe("campus");
+    },
+  );
+
+  it("still returns 200 and filters for a valid ?campus=ARAPIRACA", async () => {
+    const author = await createTeacher();
+    const target = await createActivity(author.user.id, { campus: "ARAPIRACA" });
+    await createActivity(author.user.id, { campus: "MACEIO" });
+
+    const response = await request(app).get("/activities?campus=ARAPIRACA");
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.activities[0].id).toBe(target.id);
+  });
+
+  it("reports an invalid campus and an invalid type in a single ValidationError with two items", async () => {
+    const response = await request(app).get(
+      "/activities?type=INVALIDO&campus=INVALIDO",
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toHaveLength(2);
+    expect(
+      response.body.errors.map((e: { field: string }) => e.field),
+    ).toEqual(["type", "campus"]);
+  });
+
+  it("keeps 'search' as free text: an unusual search is never a 400", async () => {
+    const response = await request(app)
+      .get("/activities")
+      .query({ search: "MACEIÓ ?? 10.9 !!" });
+
+    expect(response.status).toBe(200);
+  });
+});

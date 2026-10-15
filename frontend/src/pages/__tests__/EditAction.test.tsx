@@ -150,15 +150,12 @@ describe("EditAction", () => {
     expect(screen.getByPlaceholderText(/Descreva os detalhes/)).toHaveValue(
       action.details!.description,
     );
-    expect(screen.getByLabelText("Qtde. de Vagas")).toHaveValue(action.slots);
+    expect(screen.getByLabelText("Número de vagas")).toHaveValue(action.slots);
     expect(screen.getByLabelText("Carga horária")).toHaveValue(20);
-    expect(screen.getByLabelText("Tipo de ação")).toHaveValue("COURSE");
+    expect(screen.getByLabelText("Tipo da ação")).toHaveValue("COURSE");
     expect(screen.getByLabelText("Formato da ação")).toHaveValue("IN_PERSON");
     expect(screen.getByLabelText("Área de atuação")).toHaveValue("Robótica");
     expect(screen.getByLabelText("Campus")).toHaveValue("ARAPIRACA");
-    expect(screen.getByLabelText("Link do evento")).toHaveValue(
-      action.details!.url,
-    );
     expect(screen.getByLabelText("Logradouro")).toHaveValue(
       ADDRESS.addressLine,
     );
@@ -199,7 +196,7 @@ describe("EditAction", () => {
 
     await findTitleField();
 
-    expect(optionLabels(screen.getByLabelText("Tipo de ação"))).toEqual([
+    expect(optionLabels(screen.getByLabelText("Tipo da ação"))).toEqual([
       "Ação de extensão",
       "Curso ou minicurso",
       "Evento",
@@ -227,7 +224,7 @@ describe("EditAction", () => {
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
 
-    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    const slots = await screen.findByLabelText("Número de vagas");
     await user.clear(slots);
     await user.type(slots, "45");
     await user.click(getSaveButton());
@@ -255,14 +252,14 @@ describe("EditAction", () => {
     );
   });
 
-  it("sends the link of an in-person action when it is edited", async () => {
-    mockAction();
+  it("sends the link of an online action when it is edited", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
 
     await findTitleField();
 
-    const url = screen.getByLabelText("Link do evento");
+    const url = screen.getByLabelText("Link para o evento");
     await user.clear(url);
     await user.type(url, "https://exemplo.com/novo");
     await user.click(getSaveButton());
@@ -273,6 +270,31 @@ describe("EditAction", () => {
       }),
     );
   });
+
+  it("does not show the link field for an in-person action", async () => {
+    mockAction(editableAction({ format: "IN_PERSON" }));
+
+    renderEditAction();
+
+    await findTitleField();
+
+    expect(screen.queryByLabelText(/link/i)).not.toBeInTheDocument();
+  });
+
+  it.each(["ONLINE", "HYBRID"] as const)(
+    "shows the saved link of a %s action",
+    async (format) => {
+      const action = mockAction(editableAction({ format }));
+
+      renderEditAction();
+
+      await findTitleField();
+
+      expect(screen.getByLabelText("Link para o evento")).toHaveValue(
+        action.details!.url,
+      );
+    },
+  );
 
   it("uppercases a state typed in lower case", async () => {
     mockAction();
@@ -412,6 +434,123 @@ describe("EditAction", () => {
     expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
   });
 
+  describe("date and time", () => {
+    // 08:00 and 18:00 in America/Maceio (UTC-3), the timezone tests run in.
+    const START = "2026-03-10T11:00:00.000Z";
+    const END = "2026-03-17T21:00:00.000Z";
+
+    function mockScheduledAction(startDate = START, endDate = END) {
+      return mockAction(editableAction({}, { startDate, endDate }));
+    }
+
+    function changeField(label: string, value: string) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+
+    it("loads the start and end times of the action", async () => {
+      mockScheduledAction();
+
+      renderEditAction();
+
+      await findTitleField();
+
+      expect(screen.getByLabelText("Data de início")).toHaveValue("2026-03-10");
+      expect(screen.getByLabelText("Horário de início")).toHaveValue("08:00");
+      expect(screen.getByLabelText("Data de encerramento")).toHaveValue(
+        "2026-03-17",
+      );
+      expect(screen.getByLabelText("Horário de encerramento")).toHaveValue(
+        "18:00",
+      );
+    });
+
+    it("keeps the time and sends both ends when only the start date changes", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Data de início", "2026-03-11");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: "2026-03-11T11:00:00.000Z",
+          endDate: END,
+        }),
+      );
+    });
+
+    it("keeps the time and sends both ends when only the end date changes", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Data de encerramento", "2026-03-18");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: START,
+          endDate: "2026-03-18T21:00:00.000Z",
+        }),
+      );
+    });
+
+    it("saves a new time without changing the date", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de início", "09:30");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: "2026-03-10T12:30:00.000Z",
+          endDate: END,
+        }),
+      );
+    });
+
+    it("blocks an end time before the start time on the same date", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de encerramento", "07:00");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("blocks an end equal to the start, as the create form does", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de encerramento", "08:00");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
   it("makes no request and stays on the form when nothing changed", async () => {
     mockAction();
     const onUpdate = spyOnUpdate();
@@ -510,7 +649,7 @@ describe("EditAction", () => {
     });
     const { user } = renderEditAction();
 
-    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    const slots = await screen.findByLabelText("Número de vagas");
     await user.clear(slots);
     await user.type(slots, "5");
     await user.click(getSaveButton());

@@ -54,6 +54,8 @@ export const ActionEditSchema = z
       .min(10, "A descrição deve ter no mínimo 10 caracteres"),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
+    startTime: z.string().min(1, "O horário de início é obrigatório"),
+    endTime: z.string().min(1, "O horário de encerramento é obrigatório"),
     type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"], {
       message: "Selecione um tipo de ação",
     }),
@@ -94,10 +96,15 @@ export const ActionEditSchema = z
       })
       .optional(),
   })
-  .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
-    message: "A data de encerramento deve ser posterior à data de início",
-    path: ["endDate"],
-  })
+  .refine(
+    (data) =>
+      new Date(`${data.endDate}T${data.endTime}`) >
+      new Date(`${data.startDate}T${data.startTime}`),
+    {
+      message: "A data de encerramento deve ser posterior à de início",
+      path: ["endDate"],
+    },
+  )
   .refine((data) => data.format === "IN_PERSON" || !!data.url, {
     message: "Link do evento é obrigatório para ações on-line ou híbridas",
     path: ["url"],

@@ -97,20 +97,12 @@ async function fillStep2(user: UserEvent) {
     "https://meet.google.com/abc",
   );
 
-  fireEvent.change(
-    registerDialog().getByLabelText(/Início/i, {
-      selector: 'input[type="date"]',
-    }),
-    {
-      target: { value: futureDateInput() },
-    },
-  );
-  fireEvent.change(
-    registerDialog().getByLabelText(/Fim/i, { selector: 'input[type="date"]' }),
-    {
-      target: { value: futureDateInput() },
-    },
-  );
+  fireEvent.change(registerDialog().getByLabelText("Data de início"), {
+    target: { value: futureDateInput() },
+  });
+  fireEvent.change(registerDialog().getByLabelText("Data de encerramento"), {
+    target: { value: futureDateInput() },
+  });
 }
 
 describe("DashboardShell", () => {

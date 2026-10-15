@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
-import { createTeacher, createStudent } from "../../helpers/factories.js";
+import { anAddress, createTeacher, createStudent } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
 
@@ -167,6 +167,42 @@ describe("POST /activities", () => {
     expect(persisted.body.details.format).toBe("ONLINE");
     expect(persisted.body.details.url).toBeNull();
   });
+
+  it("discards the address of an ONLINE activity", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ format: "ONLINE", address: anAddress() }));
+
+    expect(response.status).toBe(201);
+
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.format).toBe("ONLINE");
+    expect(persisted.body.details.address).toBeNull();
+  });
+
+  it.each(["IN_PERSON", "HYBRID"] as const)(
+    "persists the address of a %s activity",
+    async (format) => {
+      const author = await createTeacher();
+      const address = anAddress();
+
+      const response = await request(app)
+        .post("/activities")
+        .set(...authHeader(author.token))
+        .send(validPayload({ format, address }));
+
+      expect(response.status).toBe(201);
+
+      const persisted = await request(app).get(`/activities/${response.body.id}`);
+      expect(persisted.body.details.address).toEqual({
+        id: expect.any(String),
+        ...address,
+      });
+    },
+  );
 
   it("returns 400 when format is ONLINE with a malformed url", async () => {
     const author = await createTeacher();

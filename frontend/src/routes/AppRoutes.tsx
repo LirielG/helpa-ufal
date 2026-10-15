@@ -7,7 +7,9 @@ import {
   Profile,
   EditAction,
   NotFound,
+  EnrollmentsPage,
 } from "../pages";
+
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
 import { useSessionCheck } from "../hooks/useSessionCheck";
 import { PublicRoute } from "./PublicRoute";
@@ -60,6 +62,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <EditAction />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/activity/:id/enrollments"
+        element={
+          <ProtectedRoute>
+            <EnrollmentsPage />
           </ProtectedRoute>
         }
       />

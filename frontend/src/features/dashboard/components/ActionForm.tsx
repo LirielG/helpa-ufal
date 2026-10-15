@@ -585,6 +585,7 @@ export function ActionRegister({
                           <input
                             id="startTime"
                             type="time"
+                            aria-label="Horário de início"
                             className={inputCls(!!errors.startTime)}
                             {...register("startTime")}
                           />
@@ -599,6 +600,7 @@ export function ActionRegister({
                           <input
                             id="endTime"
                             type="time"
+                            aria-label="Horário de encerramento"
                             className={inputCls(!!errors.endTime)}
                             {...register("endTime")}
                           />
@@ -622,6 +624,7 @@ export function ActionRegister({
                             id="startDate"
                             type="date"
                             min={today}
+                            aria-label="Data de início"
                             className={inputCls(!!errors.startDate)}
                             {...register("startDate")}
                           />
@@ -636,6 +639,7 @@ export function ActionRegister({
                           <input
                             id="endDate"
                             type="date"
+                            aria-label="Data de encerramento"
                             min={startDate || today}
                             className={inputCls(!!errors.endDate)}
                             {...register("endDate")}
