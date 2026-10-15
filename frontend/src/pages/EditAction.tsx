@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -11,7 +11,6 @@ import {
   ConfirmFormatModal,
 } from "../features/action-edit/components";
 import {
-  ACTION_AREA_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
   ACTION_FORMAT_OPTIONS,
   ACTION_TYPE_OPTIONS,
@@ -28,6 +27,7 @@ import type {
   UpdateActionPayload,
 } from "../features/action-edit/types";
 import { toInputDate, toInputTime } from "../utils";
+import { fetchAreaSuggestions } from "../features/dashboard/services";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -59,7 +59,7 @@ export function EditAction() {
   const [loadFailed, setLoadFailed] = useState(false);
   const notFound = !id || loadFailed;
 
-  const [loadedArea, setLoadedArea] = useState("");
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<ActionEditSchemaType | null>(
@@ -83,20 +83,16 @@ export function EditAction() {
 
   const currentFormat = useWatch({ control, name: "format" });
 
-  /**
-   * `area` is free text in the API, so an action may carry a value the closed
-   * list of #171 does not have. Offering it keeps the action editable instead
-   * of silently switching it to the first option.
-   */
-  const areaOptions = useMemo(() => {
-    const isKnown = ACTION_AREA_OPTIONS.some(
-      (option) => option.value === loadedArea,
-    );
+  useEffect(() => {
+    let isMounted = true;
+    fetchAreaSuggestions().then((suggestions) => {
+      if (isMounted) setAreaSuggestions(suggestions);
+    });
 
-    return isKnown || !loadedArea
-      ? ACTION_AREA_OPTIONS
-      : [...ACTION_AREA_OPTIONS, { value: loadedArea, label: loadedArea }];
-  }, [loadedArea]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -113,8 +109,6 @@ export function EditAction() {
         setIsLoadingAction(false);
         return;
       }
-
-      setLoadedArea(action.details?.area ?? "");
 
       reset({
         title: action.title,
@@ -175,7 +169,7 @@ export function EditAction() {
     if (dirtyFields.type) payload.type = data.type;
     if (dirtyFields.slots) payload.slots = data.slots;
     if (dirtyFields.workloadHours) payload.workloadHours = data.workloadHours;
-    if (dirtyFields.area) payload.area = data.area;
+    if (dirtyFields.area) payload.area = data.area.trim();
     if (dirtyFields.campus) payload.campus = data.campus;
     if (dirtyFields.format) payload.format = data.format;
 
@@ -424,13 +418,21 @@ export function EditAction() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Select
-                  size="sm"
-                  label="Área de atuação"
-                  options={areaOptions}
-                  error={errors.area?.message}
-                  {...register("area")}
-                />
+                <div>
+                  <Input
+                    size="sm"
+                    label="Área de atuação"
+                    list="edit-area-suggestions"
+                    placeholder="Digite ou selecione"
+                    error={errors.area?.message}
+                    {...register("area")}
+                  />
+                  <datalist id="edit-area-suggestions">
+                    {areaSuggestions.map((suggestion) => (
+                      <option key={suggestion} value={suggestion} />
+                    ))}
+                  </datalist>
+                </div>
                 {currentFormat !== "IN_PERSON" && (
                   <Input
                     size="sm"

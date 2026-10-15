@@ -56,6 +56,11 @@ export const handlers = [
     }),
   ),
 
+  // Declared before /activities/:id so the literal path wins over the id.
+  http.get(`${API}/activities/filters`, () =>
+    HttpResponse.json({ areas: ["Educação", "Robótica", "Saúde"] }),
+  ),
+
   http.get(`${API}/activities/:id`, ({ params }) =>
     HttpResponse.json(makeActionDetail({ id: String(params.id) })),
   ),
