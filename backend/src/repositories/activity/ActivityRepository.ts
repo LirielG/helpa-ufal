@@ -42,7 +42,7 @@ class ActivityRepository implements IActivityRepository {
 
       let addressId: string | null = null;
 
-      if (data.address) {
+      if (data.format !== "ONLINE") {
         const address = await tx.address.create({ data: data.address });
         addressId = address.id;
       }
