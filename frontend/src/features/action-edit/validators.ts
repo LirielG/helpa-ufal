@@ -98,7 +98,7 @@ export const ActionEditSchema = z
   })
   .refine(
     (data) =>
-      new Date(`${data.endDate}T${data.endTime}`) >=
+      new Date(`${data.endDate}T${data.endTime}`) >
       new Date(`${data.startDate}T${data.startTime}`),
     {
       message: "A data de encerramento deve ser posterior à de início",

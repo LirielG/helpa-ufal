@@ -436,6 +436,22 @@ describe("EditAction", () => {
       ).toBeInTheDocument();
       expect(onUpdate).not.toHaveBeenCalled();
     });
+
+    it("blocks an end equal to the start, as the create form does", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de encerramento", "08:00");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
   });
 
   it("makes no request and stays on the form when nothing changed", async () => {

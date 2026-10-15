@@ -168,8 +168,6 @@ export function EditAction() {
       payload.startDate = new Date(
         `${data.startDate}T${data.startTime}:00`,
       ).toISOString();
-      //}
-      //if (dirtyFields.endDate || dirtyFields.endTime) {
       payload.endDate = new Date(
         `${data.endDate}T${data.endTime}:00`,
       ).toISOString();
@@ -181,8 +179,9 @@ export function EditAction() {
     if (dirtyFields.campus) payload.campus = data.campus;
     if (dirtyFields.format) payload.format = data.format;
 
-    // The link is editable in every format — it is only optional in person —
-    // so an edit to it is sent whatever the format is.
+    // Online and hybrid actions require a link, so switching to one of them
+    // sends the current link along with the new format, even if it was not
+    // edited.
     const urlRequiredByNewFormat =
       dirtyFields.format && data.format !== "IN_PERSON";
 
@@ -311,10 +310,14 @@ export function EditAction() {
                   </legend>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label
+                        htmlFor="edit-start-time"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
                         Início
                       </label>
                       <Input
+                        id="edit-start-time"
                         size="sm"
                         type="time"
                         aria-label="Horário de início"
@@ -324,10 +327,14 @@ export function EditAction() {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label
+                        htmlFor="edit-end-time"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
                         Fim
                       </label>
                       <Input
+                        id="edit-end-time"
                         size="sm"
                         type="time"
                         aria-label="Horário de encerramento"
@@ -343,10 +350,14 @@ export function EditAction() {
                   </legend>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label
+                        htmlFor="edit-start-date"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
                         Início
                       </label>
                       <Input
+                        id="edit-start-date"
                         size="sm"
                         type="date"
                         aria-label="Data de início"
@@ -355,10 +366,14 @@ export function EditAction() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label
+                        htmlFor="edit-end-date"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
                         Fim
                       </label>
                       <Input
+                        id="edit-end-date"
                         size="sm"
                         type="date"
                         aria-label="Data de encerramento"
