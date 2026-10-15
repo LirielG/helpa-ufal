@@ -124,6 +124,12 @@ class ActivityService implements IActivityService {
       throw new CustomError(400, "HYBRID activities require a url.");
     }
 
+    // Zod already strips address from ONLINE payloads; this covers callers that skip
+    // the schema, matching update, which also drops the address of ONLINE activities.
+    if (data.format === "ONLINE" && "address" in data) {
+      delete data.address;
+    }
+
     const newActivity = await this._activityRepository.create(authorId, data);
 
     const activityResponse: ActivityResponse = {
