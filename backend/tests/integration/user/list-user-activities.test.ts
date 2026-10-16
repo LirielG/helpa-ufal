@@ -749,11 +749,11 @@ describe("GET /users/me/activities", () => {
         });
       });
 
-      it("accepts limit=50, the maximum", async () => {
+      it("accepts limit=100, the maximum", async () => {
         const user = await createTeacher();
         await createActivity(user.user.id);
 
-        const response = await listActivities(user.token, "?filter=managed&limit=50");
+        const response = await listActivities(user.token, "?filter=managed&limit=100");
 
         expect(response.status).toBe(200);
         expect(response.body.meta.limit).toBe(50);
