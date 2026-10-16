@@ -58,7 +58,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
           return (
             <div
               key={action.id}
+              data-testid="hero-slide"
               aria-hidden={index !== currentSlide}
+              inert={index !== currentSlide}
               className={`absolute inset-0 transition-opacity duration-700 ${
                 index === currentSlide ? "opacity-100" : "opacity-0"
               }`}
