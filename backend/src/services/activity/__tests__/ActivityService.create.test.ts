@@ -5,6 +5,7 @@ import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { expectValidationError, expectCustomError } from "@/utils/tests.js";
 import { daysFromNow } from "../../../../tests/helpers/dates.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 
 const AUTHOR_ID = "a1b2c3d4-0000-4000-8000-000000000099";
 const CREATED_ID = "a1b2c3d4-0000-4000-8000-000000000001";
@@ -57,13 +58,13 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
       format: data.format,
       url: data.url ?? null,
       workloadHours: data.workloadHours,
-      address: data.address ? {
+      address: (data as any).address ? {
         id: "addr-123",
-        addressLine: data.address.addressLine,
-        district: data.address.district,
-        zipCode: data.address.zipCode,
-        city: data.address.city,
-        state: data.address.state,
+        addressLine: (data as any).address.addressLine,
+        district: (data as any).address.district,
+        zipCode: (data as any).address.zipCode,
+        city: (data as any).address.city,
+        state: (data as any).address.state,
       } : null,
     }
   };
@@ -73,6 +74,7 @@ function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
     user?: Partial<IUserRepository>;
+    enrollment?: Partial<IEnrollmentRepository>;
   } = {},
 ) {
   const activityRepository = {
@@ -89,7 +91,12 @@ function mockRepositories(
     ...overrides.user,
   } as unknown as IUserRepository;
 
-  return { activityRepository, userRepository };
+  const enrollmentRepository = {
+    findByUserAndActivity: vi.fn().mockResolvedValue(null),
+    ...overrides.enrollment,
+  } as unknown as IEnrollmentRepository;
+
+  return { activityRepository, userRepository, enrollmentRepository };
 }
 
 describe("ActivityService.create", () => {
@@ -430,11 +437,11 @@ describe("ActivityService.create", () => {
         workloadHours: input.workloadHours,
         address: {
           id: "addr-123",
-          addressLine: input.address.addressLine,
-          district: input.address.district,
-          zipCode: input.address.zipCode,
-          city: input.address.city,
-          state: input.address.state,
+          addressLine: (input as any).address.addressLine,
+          district: (input as any).address.district,
+          zipCode: (input as any).address.zipCode,
+          city: (input as any).address.city,
+          state: (input as any).address.state,
         }
       }
     });

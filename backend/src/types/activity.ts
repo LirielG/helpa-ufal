@@ -49,6 +49,7 @@ export type ActivityDetailsResponse = {
 
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
+  enrollmentStatus?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | null;
 };
 
 export type ActivityFilterOptions = {

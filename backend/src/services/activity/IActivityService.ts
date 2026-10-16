@@ -19,7 +19,7 @@ export interface IActivityService {
     filters: IListActivitiesFilters,
     userId?: string,
   ): Promise<IListActivitiesResponse>;
-  findById(id: string): Promise<ActivityFullResponse>;
+  findById(id: string, userId?: string): Promise<ActivityFullResponse>;
   update(
     id: string,
     userId: string,
