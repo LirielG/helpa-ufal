@@ -12,9 +12,9 @@ import {
 
 export interface IActivityService {
   create(
-    authorId: string,
-    data: CreateActivityInput,
-  ): Promise<ActivityResponse>;
+    authorId: string, 
+    data: CreateActivityInput): 
+    Promise<ActivityFullResponse>;
   list(
     filters: IListActivitiesFilters,
     userId?: string,

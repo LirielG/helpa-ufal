@@ -201,6 +201,9 @@ describe("POST /activities", () => {
       .send(validPayload({ format: "ONLINE", address: anAddress() }));
 
     expect(response.status).toBe(201);
+    
+    expect(response.body.details.format).toBe("ONLINE");
+    expect(response.body.details.address).toBeNull();
 
     const persisted = await request(app).get(`/activities/${response.body.id}`);
     expect(persisted.body.details.format).toBe("ONLINE");
@@ -219,6 +222,11 @@ describe("POST /activities", () => {
         .send(validPayload({ format, address }));
 
       expect(response.status).toBe(201);
+      
+      expect(response.body.details.address).toEqual({
+        id: expect.any(String),
+        ...address,
+      });
 
       const persisted = await request(app).get(`/activities/${response.body.id}`);
       expect(persisted.body.details.address).toEqual({
