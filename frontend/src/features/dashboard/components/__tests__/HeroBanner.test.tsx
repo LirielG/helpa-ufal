@@ -97,11 +97,9 @@ describe("HeroBanner", () => {
     });
   });
 
-  // jsdom does not implement `inert`, so these assertions cover the attribute
-  // that enforces the behaviour in a real browser. Tab order and click
-  // targeting are not verifiable here and are checked manually — see the
-  // manual test steps in the PR description.
-  describe("hidden slides leave the tab order and the click area (#218)", () => {
+  // jsdom does not implement `inert` behaviour, so these tests only assert the
+  // attribute; tab order and click targeting must be checked in a real browser.
+  describe("hidden slides leave the tab order and the click area", () => {
     it("puts inert on the hidden slides only", () => {
       render(<HeroBanner actions={mockActions} />);
 
