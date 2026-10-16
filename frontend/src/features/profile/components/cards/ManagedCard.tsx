@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { MapPin, Calendar, Pencil, Trash2, Users } from "lucide-react";
-import type { ActionStatus } from "@/features/dashboard/types";
+import type { ActivityStatus } from "@/services/contracts/activity";
 import { ApiError } from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 import { updateActivityStatus, getActivityById } from "../../services";
@@ -9,8 +9,8 @@ import { DeleteActionModal } from "./DeleteActionModal";
 
 // The current status first, then only the transitions the backend accepts.
 const STATUS_OPTIONS: Record<
-  ActionStatus,
-  { value: ActionStatus; label: string }[]
+  ActivityStatus,
+  { value: ActivityStatus; label: string }[]
 > = {
   OPEN: [
     { value: "OPEN", label: "Aberta" },
@@ -40,7 +40,7 @@ export function ManagedCard({
   onEdit,
   onManageEnrollments,
 }: ManagedCardProps) {
-  const [currentStatus, setCurrentStatus] = useState<ActionStatus>(
+  const [currentStatus, setCurrentStatus] = useState<ActivityStatus>(
     activity.activityStatus,
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -126,7 +126,7 @@ export function ManagedCard({
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = e.target.value as ActionStatus;
+    const selected = e.target.value as ActivityStatus;
     if (selected === currentStatus || selected === "OPEN") return;
 
     const transitionStatus = selected as ActivityStatusTransition;

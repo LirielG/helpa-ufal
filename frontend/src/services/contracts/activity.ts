@@ -6,7 +6,8 @@
  * enums are the Prisma unions. Optional-by-absence becomes `T | null` (§6).
  */
 
-export type ActivityType = "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
+export type ActivityType =
+  "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
 
 export type ActivityFormat = "IN_PERSON" | "ONLINE" | "HYBRID";
 

@@ -9,9 +9,11 @@ import type {
   UserActivity,
 } from "./types";
 import type { UserProfile } from "../../types/profile";
-import type { ListActivitiesResponse } from "../../services/contracts/activity";
-import type { Action } from "../dashboard/types";
-import type { ActionDetail } from "../action-detail/types";
+import type {
+  Activity,
+  ActivityListItem,
+  ListActivitiesResponse,
+} from "../../services/contracts/activity";
 
 // The one `/users/me` client lives on authService; the profile screen asks for
 // the same resource through it, so the session check and this screen cannot
@@ -62,7 +64,7 @@ export async function fetchUserActivities(
     `/activities?filter=${filter}&page=1&limit=50`,
   );
 
-  let rawList: (UserActivity | Action)[] = [];
+  let rawList: (UserActivity | ActivityListItem)[] = [];
 
   if (Array.isArray(response)) {
     rawList = response;
@@ -94,7 +96,7 @@ export async function fetchUserActivities(
         return item as UserActivity;
       }
 
-      const action = item as Action;
+      const action = item as ActivityListItem;
       return {
         id: action.id,
         title: action.title,
@@ -113,14 +115,14 @@ export async function fetchUserActivities(
 export async function updateActivityStatus(
   id: string,
   status: ActivityStatusTransition,
-): Promise<Omit<Action, "details">> {
+): Promise<Omit<ActivityListItem, "details">> {
   const body: UpdateActivityStatusRequest = { status };
-  return await api.patch<Omit<Action, "details">>(
+  return await api.patch<Omit<ActivityListItem, "details">>(
     `/activities/${id}/status`,
     body,
   );
 }
 
-export async function getActivityById(id: string): Promise<ActionDetail> {
-  return await api.get<ActionDetail>(`/activities/${id}`);
+export async function getActivityById(id: string): Promise<Activity> {
+  return await api.get<Activity>(`/activities/${id}`);
 }

@@ -1,19 +1,4 @@
-import type { ActivityListItem } from "../../services/contracts/activity";
 import type { ListActivitiesResponse } from "../../services/contracts/activity";
-
-/**
- * Provisional aliases (#194): the wire types live in
- * `frontend/src/services/contracts/activity.ts`; screens keep the historical
- * `Action*` names.
- */
-export type {
-  ActivityType as ActionType,
-  ActivityFormat as ActionFormat,
-  ActivityStatus as ActionStatus,
-  CampusLocation as ActionCampus,
-} from "../../services/contracts/activity";
-
-export type Action = ActivityListItem;
 
 export interface FilterOptions {
   area: string;

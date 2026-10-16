@@ -35,7 +35,7 @@ export interface Paginated<T> {
  */
 export interface ApiErrorBody {
   status: number;
-  code: ApiErrorCode;
+  code: OpenUnion<ApiErrorCode>;
   message: string;
   errors?: ApiErrorItem[];
   details?: Record<string, unknown>;
@@ -44,9 +44,16 @@ export interface ApiErrorBody {
 
 export interface ApiErrorItem {
   field: string;
-  code: ApiErrorItemCode;
+  code: OpenUnion<ApiErrorItemCode>;
   message: string;
 }
+
+/**
+ * The known codes plus any other string. Routes document their own codes in
+ * Bruno (§4), so a closed union would reject them; `string & {}` keeps the
+ * known ones in autocomplete instead of collapsing the union into `string`.
+ */
+type OpenUnion<T extends string> = T | (string & {});
 
 /** §4 "codes genéricos" + §5 `SESSION_INVALID`. */
 export type ApiErrorCode =
@@ -61,6 +68,4 @@ export type ApiErrorCode =
 
 /** §4 "codes de item de `errors[]` já definidos". */
 export type ApiErrorItemCode =
-  | "INVALID_UUID"
-  | "UNKNOWN_PARAMETER"
-  | "INVALID_DATETIME";
+  "INVALID_UUID" | "UNKNOWN_PARAMETER" | "INVALID_DATETIME";

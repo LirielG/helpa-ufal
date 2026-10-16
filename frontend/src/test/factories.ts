@@ -1,15 +1,8 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
-import type { Action } from "@/features/dashboard/types";
-import type { ActionDetail } from "@/features/action-detail/types";
+import type { Activity, ActivityListItem } from "@/services/contracts/activity";
 import type { Enrollment } from "@/features/enrollment-management/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
-import type {
-  ActivityStatus,
-  ActivityType,
-  CampusLocation,
-} from "@/services/contracts/activity";
-
 
 let counter = 0;
 
@@ -49,22 +42,8 @@ export function makeManager(overrides: Partial<User> = {}): User {
 const ACTION_START = "2026-03-10T14:00:00.000Z";
 const ACTION_END = "2026-03-17T18:00:00.000Z";
 
-/** Top-level fields shared by the list item and the detail wire shapes. */
-type ActivityHeader = {
-  id: string;
-  authorId: string;
-  title: string;
-  type: ActivityType;
-  campus: CampusLocation;
-  startDate: string;
-  endDate: string;
-  slots: number;
-  availableSlots: number;
-  status: ActivityStatus;
-};
-
 /** Private defaults both activity factories build on, so the two stay independent. */
-function makeActivityHeader(): ActivityHeader {
+function makeActivityHeader(): Omit<Activity, "details"> {
   return {
     id: unique("action"),
     authorId: unique("author"),
@@ -79,7 +58,9 @@ function makeActivityHeader(): ActivityHeader {
   };
 }
 
-export function makeAction(overrides: Partial<Action> = {}): Action {
+export function makeAction(
+  overrides: Partial<ActivityListItem> = {},
+): ActivityListItem {
   const header = makeActivityHeader();
 
   return {
@@ -102,9 +83,7 @@ export function makeAction(overrides: Partial<Action> = {}): Action {
   };
 }
 
-export function makeActionDetail(
-  overrides: Partial<ActionDetail> = {},
-): ActionDetail {
+export function makeActionDetail(overrides: Partial<Activity> = {}): Activity {
   return {
     ...makeActivityHeader(),
     details: {

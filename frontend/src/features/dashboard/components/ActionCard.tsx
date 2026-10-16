@@ -1,10 +1,10 @@
 import { MapPin, Calendar, Users } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
-import type { Action } from "../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
 
 interface ActionCardProps {
-  action: Action;
+  action: ActivityListItem;
 }
 
 export function ActionCard({ action }: ActionCardProps) {

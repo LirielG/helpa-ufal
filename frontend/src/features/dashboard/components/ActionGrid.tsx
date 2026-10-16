@@ -1,8 +1,8 @@
-import type { Action } from "../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
 import { ActionCard } from "./ActionCard";
 
 interface ActionGridProps {
-  actions: Action[];
+  actions: ActivityListItem[];
 }
 
 export function ActionGrid({ actions }: ActionGridProps) {
