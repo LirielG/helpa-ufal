@@ -7,14 +7,20 @@ import {
   Profile,
   EditAction,
   NotFound,
+  EnrollmentsPage,
 } from "../pages";
+
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
+import { useSessionCheck } from "../hooks/useSessionCheck";
 import { PublicRoute } from "./PublicRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { GuestRoute } from "./GuestRoute";
 
 export function AppRoutes() {
   useSessionExpiry();
+  // After useSessionExpiry: effects run in order, so the 401 handler is in
+  // place before the check can get its answer.
+  useSessionCheck();
 
   return (
     <Routes>
@@ -56,6 +62,15 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <EditAction />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/activity/:id/enrollments"
+        element={
+          <ProtectedRoute>
+            <EnrollmentsPage />
           </ProtectedRoute>
         }
       />

@@ -17,14 +17,8 @@ export interface User {
   userType: UserType;
   isManager: boolean;
   createdAt: string;
-  updatedAt: string;
-  // Optional profile fields. Not returned by the current auth endpoints yet —
-  // populated by the (mocked) profile service. Optional to keep login/register intact.
-  registrationCode?: string;
-  course?: string;
-  institution?: string;
-  avatarUrl?: string;
-  totalHours?: number;
+  /** Absent once the session is verified: `GET /users/me` does not return it. */
+  updatedAt?: string;
 }
 
 export interface UpdateProfileRequest {

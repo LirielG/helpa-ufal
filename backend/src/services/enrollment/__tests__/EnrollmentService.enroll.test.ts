@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import { expectHttpError } from "@/utils/tests.js";
@@ -16,8 +17,8 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
     userId: USER_ID,
     activityId: ACTIVITY_ID,
     status: "APPROVED",
-    attendanceConfirmed: null, // era: false
-    confirmedWorkloadHours: 0, // novo
+    attendanceConfirmed: null,
+    confirmedWorkloadHours: 0,
     isModerator: false,
     enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     createdAt: new Date("2026-08-22T21:00:00.000Z"),
@@ -46,14 +47,19 @@ function anActivity(overrides: Record<string, unknown> = {}) {
 function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
+    user?: Partial<IUserRepository>;
     enrollment?: Partial<IEnrollmentRepository>;
   } = {},
 ) {
   const activityRepository = {
     findById: vi.fn().mockResolvedValue(anActivity()),
-    findUserById: vi.fn().mockResolvedValue({ isManager: false }),
     ...overrides.activity,
   } as unknown as IActivityRepository;
+
+  const userRepository = {
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
+    ...overrides.user,
+  } as unknown as IUserRepository;
 
   const enrollmentRepository = {
     findByUserAndActivity: vi.fn().mockResolvedValue(null),
@@ -64,7 +70,7 @@ function mockRepositories(
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 
-  return { activityRepository, enrollmentRepository };
+  return { activityRepository, userRepository, enrollmentRepository };
 }
 
 describe("EnrollmentService.enroll", () => {
@@ -73,11 +79,13 @@ describe("EnrollmentService.enroll", () => {
   it("throws 401 when the token's user no longer exists in the database", async () => {
     // Ghost user: account removed, token still valid. Checked before anything
     // else, following the contract's validation order.
-    const { activityRepository, enrollmentRepository } = mockRepositories({
-      activity: { findUserById: vi.fn().mockResolvedValue(null) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        user: { findById: vi.fn().mockResolvedValue(null) },
+      });
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -93,9 +101,11 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Input validation ----------
 
   it("rejects a malformed activityId with a ValidationError", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -108,12 +118,13 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Activity existence/state ----------
 
   it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {
-    // findById filters deletedAt, so null covers both cases of the contract.
-    const { activityRepository, enrollmentRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(null) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        activity: { findById: vi.fn().mockResolvedValue(null) },
+      });
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -128,15 +139,15 @@ describe("EnrollmentService.enroll", () => {
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
     "throws 409 when the activity status is %s (not open for enrollment)",
     async (status) => {
-      // CANCELLED here is the activity lifecycle status — distinct from soft
-      // delete (deletedAt), which is 404 via the filtered findById.
-      const { activityRepository, enrollmentRepository } = mockRepositories({
-        activity: {
-          findById: vi.fn().mockResolvedValue(anActivity({ status })),
-        },
-      });
+      const { activityRepository, userRepository, enrollmentRepository } =
+        mockRepositories({
+          activity: {
+            findById: vi.fn().mockResolvedValue(anActivity({ status })),
+          },
+        });
       const service = new EnrollmentService({
         activityRepository,
+        userRepository,
         enrollmentRepository,
       });
 
@@ -152,9 +163,11 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Happy path ----------
 
   it("creates an enrollment and returns the contract's 201 shape", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories();
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -169,17 +182,17 @@ describe("EnrollmentService.enroll", () => {
   });
 
   it("keeps the original createdAt when the repository reactivates a canceled enrollment", async () => {
-    // Contract decision: reactivation returns 201 with the record's original
-    // createdAt, not the reactivation moment (that one lives in enrolledAt).
     const reactivated = anEnrollment({
       createdAt: new Date("2026-06-01T10:00:00.000Z"),
       enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     });
-    const { activityRepository, enrollmentRepository } = mockRepositories({
-      enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
+      });
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -192,17 +205,22 @@ describe("EnrollmentService.enroll", () => {
   // ---------- Repository business rules (propagation) ----------
 
   it("propagates 409 when the user is already enrolled", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        enroll: vi
-          .fn()
-          .mockRejectedValue(
-            new CustomError(409, "User is already enrolled in this activity."),
-          ),
-      },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          enroll: vi
+            .fn()
+            .mockRejectedValue(
+              new CustomError(
+                409,
+                "User is already enrolled in this activity.",
+              ),
+            ),
+        },
+      });
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 
@@ -214,17 +232,19 @@ describe("EnrollmentService.enroll", () => {
   });
 
   it("propagates 409 when the activity has no available slots", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories({
-      enrollment: {
-        enroll: vi
-          .fn()
-          .mockRejectedValue(
-            new CustomError(409, "No available slots for this activity."),
-          ),
-      },
-    });
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories({
+        enrollment: {
+          enroll: vi
+            .fn()
+            .mockRejectedValue(
+              new CustomError(409, "No available slots for this activity."),
+            ),
+        },
+      });
     const service = new EnrollmentService({
       activityRepository,
+      userRepository,
       enrollmentRepository,
     });
 

@@ -51,8 +51,10 @@ function editableAction(
 }
 
 function mockAction(action: ActionDetail = editableAction()) {
+  // The literal id, not `:id`: an override on `:id` would also answer
+  // GET /activities/filters, which the area field calls.
   server.use(
-    http.get(`${API}/activities/:id`, () => HttpResponse.json(action)),
+    http.get(`${API}/activities/${ACTION_ID}`, () => HttpResponse.json(action)),
   );
 
   return action;
@@ -114,6 +116,30 @@ function optionLabels(select: HTMLElement) {
     .map((option) => option.textContent);
 }
 
+function getAreaField() {
+  return screen.getByLabelText("Área de atuação");
+}
+
+/**
+ * The area field is free text with a `<datalist>` of suggestions, so the
+ * suggestions are the options of the list the input points to.
+ */
+function areaSuggestions(): string[] {
+  const datalist = (getAreaField() as HTMLInputElement).list;
+
+  if (!datalist) return [];
+
+  return within(datalist)
+    .queryAllByRole("option", { hidden: true })
+    .map((option) => (option as HTMLOptionElement).value);
+}
+
+function serveAreas(areas: string[]) {
+  server.use(
+    http.get(`${API}/activities/filters`, () => HttpResponse.json({ areas })),
+  );
+}
+
 describe("EditAction", () => {
   it("loads the action from the API into the form", async () => {
     const action = mockAction();
@@ -124,15 +150,12 @@ describe("EditAction", () => {
     expect(screen.getByPlaceholderText(/Descreva os detalhes/)).toHaveValue(
       action.details!.description,
     );
-    expect(screen.getByLabelText("Qtde. de Vagas")).toHaveValue(action.slots);
+    expect(screen.getByLabelText("Número de vagas")).toHaveValue(action.slots);
     expect(screen.getByLabelText("Carga horária")).toHaveValue(20);
-    expect(screen.getByLabelText("Tipo de ação")).toHaveValue("COURSE");
+    expect(screen.getByLabelText("Tipo da ação")).toHaveValue("COURSE");
     expect(screen.getByLabelText("Formato da ação")).toHaveValue("IN_PERSON");
     expect(screen.getByLabelText("Área de atuação")).toHaveValue("Robótica");
     expect(screen.getByLabelText("Campus")).toHaveValue("ARAPIRACA");
-    expect(screen.getByLabelText("Link do evento")).toHaveValue(
-      action.details!.url,
-    );
     expect(screen.getByLabelText("Logradouro")).toHaveValue(
       ADDRESS.addressLine,
     );
@@ -166,14 +189,14 @@ describe("EditAction", () => {
     expect(screen.queryByText(/respons[áa]vel/i)).not.toBeInTheDocument();
   });
 
-  it("offers the type, format, area and campus vocabulary closed in #171", async () => {
+  it("offers the type, format and campus vocabulary closed in #171", async () => {
     mockAction();
 
     renderEditAction();
 
     await findTitleField();
 
-    expect(optionLabels(screen.getByLabelText("Tipo de ação"))).toEqual([
+    expect(optionLabels(screen.getByLabelText("Tipo da ação"))).toEqual([
       "Ação de extensão",
       "Curso ou minicurso",
       "Evento",
@@ -184,13 +207,6 @@ describe("EditAction", () => {
       "Presencial",
       "On-line",
       "Híbrido",
-    ]);
-    expect(optionLabels(screen.getByLabelText("Área de atuação"))).toEqual([
-      "Robótica",
-      "Educação",
-      "Saúde",
-      "Meio Ambiente",
-      "Arquitetura",
     ]);
     expect(optionLabels(screen.getByLabelText("Campus"))).toEqual([
       "UFAL - Campus Maceió",
@@ -208,7 +224,7 @@ describe("EditAction", () => {
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
 
-    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    const slots = await screen.findByLabelText("Número de vagas");
     await user.clear(slots);
     await user.type(slots, "45");
     await user.click(getSaveButton());
@@ -236,14 +252,14 @@ describe("EditAction", () => {
     );
   });
 
-  it("sends the link of an in-person action when it is edited", async () => {
-    mockAction();
+  it("sends the link of an online action when it is edited", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
 
     await findTitleField();
 
-    const url = screen.getByLabelText("Link do evento");
+    const url = screen.getByLabelText("Link para o evento");
     await user.clear(url);
     await user.type(url, "https://exemplo.com/novo");
     await user.click(getSaveButton());
@@ -254,6 +270,31 @@ describe("EditAction", () => {
       }),
     );
   });
+
+  it("does not show the link field for an in-person action", async () => {
+    mockAction(editableAction({ format: "IN_PERSON" }));
+
+    renderEditAction();
+
+    await findTitleField();
+
+    expect(screen.queryByLabelText(/link/i)).not.toBeInTheDocument();
+  });
+
+  it.each(["ONLINE", "HYBRID"] as const)(
+    "shows the saved link of a %s action",
+    async (format) => {
+      const action = mockAction(editableAction({ format }));
+
+      renderEditAction();
+
+      await findTitleField();
+
+      expect(screen.getByLabelText("Link para o evento")).toHaveValue(
+        action.details!.url,
+      );
+    },
+  );
 
   it("uppercases a state typed in lower case", async () => {
     mockAction();
@@ -295,7 +336,7 @@ describe("EditAction", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
-  it("keeps an action editable when its area is outside the closed list", async () => {
+  it("keeps an action editable when its area is outside the suggestions", async () => {
     mockAction(editableAction({ area: "Tecnologia e Inovação" }));
     const onUpdate = spyOnUpdate();
     const { user } = renderEditAction();
@@ -313,6 +354,201 @@ describe("EditAction", () => {
     await waitFor(() =>
       expect(onUpdate).toHaveBeenCalledWith({ title: "Oficina de Robótica" }),
     );
+  });
+
+  it("suggests the areas returned by GET /activities/filters and nothing else", async () => {
+    mockAction();
+    serveAreas(["Robótica Educacional", "Saúde", "Saude"]);
+
+    renderEditAction();
+
+    await findTitleField();
+
+    await waitFor(() =>
+      expect(areaSuggestions()).toEqual([
+        "Robótica Educacional",
+        "Saúde",
+        "Saude",
+      ]),
+    );
+  });
+
+  it("sends a typed area that is not among the suggestions", async () => {
+    mockAction();
+    serveAreas(["Robótica", "Saúde"]);
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "Astronomia Amadora");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+  });
+
+  it("trims the spaces around the area before sending it", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "  Astronomia Amadora  ");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+  });
+
+  it("still saves the area when the suggestions fail to load", async () => {
+    mockAction();
+    server.use(
+      http.get(`${API}/activities/filters`, () =>
+        HttpResponse.json(
+          { message: "Internal server error." },
+          { status: 500 },
+        ),
+      ),
+    );
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const area = getAreaField();
+    await user.clear(area);
+    await user.type(area, "Astronomia Amadora");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ area: "Astronomia Amadora" }),
+    );
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+  });
+
+  describe("date and time", () => {
+    // 08:00 and 18:00 in America/Maceio (UTC-3), the timezone tests run in.
+    const START = "2026-03-10T11:00:00.000Z";
+    const END = "2026-03-17T21:00:00.000Z";
+
+    function mockScheduledAction(startDate = START, endDate = END) {
+      return mockAction(editableAction({}, { startDate, endDate }));
+    }
+
+    function changeField(label: string, value: string) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+
+    it("loads the start and end times of the action", async () => {
+      mockScheduledAction();
+
+      renderEditAction();
+
+      await findTitleField();
+
+      expect(screen.getByLabelText("Data de início")).toHaveValue("2026-03-10");
+      expect(screen.getByLabelText("Horário de início")).toHaveValue("08:00");
+      expect(screen.getByLabelText("Data de encerramento")).toHaveValue(
+        "2026-03-17",
+      );
+      expect(screen.getByLabelText("Horário de encerramento")).toHaveValue(
+        "18:00",
+      );
+    });
+
+    it("keeps the time and sends both ends when only the start date changes", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Data de início", "2026-03-11");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: "2026-03-11T11:00:00.000Z",
+          endDate: END,
+        }),
+      );
+    });
+
+    it("keeps the time and sends both ends when only the end date changes", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Data de encerramento", "2026-03-18");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: START,
+          endDate: "2026-03-18T21:00:00.000Z",
+        }),
+      );
+    });
+
+    it("saves a new time without changing the date", async () => {
+      mockScheduledAction();
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de início", "09:30");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          startDate: "2026-03-10T12:30:00.000Z",
+          endDate: END,
+        }),
+      );
+    });
+
+    it("blocks an end time before the start time on the same date", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de encerramento", "07:00");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("blocks an end equal to the start, as the create form does", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de encerramento", "08:00");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
   });
 
   it("makes no request and stays on the form when nothing changed", async () => {
@@ -413,7 +649,7 @@ describe("EditAction", () => {
     });
     const { user } = renderEditAction();
 
-    const slots = await screen.findByLabelText("Qtde. de Vagas");
+    const slots = await screen.findByLabelText("Número de vagas");
     await user.clear(slots);
     await user.type(slots, "5");
     await user.click(getSaveButton());
@@ -536,7 +772,7 @@ describe("EditAction", () => {
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(
       http.get(
-        `${API}/activities/:id`,
+        `${API}/activities/${ACTION_ID}`,
         () => new HttpResponse(null, { status: 404 }),
       ),
     );

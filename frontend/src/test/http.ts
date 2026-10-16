@@ -1,12 +1,15 @@
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { config } from "@/config";
+import { useAuthStore } from "@/stores/authStore";
 import {
   makeAction,
   makeActionDetail,
+  makeEnrollment,
   makeSigaaActivity,
   makeUser,
 } from "./factories";
+
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -32,11 +35,30 @@ export const handlers = [
     () => new HttpResponse(null, { status: 204 }),
   ),
 
+  // `GET /users/me` answers for the session, so it echoes the user the test
+  // signed in instead of minting a new one: the session check must not swap
+  // the logged-in user mid-test.
+  http.get(`${API}/users/me`, () => {
+    const user = useAuthStore.getState().user ?? makeUser();
+
+    return HttpResponse.json({
+      ...user,
+      registrationCode: "2026000001",
+      course: "Ciência da Computação",
+      cndb: null,
+    });
+  }),
+
   http.get(`${API}/activities`, () =>
     HttpResponse.json({
       activities: [makeAction()],
       total: 1,
     }),
+  ),
+
+  // Declared before /activities/:id so the literal path wins over the id.
+  http.get(`${API}/activities/filters`, () =>
+    HttpResponse.json({ areas: ["Educação", "Robótica", "Saúde"] }),
   ),
 
   http.get(`${API}/activities/:id`, ({ params }) =>
@@ -57,6 +79,18 @@ export const handlers = [
       total: 1,
       page: 1,
       limit: 10,
+    }),
+  ),
+
+  // Default happy-path handler for the enrollment list endpoint.
+  // Tests that need error scenarios override this with server.use(...).
+  http.get(`${API}/activities/:id/enrollments`, () =>
+    HttpResponse.json({
+      items: [makeEnrollment()],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPresent: 0,
     }),
   ),
 ];

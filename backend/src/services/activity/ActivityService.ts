@@ -1,5 +1,7 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -11,6 +13,7 @@ import type {
   IListActivitiesResponse,
 } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
+import { CampusLocation } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
@@ -28,16 +31,39 @@ const MAX_SLOTS = 10_000;
 const MAX_WORKLOAD_HOURS = 8_760; // hours in a year
 const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
 
+// `page` and `limit` accept only plain digits. parseInt() alone is too
+// lenient: it turns "10.9" into 10 and "20abc" into 20 without any warning.
+const STRICT_INTEGER_PATTERN = /^\d+$/;
+
+function isStrictIntegerString(value: unknown): value is string {
+  return typeof value === "string" && STRICT_INTEGER_PATTERN.test(value);
+}
+
+// A filter is invalid when it is PRESENT but not one of the accepted values.
+// "Present" means anything other than `undefined`: an empty `?type=` is a
+// present-and-invalid value (400), not an absent filter. A non-string value
+// (e.g. `?type=A&type=B`, which Express parses as an array) is invalid too.
+function isInvalidFilterValue(
+  value: unknown,
+  allowed: readonly string[],
+): boolean {
+  if (value === undefined) return false;
+  return typeof value !== "string" || !allowed.includes(value);
+}
+
 type Props = {
   activityRepository?: IActivityRepository;
+  userRepository?: IUserRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
+  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async create(
@@ -119,6 +145,12 @@ class ActivityService implements IActivityService {
       throw new CustomError(400, "HYBRID activities require a url.");
     }
 
+    // Zod already strips address from ONLINE payloads; this covers callers that skip
+    // the schema, matching update, which also drops the address of ONLINE activities.
+    if (data.format === "ONLINE" && "address" in data) {
+      delete data.address;
+    }
+
     const newActivity = await this._activityRepository.create(authorId, data);
 
     const activityResponse: ActivityResponse = {
@@ -141,11 +173,12 @@ class ActivityService implements IActivityService {
     filters: IListActivitiesFilters,
     userId?: string,
   ): Promise<IListActivitiesResponse> {
-    const pageRaw = filters.page ?? "1";
-    const limitRaw = filters.limit ?? "20";
+    // Absent -> default. Present (even empty) -> must be a plain integer.
+    const pageRaw: unknown = filters.page ?? "1";
+    const limitRaw: unknown = filters.limit ?? "20";
 
-    const pageNum = parseInt(pageRaw, 10);
-    const limitNum = parseInt(limitRaw, 10);
+    const pageNum = isStrictIntegerString(pageRaw) ? Number(pageRaw) : NaN;
+    const limitNum = isStrictIntegerString(limitRaw) ? Number(limitRaw) : NaN;
 
     const paginationErrors = [];
 
@@ -172,45 +205,56 @@ class ActivityService implements IActivityService {
       throw new ValidationError(paginationErrors);
     }
 
-    // filtros
     const filterErrors = [];
 
     const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
     const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
     const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
-    if (filters.type && !validTypes.includes(filters.type)) {
+    // Derived from the Prisma enum (never hand-written): campus is a DB enum
+    // column, so an unknown value would otherwise blow up in the driver (500).
+    const validCampuses: readonly string[] = Object.values(CampusLocation);
+
+    if (isInvalidFilterValue(filters.type, validTypes)) {
       filterErrors.push({
         field: "type",
         message: `type must be one of the following: ${validTypes.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
-    if (filters.format && !validFormats.includes(filters.format)) {
+    if (isInvalidFilterValue(filters.format, validFormats)) {
       filterErrors.push({
         field: "format",
         message: `format must be one of the following: ${validFormats.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
-    if (filters.status && !validStatuses.includes(filters.status)) {
+    if (isInvalidFilterValue(filters.status, validStatuses)) {
       filterErrors.push({
         field: "status",
         message: `status must be one of the following: ${validStatuses.join(", ")}.`,
       } as ValidationErrorItem);
     }
 
+    // `search` is deliberately NOT validated: it is free text.
+    if (isInvalidFilterValue(filters.campus, validCampuses)) {
+      filterErrors.push({
+        field: "campus",
+        message: `campus must be one of the following: ${validCampuses.join(", ")}.`,
+      } as ValidationErrorItem);
+    }
+
     const validOrders = ["asc", "desc"];
     const validSortFields = ["start_date", "created_at"];
 
-    if (filters.order && !validOrders.includes(filters.order)) {
+    if (isInvalidFilterValue(filters.order, validOrders)) {
       filterErrors.push({
         field: "order",
         message: `order must be one of the following: ${validOrders.join(",")}.`,
       } as ValidationErrorItem);
     }
 
-    if (filters.orderBy && !validSortFields.includes(filters.orderBy)) {
+    if (isInvalidFilterValue(filters.orderBy, validSortFields)) {
       filterErrors.push({
         field: "orderBy",
         message: `orderBy must be one of the following: ${validSortFields.join(",")}.`,
@@ -277,7 +321,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const dbUser = await this._activityRepository.findUserById(userId);
+    const dbUser = await this._userRepository.findById(userId);
     const isAuthor = !!dbUser && activity.authorId === userId;
     const isManager = dbUser?.isManager ?? false;
 
@@ -386,20 +430,18 @@ class ActivityService implements IActivityService {
     }
 
     const finalFormat = data.format ?? activity.details?.format;
+    // `url: null` clears the stored url, so only an absent field falls back to it.
+    const finalUrl = data.url !== undefined ? data.url : activity.details?.url;
 
-    if (
-      (finalFormat === "ONLINE" || finalFormat === "HYBRID") &&
-      !data.url &&
-      !activity.details?.url
-    ) {
-      throw new CustomError(400, `${finalFormat} activities require a url.`);
+    if (finalFormat === "HYBRID" && !finalUrl) {
+      throw new CustomError(400, "HYBRID activities require a url.");
     }
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";
     const hasExistingAddress = !!activity.details?.address;
 
     if (finalFormat === "ONLINE") {
-      data.address = null; // ignora endereço enviado se virou online
+      data.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -432,7 +474,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
     const isManager = user?.isManager ?? false;
 
@@ -490,7 +532,7 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._activityRepository.findUserById(userId);
+    const user = await this._userRepository.findById(userId);
     const isAuthor = !!user && activity.authorId === userId;
     const isManager = user?.isManager ?? false;
 
