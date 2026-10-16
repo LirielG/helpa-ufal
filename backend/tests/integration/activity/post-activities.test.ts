@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
+import { prisma } from "@/database/prisma.js";
 import { anAddress, createTeacher, createStudent } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
@@ -49,6 +50,29 @@ describe("POST /activities", () => {
       .set(...authHeader(expiredToken))
       .send(validPayload());
     expect(response.status).toBe(401);
+  });
+
+  it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
+    const teacher = await createTeacher();
+
+    await prisma.teacher.deleteMany({ where: { userId: teacher.user.id } });
+    await prisma.user.delete({ where: { id: teacher.user.id } });
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(teacher.token))
+      .send(validPayload());
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      status: 403,
+      message: "You do not have permission to create an activity.",
+    });
+
+    const count = await prisma.activity.count({
+      where: { authorId: teacher.user.id },
+    });
+    expect(count).toBe(0);
   });
 
   it.each([
