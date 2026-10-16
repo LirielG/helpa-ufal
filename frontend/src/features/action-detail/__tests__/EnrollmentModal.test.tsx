@@ -67,7 +67,7 @@ describe("EnrollmentModal", () => {
         buttons.find(
           (btn) =>
             !btn.hasAttribute("aria-label") &&
-            !btn.disabled &&
+            !(btn as HTMLButtonElement).disabled &&
             btn.textContent?.includes("✓"),
         ) || screen.getByRole("button", { name: /Confirmar/i });
 

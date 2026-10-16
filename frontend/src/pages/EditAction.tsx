@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -11,7 +11,6 @@ import {
   ConfirmFormatModal,
 } from "../features/action-edit/components";
 import {
-  ACTION_AREA_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
   ACTION_FORMAT_OPTIONS,
   ACTION_TYPE_OPTIONS,
@@ -27,7 +26,8 @@ import type {
   ActionAddressPayload,
   UpdateActionPayload,
 } from "../features/action-edit/types";
-import { toInputDate } from "../utils";
+import { toInputDate, toInputTime } from "../utils";
+import { fetchAreaSuggestions } from "../features/dashboard/services";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -59,7 +59,7 @@ export function EditAction() {
   const [loadFailed, setLoadFailed] = useState(false);
   const notFound = !id || loadFailed;
 
-  const [loadedArea, setLoadedArea] = useState("");
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingData, setPendingData] = useState<ActionEditSchemaType | null>(
@@ -83,20 +83,16 @@ export function EditAction() {
 
   const currentFormat = useWatch({ control, name: "format" });
 
-  /**
-   * `area` is free text in the API, so an action may carry a value the closed
-   * list of #171 does not have. Offering it keeps the action editable instead
-   * of silently switching it to the first option.
-   */
-  const areaOptions = useMemo(() => {
-    const isKnown = ACTION_AREA_OPTIONS.some(
-      (option) => option.value === loadedArea,
-    );
+  useEffect(() => {
+    let isMounted = true;
+    fetchAreaSuggestions().then((suggestions) => {
+      if (isMounted) setAreaSuggestions(suggestions);
+    });
 
-    return isKnown || !loadedArea
-      ? ACTION_AREA_OPTIONS
-      : [...ACTION_AREA_OPTIONS, { value: loadedArea, label: loadedArea }];
-  }, [loadedArea]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -114,13 +110,13 @@ export function EditAction() {
         return;
       }
 
-      setLoadedArea(action.details?.area ?? "");
-
       reset({
         title: action.title,
         description: action.details?.description ?? "",
         startDate: toInputDate(action.startDate),
         endDate: toInputDate(action.endDate),
+        startTime: toInputTime(action.startDate),
+        endTime: toInputTime(action.endDate),
         type: action.type,
         slots: action.slots,
         format: action.details?.format,
@@ -157,21 +153,29 @@ export function EditAction() {
 
     if (dirtyFields.title) payload.title = data.title;
     if (dirtyFields.description) payload.description = data.description;
-    if (dirtyFields.startDate) {
-      payload.startDate = new Date(`${data.startDate}T00:00:00`).toISOString();
-    }
-    if (dirtyFields.endDate) {
-      payload.endDate = new Date(`${data.endDate}T23:59:59.999`).toISOString();
+    if (
+      dirtyFields.startDate ||
+      dirtyFields.startTime ||
+      dirtyFields.endDate ||
+      dirtyFields.endTime
+    ) {
+      payload.startDate = new Date(
+        `${data.startDate}T${data.startTime}:00`,
+      ).toISOString();
+      payload.endDate = new Date(
+        `${data.endDate}T${data.endTime}:00`,
+      ).toISOString();
     }
     if (dirtyFields.type) payload.type = data.type;
     if (dirtyFields.slots) payload.slots = data.slots;
     if (dirtyFields.workloadHours) payload.workloadHours = data.workloadHours;
-    if (dirtyFields.area) payload.area = data.area;
+    if (dirtyFields.area) payload.area = data.area.trim();
     if (dirtyFields.campus) payload.campus = data.campus;
     if (dirtyFields.format) payload.format = data.format;
 
-    // The link is editable in every format — it is only optional in person —
-    // so an edit to it is sent whatever the format is.
+    // Online and hybrid actions require a link, so switching to one of them
+    // sends the current link along with the new format, even if it was not
+    // edited.
     const urlRequiredByNewFormat =
       dirtyFields.format && data.format !== "IN_PERSON";
 
@@ -233,10 +237,7 @@ export function EditAction() {
 
   if (isLoadingAction) {
     return (
-      <DashboardShell
-        header={<DashboardHeader onOpenRegister={() => {}} />}
-        footer={<Footer />}
-      >
+      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
         <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-gray-500">Carregando...</p>
         </div>
@@ -246,10 +247,7 @@ export function EditAction() {
 
   if (notFound) {
     return (
-      <DashboardShell
-        header={<DashboardHeader onOpenRegister={() => {}} />}
-        footer={<Footer />}
-      >
+      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
         <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-gray-500">Ação não encontrada.</p>
         </div>
@@ -259,7 +257,7 @@ export function EditAction() {
 
   return (
     <DashboardShell
-      header={<DashboardHeader onOpenRegister={() => {}} />}
+      header={<DashboardHeader />}
       footer={<Footer />}
       containerStyle={{ backgroundColor: "#E0F6F6" }}
     >
@@ -299,27 +297,92 @@ export function EditAction() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  size="sm"
-                  type="date"
-                  label="Data de início"
-                  error={errors.startDate?.message}
-                  {...register("startDate")}
-                />
-                <Input
-                  size="sm"
-                  type="date"
-                  label="Data de encerramento"
-                  error={errors.endDate?.message}
-                  {...register("endDate")}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <fieldset>
+                  <legend className="block text-sm font-medium text-gray-700 mb-1">
+                    Horário
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label
+                        htmlFor="edit-start-time"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
+                        Início
+                      </label>
+                      <Input
+                        id="edit-start-time"
+                        size="sm"
+                        type="time"
+                        aria-label="Horário de início"
+                        error={errors.startTime?.message}
+                        {...register("startTime")}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="edit-end-time"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
+                        Fim
+                      </label>
+                      <Input
+                        id="edit-end-time"
+                        size="sm"
+                        type="time"
+                        aria-label="Horário de encerramento"
+                        error={errors.endTime?.message}
+                        {...register("endTime")}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend className="block text-sm font-medium text-gray-700 mb-1">
+                    Data
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label
+                        htmlFor="edit-start-date"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
+                        Início
+                      </label>
+                      <Input
+                        id="edit-start-date"
+                        size="sm"
+                        type="date"
+                        aria-label="Data de início"
+                        error={errors.startDate?.message}
+                        {...register("startDate")}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="edit-end-date"
+                        className="block text-xs text-gray-500 mb-1"
+                      >
+                        Fim
+                      </label>
+                      <Input
+                        id="edit-end-date"
+                        size="sm"
+                        type="date"
+                        aria-label="Data de encerramento"
+                        error={errors.endDate?.message}
+                        {...register("endDate")}
+                      />
+                    </div>
+                  </div>
+                </fieldset>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <Select
                   size="sm"
-                  label="Tipo de ação"
+                  label="Tipo da ação"
                   options={ACTION_TYPE_OPTIONS}
                   error={errors.type?.message}
                   {...register("type")}
@@ -329,7 +392,7 @@ export function EditAction() {
                   type="number"
                   min={1}
                   placeholder="0"
-                  label="Qtde. de Vagas"
+                  label="Número de vagas"
                   error={errors.slots?.message}
                   {...register("slots")}
                 />
@@ -355,20 +418,30 @@ export function EditAction() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Select
-                  size="sm"
-                  label="Área de atuação"
-                  options={areaOptions}
-                  error={errors.area?.message}
-                  {...register("area")}
-                />
-                <Input
-                  size="sm"
-                  label="Link do evento"
-                  placeholder="(Opcional para presencial)"
-                  error={errors.url?.message}
-                  {...register("url")}
-                />
+                <div>
+                  <Input
+                    size="sm"
+                    label="Área de atuação"
+                    list="edit-area-suggestions"
+                    placeholder="Digite ou selecione"
+                    error={errors.area?.message}
+                    {...register("area")}
+                  />
+                  <datalist id="edit-area-suggestions">
+                    {areaSuggestions.map((suggestion) => (
+                      <option key={suggestion} value={suggestion} />
+                    ))}
+                  </datalist>
+                </div>
+                {currentFormat !== "IN_PERSON" && (
+                  <Input
+                    size="sm"
+                    label="Link para o evento"
+                    placeholder="Ex: https://meet.google.com/abc-defg-hij"
+                    error={errors.url?.message}
+                    {...register("url")}
+                  />
+                )}
               </div>
             </div>
 

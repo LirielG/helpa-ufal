@@ -191,7 +191,7 @@ export function anAddress(): Omit<Address, "id" | "createdAt" | "updatedAt"> {
   return {
     addressLine: "Av. Manoel Severino Barbosa, 100",
     district: "Bom Sucesso",
-    zipCode: "57309-005",
+    zipCode: "57309005",
     city: "Arapiraca",
     state: "AL",
   };

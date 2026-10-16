@@ -60,7 +60,14 @@ describe("GET /activities/filters", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      areas: ["Água", "Assistência", "Educação", "Educador", "Saúde", "Zoologia"],
+      areas: [
+        "Água",
+        "Assistência",
+        "Educação",
+        "Educador",
+        "Saúde",
+        "Zoologia",
+      ],
     });
   });
 
@@ -191,9 +198,7 @@ describe("GET /activities/filters", () => {
     };
 
     for (const area of options.body.areas) {
-      const listed = await request(app)
-        .get("/activities")
-        .query({ area });
+      const listed = await request(app).get("/activities").query({ area });
 
       expect(listed.status).toBe(200);
       expect(listed.body.total).toBe(expectedTotalByArea[area.toLowerCase()]);

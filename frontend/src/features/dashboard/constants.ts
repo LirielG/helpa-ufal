@@ -61,16 +61,3 @@ export const ACTION_FORMAT_OPTIONS = (
 export const ACTION_CAMPUS_OPTIONS = (
   Object.keys(ACTION_CAMPUS_LABELS) as ActionCampus[]
 ).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
-
-export const ACTION_AREA_LABELS = [
-  "Robótica",
-  "Educação",
-  "Saúde",
-  "Meio Ambiente",
-  "Arquitetura",
-] as const;
-
-export const ACTION_AREA_OPTIONS = ACTION_AREA_LABELS.map((label) => ({
-  value: label,
-  label,
-}));
