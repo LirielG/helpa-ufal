@@ -85,7 +85,7 @@ export const ActionEditSchema = z
       ],
       { message: "Selecione o campus" },
     ),
-    url: z.string().url("Informe uma URL válida").or(z.literal("")),
+    url: z.string(),
     address: z
       .object({
         addressLine: z.string().trim(),
@@ -101,13 +101,29 @@ export const ActionEditSchema = z
       new Date(`${data.endDate}T${data.endTime}`) >
       new Date(`${data.startDate}T${data.startTime}`),
     {
-      message: "A data de encerramento deve ser posterior à de início",
+      message: "A data de encerramento deve ser posterior à de início.",
       path: ["endDate"],
     },
   )
-  .refine((data) => data.format === "IN_PERSON" || !!data.url, {
-    message: "Link do evento é obrigatório para ações on-line ou híbridas",
-    path: ["url"],
+  .superRefine((data, ctx) => {
+    // In person the link field is hidden, so whatever it still holds is not
+    // checked: an error there would block the save with nothing on screen.
+    if (data.format === "IN_PERSON") return;
+
+    if (!data.url.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+        path: ["url"],
+      });
+    } else if (!z.url().safeParse(data.url).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe uma URL válida",
+        path: ["url"],
+      });
+    }
   })
   .superRefine((data, ctx) => {
     if (data.format === "ONLINE") return;
