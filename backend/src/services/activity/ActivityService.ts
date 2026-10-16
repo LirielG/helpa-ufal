@@ -13,6 +13,13 @@ import type {
   IListActivitiesResponse,
 } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
+// Runtime enums, aliased because `ActivityStatus` is already imported below as
+// a type from "@/types/activity.js".
+import {
+  ActivityFormat as ActivityFormatEnum,
+  ActivityStatus as ActivityStatusEnum,
+  ActivityType as ActivityTypeEnum,
+} from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
@@ -179,9 +186,13 @@ class ActivityService implements IActivityService {
 
     const filterErrors = [];
 
-    const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
-    const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
-    const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+    // Derived from the Prisma enums (single source of truth), never hand-written:
+    // a value added to schema.prisma is accepted here, and listed in the error
+    // message, with no edit to this service. Typed as `readonly string[]`
+    // because the raw query-string filters are plain strings.
+    const validTypes: readonly string[] = Object.values(ActivityTypeEnum);
+    const validFormats: readonly string[] = Object.values(ActivityFormatEnum);
+    const validStatuses: readonly string[] = Object.values(ActivityStatusEnum);
 
     if (filters.type && !validTypes.includes(filters.type)) {
       filterErrors.push({
