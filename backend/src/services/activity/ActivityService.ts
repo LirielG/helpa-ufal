@@ -70,7 +70,7 @@ class ActivityService implements IActivityService {
     authorId: string,
     data: CreateActivityInput,
   ): Promise<ActivityResponse> {
-    const author = await this._activityRepository.findUserById(authorId);
+    const author = await this._userRepository.findById(authorId);
 
     if (!author) {
       throw new CustomError(
