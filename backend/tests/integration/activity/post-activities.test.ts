@@ -24,6 +24,81 @@ function validPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("POST /activities", () => {
+  it.each([
+    ["date without timezone", "2026-01-01T08:00"],
+    ["date only", "2026-01-01"],
+    ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+    ["numeric timestamp", 1767225600000],
+  ])(
+    "returns 400 when startDate is not ISO 8601 in UTC with Z (%s)",
+    async (_, invalidStartDate) => {
+      const author = await createTeacher();
+
+      const response = await request(app)
+        .post("/activities")
+        .set(...authHeader(author.token))
+        .send(validPayload({ startDate: invalidStartDate }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: "startDate" }),
+        ]),
+      );
+    },
+  );
+
+  it("creates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(
+        validPayload({
+          startDate: "2026-01-01T11:00:00.000Z",
+          endDate: "2026-01-15T11:00:00.000Z",
+        }),
+      );
+
+    expect(response.status).toBe(201);
+  });
+
+  it("creates an IN_PERSON activity with url: null and returns url as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(
+        validPayload({
+          format: "IN_PERSON",
+          url: null,
+          address: anAddress(),
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    expect(response.body.details.url).toBeNull();
+  });
+
+  it("creates an ONLINE activity with address: null and returns address as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(
+        validPayload({
+          format: "ONLINE",
+          address: null,
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    expect(response.body.details.address).toBeNull();
+  });
+
   it("returns 401 without a token", async () => {
     const response = await request(app).post("/activities").send(validPayload());
     expect(response.status).toBe(401);

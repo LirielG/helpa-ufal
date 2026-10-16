@@ -13,6 +13,44 @@ import {
 import { authHeader } from "../../helpers/auth.js";
 
 describe("PATCH /activities/:id", () => {
+  it.each([
+    ["date without timezone", "2026-01-01T08:00"],
+    ["date only", "2026-01-01"],
+    ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+    ["numeric timestamp", 1767225600000],
+  ])(
+    "returns 400 when startDate is not ISO 8601 in UTC with Z (%s)",
+    async (_, invalidStartDate) => {
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id);
+
+      const response = await request(app)
+        .patch(`/activities/${activity.id}`)
+        .set(...authHeader(author.token))
+        .send({ startDate: invalidStartDate });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: "startDate" }),
+        ]),
+      );
+    },
+  );
+
+  it("updates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({
+        startDate: "2026-01-01T11:00:00.000Z",
+      });
+
+    expect(response.status).toBe(200);
+  });
 
   it("returns 400 for an empty body", async () => {
     const author = await createTeacher();
