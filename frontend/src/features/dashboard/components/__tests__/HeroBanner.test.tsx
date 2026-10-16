@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen } from "@/test";
+import { act, render, screen, within } from "@/test";
 import { HeroBanner } from "../HeroBanner";
 import type { Action } from "../../types";
 
@@ -94,6 +94,59 @@ describe("HeroBanner", () => {
       unmount();
       expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
       expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+
+  // jsdom does not implement `inert`, so these assertions cover the attribute
+  // that enforces the behaviour in a real browser. Tab order and click
+  // targeting are not verifiable here and are checked manually — see the
+  // manual test steps in the PR description.
+  describe("hidden slides leave the tab order and the click area (#218)", () => {
+    it("puts inert on the hidden slides only", () => {
+      render(<HeroBanner actions={mockActions} />);
+
+      const slides = screen.getAllByTestId("hero-slide");
+      expect(slides).toHaveLength(4);
+
+      const hidden = slides.filter((slide) => slide.hasAttribute("inert"));
+      const visible = slides.filter((slide) => !slide.hasAttribute("inert"));
+
+      expect(hidden).toHaveLength(3);
+      expect(visible).toHaveLength(1);
+      expect(visible[0]).not.toHaveAttribute("inert");
+      expect(
+        within(visible[0]).getByRole("link", { name: "Saiba mais" }),
+      ).toHaveAttribute("href", "/activity/1");
+    });
+
+    it("keeps the control of every hidden slide inside an inert container", () => {
+      render(<HeroBanner actions={mockActions} />);
+
+      const links = screen.getAllByRole("link", {
+        name: "Saiba mais",
+        hidden: true,
+      });
+      expect(links).toHaveLength(4);
+
+      const reachable = links.filter((link) => !link.closest("[inert]"));
+      expect(reachable).toHaveLength(1);
+      expect(reachable[0]).toHaveAttribute("href", "/activity/1");
+    });
+
+    it("moves inert to the slide that becomes visible when advancing", async () => {
+      const { user } = render(<HeroBanner actions={mockActions} />);
+      await user.click(screen.getByRole("button", { name: "Próximo slide" }));
+
+      const slides = screen.getAllByTestId("hero-slide");
+      const visible = slides.filter((slide) => !slide.hasAttribute("inert"));
+
+      expect(visible).toHaveLength(1);
+      expect(
+        slides.filter((slide) => slide.hasAttribute("inert")),
+      ).toHaveLength(3);
+      expect(
+        within(visible[0]).getByRole("link", { name: "Saiba mais" }),
+      ).toHaveAttribute("href", "/activity/2");
     });
   });
 });
