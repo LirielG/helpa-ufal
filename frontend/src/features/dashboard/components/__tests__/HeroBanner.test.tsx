@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@/test";
 import { HeroBanner } from "../HeroBanner";
-import type { Action } from "../../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
 
 const mockActions = [
   { id: "1", title: "Slide 1", startDate: "2026-05-09T12:00:00Z" },
   { id: "2", title: "Slide 2", startDate: "2026-05-10T12:00:00Z" },
   { id: "3", title: "Slide 3", startDate: "2026-05-11T12:00:00Z" },
   { id: "4", title: "Slide 4", startDate: "2026-05-12T12:00:00Z" },
-] as unknown as Action[];
+] as unknown as ActivityListItem[];
 
 function getVisibleSlideTitle(): string {
   return screen.getByRole("heading").textContent || "";

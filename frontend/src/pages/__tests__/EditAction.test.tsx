@@ -13,10 +13,7 @@ import {
   waitFor,
   within,
 } from "@/test";
-import type {
-  ActionDetail,
-  ActionDetails,
-} from "@/features/action-detail/types";
+import type { Activity, ActivityDetails } from "@/services/contracts/activity";
 import type { ActionAddressPayload } from "@/features/action-edit/types";
 import { EditAction } from "../EditAction";
 
@@ -30,18 +27,18 @@ const ADDRESS: ActionAddressPayload = {
   state: "AL",
 };
 
-type EditableAction = ActionDetail & { details: ActionDetails };
+type EditableAction = Activity & { details: ActivityDetails };
 
 function editableAction(
-  details: Partial<ActionDetails> = {},
-  action: Partial<ActionDetail> = {},
+  details: Partial<ActivityDetails> = {},
+  action: Partial<Activity> = {},
 ): EditableAction {
   const base = makeActionDetail({ id: ACTION_ID, ...action });
 
   return {
     ...base,
     details: {
-      ...(base.details as ActionDetails),
+      ...(base.details as ActivityDetails),
       area: "Robótica",
       url: "https://exemplo.com/oficina",
       address: { id: "address-1", ...ADDRESS },
@@ -50,7 +47,7 @@ function editableAction(
   };
 }
 
-function mockAction(action: ActionDetail = editableAction()) {
+function mockAction(action: Activity = editableAction()) {
   // The literal id, not `:id`: an override on `:id` would also answer
   // GET /activities/filters, which the area field calls.
   server.use(

@@ -1,4 +1,4 @@
-import type { ActionStatus } from "@/features/dashboard/types";
+import type { Activity } from "@/services/contracts/activity";
 
 export type { UserProfile } from "@/types/profile";
 
@@ -14,12 +14,12 @@ export interface UserActivity {
   date: string;
   status: ActivityStatus;
   /** Lifecycle status of the action itself, as opposed to the sub-tab in `status`. */
-  activityStatus: ActionStatus;
+  activityStatus: Activity["status"];
   workloadHours?: number;
 }
 
 /** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */
-export type ActivityStatusTransition = Exclude<ActionStatus, "OPEN">;
+export type ActivityStatusTransition = Exclude<Activity["status"], "OPEN">;
 
 export interface UpdateActivityStatusRequest {
   status: ActivityStatusTransition;

@@ -11,7 +11,7 @@ import {
 } from "@/test/factories";
 import { signIn } from "@/test/auth";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
-import type { ActionStatus } from "@/features/dashboard/types";
+import type { ActivityStatus } from "@/services/contracts/activity";
 import type { UserActivity } from "../../../types";
 import { ManagedCard } from "../ManagedCard";
 import { EnrolledCard } from "../EnrolledCard";
@@ -29,7 +29,7 @@ const RELOAD_FAILED_MESSAGE =
 const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
 
-function managed(activityStatus: ActionStatus): UserActivity {
+function managed(activityStatus: ActivityStatus): UserActivity {
   return makeManagedActivity({ id: ACTION_ID, activityStatus });
 }
 
@@ -82,7 +82,7 @@ function recordPatches(
   return bodies;
 }
 
-function respondWithStatus(status: ActionStatus) {
+function respondWithStatus(status: ActivityStatus) {
   return () => HttpResponse.json(makeAction({ id: ACTION_ID, status }));
 }
 

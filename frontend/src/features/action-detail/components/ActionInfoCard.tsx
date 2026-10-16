@@ -10,11 +10,11 @@ import {
   ACTION_CAMPUS_LABELS,
   ACTION_FORMAT_LABELS,
 } from "../../dashboard/constants";
-import type { ActionDetail } from "../types";
+import type { Activity } from "@/services/contracts/activity";
 import { formatDate, formatTime } from "../../../utils";
 
 interface ActionInfoCardProps {
-  action: ActionDetail;
+  action: Activity;
 }
 
 function InfoRow({

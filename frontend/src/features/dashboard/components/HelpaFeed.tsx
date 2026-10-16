@@ -1,11 +1,12 @@
 import { Alert } from "../../../components/Alert";
 import { Pagination } from "../../../components/Pagination";
-import type { Action, FilterOptions } from "../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
+import type { FilterOptions } from "../types";
 import { ActionGrid } from "./ActionGrid";
 import { FilterBar } from "./FilterBar";
 
 interface HelpaFeedProps {
-  actions: Action[];
+  actions: ActivityListItem[];
   filters: FilterOptions;
   onFilterChange: (key: keyof FilterOptions, value: string) => void;
   page: number;
