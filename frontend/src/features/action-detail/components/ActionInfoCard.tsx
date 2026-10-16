@@ -47,7 +47,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
       <ul className="space-y-4">
         <InfoRow
           icon={<Building2 className="size-5 text-gray-400" />}
-          label="Campus / Instituição"
+          label="Campus"
         >
           <span className="font-medium text-gray-900">
             {ACTION_CAMPUS_LABELS[action.campus] ?? "Não informado"}
