@@ -1,21 +1,9 @@
-import type {
-  Action,
-  ActionDetails as ActionListDetails,
-} from "../dashboard/types";
-
-export interface ActionAddress {
-  id: string;
-  addressLine: string;
-  district: string;
-  zipCode: string;
-  city: string;
-  state: string;
-}
-
-export interface ActionDetails extends ActionListDetails {
-  address: ActionAddress | null;
-}
-
-export interface ActionDetail extends Action {
-  details: ActionDetails | null;
-}
+/**
+ * Provisional aliases (#194): the detail wire type lives in
+ * `frontend/src/services/contracts/activity.ts`; screens keep the historic names.
+ */
+export type {
+  Activity as ActionDetail,
+  ActivityAddress as ActionAddress,
+  ActivityDetails as ActionDetails,
+} from "../../services/contracts/activity";

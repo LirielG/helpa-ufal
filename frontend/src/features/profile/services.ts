@@ -9,7 +9,8 @@ import type {
   UserActivity,
 } from "./types";
 import type { UserProfile } from "../../types/profile";
-import type { Action, PaginatedResponse } from "../dashboard/types";
+import type { ListActivitiesResponse } from "../../services/contracts/activity";
+import type { Action } from "../dashboard/types";
 import type { ActionDetail } from "../action-detail/types";
 
 // The one `/users/me` client lives on authService; the profile screen asks for
@@ -33,11 +34,12 @@ export async function updateProfile(
   };
 }
 
-// The endpoint may answer with the array itself, wrapped in `data`, or in `activities` (PaginatedResponse)
+// The endpoint may answer with the array itself, wrapped in `data`, or with the
+// `activities` envelope (ListActivitiesResponse).
 type ActivitiesResponse =
   | UserActivity[]
   | { data?: UserActivity[] }
-  | PaginatedResponse<Action>;
+  | ListActivitiesResponse;
 
 /**
  * TEMPORARY WORKAROUND — remove in #118, do not keep.

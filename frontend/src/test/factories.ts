@@ -4,6 +4,11 @@ import type { ActionDetail } from "@/features/action-detail/types";
 import type { Enrollment } from "@/features/enrollment-management/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
+import type {
+  ActivityStatus,
+  ActivityType,
+  CampusLocation,
+} from "@/services/contracts/activity";
 
 
 let counter = 0;
@@ -44,7 +49,22 @@ export function makeManager(overrides: Partial<User> = {}): User {
 const ACTION_START = "2026-03-10T14:00:00.000Z";
 const ACTION_END = "2026-03-17T18:00:00.000Z";
 
-export function makeAction(overrides: Partial<Action> = {}): Action {
+/** Top-level fields shared by the list item and the detail wire shapes. */
+type ActivityHeader = {
+  id: string;
+  authorId: string;
+  title: string;
+  type: ActivityType;
+  campus: CampusLocation;
+  startDate: string;
+  endDate: string;
+  slots: number;
+  availableSlots: number;
+  status: ActivityStatus;
+};
+
+/** Private defaults both activity factories build on, so the two stay independent. */
+function makeActivityHeader(): ActivityHeader {
   return {
     id: unique("action"),
     authorId: unique("author"),
@@ -56,12 +76,27 @@ export function makeAction(overrides: Partial<Action> = {}): Action {
     slots: 30,
     availableSlots: 12,
     status: "OPEN",
+  };
+}
+
+export function makeAction(overrides: Partial<Action> = {}): Action {
+  const header = makeActivityHeader();
+
+  return {
+    ...header,
+    createdAt: NOW,
+    updatedAt: NOW,
+    deletedAt: null,
     details: {
+      activityId: header.id,
       description: "Descrição da ação de teste.",
       area: "robotica",
       format: "IN_PERSON",
       url: null,
       workloadHours: 20,
+      addressId: null,
+      createdAt: NOW,
+      updatedAt: NOW,
     },
     ...overrides,
   };
@@ -70,12 +105,14 @@ export function makeAction(overrides: Partial<Action> = {}): Action {
 export function makeActionDetail(
   overrides: Partial<ActionDetail> = {},
 ): ActionDetail {
-  const { details, ...action } = makeAction();
-
   return {
-    ...action,
-    details: details && {
-      ...details,
+    ...makeActivityHeader(),
+    details: {
+      description: "Descrição da ação de teste.",
+      area: "robotica",
+      format: "IN_PERSON",
+      url: null,
+      workloadHours: 20,
       address: {
         id: unique("address"),
         addressLine: "Av. Manoel Severino Barbosa, s/n",
