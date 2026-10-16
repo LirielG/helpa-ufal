@@ -57,7 +57,7 @@ class ActivityController implements IActivityController {
 
     const userId = req.user?.id; 
 
-    const activity = await this._activityService.findById(id);
+    const activity = await this._activityService.findById(id, userId);
     res.status(200).json(activity);
   }
 
