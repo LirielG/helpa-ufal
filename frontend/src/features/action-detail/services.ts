@@ -1,9 +1,9 @@
 import { api } from "../../services/api";
-import type { ActionDetail } from "./types";
+import type { Activity } from "@/services/contracts/activity";
 
-export async function getActionById(id: string): Promise<ActionDetail | null> {
+export async function getActionById(id: string): Promise<Activity | null> {
   try {
-    return await api.get<ActionDetail>(`/activities/${id}`);
+    return await api.get<Activity>(`/activities/${id}`);
   } catch (error) {
     console.error("Erro ao buscar detalhes da ação:", error);
     return null;

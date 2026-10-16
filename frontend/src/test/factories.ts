@@ -1,10 +1,8 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
-import type { Action } from "@/features/dashboard/types";
-import type { ActionDetail } from "@/features/action-detail/types";
+import type { Activity, ActivityListItem } from "@/services/contracts/activity";
 import type { Enrollment } from "@/features/enrollment-management/types";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
-
 
 let counter = 0;
 
@@ -44,7 +42,8 @@ export function makeManager(overrides: Partial<User> = {}): User {
 const ACTION_START = "2026-03-10T14:00:00.000Z";
 const ACTION_END = "2026-03-17T18:00:00.000Z";
 
-export function makeAction(overrides: Partial<Action> = {}): Action {
+/** Private defaults both activity factories build on, so the two stay independent. */
+function makeActivityHeader(): Omit<Activity, "details"> {
   return {
     id: unique("action"),
     authorId: unique("author"),
@@ -56,26 +55,43 @@ export function makeAction(overrides: Partial<Action> = {}): Action {
     slots: 30,
     availableSlots: 12,
     status: "OPEN",
+  };
+}
+
+export function makeAction(
+  overrides: Partial<ActivityListItem> = {},
+): ActivityListItem {
+  const header = makeActivityHeader();
+
+  return {
+    ...header,
+    createdAt: NOW,
+    updatedAt: NOW,
+    deletedAt: null,
+    details: {
+      activityId: header.id,
+      description: "Descrição da ação de teste.",
+      area: "robotica",
+      format: "IN_PERSON",
+      url: null,
+      workloadHours: 20,
+      addressId: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    },
+    ...overrides,
+  };
+}
+
+export function makeActionDetail(overrides: Partial<Activity> = {}): Activity {
+  return {
+    ...makeActivityHeader(),
     details: {
       description: "Descrição da ação de teste.",
       area: "robotica",
       format: "IN_PERSON",
       url: null,
       workloadHours: 20,
-    },
-    ...overrides,
-  };
-}
-
-export function makeActionDetail(
-  overrides: Partial<ActionDetail> = {},
-): ActionDetail {
-  const { details, ...action } = makeAction();
-
-  return {
-    ...action,
-    details: details && {
-      ...details,
       address: {
         id: unique("address"),
         addressLine: "Av. Manoel Severino Barbosa, s/n",

@@ -15,14 +15,14 @@ import { ReportActionButton } from "../features/report/components/ReportActionBu
 import { ReportActionModal } from "../features/report/ReportActionModal";
 import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
-import type { ActionDetail as ActionDetailType } from "../features/action-detail/types";
+import type { Activity } from "@/services/contracts/activity";
 
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
 
-  const [action, setAction] = useState<ActionDetailType | null>(null);
+  const [action, setAction] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);

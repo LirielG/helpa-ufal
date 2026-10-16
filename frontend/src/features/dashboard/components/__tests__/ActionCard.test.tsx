@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test";
 import { ActionCard } from "../ActionCard";
-import type { Action } from "../../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
 
 describe("ActionCard", () => {
   it("shows the title, location, date and number of spots", () => {
@@ -13,7 +13,7 @@ describe("ActionCard", () => {
       availableSlots: 25,
       status: "OPEN",
       type: "COURSE",
-    } as unknown as Action;
+    } as unknown as ActivityListItem;
 
     render(<ActionCard action={action} />);
 
@@ -31,7 +31,7 @@ describe("ActionCard", () => {
       id: "action-42",
       type: "COURSE",
       status: "OPEN",
-    } as unknown as Action;
+    } as unknown as ActivityListItem;
 
     render(<ActionCard action={action} />);
 

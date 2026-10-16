@@ -13,7 +13,8 @@ import { Footer } from "../components/Footer";
 import bgDashboard from "../assets/bg.svg";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { fetchActions } from "../features/dashboard/services";
-import type { FilterOptions, Action } from "../features/dashboard/types";
+import type { ActivityListItem } from "@/services/contracts/activity";
+import type { FilterOptions } from "../features/dashboard/types";
 import { useActionRegister } from "../hooks/useActionRegister";
 
 interface DashboardProps {
@@ -26,7 +27,7 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   const feed: FeedKey =
     searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
-  const [actions, setActions] = useState<Action[]>([]);
+  const [actions, setActions] = useState<ActivityListItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);

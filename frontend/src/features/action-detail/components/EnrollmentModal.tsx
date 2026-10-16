@@ -5,7 +5,7 @@ import { Button } from "../../../components/Button";
 import { Alert } from "../../../components/Alert";
 import { enrollInAction } from "../services";
 import { getEnrollmentErrorMessage } from "../errors";
-import type { ActionDetail } from "../types";
+import type { Activity } from "@/services/contracts/activity";
 import { formatDate } from "../../../utils";
 import { ApiError } from "../../../services/apiError";
 import {
@@ -16,7 +16,7 @@ import {
 type ModalStep = "confirm" | "loading" | "success" | "error";
 
 interface EnrollmentModalProps {
-  action: ActionDetail;
+  action: Activity;
   onClose: () => void;
   onSuccess?: () => void;
 }

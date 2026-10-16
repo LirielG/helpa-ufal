@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { CreateActivityInput } from "@/schemas/activity/ActivitySchemas.js";
 import { expectValidationError, expectCustomError } from "@/utils/tests.js";
 import { daysFromNow } from "../../../../tests/helpers/dates.js";
@@ -68,17 +69,27 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
   };
 }
 
-function mockRepository(
-  overrides: Partial<IActivityRepository> = {},
-): IActivityRepository {
-  return {
+function mockRepositories(
+  overrides: {
+    activity?: Partial<IActivityRepository>;
+    user?: Partial<IUserRepository>;
+  } = {},
+) {
+  const activityRepository = {
     create: vi
       .fn()
       .mockImplementation((authorId: string, data: CreateActivityInput) =>
         Promise.resolve(createdActivityFrom(authorId, data)),
       ),
-    ...overrides,
+    ...overrides.activity,
   } as unknown as IActivityRepository;
+
+  const userRepository = {
+    findById: vi.fn().mockResolvedValue({ isManager: false }),
+    ...overrides.user,
+  } as unknown as IUserRepository;
+
+  return { activityRepository, userRepository };
 }
 
 describe("ActivityService.create", () => {
@@ -86,11 +97,27 @@ describe("ActivityService.create", () => {
     vi.useRealTimers();
   });
 
+  // ---------- Author existence (ghost user) ----------
+
+  it("throws 403 when the token's user no longer exists in the database", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      user: { findById: vi.fn().mockResolvedValue(null) },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await expectCustomError(
+      service.create(AUTHOR_ID, validInput()),
+      403,
+      "You do not have permission to create an activity.",
+    );
+    expect(activityRepository.create).not.toHaveBeenCalled();
+  });
+
   // ---------- Block 1: dates (ValidationError, accumulated) ----------
 
   it("rejects a startDate in the past", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ startDate: daysFromNow(-1) });
 
@@ -100,8 +127,8 @@ describe("ActivityService.create", () => {
   });
 
   it("rejects an endDate equal to startDate (the comparison is inclusive)", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // Same Date instance: two daysFromNow(10) calls could differ by 1ms.
     const start = daysFromNow(10);
@@ -113,8 +140,8 @@ describe("ActivityService.create", () => {
   });
 
   it("rejects a duration longer than 365 days", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       startDate: daysFromNow(10),
@@ -130,8 +157,8 @@ describe("ActivityService.create", () => {
   });
 
   it("rejects a startDate more than 365 days in the future", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       startDate: daysFromNow(366),
@@ -147,8 +174,8 @@ describe("ActivityService.create", () => {
   });
 
   it("accumulates date errors in a single ValidationError, in check order", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       startDate: daysFromNow(-2),
@@ -159,15 +186,15 @@ describe("ActivityService.create", () => {
       { field: "startDate", message: "startDate must be in the future." },
       { field: "endDate", message: "endDate must be after startDate." },
     ]);
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(activityRepository.create).not.toHaveBeenCalled();
   });
 
   it("rejects a startDate equal to now", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-09-09T12:00:00.000Z"));
 
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       startDate: new Date("2026-09-09T12:00:00.000Z"),
@@ -182,8 +209,8 @@ describe("ActivityService.create", () => {
   // ---------- Block 2: capacity (ValidationError, accumulated) ----------
 
   it("rejects workloadHours above the total duration in hours", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // A 2-day activity lasts 48h: 49h is the cheapest way to break the rule.
     const input = validInput({ workloadHours: 49 });
@@ -198,8 +225,8 @@ describe("ActivityService.create", () => {
   });
 
   it("reports both workloadHours errors together: the 8760 cap never fires alone", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // Reaching block 2 requires duration <= 365 days (<= 8760h), so any
     // workloadHours > 8760 also exceeds the total duration — duration first.
@@ -220,8 +247,8 @@ describe("ActivityService.create", () => {
   });
 
   it("rejects slots above 10000", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ slots: 10_001 });
 
@@ -233,8 +260,8 @@ describe("ActivityService.create", () => {
   // ---------- Block 3: format (CustomError 400, first failure wins) ----------
 
   it("rejects IN_PERSON without an address", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ address: undefined });
 
@@ -243,12 +270,12 @@ describe("ActivityService.create", () => {
       400,
       "IN_PERSON activities require an address.",
     );
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(activityRepository.create).not.toHaveBeenCalled();
   });
 
   it("rejects HYBRID without an address", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       format: "HYBRID",
@@ -264,8 +291,8 @@ describe("ActivityService.create", () => {
   });
 
   it("rejects HYBRID without a url", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ format: "HYBRID" });
 
@@ -277,8 +304,8 @@ describe("ActivityService.create", () => {
   });
 
   it("discards address silently when format is ONLINE", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       format: "ONLINE",
@@ -287,13 +314,13 @@ describe("ActivityService.create", () => {
 
     await service.create(AUTHOR_ID, input);
 
-    const [, persisted] = vi.mocked(repository.create).mock.calls[0];
+    const [, persisted] = vi.mocked(activityRepository.create).mock.calls[0];
     expect(persisted).not.toHaveProperty("address");
   });
 
   it("reports only the address error when HYBRID misses both address and url", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // First-failure block: the url check is never reached.
     const input = validInput({ format: "HYBRID", address: undefined });
@@ -308,20 +335,20 @@ describe("ActivityService.create", () => {
   // ---------- Precedence between blocks ----------
 
   it("reports only the date error when dates and slots are both invalid", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ startDate: daysFromNow(-1), slots: 20_000 });
 
     await expectValidationError(service.create(AUTHOR_ID, input), [
       { field: "startDate", message: "startDate must be in the future." },
     ]);
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(activityRepository.create).not.toHaveBeenCalled();
   });
 
   it("reports only the capacity error when slots and format are both invalid", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // Capacity (ValidationError) runs before format (CustomError).
     const input = validInput({ slots: 20_000, address: undefined });
@@ -329,14 +356,14 @@ describe("ActivityService.create", () => {
     await expectValidationError(service.create(AUTHOR_ID, input), [
       { field: "slots", message: "slots cannot exceed 10000." },
     ]);
-    expect(repository.create).not.toHaveBeenCalled();
+    expect(activityRepository.create).not.toHaveBeenCalled();
   });
 
   // ---------- Boundaries (the comparisons are strict) ----------
 
   it("accepts slots exactly at the 10000 limit", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const response = await service.create(
       AUTHOR_ID,
@@ -348,20 +375,20 @@ describe("ActivityService.create", () => {
   });
 
   it("accepts workloadHours equal to the exact total duration", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({ workloadHours: 48 });
 
     await expect(service.create(AUTHOR_ID, input)).resolves.toMatchObject({
       status: "OPEN",
     });
-    expect(repository.create).toHaveBeenCalledTimes(1);
+    expect(activityRepository.create).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a duration of exactly 365 days", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput({
       startDate: daysFromNow(1),
@@ -369,20 +396,20 @@ describe("ActivityService.create", () => {
     });
 
     await expect(service.create(AUTHOR_ID, input)).resolves.toBeDefined();
-    expect(repository.create).toHaveBeenCalledTimes(1);
+    expect(activityRepository.create).toHaveBeenCalledTimes(1);
   });
 
   // ---------- Happy path ----------
 
   it("passes authorId and the input untouched to the repository and returns the exact DTO", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const input = validInput();
     const response = await service.create(AUTHOR_ID, input);
 
-    expect(repository.create).toHaveBeenCalledTimes(1);
-    expect(repository.create).toHaveBeenCalledWith(AUTHOR_ID, input);
+    expect(activityRepository.create).toHaveBeenCalledTimes(1);
+    expect(activityRepository.create).toHaveBeenCalledWith(AUTHOR_ID, input);
     // Exact shape: includes 'details' matching the Bruno 201 example, resolving the contract debt.
     expect(response).toEqual({
       id: CREATED_ID,
@@ -415,14 +442,16 @@ describe("ActivityService.create", () => {
 
   it("takes availableSlots from the persisted row, not from the request payload", async () => {
     const input = validInput({ slots: 40 });
-    const repository = mockRepository({
-      create: vi.fn().mockResolvedValue({
-        ...createdActivityFrom(AUTHOR_ID, input),
-        slots: 30,
-        availableSlots: 30,
-      }),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        create: vi.fn().mockResolvedValue({
+          ...createdActivityFrom(AUTHOR_ID, input),
+          slots: 30,
+          availableSlots: 30,
+        }),
+      },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     const response = await service.create(AUTHOR_ID, input);
 
@@ -431,8 +460,8 @@ describe("ActivityService.create", () => {
   });
 
   it("creates an ONLINE activity without url or address", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
+    const { activityRepository, userRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository, userRepository });
 
     // Today's behavior: the event link may not exist yet at creation time.
     // Bypasses the Zod contract (url is required for ONLINE there); if the
@@ -441,7 +470,7 @@ describe("ActivityService.create", () => {
 
     const response = await service.create(AUTHOR_ID, input);
 
-    expect(repository.create).toHaveBeenCalledWith(AUTHOR_ID, input);
+    expect(activityRepository.create).toHaveBeenCalledWith(AUTHOR_ID, input);
     expect(response.status).toBe("OPEN");
   });
 
@@ -449,10 +478,12 @@ describe("ActivityService.create", () => {
 
   it("propagates repository rejections unchanged (no wrapping)", async () => {
     const infraError = new Error("database is down");
-    const repository = mockRepository({
-      create: vi.fn().mockRejectedValue(infraError),
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        create: vi.fn().mockRejectedValue(infraError),
+      },
     });
-    const service = new ActivityService({ activityRepository: repository });
+    const service = new ActivityService({ activityRepository, userRepository });
 
     await expect(service.create(AUTHOR_ID, validInput())).rejects.toBe(
       infraError,

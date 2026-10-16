@@ -1,8 +1,8 @@
 import type {
-  ActionCampus,
-  ActionFormat,
-  ActionType,
-} from "../dashboard/types";
+  CampusLocation,
+  ActivityFormat,
+  ActivityType,
+} from "@/services/contracts/activity";
 
 /**
  * The API has no partial address: `AddressSchema` requires the five fields in
@@ -22,9 +22,9 @@ export interface UpdateActionPayload {
   description?: string;
   startDate?: string;
   endDate?: string;
-  type?: ActionType;
-  campus?: ActionCampus;
-  format?: ActionFormat;
+  type?: ActivityType;
+  campus?: CampusLocation;
+  format?: ActivityFormat;
   area?: string;
   slots?: number;
   workloadHours?: number;
