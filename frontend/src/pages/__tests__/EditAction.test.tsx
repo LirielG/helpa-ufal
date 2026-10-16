@@ -293,6 +293,48 @@ describe("EditAction", () => {
     },
   );
 
+  it("asks for the link of an online action with the create form's message", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.clear(screen.getByLabelText("Link para o evento"));
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+      ),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("drops an edited link when the action becomes in-person", async () => {
+    mockAction(editableAction({ format: "ONLINE" }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "https://exemplo.com/novo");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "IN_PERSON",
+    );
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        format: "IN_PERSON",
+        address: ADDRESS,
+      }),
+    );
+  });
+
   it("uppercases a state typed in lower case", async () => {
     mockAction();
     const onUpdate = spyOnUpdate();

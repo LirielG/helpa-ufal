@@ -175,11 +175,12 @@ export function EditAction() {
 
     // Online and hybrid actions require a link, so switching to one of them
     // sends the current link along with the new format, even if it was not
-    // edited.
-    const urlRequiredByNewFormat =
-      dirtyFields.format && data.format !== "IN_PERSON";
-
-    if (dirtyFields.url || urlRequiredByNewFormat) {
+    // edited. In person the field is hidden, so a link typed before the
+    // switch is dropped, as the create form does.
+    if (
+      data.format !== "IN_PERSON" &&
+      (dirtyFields.url || dirtyFields.format)
+    ) {
       payload.url = data.url;
     }
 
