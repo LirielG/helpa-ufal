@@ -311,6 +311,48 @@ describe("EditAction", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
+  it("blocks an invalid link on an online action", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "nao-e-um-link");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText("Informe uma URL válida"),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("saves an in-person switch even if the hidden link is invalid", async () => {
+    mockAction(editableAction({ format: "ONLINE" }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "nao-e-um-link");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "IN_PERSON",
+    );
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        format: "IN_PERSON",
+        address: ADDRESS,
+      }),
+    );
+  });
+
   it("drops an edited link when the action becomes in-person", async () => {
     mockAction(editableAction({ format: "ONLINE" }));
     const onUpdate = spyOnUpdate();
