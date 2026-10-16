@@ -25,7 +25,7 @@ class ActivityRepository implements IActivityRepository {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<Activity> {
+  ): Promise<ActivityFullResponse> {
     return this._prisma.$transaction(async (tx) => {
       const activity = await tx.activity.create({
         data: {
@@ -41,10 +41,20 @@ class ActivityRepository implements IActivityRepository {
       });
 
       let addressId: string | null = null;
+      let createdAddress = null;
 
-      if (data.format !== "ONLINE") {
+      if (data.format !== "ONLINE" && data.address) {
         const address = await tx.address.create({ data: data.address });
         addressId = address.id;
+        
+        createdAddress = {
+          id: address.id,
+          addressLine: address.addressLine,
+          district: address.district,
+          zipCode: address.zipCode,
+          city: address.city,
+          state: address.state,
+        };
       }
 
       await tx.activityDetails.create({
@@ -59,7 +69,26 @@ class ActivityRepository implements IActivityRepository {
         },
       });
 
-      return activity;
+      return {
+        id: activity.id,
+        authorId: activity.authorId,
+        title: activity.title,
+        type: activity.type,
+        campus: activity.campus,
+        startDate: activity.startDate,
+        endDate: activity.endDate,
+        slots: activity.slots,
+        availableSlots: activity.slots,
+        status: activity.status as ActivityStatus,
+        details: {
+          description: data.description,
+          area: data.area,
+          format: data.format,
+          url: data.url ?? null,
+          workloadHours: data.workloadHours,
+          address: createdAddress,
+        },
+      };
     });
   }
 

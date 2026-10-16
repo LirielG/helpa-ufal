@@ -48,7 +48,23 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
     startDate: data.startDate,
     endDate: data.endDate,
     slots: data.slots,
+    availableSlots: data.slots,
     status: "OPEN",
+    details: {
+      description: data.description,
+      area: data.area,
+      format: data.format,
+      url: data.url ?? null,
+      workloadHours: data.workloadHours,
+      address: data.address ? {
+        id: "addr-123",
+        addressLine: data.address.addressLine,
+        district: data.address.district,
+        zipCode: data.address.zipCode,
+        city: data.address.city,
+        state: data.address.state,
+      } : null,
+    }
   };
 }
 
@@ -367,7 +383,7 @@ describe("ActivityService.create", () => {
 
     expect(repository.create).toHaveBeenCalledTimes(1);
     expect(repository.create).toHaveBeenCalledWith(AUTHOR_ID, input);
-    // Exact shape: no `details` (the Bruno 201 example shows it — contract debt).
+    // Exact shape: includes 'details' matching the Bruno 201 example, resolving the contract debt.
     expect(response).toEqual({
       id: CREATED_ID,
       authorId: AUTHOR_ID,
@@ -379,6 +395,21 @@ describe("ActivityService.create", () => {
       slots: input.slots,
       availableSlots: input.slots,
       status: "OPEN",
+      details: {
+        description: input.description,
+        area: input.area,
+        format: input.format,
+        url: input.url ?? null,
+        workloadHours: input.workloadHours,
+        address: {
+          id: "addr-123",
+          addressLine: input.address.addressLine,
+          district: input.address.district,
+          zipCode: input.address.zipCode,
+          city: input.address.city,
+          state: input.address.state,
+        }
+      }
     });
   });
 
@@ -388,6 +419,7 @@ describe("ActivityService.create", () => {
       create: vi.fn().mockResolvedValue({
         ...createdActivityFrom(AUTHOR_ID, input),
         slots: 30,
+        availableSlots: 30,
       }),
     });
     const service = new ActivityService({ activityRepository: repository });

@@ -69,7 +69,7 @@ class ActivityService implements IActivityService {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<ActivityResponse> {
+  ): Promise<ActivityFullResponse> {
     const now = new Date();
     const durationDays =
       (data.endDate.getTime() - data.startDate.getTime()) /
@@ -153,20 +153,7 @@ class ActivityService implements IActivityService {
 
     const newActivity = await this._activityRepository.create(authorId, data);
 
-    const activityResponse: ActivityResponse = {
-      id: newActivity.id,
-      authorId: newActivity.authorId,
-      title: newActivity.title,
-      type: newActivity.type,
-      campus: newActivity.campus,
-      startDate: newActivity.startDate,
-      endDate: newActivity.endDate,
-      slots: newActivity.slots,
-      availableSlots: newActivity.slots,
-      status: newActivity.status,
-    };
-
-    return activityResponse;
+    return newActivity;
   }
 
   public async list(
