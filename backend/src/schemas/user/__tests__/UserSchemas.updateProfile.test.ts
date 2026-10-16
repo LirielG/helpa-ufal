@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
 import { Prisma } from "@prisma/client";
 import registrationPolicyMessage from "@/../tests/helpers/password-policy.js"
+import { UserType } from "@/types/auth.js";
 
 const IMMUTABLE = "This field cannot be updated.";
 const EMPTY_BODY = "At least one updatable field must be provided.";
@@ -9,8 +10,6 @@ const CURRENT_REQUIRED = "Current password is required to set a new password.";
 const POLICY_MESSAGE = registrationPolicyMessage();
 const VALID_NEW_PASSWORD = "Nova@1234";
 const CURRENT_PASSWORD = "Senha@123";
-
-type UserType = "STUDENT" | "TEACHER";
 
 function parse(userType: UserType, input: unknown) {
   return updateProfileSchemaFor(userType).safeParse(input);

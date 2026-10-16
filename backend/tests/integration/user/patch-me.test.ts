@@ -21,7 +21,6 @@ import registrationPolicyMessage from "../../helpers/password-policy.js";
 import { randomUUID } from "node:crypto";
 
 /**
- * Spec for issue #95 (PATCH /users/me).
  * Route contract: docs/bruno/User/Update user's profile.yml.
  *
  * Red until #59 (route) and the tokenVersion issue (session revocation) land.
