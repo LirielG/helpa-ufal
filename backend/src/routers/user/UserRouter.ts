@@ -12,4 +12,10 @@ router.get(
   (req, res, next) => userController.getMe(req, res).catch(next),
 );
 
+router.patch(
+  "/users/me",
+  authMiddleware.auth({ userTypes: "all" }),
+  (req, res, next) => userController.updateMe(req, res).catch(next),
+);
+
 export default router;

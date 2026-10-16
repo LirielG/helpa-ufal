@@ -271,7 +271,10 @@ describe("UserService.updateProfile", () => {
 
     it("returns the TEACHER profile with a cleared course, without passwordHash", async () => {
       const cleared = aTeacherRow();
-      cleared.teacher = { ...(cleared.teacher as object), course: null } as never;
+      cleared.teacher = {
+        ...(cleared.teacher as unknown as object),
+        course: null,
+      } as never;
       const { service } = setup(aTeacherRow(), cleared);
 
       const profile = await service.updateProfile(USER_ID, { course: null });

@@ -3,9 +3,14 @@ import type {
   IUserRepository,
   UserWithProfile,
 } from "@/repositories/auth/IUserRepository.js";
-import type { IUserService } from "@/services/user/IUserService.js";
+import type {
+  IUserService,
+  UpdateProfileInput,
+} from "@/services/user/IUserService.js";
 import type { UserProfileResponse } from "@/types/user.js";
 import CustomError from "@/models/error/CustomError.js";
+import bcryptjs from "bcryptjs";
+import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 
 type Props = {
   userRepository?: IUserRepository;
@@ -29,6 +34,48 @@ class UserService implements IUserService {
     if (!user) throw new CustomError(404, "User not found.");
 
     return this.toProfileResponse(user);
+  }
+
+  public async updateProfile(
+    userId: string,
+    input: UpdateProfileInput,
+  ): Promise<UserProfileResponse> {
+    const user = await this._userRepository.findById(userId);
+
+    if (!user) throw new CustomError(404, "User not found.");
+
+    let newHash: string | undefined;
+
+    if (input.newPassword !== undefined) {
+      const isCurrentValid = await bcryptjs.compare(
+        input.currentPassword ?? "",
+        user.passwordHash,
+      );
+      if (!isCurrentValid) {
+        throw new CustomError(403, "Current password is incorrect.");
+      }
+
+      const isSamePassword = await bcryptjs.compare(
+        input.newPassword,
+        user.passwordHash,
+      );
+      if (isSamePassword) {
+        throw new CustomError(
+          422,
+          "New password must be different from the current password.",
+        );
+      }
+
+      newHash = await bcryptjs.hash(input.newPassword, BCRYPT_SALT_ROUNDS);
+    }
+
+    const updatedUser = await this._userRepository.updateProfile(userId, {
+      ...(input.fullName !== undefined && { fullName: input.fullName }),
+      ...(input.course !== undefined && { course: input.course }),
+      ...(newHash !== undefined && { passwordHash: newHash }),
+    });
+
+    return this.toProfileResponse(updatedUser);
   }
 
   private toProfileResponse(user: UserWithProfile): UserProfileResponse {
