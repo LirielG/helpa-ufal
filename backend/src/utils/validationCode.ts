@@ -19,12 +19,17 @@ export function generateValidationCode(): string {
 
 const STORED_CODE = /^[0-9A-HJKMNP-TV-Z]{10}$/;
 
+// Besides the ASCII hyphen, the Unicode dashes (U+2010–U+2015) and the minus
+// sign (U+2212): a code copied from a PDF or a word processor often carries
+// one of them in place of the printed "-".
+const SEPARATORS = /[\s‐-―−-]/g;
+
 // Turns what a person typed (lowercase, hyphenated, with the look-alike
 // letters Crockford maps onto digits) into the stored form, or null when it
 // cannot be a code at all.
 export function normalizeValidationCode(input: string): string | null {
   const code = input
-    .replace(/[\s-]/g, "")
+    .replace(SEPARATORS, "")
     .toUpperCase()
     .replace(/O/g, "0")
     .replace(/[IL]/g, "1");

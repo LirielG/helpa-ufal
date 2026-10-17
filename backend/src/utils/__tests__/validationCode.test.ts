@@ -24,6 +24,19 @@ describe("normalizeValidationCode", () => {
     expect(normalizeValidationCode(" 7kq4m-x9t2r ")).toBe("7KQ4MX9T2R");
   });
 
+  // Copying from a PDF or a word processor often brings typographic dashes
+  // and no-break spaces instead of the plain "-" and " " printed.
+  it.each([
+    ["7KQ4M‐X9T2R", "hyphen"],
+    ["7KQ4M‑X9T2R", "non-breaking hyphen"],
+    ["7KQ4M–X9T2R", "dash (en)"],
+    ["7KQ4M—X9T2R", "dash (em)"],
+    ["7KQ4M−X9T2R", "minus sign"],
+    ["7KQ4M X9T2R", "no-break space"],
+  ])("accepts %s, with a %s as separator", (input) => {
+    expect(normalizeValidationCode(input)).toBe("7KQ4MX9T2R");
+  });
+
   it("reads O as 0 and I or L as 1, the way Crockford intends", () => {
     expect(normalizeValidationCode("7KQ4MX9T2O")).toBe("7KQ4MX9T20");
     expect(normalizeValidationCode("7KQ4MX9TIl")).toBe("7KQ4MX9T11");
