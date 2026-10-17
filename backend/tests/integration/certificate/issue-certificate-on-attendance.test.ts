@@ -12,8 +12,8 @@ import {
 } from "../../helpers/factories.js";
 
 // Issuing lives in the repository, not in the route: these tests call
-// confirmAttendance directly so they keep holding when #294 rewrites the
-// attendance route.
+// confirmAttendance directly so they keep holding when the attendance route
+// is rewritten.
 
 const STORED_CODE = /^[0-9A-HJKMNP-TV-Z]{10}$/;
 

@@ -267,9 +267,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
   }
 
   /**
-   * Keeps exactly one certificate per confirmed presence (#151). The
-   * certificate stores no hours: the PDF and the public validation read them
-   * from the enrollment, so a correction only has to move issuedAt.
+   * Keeps exactly one certificate per confirmed presence. The certificate
+   * stores no hours: the PDF and the public validation read them from the
+   * enrollment, so a correction only has to move issuedAt.
    *
    * - first presence           → create, with a fresh code
    * - same hours again         → nothing
