@@ -11,45 +11,47 @@ import {
   createTeacher,
 } from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
+import { daysFromNow } from "../../helpers/dates.js";
 
 describe("PATCH /activities/:id", () => {
-  it.each([
-    ["date without timezone", "2026-01-01T08:00"],
-    ["date only", "2026-01-01"],
-    ["local timezone offset", "2026-01-01T08:00:00-03:00"],
-    ["numeric timestamp", 1767225600000],
-  ])(
-    "returns 400 when startDate is not ISO 8601 in UTC with Z (%s)",
-    async (_, invalidStartDate) => {
-      const author = await createTeacher();
-      const activity = await createActivity(author.user.id);
+  describe.each(["startDate", "endDate"])("%s", (field) => {
+    it.each([
+      ["date without timezone", "2026-01-01T08:00"],
+      ["date only", "2026-01-01"],
+      ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+      ["numeric timestamp", 1767225600000],
+    ])(
+      "returns 400 when it is not ISO 8601 in UTC with Z (%s)",
+      async (_, invalidDate) => {
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id);
 
-      const response = await request(app)
-        .patch(`/activities/${activity.id}`)
-        .set(...authHeader(author.token))
-        .send({ startDate: invalidStartDate });
+        const response = await request(app)
+          .patch(`/activities/${activity.id}`)
+          .set(...authHeader(author.token))
+          .send({ [field]: invalidDate });
 
-      expect(response.status).toBe(400);
-      expect(response.body.errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ field: "startDate" }),
-        ]),
-      );
-    },
-  );
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field })]),
+        );
+      },
+    );
+  });
 
   it("updates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
+    // createActivity ends the activity 14 days from now, so the new start must come before it.
+    const startDate = daysFromNow(10).toISOString();
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
       .set(...authHeader(author.token))
-      .send({
-        startDate: "2026-01-01T11:00:00.000Z",
-      });
+      .send({ startDate });
 
     expect(response.status).toBe(200);
+    expect(response.body.startDate).toBe(startDate);
   });
 
   it("returns 400 for an empty body", async () => {

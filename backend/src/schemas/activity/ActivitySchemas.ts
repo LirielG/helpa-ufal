@@ -46,12 +46,14 @@ const AddressSchema = z.object({
   }),
 });
 
+const UtcDateTimeSchema = z.iso.datetime().transform((value) => new Date(value));
+
 const BaseActivitySchema = z.object({
   title: z.string().min(1),
   type: z.enum(ActivityType),
   campus: z.enum(CampusLocation),
-  startDate: z.string().datetime().transform((val) => new Date(val)),
-  endDate: z.string().datetime().transform((val) => new Date(val)),
+  startDate: UtcDateTimeSchema,
+  endDate: UtcDateTimeSchema,
   slots: z.number().int().min(1),
   description: z.string().trim().min(1),
   area: z.string().trim().min(1),
@@ -87,8 +89,8 @@ const UpdateActivityBaseSchema = z
     title: z.string().min(1),
     type: z.enum(ActivityType),
     campus: z.enum(CampusLocation),
-    startDate: z.string().datetime().transform((val) => new Date(val)),
-    endDate: z.string().datetime().transform((val) => new Date(val)),
+    startDate: UtcDateTimeSchema,
+    endDate: UtcDateTimeSchema,
     slots: z.number().int().min(1),
     description: z.string().trim().min(1),
     area: z.string().trim().min(1),

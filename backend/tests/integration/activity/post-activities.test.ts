@@ -24,47 +24,47 @@ function validPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("POST /activities", () => {
-  it.each([
-    ["date without timezone", "2026-01-01T08:00"],
-    ["date only", "2026-01-01"],
-    ["local timezone offset", "2026-01-01T08:00:00-03:00"],
-    ["numeric timestamp", 1767225600000],
-  ])(
-    "returns 400 when startDate is not ISO 8601 in UTC with Z (%s)",
-    async (_, invalidStartDate) => {
-      const author = await createTeacher();
+  describe.each(["startDate", "endDate"])("%s", (field) => {
+    it.each([
+      ["date without timezone", "2026-01-01T08:00"],
+      ["date only", "2026-01-01"],
+      ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+      ["numeric timestamp", 1767225600000],
+    ])(
+      "returns 400 when it is not ISO 8601 in UTC with Z (%s)",
+      async (_, invalidDate) => {
+        const author = await createTeacher();
 
-      const response = await request(app)
-        .post("/activities")
-        .set(...authHeader(author.token))
-        .send(validPayload({ startDate: invalidStartDate }));
+        const response = await request(app)
+          .post("/activities")
+          .set(...authHeader(author.token))
+          .send(validPayload({ [field]: invalidDate }));
 
-      expect(response.status).toBe(400);
-      expect(response.body.errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ field: "startDate" }),
-        ]),
-      );
-    },
-  );
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field })]),
+        );
+      },
+    );
+  });
 
   it("creates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
     const author = await createTeacher();
+    const startDate = daysFromNow(30).toISOString();
+    const endDate = daysFromNow(44).toISOString();
 
     const response = await request(app)
       .post("/activities")
       .set(...authHeader(author.token))
-      .send(
-        validPayload({
-          startDate: "2026-01-01T11:00:00.000Z",
-          endDate: "2026-01-15T11:00:00.000Z",
-        }),
-      );
+      .send(validPayload({ startDate, endDate }));
 
     expect(response.status).toBe(201);
+    expect(response.body.startDate).toBe(startDate);
+    expect(response.body.endDate).toBe(endDate);
   });
 
-  it("creates an IN_PERSON activity with url: null and returns url as null", async () => {
+  // The POST response does not include details, so url and address are read back via GET.
+  it("creates an IN_PERSON activity with url: null and stores url as null", async () => {
     const author = await createTeacher();
 
     const response = await request(app)
@@ -79,10 +79,11 @@ describe("POST /activities", () => {
       );
 
     expect(response.status).toBe(201);
-    expect(response.body.details.url).toBeNull();
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.url).toBeNull();
   });
 
-  it("creates an ONLINE activity with address: null and returns address as null", async () => {
+  it("creates an ONLINE activity with address: null and stores address as null", async () => {
     const author = await createTeacher();
 
     const response = await request(app)
@@ -96,7 +97,8 @@ describe("POST /activities", () => {
       );
 
     expect(response.status).toBe(201);
-    expect(response.body.details.address).toBeNull();
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.address).toBeNull();
   });
 
   it("returns 401 without a token", async () => {
