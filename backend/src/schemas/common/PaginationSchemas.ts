@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// Contract message pinned by the Bruno docs and the integration tests of every
+// route that uses validateQuery — changing it changes their public error body.
 export const INVALID_QUERY_MESSAGE = "Invalid query parameters.";
 
 export const DEFAULT_PAGE_LIMIT = 20;

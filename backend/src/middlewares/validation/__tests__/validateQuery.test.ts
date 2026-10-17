@@ -3,10 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 import type { NextFunction, Request, Response } from "express";
 import ValidationError from "@/models/error/ValidationError.js";
 import { validateQuery } from "../validateQuery.js";
-import {
-  INVALID_QUERY_MESSAGE,
-  ListParticipantsQuerySchema,
-} from "@/schemas/enrollment/EnrollmentSchemas.js";
+import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
+import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
 import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
 
 // Contract: the middleware never responds by itself — it either forwards the
