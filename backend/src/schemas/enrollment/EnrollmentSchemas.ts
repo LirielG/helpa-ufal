@@ -2,8 +2,8 @@ import { z } from "zod";
 
 // Contract message pinned by docs/bruno/Enrollments/List Activity Enrollments.yml
 // and by tests/integration/enrollment/get-enrollments.test.ts — changing it
-// here changes the public error body.
-export const INVALID_QUERY_MESSAGE = "Invalid query parameters.";
+// changes the public error body of every validated query.
+export { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
 
 /**
  * GET /activities/:activityId/enrollments — ?page=1&limit=10 (limit capped at 50).

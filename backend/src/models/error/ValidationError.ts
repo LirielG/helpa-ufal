@@ -2,6 +2,7 @@ import CustomError from "@/models/error/CustomError.js";
 
 export type ValidationErrorItem = {
   field: string;
+  code?: string;
   message: string;
 };
 

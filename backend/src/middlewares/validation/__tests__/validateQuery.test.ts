@@ -7,6 +7,7 @@ import {
   INVALID_QUERY_MESSAGE,
   ListParticipantsQuerySchema,
 } from "@/schemas/enrollment/EnrollmentSchemas.js";
+import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
 
 // Contract: the middleware never responds by itself — it either forwards the
 // parsed query through res.locals.validatedQuery or forwards one
@@ -142,5 +143,54 @@ describe("validateQuery(ListParticipantsQuerySchema)", () => {
       expect(spies.json).not.toHaveBeenCalled();
       expect(next).toHaveBeenCalledTimes(1);
     }
+  });
+});
+
+describe("validateQuery with a strict schema", () => {
+  const strictMiddleware = validateQuery(
+    ListReportsQuerySchema,
+    INVALID_QUERY_MESSAGE,
+  );
+
+  function callStrict(query: Record<string, unknown>) {
+    const { res } = fakeResponse();
+    const next = vi.fn();
+    strictMiddleware(fakeRequest(query), res, next as unknown as NextFunction);
+    return next.mock.calls[0]?.[0] as MiddlewareError | undefined;
+  }
+
+  it("reports each unknown parameter as its own UNKNOWN_PARAMETER item", () => {
+    const error = callStrict({ status: "OPEN", search: "x" });
+
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(error?.message).toBe(INVALID_QUERY_MESSAGE);
+    expect(error?.errors).toEqual([
+      {
+        field: "status",
+        code: "UNKNOWN_PARAMETER",
+        message: "status is not a supported query parameter.",
+      },
+      {
+        field: "search",
+        code: "UNKNOWN_PARAMETER",
+        message: "search is not a supported query parameter.",
+      },
+    ]);
+  });
+
+  it("reports unknown and invalid parameters together in one errors[]", () => {
+    const error = callStrict({ page: "0", sort: "asc" });
+
+    expect(error?.errors).toEqual(
+      expect.arrayContaining([
+        { field: "page", message: "page must be a positive integer." },
+        {
+          field: "sort",
+          code: "UNKNOWN_PARAMETER",
+          message: "sort is not a supported query parameter.",
+        },
+      ]),
+    );
+    expect(error?.errors).toHaveLength(2);
   });
 });
