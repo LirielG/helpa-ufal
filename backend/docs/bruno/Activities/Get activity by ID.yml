@@ -282,6 +282,6 @@ docs: |-
   no session; `null` means authenticated with no enrollment.
 
   - The user is resolved exclusively from the JWT token (never from params, query or body).
-  - Invalid tokens are treated as anonymous for now. Once #205 moves the route to
+  - Invalid tokens are treated as anonymous for now. Once the route moves to
     `optionalAuth()`, a present but invalid or expired token will answer 401
     (see `docs/api-conventions.md`, section 5).
