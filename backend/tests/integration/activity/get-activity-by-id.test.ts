@@ -117,7 +117,7 @@ describe("GET /activities/:id", () => {
     });
 
     // Interim behavior: auth() without options treats an invalid token as
-    // anonymous. #205 switches the route to optionalAuth(), which answers 401
+    // anonymous. Moving the route to optionalAuth() makes it answer 401
     // (api-conventions.md, section 5); this test must change with it.
     it("treats an invalid token as anonymous and omits the key", async () => {
       const author = await createTeacher();
