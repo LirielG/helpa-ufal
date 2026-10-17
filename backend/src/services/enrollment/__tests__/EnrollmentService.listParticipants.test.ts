@@ -4,7 +4,11 @@ import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
-import { expectHttpError, expectCustomError } from "@/utils/tests.js";
+import {
+  expectHttpError,
+  expectCustomError,
+  expectValidationError,
+} from "@/utils/tests.js";
 
 const AUTHOR_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const OUTSIDER_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
@@ -269,9 +273,20 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Pagination boundary ----------
   //
   // The repository speaks skip/take. The service owns the page -> skip
-  // conversion AND the guard: the HTTP validateQuery is not the only caller
-  // any more, so no page/limit given to the service may build a negative skip
-  // (which Prisma rejects, surfacing as a 500).
+  // conversion AND the guard: the HTTP validateQuery is not the only caller,
+  // so an invalid page/limit given to the service answers 400 instead of
+  // building a negative skip (which Prisma rejects, surfacing as a 500).
+
+  function aService() {
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
+    });
+    return { service, enrollmentRepository };
+  }
 
   it.each([
     { page: 1, limit: 10, skip: 0 },
@@ -280,13 +295,7 @@ describe("EnrollmentService.listParticipants", () => {
   ])(
     "converts page $page / limit $limit into skip $skip / take $limit",
     async ({ page, limit, skip }) => {
-      const { activityRepository, userRepository, enrollmentRepository } =
-        mockRepositories();
-      const service = new EnrollmentService({
-        activityRepository,
-        userRepository,
-        enrollmentRepository,
-      });
+      const { service, enrollmentRepository } = aService();
 
       const result = await service.listParticipants(
         AUTHOR_ID,
@@ -305,13 +314,7 @@ describe("EnrollmentService.listParticipants", () => {
   );
 
   it("applies the defaults (page 1, limit 10) when page and limit are omitted", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
-    const service = new EnrollmentService({
-      activityRepository,
-      userRepository,
-      enrollmentRepository,
-    });
+    const { service, enrollmentRepository } = aService();
 
     const result = await service.listParticipants(AUTHOR_ID, ACTIVITY_ID);
 
@@ -324,81 +327,61 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it.each([
-    { page: 0, expectedPage: 1 },
-    { page: -1, expectedPage: 1 },
-    { page: -100, expectedPage: 1 },
-    { page: 2.7, expectedPage: 2 },
-    { page: Number.NaN, expectedPage: 1 },
-    { page: Number.POSITIVE_INFINITY, expectedPage: 1 },
-    { page: Number.NEGATIVE_INFINITY, expectedPage: 1 },
+    0,
+    -1,
+    2.7,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
   ])(
-    "corrects the invalid page $page to $expectedPage: no negative skip reaches the repository",
-    async ({ page, expectedPage }) => {
-      const { activityRepository, userRepository, enrollmentRepository } =
-        mockRepositories();
-      const service = new EnrollmentService({
-        activityRepository,
-        userRepository,
-        enrollmentRepository,
-      });
+    "rejects page %s with 400 and never reaches the repository",
+    async (page) => {
+      const { service, enrollmentRepository } = aService();
 
-      const result = await service.listParticipants(
-        AUTHOR_ID,
-        ACTIVITY_ID,
-        page,
-        10,
+      await expectValidationError(
+        service.listParticipants(AUTHOR_ID, ACTIVITY_ID, page, 10),
+        [{ field: "page", message: "page must be a positive integer." }],
       );
-
-      expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
-        ACTIVITY_ID,
-        (expectedPage - 1) * 10,
-        10,
-      );
-      // The response reports the page that was actually served.
-      expect(result.page).toBe(expectedPage);
+      expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
     },
   );
 
-  it.each([
-    { limit: 0, expectedLimit: 1 },
-    { limit: -5, expectedLimit: 1 },
-    { limit: 7.9, expectedLimit: 7 },
-    { limit: Number.NaN, expectedLimit: 10 },
-  ])(
-    "corrects the invalid limit $limit to $expectedLimit (a negative limit on page 3 would also build a negative skip)",
-    async ({ limit, expectedLimit }) => {
-      const { activityRepository, userRepository, enrollmentRepository } =
-        mockRepositories();
-      const service = new EnrollmentService({
-        activityRepository,
-        userRepository,
-        enrollmentRepository,
-      });
+  it.each([0, -5, 7.9, Number.NaN])(
+    "rejects limit %s with 400 and never reaches the repository",
+    async (limit) => {
+      const { service, enrollmentRepository } = aService();
 
-      const result = await service.listParticipants(
-        AUTHOR_ID,
-        ACTIVITY_ID,
-        3,
-        limit,
+      await expectValidationError(
+        service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 3, limit),
+        [{ field: "limit", message: "limit must be a positive integer." }],
       );
-
-      expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
-        ACTIVITY_ID,
-        2 * expectedLimit,
-        expectedLimit,
-      );
-      expect(result.limit).toBe(expectedLimit);
+      expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
     },
   );
+
+  it("reports both page and limit when both are invalid", async () => {
+    const { service } = aService();
+
+    await expectValidationError(
+      service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 0, 0),
+      [
+        { field: "page", message: "page must be a positive integer." },
+        { field: "limit", message: "limit must be a positive integer." },
+      ],
+    );
+  });
+
+  it("checks pagination only after authorization, so a 400 never leaks past a 403", async () => {
+    const { service } = aService();
+
+    await expectCustomError(
+      service.listParticipants(OUTSIDER_ID, ACTIVITY_ID, 0, 10),
+      403,
+    );
+  });
 
   it("never hands the repository a negative or fractional skip, nor a take below 1, for any page/limit", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
-    const service = new EnrollmentService({
-      activityRepository,
-      userRepository,
-      enrollmentRepository,
-    });
+    const { service, enrollmentRepository } = aService();
     const values = [
       -100,
       -1,
@@ -416,12 +399,15 @@ describe("EnrollmentService.listParticipants", () => {
 
     for (const page of values) {
       for (const limit of values) {
-        await service.listParticipants(AUTHOR_ID, ACTIVITY_ID, page, limit);
+        await service
+          .listParticipants(AUTHOR_ID, ACTIVITY_ID, page, limit)
+          .catch(() => undefined);
       }
     }
 
     const calls = vi.mocked(enrollmentRepository.findByActivityId).mock.calls;
-    expect(calls).toHaveLength(values.length * values.length);
+    // Only page and limit in {1, 2, 10, 50} are valid.
+    expect(calls).toHaveLength(16);
     for (const [, skip, take] of calls) {
       expect(Number.isInteger(skip)).toBe(true);
       expect(skip).toBeGreaterThanOrEqual(0);

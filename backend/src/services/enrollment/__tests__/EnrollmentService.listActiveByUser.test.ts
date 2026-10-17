@@ -3,6 +3,7 @@ import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import { expectValidationError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 
@@ -61,79 +62,33 @@ describe("EnrollmentService.listActiveByUser — pagination boundary", () => {
   );
 
   it.each([
-    { page: 0, expectedPage: 1 },
-    { page: -1, expectedPage: 1 },
-    { page: -100, expectedPage: 1 },
-    { page: 2.7, expectedPage: 2 },
-    { page: Number.NaN, expectedPage: 1 },
-    { page: Number.POSITIVE_INFINITY, expectedPage: 1 },
+    0,
+    -1,
+    2.7,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
   ])(
-    "corrects the invalid page $page to $expectedPage: no negative skip reaches the repository",
-    async ({ page, expectedPage }) => {
+    "rejects page %s with 400 and never reaches the repository",
+    async (page) => {
       const { service, enrollmentRepository } = setup();
 
-      const result = await service.listActiveByUser(USER_ID, page, 10);
-
-      expect(enrollmentRepository.findActiveByUserId).toHaveBeenCalledWith(
-        USER_ID,
-        (expectedPage - 1) * 10,
-        10,
-      );
-      expect(result.page).toBe(expectedPage);
+      await expectValidationError(service.listActiveByUser(USER_ID, page, 10), [
+        { field: "page", message: "page must be a positive integer." },
+      ]);
+      expect(enrollmentRepository.findActiveByUserId).not.toHaveBeenCalled();
     },
   );
 
-  it.each([
-    { limit: 0, expectedLimit: 1 },
-    { limit: -5, expectedLimit: 1 },
-    { limit: 7.9, expectedLimit: 7 },
-    { limit: Number.NaN, expectedLimit: 10 },
-  ])(
-    "corrects the invalid limit $limit to $expectedLimit",
-    async ({ limit, expectedLimit }) => {
+  it.each([0, -5, 7.9, Number.NaN])(
+    "rejects limit %s with 400 and never reaches the repository",
+    async (limit) => {
       const { service, enrollmentRepository } = setup();
 
-      const result = await service.listActiveByUser(USER_ID, 3, limit);
-
-      expect(enrollmentRepository.findActiveByUserId).toHaveBeenCalledWith(
-        USER_ID,
-        2 * expectedLimit,
-        expectedLimit,
-      );
-      expect(result.limit).toBe(expectedLimit);
+      await expectValidationError(service.listActiveByUser(USER_ID, 3, limit), [
+        { field: "limit", message: "limit must be a positive integer." },
+      ]);
+      expect(enrollmentRepository.findActiveByUserId).not.toHaveBeenCalled();
     },
   );
-
-  it("never hands the repository a negative or fractional skip, nor a take below 1, for any page/limit", async () => {
-    const { service, enrollmentRepository } = setup();
-    const values = [
-      -100,
-      -1,
-      0,
-      0.5,
-      1,
-      2,
-      3.5,
-      10,
-      50,
-      Number.NaN,
-      Number.POSITIVE_INFINITY,
-      Number.NEGATIVE_INFINITY,
-    ];
-
-    for (const page of values) {
-      for (const limit of values) {
-        await service.listActiveByUser(USER_ID, page, limit);
-      }
-    }
-
-    const calls = vi.mocked(enrollmentRepository.findActiveByUserId).mock.calls;
-    expect(calls).toHaveLength(values.length * values.length);
-    for (const [, skip, take] of calls) {
-      expect(Number.isInteger(skip)).toBe(true);
-      expect(skip).toBeGreaterThanOrEqual(0);
-      expect(Number.isInteger(take)).toBe(true);
-      expect(take).toBeGreaterThanOrEqual(1);
-    }
-  });
 });

@@ -11,7 +11,9 @@ import type {
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
+import ValidationError, {
+  type ValidationErrorItem,
+} from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 import type { Enrollment } from "@prisma/client";
 import {
@@ -25,30 +27,30 @@ import {
   type ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 10;
-
 /**
  * The single place where the 1-based page/limit of the service becomes the
- * skip/take of the repository, and the guard for callers that bypass the HTTP
+ * skip of the repository, and the guard for callers that bypass the HTTP
  * validateQuery: page 0 would build skip -10, which Prisma rejects as a 500.
  *
- * Invalid values are corrected rather than rejected, and the corrected
- * page/limit are echoed back in the response. The upper bound on limit is
+ * Invalid values answer 400 with the same items as the route schema, never a
+ * silent clamp (api-conventions, section 3). The upper bound on limit is
  * enforced by the route schema only.
  */
-function toSafePagination(
-  page: number,
-  limit: number,
-): { page: number; limit: number; skip: number } {
-  const safePage = Number.isFinite(page)
-    ? Math.max(1, Math.floor(page))
-    : DEFAULT_PAGE;
-  const safeLimit = Number.isFinite(limit)
-    ? Math.max(1, Math.floor(limit))
-    : DEFAULT_LIMIT;
+function toSkip(page: number, limit: number): number {
+  const errors: ValidationErrorItem[] = [];
 
-  return { page: safePage, limit: safeLimit, skip: (safePage - 1) * safeLimit };
+  if (!Number.isInteger(page) || page < 1) {
+    errors.push({ field: "page", message: "page must be a positive integer." });
+  }
+  if (!Number.isInteger(limit) || limit < 1) {
+    errors.push({
+      field: "limit",
+      message: "limit must be a positive integer.",
+    });
+  }
+  if (errors.length > 0) throw new ValidationError(errors);
+
+  return (page - 1) * limit;
 }
 
 type Props = {
@@ -122,30 +124,26 @@ class EnrollmentService implements IEnrollmentService {
 
   public async listActiveByUser(
     userId: string,
-    page = DEFAULT_PAGE,
-    limit = DEFAULT_LIMIT,
+    page = 1,
+    limit = 10,
   ): Promise<EnrollmentListResponse> {
-    const pagination = toSafePagination(page, limit);
+    const skip = toSkip(page, limit);
     const { items, total } =
-      await this._enrollmentRepository.findActiveByUserId(
-        userId,
-        pagination.skip,
-        pagination.limit,
-      );
+      await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
     return {
       items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
       total,
-      page: pagination.page,
-      limit: pagination.limit,
+      page,
+      limit,
     };
   }
 
   public async listParticipants(
     userId: string,
     activityId: string,
-    page = DEFAULT_PAGE,
-    limit = DEFAULT_LIMIT,
+    page = 1,
+    limit = 10,
   ): Promise<ParticipantsListResponse> {
     const user = await this.requireUser(userId);
 
@@ -165,12 +163,12 @@ class EnrollmentService implements IEnrollmentService {
       );
     }
 
-    const pagination = toSafePagination(page, limit);
+    const skip = toSkip(page, limit);
     const { items, total, totalPresent } =
       await this._enrollmentRepository.findByActivityId(
         activityId,
-        pagination.skip,
-        pagination.limit,
+        skip,
+        limit,
       );
 
     // totalPresent comes from the repository as-is: the service forwards the
@@ -178,8 +176,8 @@ class EnrollmentService implements IEnrollmentService {
     return {
       items: items.map((item) => this.toParticipantResponse(item)),
       total,
-      page: pagination.page,
-      limit: pagination.limit,
+      page,
+      limit,
       totalPresent,
     };
   }
