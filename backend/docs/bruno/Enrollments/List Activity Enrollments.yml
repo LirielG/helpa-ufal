@@ -294,6 +294,14 @@ docs: |-
 
   **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
+  ## Query params
+  | Param | Rule | Default |
+  |-------|------|---------|
+  | `page` | positive integer | `1` |
+  | `limit` | positive integer, up to the route's ceiling | `10` |
+
+  Unknown parameters are ignored.
+
   - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
