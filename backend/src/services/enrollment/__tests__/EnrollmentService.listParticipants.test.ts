@@ -266,7 +266,7 @@ describe("EnrollmentService.listParticipants", () => {
     });
   });
 
-  // ---------- Pagination boundary (issue #248) ----------
+  // ---------- Pagination boundary ----------
   //
   // The repository speaks skip/take. The service owns the page -> skip
   // conversion AND the guard: the HTTP validateQuery is not the only caller
@@ -399,8 +399,20 @@ describe("EnrollmentService.listParticipants", () => {
       userRepository,
       enrollmentRepository,
     });
-    const values = [-100, -1, 0, 0.5, 1, 2, 3.5, 10, 50, Number.NaN,
-      Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+    const values = [
+      -100,
+      -1,
+      0,
+      0.5,
+      1,
+      2,
+      3.5,
+      10,
+      50,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ];
 
     for (const page of values) {
       for (const limit of values) {

@@ -29,17 +29,13 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 
 /**
- * The API speaks page/limit (page is 1-based); the repository speaks skip/take.
- * This is the single place where one becomes the other, and it is also the
- * guard: whatever the caller passes (a script, a job, a test, a new service —
- * anything that does not come through the HTTP validateQuery), the repository
- * only ever receives a non-negative skip. `(0 - 1) * 10` would be -10, which
- * Prisma rejects as a 500; so would a negative limit on any page beyond the first.
+ * The single place where the 1-based page/limit of the service becomes the
+ * skip/take of the repository, and the guard for callers that bypass the HTTP
+ * validateQuery: page 0 would build skip -10, which Prisma rejects as a 500.
  *
- * Invalid values are corrected, not rejected: page and limit are floored to
- * whole numbers and raised to at least 1; NaN/Infinity fall back to the defaults.
- * There is deliberately NO upper bound on limit here — that is its own issue.
- * The corrected page/limit are what the caller gets echoed back in the response.
+ * Invalid values are corrected rather than rejected, and the corrected
+ * page/limit are echoed back in the response. The upper bound on limit is
+ * enforced by the route schema only.
  */
 function toSafePagination(
   page: number,

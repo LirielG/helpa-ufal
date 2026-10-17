@@ -243,8 +243,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
 
   public async findActiveByUserId(
     userId: string,
-    skip = 0,
-    take = 10,
+    skip: number,
+    take: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }> {
     const where = { userId, status: "APPROVED" as const };
 

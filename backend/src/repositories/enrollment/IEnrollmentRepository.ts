@@ -51,8 +51,8 @@ export interface IEnrollmentRepository {
   /* Foundation for the "Subscribed Actions" tab (Epic 3): lists only APPROVED items */
   findActiveByUserId(
     userId: string,
-    skip?: number,
-    take?: number,
+    skip: number,
+    take: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }>;
 
   /* skip/take, the same vocabulary as findActiveByUserId. The service owns the

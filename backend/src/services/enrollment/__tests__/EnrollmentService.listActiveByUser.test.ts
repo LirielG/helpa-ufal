@@ -23,7 +23,7 @@ function setup() {
   return { service, enrollmentRepository };
 }
 
-// Issue #248. listActiveByUser is public API of the service and converted
+// listActiveByUser is public API of the service and used to convert
 // page -> skip on its own, so it had the same trap as listParticipants:
 // page 0 -> skip -10 -> a Prisma error surfacing as a 500.
 describe("EnrollmentService.listActiveByUser — pagination boundary", () => {
