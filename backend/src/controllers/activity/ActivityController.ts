@@ -55,7 +55,7 @@ class ActivityController implements IActivityController {
       throw new CustomError(400, "Invalid id parameter.");
     }
 
-    const activity = await this._activityService.findById(id);
+    const activity = await this._activityService.findById(id, req.user?.id);
     res.status(200).json(activity);
   }
 

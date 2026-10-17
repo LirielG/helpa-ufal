@@ -1,0 +1,243 @@
+info:
+  name: List reports
+  type: http
+  seq: 1
+  tags:
+    - Reports
+
+http:
+  method: GET
+  url: "{{baseUrl}}/reports"
+  params:
+    - name: resolved
+      value: "false"
+      type: query
+      description: true | false (default false)
+      disabled: true
+    - name: page
+      value: "1"
+      type: query
+      description: Page number (default 1)
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: Items per page (default 20, maximum 100)
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Successful
+    description: Open reports, newest first. The second one belongs to a reporter whose account was removed, so reporter is null.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [
+              {
+                "id": "b2c3d4e5-0000-4000-8000-000000000007",
+                "category": "MISINFORMATION",
+                "description": "The address provided is incorrect.",
+                "createdAt": "2026-06-05T19:44:20.000Z",
+                "resolvedAt": null,
+                "activity": {
+                  "id": "22ac40bd-e160-4c6e-8505-b63913d2482f",
+                  "title": "Oficina de Introdução à Programação",
+                  "authorId": "a1b2c3d4-0000-4000-8000-000000000099"
+                },
+                "reporter": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000042",
+                  "fullName": "Maria Clara Santos"
+                }
+              },
+              {
+                "id": "b2c3d4e5-0000-4000-8000-000000000006",
+                "category": "SPAM",
+                "description": null,
+                "createdAt": "2026-06-04T10:12:00.000Z",
+                "resolvedAt": null,
+                "activity": {
+                  "id": "22ac40bd-e160-4c6e-8505-b63913d2482f",
+                  "title": "Oficina de Introdução à Programação",
+                  "authorId": "a1b2c3d4-0000-4000-8000-000000000099"
+                },
+                "reporter": null
+              }
+            ],
+            "total": 2,
+            "page": 1,
+            "limit": 20,
+            "totalPages": 1
+          }
+
+  - name: 200 - Empty list
+    description: Nothing matches the filter, or page is beyond the last one. Never 404.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "limit": 20,
+            "totalPages": 1
+          }
+
+  - name: 400 - Invalid query
+    description: A parameter has an invalid value (empty included) or is not supported by the route. Every offending parameter gets its own item.
+    request:
+      url: "{{baseUrl}}/reports?resolved=yes&status=OPEN"
+      method: GET
+      params:
+        - name: resolved
+          value: "yes"
+          type: query
+        - name: status
+          value: OPEN
+          type: query
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Invalid query parameters.",
+            "errors": [
+              { "field": "resolved", "message": "resolved must be true or false." },
+              {
+                "field": "status",
+                "code": "UNKNOWN_PARAMETER",
+                "message": "status is not a supported query parameter."
+              }
+            ]
+          }
+
+  - name: 401 - Unauthenticated
+    description: Session missing, invalid or expired.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "No token provided."
+          }
+
+  - name: 401 - Account removed
+    description: The session is valid but its user no longer exists.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "User account not found or inactive."
+          }
+
+  - name: 403 - Not a manager
+    description: The user is authenticated but is not a manager. No report data is returned.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 403,
+            "message": "User is not a manager."
+          }
+
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/reports"
+      method: GET
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Moderation queue: lists the reports filed against activities. General rules (pagination, envelope, error body) are in [api-conventions.md](../../api-conventions.md).
+
+  **Authentication:** manager only (`auth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
+
+  **Query parameters**
+
+  | Parameter | Values | Default |
+  |---|---|---|
+  | `resolved` | `true` (resolved only) or `false` (open only) | `false` |
+  | `page` | integer >= 1 | `1` |
+  | `limit` | integer from 1 to 100 | `20` |
+
+  Any other parameter answers 400 `UNKNOWN_PARAMETER`.
+
+  **Route-specific behavior**
+
+  - Items are ordered by `createdAt` descending, tie-broken by `id`.
+  - `total` and `totalPages` count every report matching `resolved`, regardless of the page.
+  - Reports of a soft-deleted activity are still listed: removing an activity from the feed does not close its reports.
+  - `reporter` is `null` when the reporter's account was removed.
+  - Each item carries only the fields shown; the reporter's email and `passwordHash` never appear.
+  - Reports are listed one by one; grouping them by activity is out of the MVP.

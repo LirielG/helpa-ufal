@@ -1,0 +1,218 @@
+info:
+  name: Resolve a report
+  type: http
+  seq: 2
+  tags:
+    - Reports
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/reports/:reportId/resolution"
+  params:
+    - name: reportId
+      value: b2c3d4e5-0000-4000-8000-000000000007
+      type: path
+      description: Report UUID
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Resolved
+    description: The report is marked as resolved by the manager in the session. Repeating the request returns the same body, with the original resolvedAt.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: b2c3d4e5-0000-4000-8000-000000000007
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "b2c3d4e5-0000-4000-8000-000000000007",
+            "category": "MISINFORMATION",
+            "description": "The address provided is incorrect.",
+            "createdAt": "2026-06-05T19:44:20.000Z",
+            "resolvedAt": "2026-06-10T12:00:00.000Z",
+            "activity": {
+              "id": "22ac40bd-e160-4c6e-8505-b63913d2482f",
+              "title": "Oficina de Introdução à Programação",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099"
+            },
+            "reporter": {
+              "id": "a1b2c3d4-0000-4000-8000-000000000042",
+              "fullName": "Maria Clara Santos"
+            }
+          }
+
+  - name: 400 - Invalid reportId
+    description: reportId is not a UUID.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: not-a-uuid
+          type: path
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "reportId",
+                "code": "INVALID_UUID",
+                "message": "reportId must be a valid UUID."
+              }
+            ]
+          }
+
+  - name: 401 - Unauthenticated
+    description: Session missing, invalid or expired. Checked before the id format and the report's existence.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: b2c3d4e5-0000-4000-8000-000000000007
+          type: path
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "No token provided."
+          }
+
+  - name: 401 - Account removed
+    description: The session is valid but its user no longer exists.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: b2c3d4e5-0000-4000-8000-000000000007
+          type: path
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "User account not found or inactive."
+          }
+
+  - name: 403 - Not a manager
+    description: The user is authenticated but is not a manager. Checked before the report's existence, so it does not reveal whether the report exists.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: b2c3d4e5-0000-4000-8000-000000000007
+          type: path
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 403,
+            "message": "User is not a manager."
+          }
+
+  - name: 404 - Report not found
+    description: reportId is a valid UUID, but no report has it.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: 00000000-0000-4000-8000-000000000000
+          type: path
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "Report not found."
+          }
+
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/reports/:reportId/resolution"
+      method: PUT
+      params:
+        - name: reportId
+          value: b2c3d4e5-0000-4000-8000-000000000007
+          type: path
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Marks a report as resolved. General rules (status codes, error body, validation order) are in [api-conventions.md](../../api-conventions.md).
+
+  **Authentication:** manager only (`auth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
+
+  **Route-specific behavior**
+
+  - No request body. The resolver is always the user in the session, never a value from the path, query or body.
+  - Sets `resolvedAt` and `resolvedById`, then returns the report in the same format as an item of `GET /reports`.
+  - Idempotent: resolving a report that is already resolved answers 200 with the report as it is. `resolvedAt` and `resolvedById` keep the first resolution, even when two managers resolve at the same time.
+  - Resolving does not change the reported activity (no removal, cancellation or status change).
+  - A resolved report cannot be reopened, and resolving it does not let the same person report the same activity again (one report per person per activity).
+  - Validation order: 401 → 403 → 400 (`reportId` format) → 404.

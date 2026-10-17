@@ -1,4 +1,5 @@
 import { ActivityDetails } from "@prisma/client";
+import type { EnrollmentStatus } from "./enrollment.js";
 
 export type ActivityType =
   "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
@@ -49,6 +50,7 @@ export type ActivityDetailsResponse = {
 
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
+  enrollmentStatus?: EnrollmentStatus | null;
 };
 
 export type ActivityFilterOptions = {

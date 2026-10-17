@@ -1,5 +1,11 @@
-import { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
-import type { ActivityReportResponse } from "@/types/activityReport.js";
+import {
+  CreateActivityReportInput,
+  ListReportsQuery,
+} from "@/schemas/activityReport/activityReportSchemas.js";
+import type {
+  ActivityReportResponse,
+  ReportResponse,
+} from "@/types/activityReport.js";
 
 export interface IActivityReportRepository {
   create(
@@ -11,5 +17,9 @@ export interface IActivityReportRepository {
     userId: string,
     activityId: string,
   ): Promise<ActivityReportResponse | null>;
-  // metodo resolve p ser add futuramente
+  list(
+    filters: ListReportsQuery,
+  ): Promise<{ items: ReportResponse[]; total: number }>;
+  findById(id: string): Promise<ReportResponse | null>;
+  resolve(id: string, resolverId: string): Promise<ReportResponse | null>;
 }

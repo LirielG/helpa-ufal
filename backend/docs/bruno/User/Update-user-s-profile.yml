@@ -1,0 +1,302 @@
+info:
+  name: Update user's profile (coming soon)
+  type: http
+  seq: 1
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/users/me"
+  body:
+    type: json
+    data: |-
+      {
+        "fullName": "Maria Silva Souza",
+        "currentPassword": "CurrentPass#123",
+        "newPassword": "NewPass#456"
+      }
+  auth:
+    type: bearer
+    token: "{{apiKey}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Student updates name
+    description: Valid edit of a STUDENT (only fullName). Same DTO as GET /users/me, already updated. The session stays valid.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000010",
+            "fullName": "Maria Silva Souza",
+            "email": "maria@aluno.ufal.br",
+            "userType": "STUDENT",
+            "isManager": false,
+            "registrationCode": "20240012345",
+            "course": "Ciência da Computação",
+            "cndb": null,
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 200 Teacher changes course
+    description: Body with a new course string on a TEACHER. Only teachers may send course.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000020",
+            "fullName": "Ricardo Almeida",
+            "email": "ricardo.almeida@ufal.br",
+            "userType": "TEACHER",
+            "isManager": false,
+            "registrationCode": "1234567",
+            "course": "Engenharia de Computação",
+            "cndb": "CNDB-9988",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 200 Teacher clears course
+    description: Body with course null on a TEACHER. The course is removed - a teacher with no course is a legitimate state.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000020",
+            "fullName": "Ricardo Almeida",
+            "email": "ricardo.almeida@ufal.br",
+            "userType": "TEACHER",
+            "isManager": false,
+            "registrationCode": "1234567",
+            "course": null,
+            "cndb": "CNDB-9988",
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 200 Password changed
+    description: Body with currentPassword and newPassword. Every token issued before this request, including the one that made it, stops working and the next call answers 401. The response also clears the session cookie (same options as logout). The client must send the user back to the login screen.
+    response:
+      status: 200
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000010",
+            "fullName": "Maria Silva Souza",
+            "email": "maria@aluno.ufal.br",
+            "userType": "STUDENT",
+            "isManager": false,
+            "registrationCode": "20240012345",
+            "course": "Ciência da Computação",
+            "cndb": null,
+            "createdAt": "2026-01-15T10:30:00.000Z"
+          }
+  - name: 400 No updatable field
+    description: Body is empty, absent, or has only currentPassword. Nothing to change is an error, not a silent 200.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "body", "message": "At least one updatable field must be provided." }
+            ]
+          }
+  - name: 400 Field outside the whitelist
+    description: email, userType, isManager, registrationCode, cndb, id, createdAt or any unknown key. The whole request is rejected and nothing is persisted, including valid fields sent together. Every offending key gets its own entry.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "isManager", "message": "This field cannot be updated." },
+              { "field": "email", "message": "This field cannot be updated." }
+            ]
+          }
+  - name: 400 Student sends course
+    description: course is not editable for a STUDENT, whatever the value (text, null or the current one). Nothing is persisted.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "course", "message": "This field cannot be updated." }
+            ]
+          }
+  - name: 400 Weak password
+    description: newPassword fails the registration password policy.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "newPassword", "message": "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character." }
+            ]
+          }
+  - name: 400 newPassword without currentPassword
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "currentPassword", "message": "Current password is required to set a new password." }
+            ]
+          }
+  - name: 401 Missing token
+    description: No credential at all - neither the session cookie nor an Authorization header.
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "No token provided."
+          }
+  - name: 401 Invalid, expired or revoked token
+    description: A credential was sent, but it failed verification - malformed, wrong signature, past its expiry, or issued before the last password change. All cases share one message on purpose, so the response never tells which one it was.
+    response:
+      status: 401
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Token malformatted, expired or invalid."
+          }
+  - name: 403 Wrong current password
+    description: The credential is valid, but currentPassword does not match. It is 403 and not 401 so clients do not mistake it for an expired session. Nothing is persisted, including fullName or course sent in the same request.
+    response:
+      status: 403
+      body:
+        type: json
+        data: |-
+          {
+            "status": 403,
+            "message": "Current password is incorrect."
+          }
+  - name: 404 User no longer exists
+    description: Valid credential, but the user from the token is gone. Same answer as GET /users/me.
+    response:
+      status: 404
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "User not found."
+          }
+  - name: 422 New password equals the current one
+    description: Business rule checked in the service, which needs the stored hash. The body has no errors array.
+    response:
+      status: 422
+      body:
+        type: json
+        data: |-
+          {
+            "status": 422,
+            "message": "New password must be different from the current password."
+          }
+
+docs: |-
+  # PATCH /users/me — Profile update
+
+  Updates the editable fields of the authenticated user. Sensitive route: institutional and
+  permission fields are immutable here. PATCH, not PUT: every field is optional and only what is
+  sent changes.
+
+  ## Authentication
+  - Hybrid, like the rest of the API: httpOnly session cookie (web frontend) or
+    `Authorization: Bearer` (Bruno and scripts). Both resolve the same way.
+  - The `userId` and the `userType` are extracted exclusively from the token — never from
+    `params`, `query` or `body`. There is no way to edit someone else's profile.
+
+  ## Body (explicit whitelist, strict)
+  | Field             | Who          | Rule |
+  |-------------------|--------------|------|
+  | `fullName`        | all          | string, trimmed, at least 1 character, no maximum |
+  | `course`          | TEACHER only | string (trimmed, at least 1 character) or `null` to clear it; `""` is 400 |
+  | `newPassword`     | all          | registration password policy (same function); must differ from the current password |
+  | `currentPassword` | all          | **required** with `newPassword`; only checked against the stored hash, the policy is not applied to it |
+
+  Anything else is **400** and **nothing is persisted** (atomic rejection): `email`, `userType`,
+  `isManager`, `registrationCode`, `cndb`, `id`, `createdAt`, unknown keys, and `course` sent by
+  a STUDENT (any value). Every offending key appears in `errors[]`, each with
+  `This field cannot be updated.` (fail-collect). Messages for invalid values come from Zod.
+
+  The schema is chosen by the `userType` claim of the token (`userType` is immutable).
+
+  A body with no updatable field (empty, absent, or only `currentPassword`) is **400**, field
+  `body`.
+
+  ## Response — 200 OK
+  Same DTO as GET /users/me, already updated. `passwordHash` and other internal fields are never
+  serialized. Sending a value equal to the current one is a valid 200.
+
+  ## Validation order
+  1. Authentication (401)
+  2. Body shape (400 — Zod)
+  3. The user exists (404)
+  4. `currentPassword` matches the stored hash (403)
+  5. `newPassword` differs from the current password (422)
+  6. Persist everything in a single transaction
+
+  Steps 4 and 5 run before any write, so a wrong password persists nothing.
+
+  ## Sessions after a password change
+  - The new password is persisted only as a bcrypt hash (same cost as registration).
+  - A successful password change increments the user's `tokenVersion`. Every token issued
+    before it — **including the one that made this request** — becomes invalid and answers 401
+    on the next call. The frontend sends the user back to the login screen.
+  - The 200 of a password change clears the session cookie, with the same options as logout.
+  - Tokens without the `tokenVersion` claim (issued before the migration) count as version 0.
+  - Changing only `fullName` or `course` does **not** invalidate sessions.
+  - The `tokenVersion` column, the claim signed at login and the middleware check belong to a
+    separate issue; this route only increments it.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | No updatable field; key outside the whitelist (or `course` from a STUDENT); invalid value; password outside the policy; `newPassword` without `currentPassword` |
+  | 401    | Missing, invalid, expired or revoked credential |
+  | 403    | Incorrect `currentPassword` |
+  | 404    | The user from the token no longer exists |
+  | 422    | `newPassword` equal to the current password |
+
+  > Error body aligned with the rest of the API: `{ status, message }`, plus an
+  > `errors` array on validation failures (400 only).
+
+  ## Known limitations (registered debt)
+  - Malformed JSON answers 500 until the guard planned in #146 lands. Not covered by tests.
+  - No rate limit on wrong `currentPassword` attempts: a stolen token can be used to guess the
+    password.
+  - No maximum password length (bcrypt only considers the first 72 bytes), on registration and
+    on this route.
+  - Registration accepts `fullName` and `course` without trimming and without a maximum length.
+  - No e-mail notice after a password change.
