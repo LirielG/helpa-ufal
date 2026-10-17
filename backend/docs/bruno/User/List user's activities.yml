@@ -14,16 +14,13 @@ http:
     - name: page
       value: "1"
       type: query
-      description: Current page (integer >= 1, default 1)
+      description: Current page
       disabled: true
     - name: limit
       value: "20"
       type: query
-      description: Items per page (integer 1-50, default 20)
+      description: Items per page
       disabled: true
-  auth:
-    type: bearer
-    token: "{{apiKey}}"
 
 examples:
   - name: 200 filter=enrolled
@@ -144,7 +141,7 @@ examples:
         }
 
   - name: 401 Missing token
-    description: No credential at all - neither the session cookie nor an Authorization header.
+    description: No session cookie was sent.
     response:
       status: 401
       body: |-
@@ -172,8 +169,7 @@ docs: |-
   defined yet.
 
   ## Authentication
-  - Hybrid, like the rest of the API: httpOnly session cookie (web frontend) or
-    `Authorization: Bearer` (Bruno and scripts). Both resolve the same way.
+  - `requireAuth`, through the httpOnly `token` cookie.
   - The `userId` is extracted exclusively from the token — never from `params`, `query` or
     `body`. There is no way to ask this route for someone else's activities.
 
@@ -181,8 +177,8 @@ docs: |-
   | Param  | Type | Required        | Description |
   |--------|------|-----------------|-------------|
   | filter | enum | yes             | `enrolled` \| `completed` \| `managed` |
-  | page   | int  | no (default 1)  | Integer >= 1 |
-  | limit  | int  | no (default 20) | Integer between 1 and 50. Above 50 is 400 (never silently capped) |
+  | page   | int  | no              | Conventional pagination |
+  | limit  | int  | no              | Conventional pagination |
 
   Unknown query params are ignored.
 
@@ -234,9 +230,8 @@ docs: |-
   ## Errors
   | Status | When |
   |--------|------|
-  | 400 | Missing or invalid `filter`; invalid `page` or `limit` (including `limit` > 50) |
+  | 400 | Missing or invalid `filter`; invalid `page` or `limit` |
   | 401 | Missing credential, invalid signature, malformed or expired token |
   | 404 | The user from the token no longer exists |
 
-  > Error body aligned with the rest of the API: `{ status, message }`, plus an `errors`
-  > array on validation failures (400 only).
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

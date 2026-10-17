@@ -15,7 +15,7 @@ http:
     - name: limit
       value: "20"
       type: query
-      description: Items per page (max. 50)
+      description: Items per page
       disabled: true
 
 settings:
@@ -82,14 +82,14 @@ docs: |-
   **Certificates** section of the Profile screen.
 
   ## Authentication
-  - Authentication required via cookie (`token`).
+  - `requireAuth`, through the httpOnly `token` cookie.
   - The `userId` is extracted exclusively from the token.
 
   ## Query params
   | Param | Type | Default | Description |
   |-------|------|---------|-------------|
   | page  | int  | 1       | Current page |
-  | limit | int  | 20      | Items per page (max. 50) |
+  | limit | int  | 20      | Items per page |
 
   ## Field mapping (DTO → database)
   | Field            | Source |
@@ -116,3 +116,5 @@ docs: |-
   |--------|------|
   | 400    | Invalid `page`/`limit` |
   | 401    | Missing, invalid or expired token |
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).
