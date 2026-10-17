@@ -13,12 +13,16 @@ import type {
   IListActivitiesResponse,
 } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
-import { CampusLocation } from "@prisma/client";
+import {
+  ActivityFormat,
+  ActivityStatus,
+  ActivityType,
+  CampusLocation,
+} from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
   ActivityResponse,
-  ActivityStatus,
   ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
@@ -203,9 +207,11 @@ class ActivityService implements IActivityService {
 
     const filterErrors = [];
 
-    const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
-    const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
-    const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+    // Derived from the Prisma enums, so a value added to schema.prisma is
+    // accepted and listed in the error message without editing this service.
+    const validTypes: readonly string[] = Object.values(ActivityType);
+    const validFormats: readonly string[] = Object.values(ActivityFormat);
+    const validStatuses: readonly string[] = Object.values(ActivityStatus);
 
     // Derived from the Prisma enum (never hand-written): campus is a DB enum
     // column, so an unknown value would otherwise blow up in the driver (500).
