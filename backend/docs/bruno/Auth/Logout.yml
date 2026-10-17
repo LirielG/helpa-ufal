@@ -53,7 +53,10 @@ examples:
 docs: |-
   Ends the browser session by clearing the `token` cookie.
 
-  - Public route: it does not go through AuthMiddleware, takes no request body and returns 204 with or without an active session. Calling it twice is harmless.
+  **Authentication:** public. The route does not go through AuthMiddleware, takes no request body and returns 204 with or without an active session. Calling it twice is harmless.
+
   - The cookie is cleared with the same options used to write it on login (src/config/auth-cookie.ts): `httpOnly`, `secure` only in production, and `sameSite` taken from COOKIE_SAME_SITE (default `strict`). Options must match, otherwise the browser keeps the original cookie.
   - Logout only drops the cookie — it does not revoke the JWT. A token captured before the logout stays valid until it expires.
-  - Consequence inside Bruno: the `apiKey` variable that the login script writes to the environment is untouched, so the authenticated requests that follow a logout still succeed. That is not a bug. AuthMiddleware accepts either the cookie or `Authorization: Bearer`, with the cookie taking precedence; the collection authenticates by header, while the browser authenticates by cookie. To simulate a logged out client here, clear `apiKey` in the environment by hand.
+  - The response carries an already expired `Set-Cookie`. Clients that honor it, like browsers, stop sending the cookie. If a request in Bruno still goes out authenticated after the logout, clear the `token` cookie in the cookie jar.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

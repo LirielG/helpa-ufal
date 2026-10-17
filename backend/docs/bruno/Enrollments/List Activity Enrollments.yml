@@ -16,12 +16,11 @@ http:
     - name: page
       value: "1"
       type: query
-      description: Page number (default 1)
+      description: Page number
     - name: limit
       value: "10"
       type: query
-      description: Items per page (default 10, maximum 50)
-  auth: inherit
+      description: Items per page
 
 settings:
   encodeUrl: true
@@ -36,9 +35,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -105,9 +101,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -131,13 +124,10 @@ examples:
           }
 
   - name: 400 - Invalid query params
-    description: page or limit is not a positive integer, or limit exceeds the maximum of 50. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
+    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -165,13 +155,10 @@ examples:
           }
 
   - name: 400 - Limit above maximum
-    description: limit above 50 is rejected. The ceiling protects the query against unbounded page sizes.
+    description: limit above the route's ceiling is rejected. The ceiling protects the query against unbounded page sizes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -199,7 +186,7 @@ examples:
           }
 
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Session cookie is missing or invalid/expired, or the Bearer token is missing, invalid or expired — or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
+    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -223,7 +210,7 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
 
   - name: 403 - Forbidden
@@ -231,9 +218,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -258,9 +242,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: not-a-uuid
@@ -289,9 +270,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -314,9 +292,19 @@ examples:
 docs: |-
   Lists the active enrollments of an activity for its creator or a manager.
 
-  - Collection route: GET /activities/:activityId/enrollments, paginated with ?page=1&limit=10 (defaults; limit is capped at 50).
-  - Authentication is hybrid: the middleware accepts an httpOnly session cookie (used by the web frontend) or an Authorization: Bearer token (used by Bruno and scripts). Both resolve the same way, and the identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
-  - The requesting user is resolved exclusively from the credential (cookie or Bearer) — never from params, query or body.
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  ## Query params
+  | Param | Rule | Default |
+  |-------|------|---------|
+  | `page` | positive integer | `1` |
+  | `limit` | positive integer, up to the route's ceiling | `10` |
+
+  Unknown parameters are ignored.
+
+  - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
+  - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
+  - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
   - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
   - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:id/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
@@ -331,3 +319,5 @@ docs: |-
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
   - A nonexistent, soft-deleted or non-UUID activity id returns 404.
   - Status filters and sorting are additive evolutions that do not break this contract; the enrolledAt ASC ordering is fixed.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

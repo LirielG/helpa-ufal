@@ -13,7 +13,6 @@ http:
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -28,9 +27,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -52,8 +48,37 @@ examples:
             "createdAt": "2026-08-22T21:00:00.000Z"
           }
 
+  - name: 400 - Invalid id
+    description: The id in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:id/enroll"
+      method: POST
+      params:
+        - name: id
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
+          }
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Token header is missing, invalid or expired.
+    description: No session cookie was sent.
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
@@ -73,17 +98,14 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
 
   - name: 401 - Unauthenticated (Invalid token)
-    description: Unauthenticated. Token header is missing, invalid or expired.
+    description: The session cookie is invalid or expired.
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer token.invalido.aqui
       params:
         - name: id
           value: ""
@@ -100,7 +122,7 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "Token malformatted, expired or invalid."
           }
 
   - name: 401 - User not found
@@ -108,9 +130,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -135,9 +154,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -162,9 +178,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -189,9 +202,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -216,9 +226,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -243,9 +250,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: POST
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -268,11 +272,15 @@ examples:
 docs: |-
   Creates an enrollment in the activity for the authenticated user.
 
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
   - Route: POST /activities/:id/enroll — the activity is identified by the id path param. No request body.
   - The user is resolved exclusively from the JWT token (never from params, query or body).
   - The token must be valid AND the user must still exist and be active in the database (light hybrid authentication).
-  - Validation order: authentication (401) → activity existence (404) → business rules (409). A non-UUID id is treated as not found (404), never 400 (decision D1).
+  - Validation order: authentication (401) → id format (400) → activity existence (404) → business rules (409). A non-UUID id answers 400 on `activityId`.
   - Only activities with status OPEN and availableSlots > 0 accept enrollments.
   - Only active enrollments count as duplicates and consume slots.
   - A previously canceled enrollment (soft-deleted) is reactivated by this endpoint, returning 201 instead of 409. Reactivation reuses the (userId, activityId) record, keeps the original createdAt, refreshes enrolledAt to the reactivation moment and clears any attendance confirmation.
   - Slot check and enrollment creation run in the same transaction (row lock on the activity) to prevent overbooking under concurrency.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

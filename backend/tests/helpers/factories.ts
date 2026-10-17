@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import type {
   Activity,
   ActivityDetails,
+  ActivityReport,
   ActivityFormat,
   ActivityStatus,
   ActivityType,
@@ -253,6 +254,33 @@ export async function createEnrollment(
       userId,
       activityId,
       status: "APPROVED",
+      ...overrides,
+    },
+  });
+}
+
+type ReportOverrides = Partial<
+  Pick<
+    ActivityReport,
+    "category" | "description" | "createdAt" | "resolvedAt" | "resolvedById"
+  >
+>;
+
+/**
+ * Creates an ActivityReport directly in the database. `userId` may be null to
+ * stand for a reporter whose account was removed (onDelete: SetNull).
+ */
+export async function createReport(
+  activityId: string,
+  userId: string | null,
+  overrides: ReportOverrides = {},
+): Promise<ActivityReport> {
+  return prisma.activityReport.create({
+    data: {
+      activityId,
+      userId,
+      category: "SPAM",
+      description: "Conteúdo promocional repetido.",
       ...overrides,
     },
   });

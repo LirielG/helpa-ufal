@@ -13,18 +13,31 @@ import {
   ACTIVE_ENROLLMENT_STATUS,
   ENROLLMENT_INITIAL_STATUS,
 } from "@/types/enrollment.js";
+import CertificateRepository from "@/repositories/certificate/CertificateRepository.js";
+import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
+import { generateValidationCode } from "@/utils/validationCode.js";
+
+const MAX_VALIDATION_CODE_ATTEMPTS = 20;
 
 type Props = {
   prisma?: PrismaClient;
+  certificateRepository?: ICertificateRepository;
+  generateValidationCode?: () => string;
 };
 
 class EnrollmentRepository implements IEnrollmentRepository {
   private _prisma: PrismaClient;
+  private _certificateRepository: ICertificateRepository;
+  private _generateValidationCode: () => string;
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
+    this._certificateRepository =
+      props?.certificateRepository ?? new CertificateRepository();
+    this._generateValidationCode =
+      props?.generateValidationCode ?? generateValidationCode;
   }
 
   public async findByActivityId(
@@ -211,6 +224,16 @@ class EnrollmentRepository implements IEnrollmentRepository {
         );
       }
 
+      // Read under the lock, before the update overwrites the hours: the
+      // certificate decision compares the old pair against the new one.
+      const previous = await tx.enrollment.findUnique({
+        where: { id: enrollmentId },
+        select: {
+          confirmedWorkloadHours: true,
+          certificate: { select: { id: true } },
+        },
+      });
+
       // The pair travels in a single statement — there is no path that
       // writes one column without the other. The where clause carries the
       // guards, so an enrollment that stopped being APPROVED (or never
@@ -231,8 +254,79 @@ class EnrollmentRepository implements IEnrollmentRepository {
         );
       }
 
+      await this.syncCertificate(tx, {
+        enrollmentId,
+        hasCertificate: Boolean(previous?.certificate),
+        previousHours: previous?.confirmedWorkloadHours,
+        attendanceConfirmed,
+        confirmedWorkloadHours,
+      });
+
       return tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } });
     });
+  }
+
+  /**
+   * Keeps exactly one certificate per confirmed presence. The certificate
+   * stores no hours: the PDF and the public validation read them from the
+   * enrollment, so a correction only has to move issuedAt.
+   *
+   * - first presence           → create, with a fresh code
+   * - same hours again         → nothing
+   * - hours corrected          → same code, issuedAt = now, so whoever checks
+   *                              an old PDF sees it was reissued
+   * - presence turned absence  → delete; the printed code stops validating,
+   *                              and a later presence gets a NEW code
+   */
+  private async syncCertificate(
+    tx: Prisma.TransactionClient,
+    state: {
+      enrollmentId: string;
+      hasCertificate: boolean;
+      previousHours: number | undefined;
+      attendanceConfirmed: boolean;
+      confirmedWorkloadHours: number;
+    },
+  ): Promise<void> {
+    const { enrollmentId, hasCertificate } = state;
+
+    if (!state.attendanceConfirmed) {
+      if (hasCertificate) {
+        await this._certificateRepository.deleteByEnrollmentId(
+          tx,
+          enrollmentId,
+        );
+      }
+      return;
+    }
+
+    if (!hasCertificate) {
+      // create() reports a code collision as null instead of raising, so the
+      // transaction stays usable and the code can be redrawn right here. With
+      // ~50 bits per code a redraw is practically unreachable; the limit only
+      // keeps a broken generator from looping forever.
+      for (let attempt = 0; attempt < MAX_VALIDATION_CODE_ATTEMPTS; attempt++) {
+        const certificate = await this._certificateRepository.create(tx, {
+          enrollmentId,
+          validationCode: this._generateValidationCode(),
+          issuedAt: new Date(),
+        });
+        if (certificate) {
+          return;
+        }
+      }
+      throw new Error(
+        `No unique validation code after ${MAX_VALIDATION_CODE_ATTEMPTS} attempts.`,
+      );
+    }
+
+    if (state.previousHours !== state.confirmedWorkloadHours) {
+      await this._certificateRepository.updateIssuedAt(
+        tx,
+        enrollmentId,
+        new Date(),
+      );
+    }
   }
 
   public async countApprovedByActivityId(activityId: string): Promise<number> {

@@ -6,9 +6,6 @@ info:
 http:
   method: GET
   url: "{{baseUrl}}/users/me"
-  auth:
-    type: bearer
-    token: "{{apiKey}}"
 
 settings:
   encodeUrl: true
@@ -73,7 +70,7 @@ examples:
             "createdAt": "2026-01-15T10:30:00.000Z"
           }
   - name: 401 Missing token
-    description: No credential at all - neither the session cookie nor an Authorization header.
+    description: No session cookie was sent.
     response:
       status: 401
       body:
@@ -104,6 +101,24 @@ examples:
             "status": 404,
             "message": "User not found."
           }
+  - name: 500 Internal error
+    description: The user exists but has no Student/Teacher row (broken database invariant), or any other unexpected error.
+    request:
+      url: "{{baseUrl}}/users/me"
+      method: GET
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
 
 docs: |-
   # GET /users/me — Profile data
@@ -112,8 +127,7 @@ docs: |-
   Powers the **Personal Data** section of the Profile screen.
 
   ## Authentication
-  - Hybrid, like the rest of the API: httpOnly session cookie (web frontend) or
-    `Authorization: Bearer` (Bruno and scripts). Both resolve the same way.
+  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie.
   - The `userId` is extracted exclusively from the token — never from `params`, `query` or `body`.
     There is no way to ask this route for someone else's profile.
 
@@ -153,5 +167,4 @@ docs: |-
   > resource exists. Here the resource *is* the token owner, so there is nothing to conceal and
   > "valid credential, resource gone" is exactly `404`.
 
-  > Error body aligned with the rest of the API: `{ status, message }`, plus an
-  > `errors` array on validation failures.
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).
