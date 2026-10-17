@@ -27,8 +27,8 @@ router.get(
   (req, res) => enrollmentController.listParticipants(req, res),
 );
 
-router.patch(
-  "/activities/:activityId/enrollments/:enrollmentId/attendance",
+router.put(
+  "/enrollments/:enrollmentId/attendance",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res) => enrollmentController.confirmAttendance(req, res),
 );

@@ -60,34 +60,52 @@ examples:
           {
             "items": [
               {
-                "enrollmentId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-                "fullName": "Maria Clara Santos",
-                "email": "maria.santos@aluno.ufal.br",
-                "registrationCode": "20240012345",
                 "status": "APPROVED",
                 "attendanceConfirmed": true,
-                "confirmedWorkloadHours": 4
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-08-22T21:00:00.000Z",
+                "updatedAt": "2026-08-30T18:45:00.000Z",
+                "user": {
+                  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                  "fullName": "Maria Clara Santos",
+                  "email": "maria.santos@aluno.ufal.br",
+                  "registrationCode": "20240012345"
+                }
               },
               {
-                "enrollmentId": "550e8400-e29b-41d4-a716-446655440000",
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "fullName": "João Pedro Ferreira",
-                "email": "joao.ferreira@aluno.ufal.br",
-                "registrationCode": "20240067890",
                 "status": "APPROVED",
                 "attendanceConfirmed": null,
-                "confirmedWorkloadHours": 0
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-23T14:00:00.000Z",
+                "updatedAt": "2026-08-23T14:00:00.000Z",
+                "user": {
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "fullName": "João Pedro Ferreira",
+                  "email": "joao.ferreira@aluno.ufal.br",
+                  "registrationCode": "20240067890"
+                }
               },
               {
-                "enrollmentId": "6f1c2a34-9b8d-4e7f-a1b2-c3d4e5f60718",
+                "id": "6f1c2a34-9b8d-4e7f-a1b2-c3d4e5f60718",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
-                "fullName": "Prof. Ricardo Almeida",
-                "email": "ricardo.almeida@ufal.br",
-                "registrationCode": null,
                 "status": "APPROVED",
                 "attendanceConfirmed": false,
-                "confirmedWorkloadHours": 0
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-24T09:30:00.000Z",
+                "updatedAt": "2026-08-30T18:50:00.000Z",
+                "user": {
+                  "id": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
+                  "fullName": "Prof. Ricardo Almeida",
+                  "email": "ricardo.almeida@ufal.br",
+                  "registrationCode": null
+                }
               }
             ],
             "total": 3,
@@ -309,7 +327,7 @@ docs: |-
   - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:id/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
-  - Each item exposes only: enrollmentId, userId, fullName, email, registrationCode, status, attendanceConfirmed and confirmedWorkloadHours. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
+  - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
   - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.

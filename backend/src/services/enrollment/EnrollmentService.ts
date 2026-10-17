@@ -18,12 +18,12 @@ import { isValidUUID } from "@/utils/uuid.js";
 import type { Enrollment } from "@prisma/client";
 import {
   ACTIVE_ENROLLMENT_STATUS,
-  type AttendanceResponse,
   type ConfirmAttendanceInput,
+  type EnrollResponse,
   type EnrollmentListResponse,
+  type EnrollmentParticipantResponse,
   type EnrollmentResponse,
   type EnrollmentWithActivityResponse,
-  type ParticipantResponse,
   type ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
@@ -75,7 +75,7 @@ class EnrollmentService implements IEnrollmentService {
   public async enroll(
     userId: string,
     activityId: string,
-  ): Promise<EnrollmentResponse> {
+  ): Promise<EnrollResponse> {
     await this.requireUser(userId);
 
     if (!isValidUUID(activityId)) {
@@ -184,33 +184,29 @@ class EnrollmentService implements IEnrollmentService {
 
   public async confirmAttendance(
     userId: string,
-    activityId: string,
     enrollmentId: string,
     input: ConfirmAttendanceInput,
-  ): Promise<AttendanceResponse> {
+  ): Promise<EnrollmentResponse> {
     const user = await this.requireUser(userId);
 
     // A malformed id is a lookup that finds nothing, never operator input: it
     // answers the same 404 as a nonexistent or soft-deleted row, so the route
     // never reveals which ids are merely badly shaped.
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(404, "Activity not found.");
-    }
-
-    const activity = await this._activityRepository.findById(activityId);
-    if (!activity) {
-      throw new CustomError(404, "Activity not found.");
-    }
-
     if (!isValidUUID(enrollmentId)) {
       throw new CustomError(404, "Enrollment not found.");
     }
 
-    const enrollment = await this._enrollmentRepository.findByIdAndActivity(
-      enrollmentId,
-      activityId,
-    );
+    const enrollment = await this._enrollmentRepository.findById(enrollmentId);
     if (!enrollment) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    // The path names only the enrollment, so an enrollment whose activity was
+    // soft-deleted reads as the same 404 as one that never existed.
+    const activity = await this._activityRepository.findById(
+      enrollment.activityId,
+    );
+    if (!activity) {
       throw new CustomError(404, "Enrollment not found.");
     }
 
@@ -245,17 +241,13 @@ class EnrollmentService implements IEnrollmentService {
     );
 
     const updated = await this._enrollmentRepository.confirmAttendance(
-      activityId,
+      enrollment.activityId,
       enrollmentId,
       input.attended,
       confirmedWorkloadHours,
     );
 
-    return {
-      attendanceConfirmed: updated.attendanceConfirmed,
-      confirmedWorkloadHours: updated.confirmedWorkloadHours,
-      updatedAt: updated.updatedAt,
-    };
+    return this.toCanonicalEnrollmentResponse(updated);
   }
 
   /**
@@ -268,20 +260,7 @@ class EnrollmentService implements IEnrollmentService {
     workloadCeiling: number,
   ): number {
     if (!input.attended) {
-      if (input.workloadHours !== undefined) {
-        throw new CustomError(
-          422,
-          "workloadHours must be omitted when attended is false.",
-        );
-      }
       return 0;
-    }
-
-    if (input.workloadHours === undefined) {
-      throw new CustomError(
-        422,
-        "workloadHours is required when attended is true.",
-      );
     }
 
     if (
@@ -307,12 +286,27 @@ class EnrollmentService implements IEnrollmentService {
     return user;
   }
 
-  private toEnrollResponse(enrollment: Enrollment): EnrollmentResponse {
+  private toEnrollResponse(enrollment: Enrollment): EnrollResponse {
     return {
       id: enrollment.id,
       activityId: enrollment.activityId,
       userId: enrollment.userId,
       createdAt: enrollment.createdAt,
+    };
+  }
+
+  private toCanonicalEnrollmentResponse(
+    enrollment: Enrollment,
+  ): EnrollmentResponse {
+    return {
+      id: enrollment.id,
+      activityId: enrollment.activityId,
+      userId: enrollment.userId,
+      status: enrollment.status,
+      attendanceConfirmed: enrollment.attendanceConfirmed,
+      confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+      createdAt: enrollment.createdAt,
+      updatedAt: enrollment.updatedAt,
     };
   }
 
@@ -339,18 +333,22 @@ class EnrollmentService implements IEnrollmentService {
 
   private toParticipantResponse(
     enrollment: EnrollmentWithParticipant,
-  ): ParticipantResponse {
+  ): EnrollmentParticipantResponse {
     return {
-      enrollmentId: enrollment.id,
+      id: enrollment.id,
+      activityId: enrollment.activityId,
       userId: enrollment.userId,
-      fullName: enrollment.user.fullName,
-      email: enrollment.user.email,
-      // Field-by-field stays as a second line of defense, but the repository
-      // now selects only these fields — passwordHash never leaves the database.
-      registrationCode: enrollment.user.student?.registrationCode ?? null,
       status: enrollment.status,
       attendanceConfirmed: enrollment.attendanceConfirmed,
       confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+      createdAt: enrollment.createdAt,
+      updatedAt: enrollment.updatedAt,
+      user: {
+        id: enrollment.user.id,
+        fullName: enrollment.user.fullName,
+        email: enrollment.user.email,
+        registrationCode: enrollment.user.student?.registrationCode ?? null,
+      },
     };
   }
 }

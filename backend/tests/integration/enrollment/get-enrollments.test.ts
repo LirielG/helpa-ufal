@@ -22,15 +22,18 @@ async function anActivityWithAuthor(overrides = {}) {
 }
 
 const PARTICIPANT_KEYS = [
+  "activityId",
   "attendanceConfirmed",
   "confirmedWorkloadHours",
-  "email",
-  "enrollmentId",
-  "fullName",
-  "registrationCode",
+  "createdAt",
+  "id",
   "status",
+  "updatedAt",
+  "user",
   "userId",
 ];
+
+const USER_KEYS = ["email", "fullName", "id", "registrationCode"];
 
 describe("GET /activities/:activityId/enrollments", () => {
   // ---------- 200 - Success ----------
@@ -51,14 +54,20 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.body).toEqual({
       items: [
         {
-          enrollmentId: expect.any(String),
+          id: expect.any(String),
+          activityId: activity.id,
           userId: enrolled.user.id,
-          fullName: "Maria Clara Santos",
-          email: enrolled.user.email,
-          registrationCode: "20240012345",
           status: "APPROVED",
           attendanceConfirmed: null,
           confirmedWorkloadHours: 0,
+          createdAt: expect.any(String),
+          updatedAt: expect.any(String),
+          user: {
+            id: enrolled.user.id,
+            fullName: "Maria Clara Santos",
+            email: enrolled.user.email,
+            registrationCode: "20240012345",
+          },
         },
       ],
       total: 1,
@@ -199,7 +208,7 @@ describe("GET /activities/:activityId/enrollments", () => {
       .set(...authHeader(author.token));
 
     expect(response.status).toBe(200);
-    expect(response.body.items[0].registrationCode).toBeNull();
+    expect(response.body.items[0].user.registrationCode).toBeNull();
   });
 
   it("returns 200 with an empty envelope when the activity has no active enrollments", async () => {
@@ -304,6 +313,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     );
     for (const item of response.body.items) {
       expect(Object.keys(item).sort()).toEqual(PARTICIPANT_KEYS);
+      expect(Object.keys(item.user).sort()).toEqual(USER_KEYS);
     }
   });
 

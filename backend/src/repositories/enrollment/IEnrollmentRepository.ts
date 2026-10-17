@@ -26,11 +26,7 @@ export interface IEnrollmentRepository {
     activityId: string,
   ): Promise<Enrollment | null>;
 
-  /* Scoped lookup: an enrollment of another activity reads as nonexistent */
-  findByIdAndActivity(
-    enrollmentId: string,
-    activityId: string,
-  ): Promise<Enrollment | null>;
+  findById(enrollmentId: string): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
   enroll(userId: string, activityId: string): Promise<Enrollment>;

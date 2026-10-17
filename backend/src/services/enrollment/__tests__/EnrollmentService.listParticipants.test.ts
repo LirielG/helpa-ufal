@@ -20,11 +20,14 @@ function aParticipant(overrides: Record<string, unknown> = {}) {
   const userId = randomUUID();
   return {
     id: randomUUID(),
+    activityId: ACTIVITY_ID,
     userId,
     status: "APPROVED",
     attendanceConfirmed: null,
     confirmedWorkloadHours: 0,
     enrolledAt: new Date("2026-01-01T10:00:00.000Z"),
+    createdAt: new Date("2026-01-01T10:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T10:00:00.000Z"),
     user: {
       id: userId,
       fullName: "Maria Clara Santos",
@@ -101,14 +104,20 @@ describe("EnrollmentService.listParticipants", () => {
     expect(result).toEqual({
       items: [
         {
-          enrollmentId: participant.id,
+          id: participant.id,
+          activityId: ACTIVITY_ID,
           userId: participant.user.id,
-          fullName: participant.user.fullName,
-          email: participant.user.email,
-          registrationCode: "20240012345",
           status: "APPROVED",
           attendanceConfirmed: null,
           confirmedWorkloadHours: 0,
+          createdAt: participant.createdAt,
+          updatedAt: participant.updatedAt,
+          user: {
+            id: participant.user.id,
+            fullName: participant.user.fullName,
+            email: participant.user.email,
+            registrationCode: "20240012345",
+          },
         },
       ],
       total: 1,
@@ -116,7 +125,7 @@ describe("EnrollmentService.listParticipants", () => {
       limit: 10,
       totalPresent: 0,
     });
-    expect(result.items[0]).not.toHaveProperty("passwordHash");
+    expect(result.items[0].user).not.toHaveProperty("passwordHash");
     expect(JSON.stringify(result)).not.toContain(
       "super-secret-hash-that-must-never-leak",
     );
@@ -176,7 +185,7 @@ describe("EnrollmentService.listParticipants", () => {
       10,
     );
 
-    expect(result.items[0].registrationCode).toBeNull();
+    expect(result.items[0].user.registrationCode).toBeNull();
   });
 
   it("converts page/limit into skip/take for the repository (page 3, limit 50 -> skip 100)", async () => {
