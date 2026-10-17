@@ -104,66 +104,93 @@ describe("GET /activities/:id", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ status: 404, message: "Activity not found." });
   });
-    it("sem token: resposta não tem o campo enrollmentStatus", async () => {
-    const author = await createTeacher();
-    const activity = await createActivity(author.user.id, { status: "OPEN" });
 
-    const response = await request(app).get(`/activities/${activity.id}`);
+  describe("enrollmentStatus", () => {
+    it("omits the key when the request has no token", async () => {
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
 
-    expect(response.status).toBe(200);
-    expect(response.body).not.toHaveProperty("enrollmentStatus");
-  });
+      const response = await request(app).get(`/activities/${activity.id}`);
 
-  it("token válido sem inscrição: enrollmentStatus é null", async () => {
-    const author = await createTeacher();
-    const student = await createStudent();
-    const activity = await createActivity(author.user.id, { status: "OPEN" });
+      expect(response.status).toBe(200);
+      expect(response.body).not.toHaveProperty("enrollmentStatus");
+    });
 
-    const response = await request(app)
-      .get(`/activities/${activity.id}`)
-      .set("Authorization", `Bearer ${student.token}`);
+    // Interim behavior: auth() without options treats an invalid token as
+    // anonymous. #205 switches the route to optionalAuth(), which answers 401
+    // (api-conventions.md, section 5); this test must change with it.
+    it("treats an invalid token as anonymous and omits the key", async () => {
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
 
-    expect(response.status).toBe(200);
-    expect(response.body.enrollmentStatus).toBeNull();
-  });
+      const response = await request(app)
+        .get(`/activities/${activity.id}`)
+        .set("Authorization", "Bearer invalid-token");
 
-  it("token válido com inscrição APPROVED: enrollmentStatus é APPROVED", async () => {
-    const author = await createTeacher();
-    const student = await createStudent();
-    const activity = await createActivity(author.user.id, { status: "OPEN" });
-    await createEnrollment(student.user.id, activity.id, { status: "APPROVED" });
+      expect(response.status).toBe(200);
+      expect(response.body).not.toHaveProperty("enrollmentStatus");
+    });
 
-    const response = await request(app)
-      .get(`/activities/${activity.id}`)
-      .set("Authorization", `Bearer ${student.token}`);
+    it("returns null for an authenticated user who never enrolled", async () => {
+      const author = await createTeacher();
+      const student = await createStudent();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
 
-    expect(response.status).toBe(200);
-    expect(response.body.enrollmentStatus).toBe("APPROVED");
-  });
+      const response = await request(app)
+        .get(`/activities/${activity.id}`)
+        .set("Authorization", `Bearer ${student.token}`);
 
-  it("token válido com inscrição CANCELLED: enrollmentStatus é CANCELLED", async () => {
-    const author = await createTeacher();
-    const student = await createStudent();
-    const activity = await createActivity(author.user.id, { status: "OPEN" });
-    await createEnrollment(student.user.id, activity.id, { status: "CANCELLED" });
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("enrollmentStatus", null);
+    });
 
-    const response = await request(app)
-      .get(`/activities/${activity.id}`)
-      .set("Authorization", `Bearer ${student.token}`);
+    it("returns APPROVED for an active enrollment", async () => {
+      const author = await createTeacher();
+      const student = await createStudent();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
+      await createEnrollment(student.user.id, activity.id, {
+        status: "APPROVED",
+      });
 
-    expect(response.status).toBe(200);
-    expect(response.body.enrollmentStatus).toBe("CANCELLED");
-  });
+      const response = await request(app)
+        .get(`/activities/${activity.id}`)
+        .set("Authorization", `Bearer ${student.token}`);
 
-  it("token inválido: 200 sem o campo enrollmentStatus, nunca 401", async () => {
-    const author = await createTeacher();
-    const activity = await createActivity(author.user.id, { status: "OPEN" });
+      expect(response.status).toBe(200);
+      expect(response.body.enrollmentStatus).toBe("APPROVED");
+    });
 
-    const response = await request(app)
-      .get(`/activities/${activity.id}`)
-      .set("Authorization", "Bearer token-invalido");
+    it("returns CANCELLED for a cancelled enrollment", async () => {
+      const author = await createTeacher();
+      const student = await createStudent();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
+      await createEnrollment(student.user.id, activity.id, {
+        status: "CANCELLED",
+      });
 
-    expect(response.status).toBe(200);
-    expect(response.body).not.toHaveProperty("enrollmentStatus");
+      const response = await request(app)
+        .get(`/activities/${activity.id}`)
+        .set("Authorization", `Bearer ${student.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.enrollmentStatus).toBe("CANCELLED");
+    });
+
+    it("reflects only the token user's enrollment, never another student's", async () => {
+      const author = await createTeacher();
+      const enrolled = await createStudent();
+      const requester = await createStudent();
+      const activity = await createActivity(author.user.id, { status: "OPEN" });
+      await createEnrollment(enrolled.user.id, activity.id, {
+        status: "APPROVED",
+      });
+
+      const response = await request(app)
+        .get(`/activities/${activity.id}`)
+        .set("Authorization", `Bearer ${requester.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("enrollmentStatus", null);
+    });
   });
 });

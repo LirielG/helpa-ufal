@@ -12,6 +12,7 @@ http:
     - name: id
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
+  auth: inherit
 
 settings:
   encodeUrl: true
@@ -21,8 +22,8 @@ settings:
   forwardAuthorizationHeader: true
 
 examples:
-  - name: 200 Response
-    description: Full activity data.
+  - name: 200 Response (anonymous)
+    description: No session recognized, so enrollmentStatus is absent.
     request:
       url: "{{baseUrl}}/activities/:id"
       method: GET
@@ -66,6 +67,156 @@ examples:
                 "state": "AL"
               }
             }
+          }
+  - name: 200 Response (authenticated, not enrolled)
+    description: Valid token and the user never enrolled, so enrollmentStatus is null.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "enrollmentStatus": null
+          }
+  - name: 200 Response (authenticated, enrolled)
+    description: Valid token with an active enrollment.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "enrollmentStatus": "APPROVED"
+          }
+  - name: 200 Response (authenticated, cancelled)
+    description: Valid token and a cancelled enrollment; the status is still reported.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: ""
+          type: path
+          description: Activity UUID
+      headers:
+        - name: Authorization
+          value: Bearer {{apiKey}}
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "enrollmentStatus": "CANCELLED"
           }
   - name: 404 Response
     description: Activity not found.
@@ -114,4 +265,23 @@ examples:
             "message": ""
           }
 
-docs: Returns the full data of an activity, including details and address if available.
+docs: |-
+  Returns the full data of an activity, including details and address if available.
+
+  The route is public. When the request carries a valid session, the response
+  also includes `enrollmentStatus`, the requester's enrollment in this activity:
+
+  | Request | `enrollmentStatus` |
+  |---|---|
+  | no token | absent |
+  | malformed, expired or invalid token | absent (the request is treated as anonymous) |
+  | valid token, user never enrolled | `null` |
+  | valid token, with an enrollment | the enrollment `status`: `PENDING`, `APPROVED`, `REJECTED` or `CANCELLED` |
+
+  Absent and `null` are different states: absent means the server recognized
+  no session; `null` means authenticated with no enrollment.
+
+  - The user is resolved exclusively from the JWT token (never from params, query or body).
+  - Invalid tokens are treated as anonymous for now. Once #205 moves the route to
+    `optionalAuth()`, a present but invalid or expired token will answer 401
+    (see `docs/api-conventions.md`, section 5).
