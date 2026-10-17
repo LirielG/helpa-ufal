@@ -1,5 +1,5 @@
 import { api } from "@/services/api";
-import type { EnrollmentsResponse } from "./types";
+import type { ListEnrollmentsResponse } from "@/services/contracts/enrollment";
 
 const DEFAULT_LIMIT = 20;
 
@@ -13,8 +13,8 @@ export async function fetchEnrollments(
   activityId: string,
   page: number = 1,
   limit: number = DEFAULT_LIMIT,
-): Promise<EnrollmentsResponse> {
-  return api.get<EnrollmentsResponse>(
+): Promise<ListEnrollmentsResponse> {
+  return api.get<ListEnrollmentsResponse>(
     `/activities/${activityId}/enrollments`,
     { params: { page, limit } },
   );

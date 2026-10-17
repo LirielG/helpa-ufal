@@ -1,6 +1,9 @@
 import type { LoginRequest, RegisterRequest, User } from "@/types";
 import type { Activity, ActivityListItem } from "@/services/contracts/activity";
-import type { Enrollment } from "@/features/enrollment-management/types";
+import type {
+  EnrollmentListItem,
+  EnrollmentUser,
+} from "@/services/contracts/enrollment";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 
@@ -178,24 +181,36 @@ export function makeRegisterRequest(
 }
 
 /**
- * Factory for Enrollment items returned by GET /activities/:id/enrollments.
+ * Factory for items of GET /activities/:id/enrollments.
  *
  * Default values have attendanceConfirmed as null and confirmedWorkloadHours as 0
  * — the structural "nothing recorded yet" state, not an error.
  */
 export function makeEnrollment(
-  overrides: Partial<Enrollment> = {},
-): Enrollment {
+  overrides: Partial<Omit<EnrollmentListItem, "user">> & {
+    user?: Partial<EnrollmentUser>;
+  } = {},
+): EnrollmentListItem {
+  const { user, ...rest } = overrides;
+  const userId = user?.id ?? rest.userId ?? unique("user");
+
   return {
-    enrollmentId: unique("enrollment"),
-    userId: unique("user"),
-    fullName: "Voluntário de Teste",
-    email: `${unique("vol")}@ufal.br`,
-    registrationCode: unique("mat"),
-    status: "ENROLLED",
+    id: unique("enrollment"),
+    activityId: unique("activity"),
+    userId,
+    status: "APPROVED",
     attendanceConfirmed: null,
     confirmedWorkloadHours: 0,
-    ...overrides,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...rest,
+    user: {
+      id: userId,
+      fullName: "Voluntário de Teste",
+      email: `${unique("vol")}@ufal.br`,
+      registrationCode: unique("mat"),
+      ...user,
+    },
   };
 }
 

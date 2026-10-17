@@ -1,13 +1,13 @@
 import type {
-  AttendanceResponse,
   ConfirmAttendanceInput,
+  EnrollResponse,
   EnrollmentListResponse,
   EnrollmentResponse,
   ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
 export interface IEnrollmentService {
-  enroll(userId: string, activityId: string): Promise<EnrollmentResponse>;
+  enroll(userId: string, activityId: string): Promise<EnrollResponse>;
   cancel(userId: string, activityId: string): Promise<void>;
   listActiveByUser(
     userId: string,
@@ -22,8 +22,7 @@ export interface IEnrollmentService {
   ): Promise<ParticipantsListResponse>;
   confirmAttendance(
     userId: string,
-    activityId: string,
     enrollmentId: string,
     input: ConfirmAttendanceInput,
-  ): Promise<AttendanceResponse>;
+  ): Promise<EnrollmentResponse>;
 }

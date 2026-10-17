@@ -3,7 +3,6 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { API, http, HttpResponse, makeEnrollment, server } from "@/test";
 import { useEnrollments } from "../useEnrollments";
 
-
 /** A promise the test settles by hand, to control when a response arrives. */
 function deferred() {
   let release!: () => void;
@@ -15,7 +14,7 @@ function deferred() {
 
 function listOf(name: string, page: number) {
   return HttpResponse.json({
-    items: [makeEnrollment({ fullName: name })],
+    items: [makeEnrollment({ user: { fullName: name } })],
     total: 25,
     page,
     limit: 20,
@@ -45,7 +44,9 @@ describe("useEnrollments", () => {
     const { result } = renderHook(() => useEnrollments("act-1"));
 
     await waitFor(() =>
-      expect(result.current.data?.items[0]?.fullName).toBe("Primeira carga"),
+      expect(result.current.data?.items[0]?.user.fullName).toBe(
+        "Primeira carga",
+      ),
     );
 
     // Ask for page 2, which hangs, then change our mind and go back to page 1.
@@ -56,7 +57,7 @@ describe("useEnrollments", () => {
       await result.current.goToPage(1);
     });
 
-    expect(result.current.data?.items[0]?.fullName).toBe("Voltei à 1");
+    expect(result.current.data?.items[0]?.user.fullName).toBe("Voltei à 1");
 
     // Page 2 finally answers, after it was abandoned.
     await act(async () => {
@@ -64,7 +65,7 @@ describe("useEnrollments", () => {
       await page2.promise;
     });
 
-    expect(result.current.data?.items[0]?.fullName).toBe("Voltei à 1");
+    expect(result.current.data?.items[0]?.user.fullName).toBe("Voltei à 1");
     expect(result.current.page).toBe(1);
     expect(result.current.isLoading).toBe(false);
   });
@@ -83,15 +84,16 @@ describe("useEnrollments", () => {
       }),
     );
 
-    const { result, rerender } = renderHook(
-      ({ id }) => useEnrollments(id),
-      { initialProps: { id: "act-a" } },
-    );
+    const { result, rerender } = renderHook(({ id }) => useEnrollments(id), {
+      initialProps: { id: "act-a" },
+    });
 
     rerender({ id: "act-b" });
 
     await waitFor(() =>
-      expect(result.current.data?.items[0]?.fullName).toBe("Inscrito da B"),
+      expect(result.current.data?.items[0]?.user.fullName).toBe(
+        "Inscrito da B",
+      ),
     );
 
     await act(async () => {
@@ -99,7 +101,6 @@ describe("useEnrollments", () => {
       await activityA.promise;
     });
 
-    expect(result.current.data?.items[0]?.fullName).toBe("Inscrito da B");
+    expect(result.current.data?.items[0]?.user.fullName).toBe("Inscrito da B");
   });
 });
-

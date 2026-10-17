@@ -79,14 +79,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
     return { items, total, totalPresent };
   }
 
-  public async findByIdAndActivity(
-    enrollmentId: string,
-    activityId: string,
-  ): Promise<Enrollment | null> {
-    // findFirst, not findUnique by id: an enrollment of ANOTHER activity must
-    // be indistinguishable from one that does not exist at all.
-    return this._prisma.enrollment.findFirst({
-      where: { id: enrollmentId, activityId },
+  public async findById(enrollmentId: string): Promise<Enrollment | null> {
+    return this._prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
     });
   }
 
