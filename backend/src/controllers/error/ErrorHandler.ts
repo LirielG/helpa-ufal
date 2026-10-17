@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import { Prisma } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import { env } from "@/config/env.js";
+import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 
 // Maps a Prisma unique-constraint field name to a user-facing message.
 // Deliberately a closed whitelist: any P2002 on a field NOT listed here
@@ -65,39 +65,11 @@ class ErrorHandler {
     res: Response,
     next: NextFunction,
   ): void {
-    if (
-      !(err instanceof Prisma.PrismaClientKnownRequestError) ||
-      err.code !== "P2002"
-    ) {
+    const fields = uniqueViolationFields(err);
+    if (fields === null) {
       next(err);
       return;
     }
-
-    // Prisma's P2002 shape has changed across versions/engines:
-    // - Legacy (Rust query engine): `meta.target` — a field name or
-    //   array of field names (e.g. ["registrationCode"]).
-    // - Driver adapters (e.g. @prisma/adapter-pg): the field names
-    //   instead live nested at `meta.driverAdapterError.cause.constraint
-    //   .fields`, as quoted SQL identifiers (e.g. ['"registrationCode"']).
-    // We read both shapes so this keeps working regardless of which one
-    // this project's Prisma setup produces.
-    const meta = err.meta as Record<string, unknown> | undefined;
-    const driverAdapterError = meta?.driverAdapterError as
-      { cause?: { constraint?: { fields?: unknown } } } | undefined;
-
-    const rawCandidates: unknown[] = [
-      meta?.target,
-      driverAdapterError?.cause?.constraint?.fields,
-    ];
-
-    const fields: string[] = rawCandidates.flatMap((candidate) => {
-      if (Array.isArray(candidate)) {
-        return candidate.filter(
-          (item): item is string => typeof item === "string",
-        );
-      }
-      return typeof candidate === "string" ? [candidate] : [];
-    });
 
     const knownField = Object.keys(UNIQUE_FIELD_MESSAGES).find((key) =>
       fields.some((field) => field.toLowerCase().includes(key.toLowerCase())),
