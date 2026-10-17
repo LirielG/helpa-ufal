@@ -32,6 +32,8 @@ const SIGAA_COPY = {
     description:
       "Nenhuma ação corresponde a esses filtros. Tente ajustar a busca.",
   },
+  retry: "Tentar de novo",
+  exploreHelpa: "Explorar ações no Helpa",
 } as const;
 
 const INITIAL_FILTERS: SigaaFeedFilters = {
@@ -168,11 +170,11 @@ export function SigaaFeed({
           title={SIGAA_COPY.error.title}
           description={SIGAA_COPY.error.description}
           primaryAction={{
-            label: "Tentar de novo",
+            label: SIGAA_COPY.retry,
             onClick: retry,
           }}
           secondaryAction={{
-            label: "Explorar ações no Helpa",
+            label: SIGAA_COPY.exploreHelpa,
             onClick: onExploreHelpa,
           }}
         />
@@ -185,7 +187,7 @@ export function SigaaFeed({
           title={SIGAA_COPY.empty.title}
           description={SIGAA_COPY.empty.description}
           secondaryAction={{
-            label: "Explorar ações no Helpa",
+            label: SIGAA_COPY.exploreHelpa,
             onClick: onExploreHelpa,
           }}
         />
