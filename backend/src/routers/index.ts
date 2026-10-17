@@ -4,6 +4,7 @@ import ActivityRouter from "@/routers/activity/ActivityRouter.js";
 import EnrollmentRouter from "@/routers/enrollment/EnrollmentRouter.js";
 import SigaaActivityRouter from "@/routers/sigaa/SigaaActivityRouter.js";
 import UserRouter from "@/routers/user/UserRouter.js";
+import reportRouter from "@/routers/user/ReportRouter.js";
 
 const router = express.Router();
 
@@ -12,5 +13,6 @@ router.use("/", ActivityRouter);
 router.use("/", EnrollmentRouter);
 router.use("/", SigaaActivityRouter);
 router.use("/", UserRouter);
+router.use("/", reportRouter);
 
 export default router;
