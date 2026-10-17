@@ -190,7 +190,7 @@ describe("certificate issuing on attendance confirmation", () => {
     });
   });
 
-  it("gives up after three collisions with an error that is not a uniqueness conflict", async () => {
+  it("gives up after 20 collisions with an error that is not a uniqueness conflict", async () => {
     const taken = await aHomologableEnrollment();
     await repository.confirmAttendance(
       taken.activity.id,
@@ -218,7 +218,7 @@ describe("certificate issuing on attendance confirmation", () => {
     // surface as a 500.
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
-    expect(draws).toBe(3);
+    expect(draws).toBe(20);
     await expect(attendanceOf(enrollment.id)).resolves.toEqual({
       attendanceConfirmed: null,
       confirmedWorkloadHours: 0,

@@ -20,7 +20,7 @@ import CustomError from "@/models/error/CustomError.js";
 import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 import { generateValidationCode } from "@/utils/validationCode.js";
 
-const MAX_VALIDATION_CODE_ATTEMPTS = 3;
+const MAX_VALIDATION_CODE_ATTEMPTS = 20;
 
 type Props = {
   prisma?: PrismaClient;
