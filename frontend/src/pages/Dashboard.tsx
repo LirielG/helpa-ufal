@@ -46,6 +46,16 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
     setPage(1);
   };
 
+  const handleResetFilters = useCallback(() => {
+    setFilters({
+      area: "all",
+      actionType: "all",
+      availability: "all",
+      search: "",
+    });
+    setPage(1);
+  }, []);
+
   // The field stays controlled by what was typed while the request trails it.
   // Debouncing `filters` as a whole would delay the selects too, which filter
   // on the spot.
@@ -149,11 +159,13 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
               actions={actions}
               filters={filters}
               onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
               page={page}
               totalPages={totalPages}
               onPageChange={setPage}
               isLoading={isLoading}
               error={error}
+              onRetry={loadActions}
             />
           ) : (
             <SigaaFeed
