@@ -1,7 +1,7 @@
-import type { Enrollment } from "../types";
+import type { EnrollmentListItem } from "@/services/contracts/enrollment";
 
 interface EnrollmentTableProps {
-  enrollments: Enrollment[];
+  enrollments: EnrollmentListItem[];
 }
 
 /**
@@ -36,16 +36,18 @@ export function EnrollmentTable({ enrollments }: EnrollmentTableProps) {
         <tbody className="divide-y divide-gray-100 bg-white">
           {enrollments.map((enrollment) => (
             <tr
-              key={enrollment.enrollmentId}
+              key={enrollment.id}
               className="hover:bg-gray-50 transition-colors"
             >
               <td className="px-4 py-3 font-medium text-gray-900">
-                {enrollment.fullName}
+                {enrollment.user.fullName}
               </td>
-              <td className="px-4 py-3 text-gray-600">{enrollment.email}</td>
+              <td className="px-4 py-3 text-gray-600">
+                {enrollment.user.email}
+              </td>
               <td className="px-4 py-3 text-gray-500">
                 {/* Explicit empty string when null — never display "null" */}
-                {enrollment.registrationCode ?? ""}
+                {enrollment.user.registrationCode ?? ""}
               </td>
             </tr>
           ))}

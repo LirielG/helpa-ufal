@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiError } from "@/services/apiError";
 import { fetchEnrollments } from "./services";
 import { getEnrollmentsErrorMessage } from "./errors";
-import type { EnrollmentsResponse } from "./types";
+import type { ListEnrollmentsResponse } from "@/services/contracts/enrollment";
 
 const PAGE_LIMIT = 20;
 
@@ -15,7 +15,7 @@ const PAGE_LIMIT = 20;
  * - Non-ApiError exceptions (unexpected) produce a generic message.
  */
 export function useEnrollments(activityId: string) {
-  const [data, setData] = useState<EnrollmentsResponse | null>(null);
+  const [data, setData] = useState<ListEnrollmentsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

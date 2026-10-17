@@ -32,9 +32,11 @@ describe("EnrollmentsPage", () => {
   describe("loaded list", () => {
     it("displays enrolled volunteers with name, email and registration code", async () => {
       const enrollment = makeEnrollment({
-        fullName: "Maria Silva",
-        email: "maria@ufal.br",
-        registrationCode: "12345678",
+        user: {
+          fullName: "Maria Silva",
+          email: "maria@ufal.br",
+          registrationCode: "12345678",
+        },
       });
 
       server.use(
@@ -108,7 +110,7 @@ describe("EnrollmentsPage", () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByText(enrollment.fullName)).toBeInTheDocument();
+        expect(screen.getByText(enrollment.user.fullName)).toBeInTheDocument();
       });
 
       // No error alert should be rendered
@@ -119,9 +121,11 @@ describe("EnrollmentsPage", () => {
   describe("teacher with null registrationCode", () => {
     it("renders an empty cell instead of 'null'", async () => {
       const teacher = makeEnrollment({
-        fullName: "Prof. João",
-        email: "joao@ufal.br",
-        registrationCode: null, // teacher has no registration code
+        user: {
+          fullName: "Prof. João",
+          email: "joao@ufal.br",
+          registrationCode: null, // teacher has no registration code
+        },
       });
 
       server.use(
@@ -253,7 +257,7 @@ describe("EnrollmentsPage", () => {
           }
 
           return HttpResponse.json({
-            items: [makeEnrollment({ fullName: "Ana Lima" })],
+            items: [makeEnrollment({ user: { fullName: "Ana Lima" } })],
             total: 1,
             page: 1,
             limit: 20,
@@ -342,7 +346,11 @@ describe("EnrollmentsPage", () => {
           }
 
           return HttpResponse.json({
-            items: [makeEnrollment({ fullName: `Pessoa da página ${page}` })],
+            items: [
+              makeEnrollment({
+                user: { fullName: `Pessoa da página ${page}` },
+              }),
+            ],
             total: 25,
             page: Number(page),
             limit: 20,
@@ -369,7 +377,7 @@ describe("EnrollmentsPage", () => {
   describe("vacancy line", () => {
     const listResponse = () =>
       HttpResponse.json({
-        items: [makeEnrollment({ fullName: "Maria Silva" })],
+        items: [makeEnrollment({ user: { fullName: "Maria Silva" } })],
         total: 3,
         page: 1,
         limit: 20,
