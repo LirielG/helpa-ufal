@@ -17,7 +17,6 @@ import CertificateRepository from "@/repositories/certificate/CertificateReposit
 import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
-import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 import { generateValidationCode } from "@/utils/validationCode.js";
 
 const MAX_VALIDATION_CODE_ATTEMPTS = 20;
@@ -198,44 +197,6 @@ class EnrollmentRepository implements IEnrollmentRepository {
     attendanceConfirmed: boolean,
     confirmedWorkloadHours: number,
   ): Promise<Enrollment> {
-    // A validation code collision cannot be redrawn inside the same
-    // transaction: in Postgres any error aborts it, and every later statement
-    // fails. So the WHOLE transaction is redone with a fresh code. With ~50
-    // bits per code this is practically unreachable, but it must not fail
-    // silently either.
-    for (let attempt = 1; ; attempt++) {
-      try {
-        return await this.confirmAttendanceOnce(
-          activityId,
-          enrollmentId,
-          attendanceConfirmed,
-          confirmedWorkloadHours,
-        );
-      } catch (error) {
-        const fields = uniqueViolationFields(error) ?? [];
-        // Substring, not equality: depending on the engine the field can be
-        // reported as the index name (Certificate_validationCode_key).
-        if (!fields.some((field) => field.includes("validationCode"))) {
-          throw error;
-        }
-        if (attempt === MAX_VALIDATION_CODE_ATTEMPTS) {
-          // Wrapped so the ErrorHandler does not answer it as a 409 "value
-          // already in use": running out of codes is a server fault (500).
-          throw new Error(
-            `No unique validation code after ${MAX_VALIDATION_CODE_ATTEMPTS} attempts.`,
-            { cause: error },
-          );
-        }
-      }
-    }
-  }
-
-  private async confirmAttendanceOnce(
-    activityId: string,
-    enrollmentId: string,
-    attendanceConfirmed: boolean,
-    confirmedWorkloadHours: number,
-  ): Promise<Enrollment> {
     return this._prisma.$transaction(async (tx) => {
       // Lock BEFORE any read: status and workload ceiling are re-read under
       // the lock, so a concurrent status transition or a workload edit cannot
@@ -340,12 +301,23 @@ class EnrollmentRepository implements IEnrollmentRepository {
     }
 
     if (!hasCertificate) {
-      await this._certificateRepository.create(tx, {
-        enrollmentId,
-        validationCode: this._generateValidationCode(),
-        issuedAt: new Date(),
-      });
-      return;
+      // create() reports a code collision as null instead of raising, so the
+      // transaction stays usable and the code can be redrawn right here. With
+      // ~50 bits per code a redraw is practically unreachable; the limit only
+      // keeps a broken generator from looping forever.
+      for (let attempt = 0; attempt < MAX_VALIDATION_CODE_ATTEMPTS; attempt++) {
+        const certificate = await this._certificateRepository.create(tx, {
+          enrollmentId,
+          validationCode: this._generateValidationCode(),
+          issuedAt: new Date(),
+        });
+        if (certificate) {
+          return;
+        }
+      }
+      throw new Error(
+        `No unique validation code after ${MAX_VALIDATION_CODE_ATTEMPTS} attempts.`,
+      );
     }
 
     if (state.previousHours !== state.confirmedWorkloadHours) {
