@@ -1,4 +1,8 @@
-import type { ActionCampus, ActionFormat, ActionType } from "./types";
+import type {
+  CampusLocation,
+  ActivityFormat,
+  ActivityType,
+} from "@/services/contracts/activity";
 
 export const FILTER_OPTIONS = {
   areas: [
@@ -26,7 +30,7 @@ export const FILTER_OPTIONS = {
 /*** `area` is free text in the API and is rendered as-is on the action detail,
  * so the stored value is the label itself.
  */
-export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
+export const ACTION_TYPE_LABELS: Record<ActivityType, string> = {
   EXTENSION: "Ação de extensão",
   COURSE: "Curso ou minicurso",
   EVENT: "Evento",
@@ -34,13 +38,13 @@ export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   OTHER: "Outro",
 };
 
-export const ACTION_FORMAT_LABELS: Record<ActionFormat, string> = {
+export const ACTION_FORMAT_LABELS: Record<ActivityFormat, string> = {
   IN_PERSON: "Presencial",
   ONLINE: "On-line",
   HYBRID: "Híbrido",
 };
 
-export const ACTION_CAMPUS_LABELS: Record<ActionCampus, string> = {
+export const ACTION_CAMPUS_LABELS: Record<CampusLocation, string> = {
   MACEIO: "UFAL - Campus Maceió",
   ARAPIRACA: "UFAL - Campus Arapiraca",
   PALMEIRA: "UFAL - Campus Palmeira dos Índios",
@@ -51,26 +55,13 @@ export const ACTION_CAMPUS_LABELS: Record<ActionCampus, string> = {
 };
 
 export const ACTION_TYPE_OPTIONS = (
-  Object.keys(ACTION_TYPE_LABELS) as ActionType[]
+  Object.keys(ACTION_TYPE_LABELS) as ActivityType[]
 ).map((value) => ({ value, label: ACTION_TYPE_LABELS[value] }));
 
 export const ACTION_FORMAT_OPTIONS = (
-  Object.keys(ACTION_FORMAT_LABELS) as ActionFormat[]
+  Object.keys(ACTION_FORMAT_LABELS) as ActivityFormat[]
 ).map((value) => ({ value, label: ACTION_FORMAT_LABELS[value] }));
 
 export const ACTION_CAMPUS_OPTIONS = (
-  Object.keys(ACTION_CAMPUS_LABELS) as ActionCampus[]
+  Object.keys(ACTION_CAMPUS_LABELS) as CampusLocation[]
 ).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
-
-export const ACTION_AREA_LABELS = [
-  "Robótica",
-  "Educação",
-  "Saúde",
-  "Meio Ambiente",
-  "Arquitetura",
-] as const;
-
-export const ACTION_AREA_OPTIONS = ACTION_AREA_LABELS.map((label) => ({
-  value: label,
-  label,
-}));

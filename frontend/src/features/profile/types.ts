@@ -1,4 +1,6 @@
-import type { UserType } from "@/types";
+import type { Activity } from "@/services/contracts/activity";
+
+export type { UserProfile } from "@/types/profile";
 
 export type ProfileTab = "personal" | "certificates" | "actions";
 
@@ -11,17 +13,14 @@ export interface UserActivity {
   location: string;
   date: string;
   status: ActivityStatus;
+  /** Lifecycle status of the action itself, as opposed to the sub-tab in `status`. */
+  activityStatus: Activity["status"];
   workloadHours?: number;
 }
 
-export interface UserProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  userType: UserType;
-  isManager: boolean;
-  registrationCode: string;
-  course: string | null;
-  cndb: string | null;
-  createdAt: string;
+/** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */
+export type ActivityStatusTransition = Exclude<Activity["status"], "OPEN">;
+
+export interface UpdateActivityStatusRequest {
+  status: ActivityStatusTransition;
 }

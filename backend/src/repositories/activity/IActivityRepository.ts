@@ -6,7 +6,7 @@ import type {
 import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
 
 export interface IActivityRepository {
-  create(authorId: string, data: CreateActivityInput): Promise<Activity>;
+  create(authorId: string, data: CreateActivityInput): Promise<ActivityFullResponse>;
 
   findById(id: string): Promise<ActivityFullResponse | null>;
 

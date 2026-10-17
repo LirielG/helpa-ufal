@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { render, http, HttpResponse, server } from "@/test";
+import { render, futureDateInput, http, HttpResponse, server } from "@/test";
 import { useActionRegisterStore } from "@/stores/actionRegisterStore";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
@@ -60,7 +60,7 @@ async function fillStep1(user: UserEvent) {
     registerDialog().getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
   );
-  await user.selectOptions(
+  await user.type(
     registerDialog().getByLabelText(/Área de atuação/i),
     "Educação",
   );
@@ -97,20 +97,12 @@ async function fillStep2(user: UserEvent) {
     "https://meet.google.com/abc",
   );
 
-  fireEvent.change(
-    registerDialog().getByLabelText(/Início/i, {
-      selector: 'input[type="date"]',
-    }),
-    {
-      target: { value: "2026-10-10" },
-    },
-  );
-  fireEvent.change(
-    registerDialog().getByLabelText(/Fim/i, { selector: 'input[type="date"]' }),
-    {
-      target: { value: "2026-10-10" },
-    },
-  );
+  fireEvent.change(registerDialog().getByLabelText("Data de início"), {
+    target: { value: futureDateInput() },
+  });
+  fireEvent.change(registerDialog().getByLabelText("Data de encerramento"), {
+    target: { value: futureDateInput() },
+  });
 }
 
 describe("DashboardShell", () => {

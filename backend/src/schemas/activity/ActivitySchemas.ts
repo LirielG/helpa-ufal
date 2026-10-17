@@ -46,17 +46,20 @@ const AddressSchema = z.object({
   }),
 });
 
+const UtcDateTimeSchema = z.iso.datetime().transform((value) => new Date(value));
+
 const BaseActivitySchema = z.object({
   title: z.string().min(1),
   type: z.enum(ActivityType),
   campus: z.enum(CampusLocation),
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  startDate: UtcDateTimeSchema,
+  endDate: UtcDateTimeSchema,
   slots: z.number().int().min(1),
   description: z.string().trim().min(1),
   area: z.string().trim().min(1),
   workloadHours: z.number().int().min(1),
-  url: z.url().optional(),
+  url: z.url().nullable().optional(),
+  address: AddressSchema.nullable().optional(),
 });
 
 export const CreateActivitySchema = z
@@ -67,7 +70,6 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("ONLINE"),
-      address: AddressSchema.optional(),
     }),
     BaseActivitySchema.extend({
       format: z.literal("HYBRID"),
@@ -87,8 +89,8 @@ const UpdateActivityBaseSchema = z
     title: z.string().min(1),
     type: z.enum(ActivityType),
     campus: z.enum(CampusLocation),
-    startDate: z.coerce.date(),
-    endDate: z.coerce.date(),
+    startDate: UtcDateTimeSchema,
+    endDate: UtcDateTimeSchema,
     slots: z.number().int().min(1),
     description: z.string().trim().min(1),
     area: z.string().trim().min(1),

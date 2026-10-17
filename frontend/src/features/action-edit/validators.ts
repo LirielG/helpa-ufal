@@ -54,6 +54,8 @@ export const ActionEditSchema = z
       .min(10, "A descrição deve ter no mínimo 10 caracteres"),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
+    startTime: z.string().min(1, "O horário de início é obrigatório"),
+    endTime: z.string().min(1, "O horário de encerramento é obrigatório"),
     type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"], {
       message: "Selecione um tipo de ação",
     }),
@@ -68,9 +70,9 @@ export const ActionEditSchema = z
     format: z.enum(["ONLINE", "IN_PERSON", "HYBRID"], {
       message: "Selecione o formato da ação",
     }),
-    // Free text, like the API: an action created before the closed list of #171
-    // still has to be editable.
-    area: z.string().trim().min(1, "Selecione uma área de atuação"),
+    // Free text, like the API: suggestions help reuse an existing spelling,
+    // but any area is accepted.
+    area: z.string().trim().min(1, "Informe uma área de atuação"),
     campus: z.enum(
       [
         "MACEIO",
@@ -83,7 +85,7 @@ export const ActionEditSchema = z
       ],
       { message: "Selecione o campus" },
     ),
-    url: z.string().url("Informe uma URL válida").or(z.literal("")),
+    url: z.string(),
     address: z
       .object({
         addressLine: z.string().trim(),
@@ -94,13 +96,34 @@ export const ActionEditSchema = z
       })
       .optional(),
   })
-  .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
-    message: "A data de encerramento deve ser posterior à data de início",
-    path: ["endDate"],
-  })
-  .refine((data) => data.format === "IN_PERSON" || !!data.url, {
-    message: "Link do evento é obrigatório para ações on-line ou híbridas",
-    path: ["url"],
+  .refine(
+    (data) =>
+      new Date(`${data.endDate}T${data.endTime}`) >
+      new Date(`${data.startDate}T${data.startTime}`),
+    {
+      message: "A data de encerramento deve ser posterior à de início.",
+      path: ["endDate"],
+    },
+  )
+  .superRefine((data, ctx) => {
+    // In person the link field is hidden, so whatever it still holds is not
+    // checked: an error there would block the save with nothing on screen.
+    if (data.format === "IN_PERSON") return;
+
+    if (!data.url.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+        path: ["url"],
+      });
+    } else if (!z.url().safeParse(data.url).success) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe uma URL válida",
+        path: ["url"],
+      });
+    }
   })
   .superRefine((data, ctx) => {
     if (data.format === "ONLINE") return;

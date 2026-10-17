@@ -1,10 +1,6 @@
 import { api } from "../../services/api";
-import type {
-  Action,
-  ActionsPage,
-  FilterOptions,
-  PaginatedResponse,
-} from "./types";
+import type { ListActivitiesResponse } from "../../services/contracts/activity";
+import type { ActionsPage, FilterOptions } from "./types";
 
 export async function fetchActions(
   filters: FilterOptions,
@@ -39,7 +35,7 @@ export async function fetchActions(
     }
   }
 
-  const response = await api.get<PaginatedResponse<Action>>("/activities", {
+  const response = await api.get<ListActivitiesResponse>("/activities", {
     params: apiParams,
   });
 
@@ -51,4 +47,13 @@ export async function fetchActions(
     ...response,
     totalPages: Math.max(1, Math.ceil(response.total / limit)),
   };
+}
+
+export async function fetchAreaSuggestions(): Promise<string[]> {
+  try {
+    const response = await api.get<{ areas: string[] }>("/activities/filters");
+    return response.areas ?? [];
+  } catch {
+    return [];
+  }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
-import type { Action } from "../types";
+import type { ActivityListItem } from "@/services/contracts/activity";
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=500&fit=crop",
@@ -12,7 +12,7 @@ const FALLBACK_IMAGES = [
 ];
 
 interface HeroBannerProps {
-  actions: Action[];
+  actions: ActivityListItem[];
 }
 
 export function HeroBanner({ actions }: HeroBannerProps) {
@@ -58,7 +58,9 @@ export function HeroBanner({ actions }: HeroBannerProps) {
           return (
             <div
               key={action.id}
+              data-testid="hero-slide"
               aria-hidden={index !== currentSlide}
+              inert={index !== currentSlide}
               className={`absolute inset-0 transition-opacity duration-700 ${
                 index === currentSlide ? "opacity-100" : "opacity-0"
               }`}
