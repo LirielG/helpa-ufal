@@ -23,11 +23,22 @@ export function validateQuery<TSchema extends z.ZodTypeAny>(
     const result = schema.safeParse(req.query);
 
     if (!result.success) {
-      const errors: ValidationErrorItem[] = result.error.issues.map(
-        (issue) => ({
-          field: String(issue.path[0] ?? "query"),
-          message: issue.message,
-        }),
+      // A strict schema reports every unknown key in a single issue at the
+      // root; splitting it gives one item per parameter, named after it.
+      const errors: ValidationErrorItem[] = result.error.issues.flatMap(
+        (issue): ValidationErrorItem[] =>
+          issue.code === "unrecognized_keys"
+            ? issue.keys.map((key) => ({
+                field: key,
+                code: "UNKNOWN_PARAMETER",
+                message: `${key} is not a supported query parameter.`,
+              }))
+            : [
+                {
+                  field: String(issue.path[0] ?? "query"),
+                  message: issue.message,
+                },
+              ],
       );
       next(new ValidationError(errors, message));
       return;
