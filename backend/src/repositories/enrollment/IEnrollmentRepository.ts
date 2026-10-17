@@ -51,14 +51,16 @@ export interface IEnrollmentRepository {
   /* Foundation for the "Subscribed Actions" tab (Epic 3): lists only APPROVED items */
   findActiveByUserId(
     userId: string,
-    skip?: number,
-    take?: number,
+    skip: number,
+    take: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }>;
 
+  /* skip/take, the same vocabulary as findActiveByUserId. The service owns the
+     page -> skip conversion, so a repository call can never carry a page. */
   findByActivityId(
     activityId: string,
-    page: number,
-    limit: number,
+    skip: number,
+    take: number,
   ): Promise<{
     items: EnrollmentWithParticipant[];
     total: number;

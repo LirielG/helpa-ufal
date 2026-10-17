@@ -11,7 +11,9 @@ import type {
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
+import ValidationError, {
+  type ValidationErrorItem,
+} from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 import type { Enrollment } from "@prisma/client";
 import {
@@ -24,6 +26,32 @@ import {
   type ParticipantResponse,
   type ParticipantsListResponse,
 } from "@/types/enrollment.js";
+
+/**
+ * The single place where the 1-based page/limit of the service becomes the
+ * skip of the repository, and the guard for callers that bypass the HTTP
+ * validateQuery: page 0 would build skip -10, which Prisma rejects as a 500.
+ *
+ * Invalid values answer 400 with the same items as the route schema, never a
+ * silent clamp (api-conventions, section 3). The upper bound on limit is
+ * enforced by the route schema only.
+ */
+function toSkip(page: number, limit: number): number {
+  const errors: ValidationErrorItem[] = [];
+
+  if (!Number.isInteger(page) || page < 1) {
+    errors.push({ field: "page", message: "page must be a positive integer." });
+  }
+  if (!Number.isInteger(limit) || limit < 1) {
+    errors.push({
+      field: "limit",
+      message: "limit must be a positive integer.",
+    });
+  }
+  if (errors.length > 0) throw new ValidationError(errors);
+
+  return (page - 1) * limit;
+}
 
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
@@ -99,7 +127,7 @@ class EnrollmentService implements IEnrollmentService {
     page = 1,
     limit = 10,
   ): Promise<EnrollmentListResponse> {
-    const skip = (page - 1) * limit;
+    const skip = toSkip(page, limit);
     const { items, total } =
       await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
@@ -135,10 +163,11 @@ class EnrollmentService implements IEnrollmentService {
       );
     }
 
+    const skip = toSkip(page, limit);
     const { items, total, totalPresent } =
       await this._enrollmentRepository.findByActivityId(
         activityId,
-        page,
+        skip,
         limit,
       );
 
