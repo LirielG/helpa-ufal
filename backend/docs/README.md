@@ -14,14 +14,9 @@ O environment `local` aponta `baseUrl` para `http://localhost:3333`, que é onde
 
 ## Autenticação
 
-Não é preciso colar token na mão. A coleção usa `auth: bearer` com o token
-`{{apiKey}}`, herdado por todos os requests, e o request
-`Auth/Login with email and password` tem um script `after-response` que grava o
-token da resposta na variável `apiKey` do environment.
+Não é preciso copiar ou colar tokens manualmente. A API utiliza autenticação baseada em cookies HTTP. ao executar a requisição `Auth/Login with email and password`, o servidor retorna um cookie de sessão (`token`) que o *cookie jar* do Bruno armazena e reutiliza automaticamente nas requisições subsequentes.
 
-Ou seja: rode o login uma vez e os requests autenticados seguintes já saem
-assinados. Se começarem a voltar 401, é só rodar o login de novo — o token
-expirou.
+Caso receba respostas com status `401 Unauthenticated`, basta executar a requisição de Login novamente para renovar a sessão.
 
 O `apiKey` é declarado como `secret` e nasce vazio no `environments/local.yml`.
 Ele é preenchido apenas no seu Bruno local; nunca comite um valor nele.

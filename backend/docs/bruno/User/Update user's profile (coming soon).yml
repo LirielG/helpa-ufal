@@ -14,9 +14,6 @@ http:
         "currentPassword": "currentPass123",
         "newPassword": "newPass456"
       }
-  auth:
-    type: bearer
-    token: "{{apiKey}}"
 
 settings:
   encodeUrl: true
@@ -87,7 +84,7 @@ docs: |-
   institutional and permission fields are immutable here.
 
   ## Authentication
-  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - Authentication required via cookie (`token`).
   - The `userId` is extracted exclusively from the token.
 
   ## Body (all fields optional; explicit whitelist)

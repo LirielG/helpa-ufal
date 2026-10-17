@@ -30,7 +30,6 @@ http:
           "state": "AC"
         }
       }
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -45,9 +44,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       body:
         type: json
         data: "{}"
@@ -92,9 +88,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       body:
         type: json
         data: "{}"
@@ -122,9 +115,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       body:
         type: json
         data: "{}"
@@ -146,9 +136,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       body:
         type: json
         data: "{}"

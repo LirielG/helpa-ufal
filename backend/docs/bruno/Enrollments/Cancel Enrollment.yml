@@ -13,7 +13,6 @@ http:
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -28,9 +27,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -70,9 +66,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -96,9 +89,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -122,9 +112,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -148,9 +135,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""
@@ -174,9 +158,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: id
           value: ""

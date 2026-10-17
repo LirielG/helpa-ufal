@@ -22,9 +22,6 @@ http:
       type: query
       description: Items per page (max. 50)
       disabled: true
-  auth:
-    type: bearer
-    token: "{{apiKey}}"
 
 settings:
   encodeUrl: true
@@ -109,7 +106,7 @@ docs: |-
   filter. Powers the **Activities** section of the Profile screen (three tabs).
 
   ## Authentication
-  - Bearer token (JWT) required, sent via `{{apiKey}}`.
+  - Authentication required via cookie (`token`).
   - The `userId` is extracted exclusively from the token.
 
   ## Query params

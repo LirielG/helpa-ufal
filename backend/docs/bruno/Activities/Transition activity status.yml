@@ -19,7 +19,6 @@ http:
       {
         "status": "IN_PROGRESS"
       }
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -34,9 +33,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -74,9 +70,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -112,9 +105,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -144,9 +134,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -176,9 +163,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -207,9 +191,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -238,9 +219,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
@@ -270,9 +248,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
           value: ""
