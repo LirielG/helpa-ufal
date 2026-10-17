@@ -88,6 +88,15 @@ describe("CertificatePdfRenderer.render", () => {
     );
   });
 
+  it("rasterizes the QR at print resolution (about 300 dpi at its drawn size)", async () => {
+    await renderer.render(common);
+
+    const qrPng = await vi.mocked(QRCode.toBuffer).mock.results[0]!.value;
+    // PNG IHDR: width is the big-endian uint32 at byte 16.
+    const widthPx = Buffer.from(qrPng).readUInt32BE(16);
+    expect(widthPx).toBeGreaterThanOrEqual(300);
+  });
+
   it("reads font and logo from disk only on the first call", async () => {
     vi.resetModules();
     const { CertificatePdfRenderer: FreshRenderer } =

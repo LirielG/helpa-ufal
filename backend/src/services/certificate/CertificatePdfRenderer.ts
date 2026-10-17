@@ -165,6 +165,9 @@ export class CertificatePdfRenderer implements ICertificatePdfRenderer {
       await QRCode.toBuffer(content.qrUrl, {
         errorCorrectionLevel: "M",
         margin: 1,
+        // The default 4px per module gives ~120px stretched to 76pt (~115
+        // dpi); viewers and printers then blur the module edges.
+        scale: 10,
       }),
     );
 
