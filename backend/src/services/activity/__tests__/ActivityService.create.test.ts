@@ -57,15 +57,18 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
       format: data.format,
       url: data.url ?? null,
       workloadHours: data.workloadHours,
-      address: data.address ? {
-        id: "addr-123",
-        addressLine: data.address.addressLine,
-        district: data.address.district,
-        zipCode: data.address.zipCode,
-        city: data.address.city,
-        state: data.address.state,
-      } : null,
-    }
+      address:
+        "address" in data
+          ? {
+              id: "addr-123",
+              addressLine: data.address.addressLine,
+              district: data.address.district,
+              zipCode: data.address.zipCode,
+              city: data.address.city,
+              state: data.address.state,
+            }
+          : null,
+    },
   };
 }
 
@@ -428,15 +431,8 @@ describe("ActivityService.create", () => {
         format: input.format,
         url: input.url ?? null,
         workloadHours: input.workloadHours,
-        address: {
-          id: "addr-123",
-          addressLine: input.address.addressLine,
-          district: input.address.district,
-          zipCode: input.address.zipCode,
-          city: input.address.city,
-          state: input.address.state,
-        }
-      }
+        address: { id: "addr-123", ...validAddress },
+      },
     });
   });
 
