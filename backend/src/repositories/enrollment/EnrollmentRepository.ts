@@ -13,18 +13,32 @@ import {
   ACTIVE_ENROLLMENT_STATUS,
   ENROLLMENT_INITIAL_STATUS,
 } from "@/types/enrollment.js";
+import CertificateRepository from "@/repositories/certificate/CertificateRepository.js";
+import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
+import { uniqueViolationFields } from "@/utils/prismaErrors.js";
+import { generateValidationCode } from "@/utils/validationCode.js";
+
+const MAX_VALIDATION_CODE_ATTEMPTS = 3;
 
 type Props = {
   prisma?: PrismaClient;
+  certificateRepository?: ICertificateRepository;
+  generateValidationCode?: () => string;
 };
 
 class EnrollmentRepository implements IEnrollmentRepository {
   private _prisma: PrismaClient;
+  private _certificateRepository: ICertificateRepository;
+  private _generateValidationCode: () => string;
 
   constructor(props?: Props) {
     this._prisma = props?.prisma ?? prisma;
+    this._certificateRepository =
+      props?.certificateRepository ?? new CertificateRepository();
+    this._generateValidationCode =
+      props?.generateValidationCode ?? generateValidationCode;
   }
 
   public async findByActivityId(
@@ -184,6 +198,44 @@ class EnrollmentRepository implements IEnrollmentRepository {
     attendanceConfirmed: boolean,
     confirmedWorkloadHours: number,
   ): Promise<Enrollment> {
+    // A validation code collision cannot be redrawn inside the same
+    // transaction: in Postgres any error aborts it, and every later statement
+    // fails. So the WHOLE transaction is redone with a fresh code. With ~50
+    // bits per code this is practically unreachable, but it must not fail
+    // silently either.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.confirmAttendanceOnce(
+          activityId,
+          enrollmentId,
+          attendanceConfirmed,
+          confirmedWorkloadHours,
+        );
+      } catch (error) {
+        const fields = uniqueViolationFields(error) ?? [];
+        // Substring, not equality: depending on the engine the field can be
+        // reported as the index name (Certificate_validationCode_key).
+        if (!fields.some((field) => field.includes("validationCode"))) {
+          throw error;
+        }
+        if (attempt === MAX_VALIDATION_CODE_ATTEMPTS) {
+          // Wrapped so the ErrorHandler does not answer it as a 409 "value
+          // already in use": running out of codes is a server fault (500).
+          throw new Error(
+            `No unique validation code after ${MAX_VALIDATION_CODE_ATTEMPTS} attempts.`,
+            { cause: error },
+          );
+        }
+      }
+    }
+  }
+
+  private async confirmAttendanceOnce(
+    activityId: string,
+    enrollmentId: string,
+    attendanceConfirmed: boolean,
+    confirmedWorkloadHours: number,
+  ): Promise<Enrollment> {
     return this._prisma.$transaction(async (tx) => {
       // Lock BEFORE any read: status and workload ceiling are re-read under
       // the lock, so a concurrent status transition or a workload edit cannot
@@ -211,6 +263,16 @@ class EnrollmentRepository implements IEnrollmentRepository {
         );
       }
 
+      // Read under the lock, before the update overwrites the hours: the
+      // certificate decision compares the old pair against the new one.
+      const previous = await tx.enrollment.findUnique({
+        where: { id: enrollmentId },
+        select: {
+          confirmedWorkloadHours: true,
+          certificate: { select: { id: true } },
+        },
+      });
+
       // The pair travels in a single statement — there is no path that
       // writes one column without the other. The where clause carries the
       // guards, so an enrollment that stopped being APPROVED (or never
@@ -231,8 +293,68 @@ class EnrollmentRepository implements IEnrollmentRepository {
         );
       }
 
+      await this.syncCertificate(tx, {
+        enrollmentId,
+        hasCertificate: Boolean(previous?.certificate),
+        previousHours: previous?.confirmedWorkloadHours,
+        attendanceConfirmed,
+        confirmedWorkloadHours,
+      });
+
       return tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } });
     });
+  }
+
+  /**
+   * Keeps exactly one certificate per confirmed presence (#151). The
+   * certificate stores no hours: the PDF and the public validation read them
+   * from the enrollment, so a correction only has to move issuedAt.
+   *
+   * - first presence           → create, with a fresh code
+   * - same hours again         → nothing
+   * - hours corrected          → same code, issuedAt = now, so whoever checks
+   *                              an old PDF sees it was reissued
+   * - presence turned absence  → delete; the printed code stops validating,
+   *                              and a later presence gets a NEW code
+   */
+  private async syncCertificate(
+    tx: Prisma.TransactionClient,
+    state: {
+      enrollmentId: string;
+      hasCertificate: boolean;
+      previousHours: number | undefined;
+      attendanceConfirmed: boolean;
+      confirmedWorkloadHours: number;
+    },
+  ): Promise<void> {
+    const { enrollmentId, hasCertificate } = state;
+
+    if (!state.attendanceConfirmed) {
+      if (hasCertificate) {
+        await this._certificateRepository.deleteByEnrollmentId(
+          tx,
+          enrollmentId,
+        );
+      }
+      return;
+    }
+
+    if (!hasCertificate) {
+      await this._certificateRepository.create(tx, {
+        enrollmentId,
+        validationCode: this._generateValidationCode(),
+        issuedAt: new Date(),
+      });
+      return;
+    }
+
+    if (state.previousHours !== state.confirmedWorkloadHours) {
+      await this._certificateRepository.updateIssuedAt(
+        tx,
+        enrollmentId,
+        new Date(),
+      );
+    }
   }
 
   public async countApprovedByActivityId(activityId: string): Promise<number> {
