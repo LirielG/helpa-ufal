@@ -12,12 +12,12 @@ http:
     - name: page
       value: "1"
       type: query
-      description: "Page number (default: 1)"
+      description: "Page number"
       disabled: true
     - name: limit
       value: "20"
       type: query
-      description: "Items per page (default: 20, max: 100)"
+      description: "Items per page"
       disabled: true
     - name: search
       value: ""
@@ -127,12 +127,12 @@ http:
     - name: page
       value: "1"
       type: query
-      description: "Page number (default: 1)."
+      description: "Page number."
       disabled: true
     - name: limit
       value: "20"
       type: query
-      description: "Items per page (default: 20, max: 100)."
+      description: "Items per page."
       disabled: true
     - name: orderBy
       value: created_at
@@ -244,7 +244,7 @@ examples:
         - name: limit
           value: "101"
           type: query
-          description: Exceeds the maximum of 100
+          description: Above the ceiling
     response:
       status: 400
       statusText: Bad Request
@@ -275,8 +275,8 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 500,
+            "message": "Internal server error."
           }
 
 docs: |-
@@ -285,8 +285,11 @@ docs: |-
   Returns the paginated list of activities. Removed activities (soft delete,
   `deletedAt`) never appear.
 
+  **Authentication:** public.
+
   ## Response envelope
-  `{ "activities": [...], "total": <number> }` — `total` reflects all applied
+  This route does not use the conventional envelope yet: it answers
+  `{ "activities": [...], "total": <number> }`. `total` reflects all applied
   filters; `activities` carries the current page. Items embed the `details`
   relation (including `details.area`) and the computed `availableSlots`.
 
@@ -299,7 +302,7 @@ docs: |-
   | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | Present-and-empty (`?type=`) is a 400, not "no filter" |
   | `campus` | Enum: MACEIO, ARAPIRACA, PALMEIRA, PENEDO, RIO_LARGO, DELMIRO_GOUVEIA, SANTANA_IPANEMA | Case-sensitive. Unknown or empty value is a 400 on `campus` |
   | `format` | Enum: IN_PERSON, ONLINE, HYBRID | Present-and-empty (`?format=`) is a 400, not "no filter" |
-  | `page` / `limit` | Pagination | Defaults 1 / 20 when ABSENT; `limit` max 100. Integers only: `10.9`, `20abc` and an empty value are a 400 |
+  | `page` / `limit` | Pagination | Defaults and ceiling from the conventions. Integers only: `10.9`, `20abc` and an empty value are a 400 |
   | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | Present-and-empty is a 400 |
 
   A parameter that is **absent** takes its default or means "no filter". A
@@ -314,3 +317,5 @@ docs: |-
   |--------|------|
   | 400    | Invalid pagination or enum filter (`{ status, message, errors[] }`) |
   | 500    | Unexpected server error (`{ status, message }`) |
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

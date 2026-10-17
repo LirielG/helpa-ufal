@@ -17,14 +17,13 @@ http:
     - name: page
       value: "1"
       type: query
-      description: Page number (default 1)
+      description: Page number
       disabled: true
     - name: limit
       value: "20"
       type: query
-      description: Items per page (default 20, maximum 100)
+      description: Items per page
       disabled: true
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -228,8 +227,7 @@ docs: |-
   | Parameter | Values | Default |
   |---|---|---|
   | `resolved` | `true` (resolved only) or `false` (open only) | `false` |
-  | `page` | integer >= 1 | `1` |
-  | `limit` | integer from 1 to 100 | `20` |
+  | `page` / `limit` | conventional pagination | conventional |
 
   Any other parameter answers 400 `UNKNOWN_PARAMETER`.
 

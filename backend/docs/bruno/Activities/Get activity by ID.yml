@@ -12,7 +12,6 @@ http:
     - name: id
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -78,9 +77,6 @@ examples:
           value: ""
           type: path
           description: Activity UUID
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
     response:
       status: 200
       statusText: OK
@@ -128,9 +124,6 @@ examples:
           value: ""
           type: path
           description: Activity UUID
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
     response:
       status: 200
       statusText: OK
@@ -178,9 +171,6 @@ examples:
           value: ""
           type: path
           description: Activity UUID
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
     response:
       status: 200
       statusText: OK
@@ -218,8 +208,37 @@ examples:
             },
             "enrollmentStatus": "CANCELLED"
           }
+  - name: 400 Response
+    description: The id in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:id"
+      method: GET
+      params:
+        - name: id
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "id",
+                "message": "id must be a valid UUID."
+              }
+            ]
+          }
   - name: 404 Response
-    description: Activity not found.
+    description: Activity not found or deleted.
     request:
       url: "{{baseUrl}}/activities/:id"
       method: GET
@@ -238,8 +257,8 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 404,
+            "message": "Activity not found."
           }
   - name: 500 Response
     description: Internal server error.
@@ -261,15 +280,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 500,
+            "message": "Internal server error."
           }
 
 docs: |-
   Returns the full data of an activity, including details and address if available.
 
-  The route is public. When the request carries a valid session, the response
-  also includes `enrollmentStatus`, the requester's enrollment in this activity:
+  **Authentication:** `optionalAuth`. Today the router uses `auth()` without
+  options, which decodes the cookie when present and never answers 401. When the
+  request carries a valid session, the response also includes `enrollmentStatus`,
+  the requester's enrollment in this activity:
 
   | Request | `enrollmentStatus` |
   |---|---|
@@ -285,3 +306,5 @@ docs: |-
   - Invalid tokens are treated as anonymous for now. Once the route moves to
     `optionalAuth()`, a present but invalid or expired token will answer 401
     (see `docs/api-conventions.md`, section 5).
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

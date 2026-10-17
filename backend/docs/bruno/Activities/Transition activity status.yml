@@ -19,7 +19,6 @@ http:
       {
         "status": "IN_PROGRESS"
       }
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -34,12 +33,9 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -58,28 +54,60 @@ examples:
         type: json
         data: |-
           {
-            "id": "a1b2c3d4-0000-4000-8000-000000000001",
-            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
-            "title": "Oficina de Introdução à Programação",
+            "id": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+            "authorId": "84dc4df7-53e1-4b4e-8468-f3da7028c24a",
+            "title": "Oficina de Introdução à Programação — Turma 2",
             "type": "COURSE",
             "campus": "ARAPIRACA",
-            "startDate": "2026-08-01T08:00:00.000Z",
-            "endDate": "2026-08-15T12:00:00.000Z",
-            "slots": 40,
-            "availableSlots": 27,
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 50,
+            "availableSlots": 50,
             "status": "IN_PROGRESS"
           }
-  - name: 400 Response
-    description: "Validation error: invalid UUID, missing `status`, or extra fields in body."
+  - name: 400 - Invalid status
+    description: status is not IN_PROGRESS, COMPLETED or CANCELLED. OPEN is also rejected here, since no transition leads back to it.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "OPEN"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "status",
+                "message": "Invalid option: expected one of \"IN_PROGRESS\"|\"COMPLETED\"|\"CANCELLED\""
+              }
+            ]
+          }
+  - name: 400 - Invalid id
+    description: The id in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:id/status"
+      method: PATCH
+      params:
+        - name: id
+          value: "not-a-uuid"
           type: path
           description: Activity UUID
       body:
@@ -99,25 +127,16 @@ examples:
         data: |-
           {
             "status": 400,
-            "message": "Validation error.",
-            "errors": [
-              {
-                "field": "",
-                "message": ""
-              }
-            ]
+            "message": "Invalid UUID format."
           }
   - name: 401 Response
-    description: Unauthenticated.
+    description: Missing, invalid or expired session cookie.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -136,27 +155,24 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 401,
+            "message": "Unauthenticated."
           }
   - name: 403 Response
-    description: Forbidden. Requester is not the author or a manager.
+    description: Requester is not the author or a manager.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
         type: json
         data: |-
           {
-            "status": "IN_PROGRESS"
+            "status": "COMPLETED"
           }
     response:
       status: 403
@@ -168,20 +184,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 403,
+            "message": "Forbidden. Requester is not the author or a manager."
           }
   - name: 404 Response
-    description: Activity not found
+    description: Activity not found or deleted.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
       body:
@@ -200,26 +213,24 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 404,
+            "message": "Activity not found."
           }
-  - name: Activity is in a terminal state
+  - name: 409 - Terminal state
+    description: Activity is already COMPLETED or CANCELLED.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
         type: json
         data: |-
           {
-            "status": "IN_PROGRESS"
+            "status": "COMPLETED"
           }
     response:
       status: 409
@@ -234,23 +245,21 @@ examples:
             "status": 409,
             "message": "Activity is already CANCELLED and cannot be transitioned."
           }
-  - name: Invalid transition from current status
+  - name: 409 - Invalid transition
+    description: The target status is not reachable from the current one.
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
         type: json
         data: |-
           {
-            "status": "IN_PROGRESS"
+            "status": "COMPLETED"
           }
     response:
       status: 409
@@ -270,12 +279,9 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:id/status"
       method: PATCH
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
         - name: id
-          value: ""
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -294,12 +300,14 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 500,
+            "message": "Internal server error."
           }
 
 docs: |-
   Transitions an activity through its lifecycle. Status is treated as a business state with controlled transitions, not a free-update field.
+
+  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can transition.
 
   **Allowed transitions:**
   - `OPEN => IN_PROGRESS | CANCELLED`
@@ -307,4 +315,4 @@ docs: |-
 
   `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.
 
-  Only the activity author or a manager can perform transitions.
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

@@ -13,7 +13,6 @@ http:
       value: b2c3d4e5-0000-4000-8000-000000000007
       type: path
       description: Report UUID
-  auth: inherit
 
 settings:
   encodeUrl: true
