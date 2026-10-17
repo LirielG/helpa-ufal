@@ -1,7 +1,9 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import UserRepository from "@/repositories/auth/UserRepository.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -58,16 +60,20 @@ function isInvalidFilterValue(
 type Props = {
   activityRepository?: IActivityRepository;
   userRepository?: IUserRepository;
+  enrollmentRepository?: IEnrollmentRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
   private _userRepository: IUserRepository;
+  private _enrollmentRepository: IEnrollmentRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
     this._userRepository = props?.userRepository ?? new UserRepository();
+    this._enrollmentRepository =
+      props?.enrollmentRepository ?? new EnrollmentRepository();
   }
 
   public async create(
@@ -296,7 +302,10 @@ class ActivityService implements IActivityService {
     return { areas };
   }
 
-  public async findById(id: string): Promise<ActivityFullResponse> {
+  public async findById(
+    id: string,
+    userId?: string,
+  ): Promise<ActivityFullResponse> {
     if (!isValidUUID(id)) {
       throw new ValidationError([
         { field: "id", message: "id must be a valid UUID." },
@@ -309,7 +318,18 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    return activity;
+    // Absent and null mean different things to the client: absent = no
+    // session recognized, null = authenticated but never enrolled.
+    if (!userId) {
+      return activity;
+    }
+
+    const enrollment = await this._enrollmentRepository.findByUserAndActivity(
+      userId,
+      id,
+    );
+
+    return { ...activity, enrollmentStatus: enrollment?.status ?? null };
   }
 
   public async update(
