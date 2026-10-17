@@ -43,6 +43,7 @@ function renderCard(
   activity: UserActivity,
   onEdit = vi.fn(),
   onManageEnrollments = vi.fn(),
+  onDelete = vi.fn(),
 ) {
   return render(
     <>
@@ -51,6 +52,7 @@ function renderCard(
         activity={activity}
         onEdit={onEdit}
         onManageEnrollments={onManageEnrollments}
+        onDelete={onDelete}
       />
     </>,
     { route: "/profile" },
@@ -80,6 +82,20 @@ function recordPatches(
     }),
   );
   return bodies;
+}
+
+function recordDeletes(
+  respond: () => Response | Promise<Response> = () =>
+    new HttpResponse(null, { status: 204 }),
+) {
+  const requests: unknown[] = [];
+  server.use(
+    http.delete(`${API}/activities/${ACTION_ID}`, async () => {
+      requests.push(true);
+      return respond();
+    }),
+  );
+  return requests;
 }
 
 function respondWithStatus(status: ActivityStatus) {
@@ -532,13 +548,151 @@ describe("ManagedCard status control", () => {
   });
 });
 
+describe("ManagedCard deletion", () => {
+  it("allows author to delete action, receiving 204 and triggering onDelete without reload", async () => {
+    const onDelete = vi.fn();
+    const requests = recordDeletes(
+      () => new HttpResponse(null, { status: 204 }),
+    );
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Confirmar exclusão" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
+    expect(requests).toHaveLength(1);
+    expect(screen.getByText("Sua ação foi excluída")).toBeInTheDocument();
+  });
+
+  it("does not send DELETE request when cancelling the confirmation modal", async () => {
+    const onDelete = vi.fn();
+    const requests = recordDeletes();
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Não" }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Confirmar exclusão" }),
+    ).not.toBeInTheDocument();
+    expect(requests).toHaveLength(0);
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("includes confirmation copy distinguishing deletion from cancellation with no notification promise", async () => {
+    const { user } = renderCard(managed("OPEN"));
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+
+    expect(
+      screen.getByText(/será completamente excluída e não terá como recorrer/i),
+    ).toBeInTheDocument();
+  });
+
+  it("allows a manager who is not the creator to delete an action", async () => {
+    signIn(makeManager());
+    const onDelete = vi.fn();
+    const requests = recordDeletes(
+      () => new HttpResponse(null, { status: 204 }),
+    );
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
+    expect(requests).toHaveLength(1);
+  });
+
+  it("shows pt-BR permission message on 403 response", async () => {
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Forbidden" }, { status: 403 }),
+    );
+    const onDelete = vi.fn();
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(
+      await screen.findByText("Você não tem permissão para excluir esta ação."),
+    ).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("removes action from list quietly on 404 response without system error", async () => {
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Not found" }, { status: 404 }),
+    );
+    const onDelete = vi.fn();
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
+    expect(
+      screen.queryByText(/erro de sistema|Internal server error/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("redirects to login on 401 response", async () => {
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Unauthorized" }, { status: 401 }),
+    );
+    const { user } = renderCard(managed("OPEN"));
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/login"),
+    );
+  });
+
+  it("shows pt-BR error message on network failure and keeps action in list", async () => {
+    recordDeletes(() => HttpResponse.error());
+    const onDelete = vi.fn();
+    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(
+      await screen.findByText(
+        "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.",
+      ),
+    ).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger two delete requests when double clicking confirm", async () => {
+    const requests = recordDeletes(
+      () => new HttpResponse(null, { status: 204 }),
+    );
+    const { user } = renderCard(managed("OPEN"));
+
+    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.dblClick(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+  });
+});
+
 describe("ManagedCard enrollments entry point", () => {
   it("opens the enrollment list without triggering edit", async () => {
     const onEdit = vi.fn();
     const onManageEnrollments = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
 
-    await user.click(screen.getByRole("button", { name: "Gerenciar inscritos" }));
+    await user.click(
+      screen.getByRole("button", { name: "Gerenciar inscritos" }),
+    );
 
     expect(onManageEnrollments).toHaveBeenCalledWith(ACTION_ID);
     expect(onEdit).not.toHaveBeenCalled();
