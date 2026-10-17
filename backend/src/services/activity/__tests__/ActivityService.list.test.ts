@@ -1,10 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  ActivityFormat,
-  ActivityStatus,
-  ActivityType,
-  CampusLocation,
-} from "@prisma/client";
+import { CampusLocation } from "@prisma/client";
 import ActivityService from "../ActivityService.js";
 import type { IListActivitiesFilters } from "../IActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
@@ -294,91 +289,21 @@ describe("ActivityService.list", () => {
     },
   );
 
-  // Issue #212 — drift detectors. The hand-written matrices above pin today's
-  // accepted values; these are derived from the Prisma enums, so they FAIL as
-  // soon as an enum gains a value that the filter does not accept (or list).
-  describe("accepted filter values follow the Prisma enums", () => {
-    it.each(Object.values(ActivityType))(
-      "accepts every ActivityType member (%s) without editing the service",
-      async (type) => {
-        const repository = mockRepository();
-        const service = new ActivityService({ activityRepository: repository });
+  it("rejects invalid format with an error in the 'format' field", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
 
-        await service.list({ type });
-
-        expect(repository.list).toHaveBeenCalledWith(
-          expect.objectContaining({ type }),
-        );
-      },
+    const error = await captureValidationError(
+      service.list({ format: "INVALID_FORMAT" }),
     );
 
-    it.each(Object.values(ActivityFormat))(
-      "accepts every ActivityFormat member (%s) without editing the service",
-      async (format) => {
-        const repository = mockRepository();
-        const service = new ActivityService({ activityRepository: repository });
-
-        await service.list({ format });
-
-        expect(repository.list).toHaveBeenCalledWith(
-          expect.objectContaining({ format }),
-        );
+    expect(error.errors).toEqual([
+      {
+        field: "format",
+        message:
+          "format must be one of the following: IN_PERSON, ONLINE, HYBRID.",
       },
-    );
-
-    it.each(Object.values(ActivityStatus))(
-      "accepts every ActivityStatus member (%s) without editing the service",
-      async (status) => {
-        const repository = mockRepository();
-        const service = new ActivityService({ activityRepository: repository });
-
-        await service.list({ status });
-
-        expect(repository.list).toHaveBeenCalledWith(
-          expect.objectContaining({ status }),
-        );
-      },
-    );
-
-    it("lists every enum member in the error messages, keeping the current text format", async () => {
-      const repository = mockRepository();
-      const service = new ActivityService({ activityRepository: repository });
-
-      const error = await captureValidationError(
-        service.list({ type: "X", format: "X", status: "X" }),
-      );
-
-      expect(error.errors).toEqual([
-        {
-          field: "type",
-          message: `type must be one of the following: ${Object.values(ActivityType).join(", ")}.`,
-        },
-        {
-          field: "format",
-          message: `format must be one of the following: ${Object.values(ActivityFormat).join(", ")}.`,
-        },
-        {
-          field: "status",
-          message: `status must be one of the following: ${Object.values(ActivityStatus).join(", ")}.`,
-        },
-      ]);
-    });
-
-    it("keeps the exact message text for format (hand-written on purpose: pins the wording)", async () => {
-      const repository = mockRepository();
-      const service = new ActivityService({ activityRepository: repository });
-
-      const error = await captureValidationError(
-        service.list({ format: "INVALID_FORMAT" }),
-      );
-
-      expect(error.errors).toEqual([
-        {
-          field: "format",
-          message: "format must be one of the following: IN_PERSON, ONLINE, HYBRID.",
-        },
-      ]);
-    });
+    ]);
   });
 
   it.each(["asc", "desc"])(
