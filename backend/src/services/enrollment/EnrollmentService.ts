@@ -25,6 +25,36 @@ import {
   type ParticipantsListResponse,
 } from "@/types/enrollment.js";
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+
+/**
+ * The API speaks page/limit (page is 1-based); the repository speaks skip/take.
+ * This is the single place where one becomes the other, and it is also the
+ * guard: whatever the caller passes (a script, a job, a test, a new service —
+ * anything that does not come through the HTTP validateQuery), the repository
+ * only ever receives a non-negative skip. `(0 - 1) * 10` would be -10, which
+ * Prisma rejects as a 500; so would a negative limit on any page beyond the first.
+ *
+ * Invalid values are corrected, not rejected: page and limit are floored to
+ * whole numbers and raised to at least 1; NaN/Infinity fall back to the defaults.
+ * There is deliberately NO upper bound on limit here — that is its own issue.
+ * The corrected page/limit are what the caller gets echoed back in the response.
+ */
+function toSafePagination(
+  page: number,
+  limit: number,
+): { page: number; limit: number; skip: number } {
+  const safePage = Number.isFinite(page)
+    ? Math.max(1, Math.floor(page))
+    : DEFAULT_PAGE;
+  const safeLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.floor(limit))
+    : DEFAULT_LIMIT;
+
+  return { page: safePage, limit: safeLimit, skip: (safePage - 1) * safeLimit };
+}
+
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
   activityRepository?: IActivityRepository;
@@ -96,26 +126,30 @@ class EnrollmentService implements IEnrollmentService {
 
   public async listActiveByUser(
     userId: string,
-    page = 1,
-    limit = 10,
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
   ): Promise<EnrollmentListResponse> {
-    const skip = (page - 1) * limit;
+    const pagination = toSafePagination(page, limit);
     const { items, total } =
-      await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
+      await this._enrollmentRepository.findActiveByUserId(
+        userId,
+        pagination.skip,
+        pagination.limit,
+      );
 
     return {
       items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
       total,
-      page,
-      limit,
+      page: pagination.page,
+      limit: pagination.limit,
     };
   }
 
   public async listParticipants(
     userId: string,
     activityId: string,
-    page = 1,
-    limit = 10,
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
   ): Promise<ParticipantsListResponse> {
     const user = await this.requireUser(userId);
 
@@ -135,11 +169,12 @@ class EnrollmentService implements IEnrollmentService {
       );
     }
 
+    const pagination = toSafePagination(page, limit);
     const { items, total, totalPresent } =
       await this._enrollmentRepository.findByActivityId(
         activityId,
-        page,
-        limit,
+        pagination.skip,
+        pagination.limit,
       );
 
     // totalPresent comes from the repository as-is: the service forwards the
@@ -147,8 +182,8 @@ class EnrollmentService implements IEnrollmentService {
     return {
       items: items.map((item) => this.toParticipantResponse(item)),
       total,
-      page,
-      limit,
+      page: pagination.page,
+      limit: pagination.limit,
       totalPresent,
     };
   }

@@ -29,8 +29,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
 
   public async findByActivityId(
     activityId: string,
-    page = 1,
-    limit = 10,
+    skip: number,
+    take: number,
   ): Promise<{
     items: EnrollmentWithParticipant[];
     total: number;
@@ -43,8 +43,8 @@ class EnrollmentRepository implements IEnrollmentRepository {
     const [items, total, totalPresent] = await this._prisma.$transaction([
       this._prisma.enrollment.findMany({
         where,
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
         orderBy: [{ enrolledAt: "asc" }, { id: "asc" }],
         include: {
           user: {

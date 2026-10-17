@@ -91,7 +91,7 @@ describe("EnrollmentService.listParticipants", () => {
 
     expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
       ACTIVITY_ID,
-      1,
+      0,
       10,
     );
     expect(result).toEqual({
@@ -139,7 +139,7 @@ describe("EnrollmentService.listParticipants", () => {
     expect(result.total).toBe(1);
     expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
       ACTIVITY_ID,
-      1,
+      0,
       10,
     );
   });
@@ -175,7 +175,7 @@ describe("EnrollmentService.listParticipants", () => {
     expect(result.items[0].registrationCode).toBeNull();
   });
 
-  it("passes pagination through to the repository unchanged", async () => {
+  it("converts page/limit into skip/take for the repository (page 3, limit 50 -> skip 100)", async () => {
     const { activityRepository, userRepository, enrollmentRepository } =
       mockRepositories({
         enrollment: {
@@ -199,7 +199,7 @@ describe("EnrollmentService.listParticipants", () => {
 
     expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
       ACTIVITY_ID,
-      3,
+      100,
       50,
     );
     expect(result.total).toBe(42);
@@ -264,6 +264,158 @@ describe("EnrollmentService.listParticipants", () => {
       limit: 10,
       totalPresent: 0,
     });
+  });
+
+  // ---------- Pagination boundary (issue #248) ----------
+  //
+  // The repository speaks skip/take. The service owns the page -> skip
+  // conversion AND the guard: the HTTP validateQuery is not the only caller
+  // any more, so no page/limit given to the service may build a negative skip
+  // (which Prisma rejects, surfacing as a 500).
+
+  it.each([
+    { page: 1, limit: 10, skip: 0 },
+    { page: 2, limit: 10, skip: 10 },
+    { page: 3, limit: 50, skip: 100 },
+  ])(
+    "converts page $page / limit $limit into skip $skip / take $limit",
+    async ({ page, limit, skip }) => {
+      const { activityRepository, userRepository, enrollmentRepository } =
+        mockRepositories();
+      const service = new EnrollmentService({
+        activityRepository,
+        userRepository,
+        enrollmentRepository,
+      });
+
+      const result = await service.listParticipants(
+        AUTHOR_ID,
+        ACTIVITY_ID,
+        page,
+        limit,
+      );
+
+      expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
+        ACTIVITY_ID,
+        skip,
+        limit,
+      );
+      expect(result).toMatchObject({ page, limit });
+    },
+  );
+
+  it("applies the defaults (page 1, limit 10) when page and limit are omitted", async () => {
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
+    });
+
+    const result = await service.listParticipants(AUTHOR_ID, ACTIVITY_ID);
+
+    expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
+      ACTIVITY_ID,
+      0,
+      10,
+    );
+    expect(result).toMatchObject({ page: 1, limit: 10 });
+  });
+
+  it.each([
+    { page: 0, expectedPage: 1 },
+    { page: -1, expectedPage: 1 },
+    { page: -100, expectedPage: 1 },
+    { page: 2.7, expectedPage: 2 },
+    { page: Number.NaN, expectedPage: 1 },
+    { page: Number.POSITIVE_INFINITY, expectedPage: 1 },
+    { page: Number.NEGATIVE_INFINITY, expectedPage: 1 },
+  ])(
+    "corrects the invalid page $page to $expectedPage: no negative skip reaches the repository",
+    async ({ page, expectedPage }) => {
+      const { activityRepository, userRepository, enrollmentRepository } =
+        mockRepositories();
+      const service = new EnrollmentService({
+        activityRepository,
+        userRepository,
+        enrollmentRepository,
+      });
+
+      const result = await service.listParticipants(
+        AUTHOR_ID,
+        ACTIVITY_ID,
+        page,
+        10,
+      );
+
+      expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
+        ACTIVITY_ID,
+        (expectedPage - 1) * 10,
+        10,
+      );
+      // The response reports the page that was actually served.
+      expect(result.page).toBe(expectedPage);
+    },
+  );
+
+  it.each([
+    { limit: 0, expectedLimit: 1 },
+    { limit: -5, expectedLimit: 1 },
+    { limit: 7.9, expectedLimit: 7 },
+    { limit: Number.NaN, expectedLimit: 10 },
+  ])(
+    "corrects the invalid limit $limit to $expectedLimit (a negative limit on page 3 would also build a negative skip)",
+    async ({ limit, expectedLimit }) => {
+      const { activityRepository, userRepository, enrollmentRepository } =
+        mockRepositories();
+      const service = new EnrollmentService({
+        activityRepository,
+        userRepository,
+        enrollmentRepository,
+      });
+
+      const result = await service.listParticipants(
+        AUTHOR_ID,
+        ACTIVITY_ID,
+        3,
+        limit,
+      );
+
+      expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
+        ACTIVITY_ID,
+        2 * expectedLimit,
+        expectedLimit,
+      );
+      expect(result.limit).toBe(expectedLimit);
+    },
+  );
+
+  it("never hands the repository a negative or fractional skip, nor a take below 1, for any page/limit", async () => {
+    const { activityRepository, userRepository, enrollmentRepository } =
+      mockRepositories();
+    const service = new EnrollmentService({
+      activityRepository,
+      userRepository,
+      enrollmentRepository,
+    });
+    const values = [-100, -1, 0, 0.5, 1, 2, 3.5, 10, 50, Number.NaN,
+      Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+
+    for (const page of values) {
+      for (const limit of values) {
+        await service.listParticipants(AUTHOR_ID, ACTIVITY_ID, page, limit);
+      }
+    }
+
+    const calls = vi.mocked(enrollmentRepository.findByActivityId).mock.calls;
+    expect(calls).toHaveLength(values.length * values.length);
+    for (const [, skip, take] of calls) {
+      expect(Number.isInteger(skip)).toBe(true);
+      expect(skip).toBeGreaterThanOrEqual(0);
+      expect(Number.isInteger(take)).toBe(true);
+      expect(take).toBeGreaterThanOrEqual(1);
+    }
   });
 
   // ---------- Authentication (light hybrid) ----------
