@@ -3,7 +3,7 @@ import type { UserActivityCertificate } from "@/services/contracts/user";
 
 export type { UserProfile } from "@/types/profile";
 
-export type ProfileTab = "personal" | "certificates" | "actions";
+export type ProfileTab = "personal" | "actions";
 
 export type ActivityStatus = "enrolled" | "completed" | "managed";
 
