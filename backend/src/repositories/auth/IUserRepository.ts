@@ -17,6 +17,7 @@ export type UserWithProfile = Prisma.UserGetPayload<{
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<{ isManager: boolean } | null>;
+  findTokenVersionById(id: string): Promise<{ tokenVersion: number } | null>;
   findProfileById(id: string): Promise<UserWithProfile | null>;
 
   createWithSubtype(

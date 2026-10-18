@@ -1,11 +1,28 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import type { IAuthMiddleware } from "@/middlewares/auth/IAuthMiddleware.js";
+import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { AuthenticatedUser, AuthorizeOptions } from "@/types/auth.js";
 import { verifyJwt } from "@/utils/jwt.js";
 import CustomError from "@/models/error/CustomError.js";
 
+type Props = {
+  userRepository?: IUserRepository;
+};
+
+const INVALID_TOKEN_MESSAGE = "Token malformatted, expired or invalid.";
+
 class AuthMiddleware implements IAuthMiddleware {
-  private validate(req: Request, required: boolean): AuthenticatedUser | null {
+  private _userRepository: IUserRepository;
+
+  constructor(props?: Props) {
+    this._userRepository = props?.userRepository ?? new UserRepository();
+  }
+
+  private async validate(
+    req: Request,
+    required: boolean,
+  ): Promise<AuthenticatedUser | null> {
     try {
       const cookieToken = req.cookies?.token as string | undefined;
       const headerToken = req.headers.authorization?.startsWith("Bearer ")
@@ -18,8 +35,16 @@ class AuthMiddleware implements IAuthMiddleware {
 
       const decoded = verifyJwt(token);
 
-      if (!decoded)
-        throw new CustomError(401, "Token malformatted, expired or invalid.");
+      if (!decoded) throw new CustomError(401, INVALID_TOKEN_MESSAGE);
+
+      // A missing user is not rejected here: each service already answers
+      // for it (e.g. 404 on GET /users/me).
+      const stored = await this._userRepository.findTokenVersionById(
+        decoded.id,
+      );
+
+      if (stored && stored.tokenVersion !== decoded.tokenVersion)
+        throw new CustomError(401, INVALID_TOKEN_MESSAGE);
 
       req.user = decoded;
       return decoded;
@@ -32,9 +57,13 @@ class AuthMiddleware implements IAuthMiddleware {
   }
 
   public auth(options: AuthorizeOptions = {}): RequestHandler {
-    return (req: Request, _res: Response, next: NextFunction): void => {
+    return async (
+      req: Request,
+      _res: Response,
+      next: NextFunction,
+    ): Promise<void> => {
       const { userTypes, manager } = options;
-      const user = this.validate(req, !!(userTypes || manager));
+      const user = await this.validate(req, !!(userTypes || manager));
 
       if (!userTypes && !manager) return next();
 

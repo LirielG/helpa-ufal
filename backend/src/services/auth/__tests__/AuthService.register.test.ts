@@ -36,6 +36,7 @@ function aUser(overrides: Partial<User> = {}): User {
     passwordHash: "$2a$12$hashbcryptdobanco",
     userType: "STUDENT",
     isManager: false,
+    tokenVersion: 0,
     createdAt: new Date("2026-08-26T21:00:00.000Z"),
     updatedAt: new Date("2026-08-26T21:00:00.000Z"),
     ...overrides,
