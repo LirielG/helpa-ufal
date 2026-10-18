@@ -128,7 +128,7 @@ describe("DELETE /activities/:id", () => {
       .expect(401);
   });
 
-  it("returns 400 for an id that is not a UUID", async () => {
+  it("returns 400 for an activityId that is not a UUID", async () => {
     const author = await createTeacher();
 
     await request(app)

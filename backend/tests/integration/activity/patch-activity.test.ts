@@ -36,7 +36,7 @@ describe("PATCH /activities/:id", () => {
     });
   });
 
-    it("returns 400 when id is not a valid UUID", async () => {
+    it("returns 400 when activityId is not a valid UUID", async () => {
     const author = await createTeacher();
 
     const response = await request(app)
@@ -47,7 +47,7 @@ describe("PATCH /activities/:id", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
-      message: "Invalid id parameter. Must be a valid UUID.",
+      message: "Invalid activityId parameter. Must be a valid UUID.",
     });
   });
 

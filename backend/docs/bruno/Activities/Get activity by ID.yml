@@ -7,9 +7,9 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/activities/:id"
+  url: "{{baseUrl}}/activities/:activityId"
   params:
-    - name: id
+    - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
 
@@ -24,10 +24,10 @@ examples:
   - name: 200 Response
     description: Full activity data.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -70,10 +70,10 @@ examples:
   - name: 404 Response
     description: Activity not found.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -93,10 +93,10 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID

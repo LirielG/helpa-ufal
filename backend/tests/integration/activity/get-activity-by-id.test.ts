@@ -76,12 +76,12 @@ describe("GET /activities/:id", () => {
     expect(response.body.availableSlots).toBe(8);
   });
 
-  it("returns 404 when id is not a valid UUID", async () => {
+  it("returns 400 when activityId is not a valid UUID", async () => {
     const response = await request(app).get("/activities/not-a-uuid");
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "id", message: "id must be a valid UUID." },
+      { field: "activityId", message: "activityId must be a valid UUID." },
     ]);
   });
 

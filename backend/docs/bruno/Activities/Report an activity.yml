@@ -7,9 +7,9 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/activities/:id/reports"
+  url: "{{baseUrl}}/activities/:activityId/reports"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -33,13 +33,13 @@ examples:
   - name: 201 Response
     description: Report registered successfully.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -70,13 +70,13 @@ examples:
   - name: 400 Response
     description: Validation error.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -109,13 +109,13 @@ examples:
   - name: 401 Response
     description: Unauthenticated.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -142,13 +142,13 @@ examples:
   - name: 403 Response
     description: Forbidden. The activity author cannot report their own activity.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -175,13 +175,13 @@ examples:
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -208,13 +208,13 @@ examples:
   - name: 409 Response
     description: Conflict.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -241,13 +241,13 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID

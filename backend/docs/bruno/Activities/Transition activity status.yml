@@ -7,9 +7,9 @@ info:
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/activities/:id/status"
+  url: "{{baseUrl}}/activities/:activityId/status"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -32,13 +32,13 @@ examples:
   - name: 200 Response
     description: Status transitioned successfully.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -72,13 +72,13 @@ examples:
   - name: 400 Response
     description: "Validation error: invalid UUID, missing `status`, or extra fields in body."
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -110,13 +110,13 @@ examples:
   - name: 401 Response
     description: Unauthenticated.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -142,13 +142,13 @@ examples:
   - name: 403 Response
     description: Forbidden. Requester is not the author or a manager.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -174,13 +174,13 @@ examples:
   - name: 404 Response
     description: Activity not found
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -205,13 +205,13 @@ examples:
           }
   - name: Activity is in a terminal state
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -236,13 +236,13 @@ examples:
           }
   - name: Invalid transition from current status
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -268,13 +268,13 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       headers:
         - name: token
           value: "{{apiKey}}"
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
