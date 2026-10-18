@@ -6,6 +6,8 @@
  * enums are the Prisma unions. Optional-by-absence becomes `T | null` (§6).
  */
 
+import type { EnrollmentStatus } from "./enrollment";
+
 export type ActivityType =
   "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
 
@@ -58,6 +60,11 @@ export interface ActivityDetails {
 /** `GET /activities/:activityId` — the canonical representation. */
 export interface Activity extends ActivityHeader {
   details: ActivityDetails | null;
+  /**
+   * The signed-in user's enrollment in this activity: absent when the request
+   * carries no recognized session, null when the user never enrolled.
+   */
+  enrollmentStatus?: EnrollmentStatus | null;
 }
 
 /**
