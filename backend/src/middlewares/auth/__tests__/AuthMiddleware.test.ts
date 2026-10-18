@@ -417,5 +417,36 @@ describe("AuthMiddleware", () => {
         expect(userRepository.findTokenVersionById).not.toHaveBeenCalled();
       },
     );
+
+    it("proceeds anonymously on optional auth when the version lookup fails", async () => {
+      const userRepository = mockRepository();
+      userRepository.findTokenVersionById.mockRejectedValue(
+        new Error("connection lost"),
+      );
+      const handler = new AuthMiddleware({ userRepository }).auth();
+      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const next = mockNext();
+
+      await handler(req, RES, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(next).toHaveBeenCalledWith();
+      expect(req.user).toBeUndefined();
+    });
+
+    it("propagates a failed version lookup on required auth instead of answering 401", async () => {
+      const failure = new Error("connection lost");
+      const userRepository = mockRepository();
+      userRepository.findTokenVersionById.mockRejectedValue(failure);
+      const handler = new AuthMiddleware({ userRepository }).auth({
+        userTypes: "all",
+      });
+      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const next = mockNext();
+
+      await expect(handler(req, RES, next)).rejects.toBe(failure);
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
   });
 });

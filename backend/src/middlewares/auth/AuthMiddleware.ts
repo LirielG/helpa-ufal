@@ -51,7 +51,11 @@ class AuthMiddleware implements IAuthMiddleware {
     } catch (error) {
       delete req.user;
 
-      if (error instanceof CustomError && !required) return null;
+      // On optional auth any failure, including the version lookup hitting
+      // the database, degrades to an anonymous request instead of a 500.
+      // Required auth propagates a database error: answering 401 would end a
+      // valid session over a failure that is not the client's.
+      if (!required) return null;
       throw error;
     }
   }
