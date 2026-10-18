@@ -21,6 +21,8 @@ function aCertificate(): CertificateForDownload {
     issuedAt: new Date("2026-06-11T10:30:00.000Z"),
     enrollment: {
       userId: HOLDER_ID,
+      status: "APPROVED",
+      attendanceConfirmed: true,
       confirmedWorkloadHours: 6,
       user: { fullName: "Maria da Silva" },
       activity: {
@@ -118,6 +120,29 @@ describe("CertificateService.getFile", () => {
       malformed.certificateRepository.findByIdForDownload,
     ).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["the attendance is no longer confirmed", { attendanceConfirmed: false }],
+    [
+      "the attendance was reset to not homologated",
+      { attendanceConfirmed: null },
+    ],
+    ["the enrollment is no longer APPROVED", { status: "CANCELLED" }],
+  ] as const)(
+    "answers the same 404, without rendering, when %s",
+    async (_label, enrollmentOverrides) => {
+      const certificate = aCertificate();
+      Object.assign(certificate.enrollment, enrollmentOverrides);
+      const { service, renderer } = setup({ certificate });
+
+      const message = await notFoundMessage(
+        service.getFile(HOLDER_ID, CERTIFICATE_ID),
+      );
+
+      expect(message).toBe("Certificate not found.");
+      expect(renderer.render).not.toHaveBeenCalled();
+    },
+  );
 
   it("answers 401 when the user from the token no longer exists", async () => {
     const { service, renderer } = setup({ user: null });

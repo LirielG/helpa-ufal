@@ -60,7 +60,7 @@ examples:
         { "status": 401, "message": "User account not found or inactive." }
 
   - name: 404 Not found
-    description: The same answer for a malformed id, an unknown id and a certificate the user may not download (neither holder nor manager). A malformed id does not answer 400 here.
+    description: The same answer for a malformed id, an unknown id, a certificate the user may not download (neither holder nor manager) and a certificate whose enrollment no longer attests presence. A malformed id does not answer 400 here.
     response:
       status: 404
       body: |-
@@ -112,12 +112,14 @@ docs: |-
 
   ## Business rules
   - A certificate of a soft-deleted activity stays downloadable: it is the holder's document.
+  - The PDF attests presence, so it is only served while the enrollment is `APPROVED` with
+    `attendanceConfirmed = true`. Otherwise the route answers the same 404.
   - The file name uses the validation code without hyphen, so it never carries accents or
     slashes from the activity title.
 
   ## Validation order
   1. Authentication (401)
   2. The user from the token exists (401)
-  3. Existence and permission (404, indistinguishable)
+  3. Existence, permission and attendance (404, indistinguishable)
 
   Error format follows [api-conventions.md](../../api-conventions.md).

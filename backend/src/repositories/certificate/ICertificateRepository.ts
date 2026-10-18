@@ -1,12 +1,14 @@
-import type { Certificate, Prisma } from "@prisma/client";
+import type { Certificate, EnrollmentStatus, Prisma } from "@prisma/client";
 
-/** What the PDF needs, plus the holder's id for the ownership check. */
+/** What the PDF needs, plus what the ownership and attendance checks read. */
 export type CertificateForDownload = {
   id: string;
   validationCode: string;
   issuedAt: Date;
   enrollment: {
     userId: string;
+    status: EnrollmentStatus;
+    attendanceConfirmed: boolean | null;
     confirmedWorkloadHours: number;
     user: { fullName: string };
     activity: { title: string; startDate: Date; endDate: Date };

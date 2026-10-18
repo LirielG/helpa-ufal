@@ -10,6 +10,7 @@ import type {
 } from "@/services/certificate/ICertificateService.js";
 import CustomError from "@/models/error/CustomError.js";
 import { isValidUUID } from "@/utils/uuid.js";
+import { ACTIVE_ENROLLMENT_STATUS } from "@/types/enrollment.js";
 
 type Props = {
   certificateRepository?: ICertificateRepository;
@@ -53,6 +54,16 @@ class CertificateService implements ICertificateService {
 
     const { enrollment } = certificate;
     if (enrollment.userId !== userId && !user.isManager) throw notFound;
+
+    // Attendance homologation deletes the certificate when presence stops
+    // holding, but the PDF attests presence, so it is not handed out on that
+    // promise alone: a row left behind by any other write is never rendered.
+    if (
+      enrollment.status !== ACTIVE_ENROLLMENT_STATUS ||
+      enrollment.attendanceConfirmed !== true
+    ) {
+      throw notFound;
+    }
 
     // Rendered on every request instead of stored, so the PDF always carries
     // the holder's current name and the hours as homologated now.

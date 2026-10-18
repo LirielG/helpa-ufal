@@ -137,6 +137,20 @@ describe("GET /certificates/:certificateId/file", () => {
     expect(response.headers["content-type"]).toBe("application/pdf");
   });
 
+  it("answers 404 when the enrollment no longer attests presence, even if the certificate row survived", async () => {
+    const { holder, enrollment, certificate } = await anIssuedCertificate();
+    // Straight to the database: the attendance route would delete the certificate.
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { status: "CANCELLED" },
+    });
+
+    const response = await download(certificate.id, holder.token);
+
+    expect(response.status).toBe(404);
+    expect(jsonOf(response)).toEqual(NOT_FOUND);
+  });
+
   it("renders the hours as corrected after issuing", async () => {
     const { holder, activity, enrollment, certificate } =
       await anIssuedCertificate();

@@ -29,6 +29,8 @@ class CertificateRepository implements ICertificateRepository {
         enrollment: {
           select: {
             userId: true,
+            status: true,
+            attendanceConfirmed: true,
             confirmedWorkloadHours: true,
             user: { select: { fullName: true } },
             activity: {
