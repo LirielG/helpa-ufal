@@ -37,7 +37,7 @@ type ManagedCardProps = {
   activity: UserActivity;
   onEdit: (id: string) => void;
   onManageEnrollments: (id: string) => void;
-  onDelete?: (id: string) => void;
+  onDelete: (id: string) => void;
 };
 
 export function ManagedCard({
@@ -142,15 +142,15 @@ export function ManagedCard({
       await deleteActivity(activity.id);
       setShowDeleteModal(false);
       setShowDeletedSuccess(true);
-      onDelete?.(activity.id);
     } catch (err: unknown) {
       const status = err instanceof ApiError ? err.status : undefined;
 
       if (status === 401) return;
 
+      // Already removed elsewhere: the outcome the user wanted has happened.
       if (status === 404) {
         setShowDeleteModal(false);
-        onDelete?.(activity.id);
+        onDelete(activity.id);
       } else if (status === 403) {
         setDeleteError("Você não tem permissão para excluir esta ação.");
       } else {
@@ -300,8 +300,13 @@ export function ManagedCard({
           errorMessage={deleteError}
           onConfirmDelete={handleConfirmDelete}
           onClose={() => {
+            // Removing the card from the list unmounts it, so the success
+            // modal must be dismissed first or it would vanish unseen.
+            if (showDeletedSuccess) {
+              onDelete(activity.id);
+              return;
+            }
             setShowDeleteModal(false);
-            setShowDeletedSuccess(false);
             setDeleteError(null);
           }}
         />

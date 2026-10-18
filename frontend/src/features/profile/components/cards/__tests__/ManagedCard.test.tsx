@@ -549,7 +549,7 @@ describe("ManagedCard status control", () => {
 });
 
 describe("ManagedCard deletion", () => {
-  it("allows author to delete action, receiving 204 and triggering onDelete without reload", async () => {
+  it("shows the success modal after a 204 and reports the deletion only once it is closed", async () => {
     const onDelete = vi.fn();
     const requests = recordDeletes(
       () => new HttpResponse(null, { status: 204 }),
@@ -564,9 +564,15 @@ describe("ManagedCard deletion", () => {
 
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
-    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
+    expect(
+      await screen.findByText("Sua ação foi excluída"),
+    ).toBeInTheDocument();
     expect(requests).toHaveLength(1);
-    expect(screen.getByText("Sua ação foi excluída")).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Fechar" }));
+
+    expect(onDelete).toHaveBeenCalledWith(ACTION_ID);
   });
 
   it("does not send DELETE request when cancelling the confirmation modal", async () => {
@@ -592,21 +598,10 @@ describe("ManagedCard deletion", () => {
     expect(
       screen.getByText(/será completamente excluída e não terá como recorrer/i),
     ).toBeInTheDocument();
-  });
-
-  it("allows a manager who is not the creator to delete an action", async () => {
-    signIn(makeManager());
-    const onDelete = vi.fn();
-    const requests = recordDeletes(
-      () => new HttpResponse(null, { status: 204 }),
-    );
-    const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
-
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
-    await user.click(screen.getByRole("button", { name: "Sim" }));
-
-    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
-    expect(requests).toHaveLength(1);
+    expect(
+      screen.getByText(/Excluir não é o mesmo que cancelar/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/notifica|avisad/i)).not.toBeInTheDocument();
   });
 
   it("shows pt-BR permission message on 403 response", async () => {

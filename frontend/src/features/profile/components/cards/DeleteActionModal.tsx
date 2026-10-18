@@ -54,6 +54,11 @@ export function DeleteActionModal({
         <div className="bg-[#FFF8E7] border border-[#F5E0B3] rounded-xl p-3 text-xs text-gray-800 text-left w-full leading-relaxed">
           <strong>Atenção:</strong> Ao confirmar, você está ciente que a ação
           será completamente excluída e não terá como recorrer.
+          <p className="mt-2">
+            Excluir não é o mesmo que cancelar: uma ação cancelada continua
+            visível no feed, mas uma ação excluída deixa de existir para todos,
+            inclusive para os inscritos.
+          </p>
         </div>
 
         {errorMessage && (
@@ -70,7 +75,7 @@ export function DeleteActionModal({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="bg-[#C81A17] hover:bg-red-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            className="bg-[#C81A17] hover:bg-red-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer disabled:opacity-50"
           >
             Não
           </button>
