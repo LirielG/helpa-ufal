@@ -1,9 +1,9 @@
 import { BadgeCheck, SearchX } from "lucide-react";
 import { Button } from "@/components/Button";
-import { formatDate } from "@/utils/date";
 import type { CertificateValidation } from "@/services/contracts/certificate";
 import type { ValidationState } from "../useCertificateValidation";
 import {
+  formatCertificateDate,
   formatPeriod,
   formatValidationCode,
   formatWorkloadHours,
@@ -81,7 +81,7 @@ function AuthenticCertificate({
       label: "Carga horária",
       value: formatWorkloadHours(certificate.workloadHours),
     },
-    { label: "Emitido em", value: formatDate(certificate.issuedAt) },
+    { label: "Emitido em", value: formatCertificateDate(certificate.issuedAt) },
     {
       label: "Código",
       value: formatValidationCode(certificate.validationCode),
