@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ApiError } from "@/services/apiError";
 import { fetchEnrollments } from "./services";
 import { getEnrollmentsErrorMessage } from "./errors";
-import type { ListEnrollmentsResponse } from "@/services/contracts/enrollment";
+import type {
+  Enrollment,
+  ListEnrollmentsResponse,
+} from "@/services/contracts/enrollment";
 
 const PAGE_LIMIT = 20;
 
@@ -80,7 +83,42 @@ export function useEnrollments(activityId: string) {
     };
   }, [runLoad]);
 
+  /**
+   * Swaps a row for the enrollment the attendance route answered with, so the
+   * screen reflects the homologation without fetching the page again.
+   * totalPresent only moves when the row enters or leaves the "present" state:
+   * correcting the hours of someone already present keeps the count.
+   */
+  const applyAttendance = useCallback((updated: Enrollment) => {
+    setData((current) => {
+      if (!current) return current;
+
+      const previous = current.items.find((item) => item.id === updated.id);
+      if (!previous) return current;
+
+      const wasPresent = previous.attendanceConfirmed === true;
+      const isPresent = updated.attendanceConfirmed === true;
+
+      return {
+        ...current,
+        items: current.items.map((item) =>
+          item.id === updated.id ? { ...updated, user: item.user } : item,
+        ),
+        totalPresent:
+          current.totalPresent + Number(isPresent) - Number(wasPresent),
+      };
+    });
+  }, []);
+
   const totalPages = data ? Math.ceil(data.total / PAGE_LIMIT) : 0;
 
-  return { data, page, totalPages, isLoading, error, goToPage: runLoad };
+  return {
+    data,
+    page,
+    totalPages,
+    isLoading,
+    error,
+    goToPage: runLoad,
+    applyAttendance,
+  };
 }

@@ -53,3 +53,11 @@ export interface ListEnrollmentsResponse {
   limit: number;
   totalPresent: number;
 }
+
+/**
+ * Body of `PUT /enrollments/:enrollmentId/attendance`. Presence and hours are
+ * one pair: hours are required with a presence and forbidden with an absence.
+ */
+export type ConfirmAttendanceRequest =
+  | { attended: true; workloadHours: number }
+  | { attended: false };

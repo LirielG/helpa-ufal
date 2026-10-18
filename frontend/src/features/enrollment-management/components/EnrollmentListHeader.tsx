@@ -1,5 +1,7 @@
 interface EnrollmentListHeaderProps {
   total: number;
+  /** Enrollments homologated as present, across every page. */
+  totalPresent: number;
   /** null while loading or when the lookup failed — the vacancy line is hidden. */
   slots: number | null;
   availableSlots: number | null;
@@ -14,6 +16,7 @@ interface EnrollmentListHeaderProps {
  */
 export function EnrollmentListHeader({
   total,
+  totalPresent,
   slots,
   availableSlots,
 }: EnrollmentListHeaderProps) {
@@ -23,6 +26,9 @@ export function EnrollmentListHeader({
     <div className="flex items-center gap-6 py-2">
       <span className="text-gray-700 font-medium">
         <strong>{total}</strong> inscrito{total !== 1 ? "s" : ""}
+      </span>
+      <span className="text-sm text-gray-500">
+        {totalPresent} presente{totalPresent !== 1 ? "s" : ""}
       </span>
       {hasSlots && (
         <span className="text-sm text-gray-500">
