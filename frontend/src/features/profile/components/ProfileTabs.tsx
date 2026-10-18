@@ -7,7 +7,6 @@ type ProfileTabsProps = {
 
 const TABS: Array<{ id: ProfileTab; label: string }> = [
   { id: "personal", label: "Dados Pessoais" },
-  { id: "certificates", label: "Certificados" },
   { id: "actions", label: "Ações" },
 ];
 

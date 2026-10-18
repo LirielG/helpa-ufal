@@ -229,6 +229,66 @@ describe("api client", () => {
     });
   });
 
+  describe("binary responses", () => {
+    let unsubscribe: (() => void) | null = null;
+
+    afterEach(() => {
+      unsubscribe?.();
+      unsubscribe = null;
+    });
+
+    it("getBlob resolves the body as a Blob and sends the session cookie", async () => {
+      const requests = captureRequest(
+        "get",
+        () =>
+          new HttpResponse("%PDF-1.7", {
+            headers: { "Content-Type": "application/pdf" },
+          }),
+      );
+
+      const blob = await api.getBlob(ENDPOINT);
+
+      expect(blob.type).toBe("application/pdf");
+      await expect(blob.text()).resolves.toBe("%PDF-1.7");
+      expect(requests[0].method).toBe("GET");
+      expect(requests[0].credentials).toBe("include");
+    });
+
+    it("getBlob notifies the session expired on a 401", async () => {
+      const handler = vi.fn();
+      unsubscribe = setSessionExpiredHandler(handler);
+      server.use(
+        http.get(URL, () =>
+          HttpResponse.json(
+            { status: 401, message: "No token provided." },
+            { status: 401 },
+          ),
+        ),
+      );
+
+      const error = await catchApiError(api.getBlob(ENDPOINT));
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(error.status).toBe(401);
+    });
+
+    it("getBlob reads the JSON error body like the other verbs", async () => {
+      server.use(
+        http.get(URL, () =>
+          HttpResponse.json(
+            { status: 404, message: "Certificate not found." },
+            { status: 404 },
+          ),
+        ),
+      );
+
+      const error = await catchApiError(api.getBlob(ENDPOINT));
+
+      expect(error.status).toBe(404);
+      expect(error.message).toBe("Certificate not found.");
+    });
+  });
+
   describe("session expiry", () => {
     let unsubscribe: (() => void) | null = null;
 

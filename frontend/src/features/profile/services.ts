@@ -60,6 +60,8 @@ export async function fetchUserActivities(
     description: item.details?.description || "Sem descrição informada.",
     location: formatActionLocation(item),
     date: formatDate(item.startDate),
+    certificate: item.certificate,
+    confirmedWorkloadHours: item.enrollment?.confirmedWorkloadHours ?? 0,
   }));
 }
 
@@ -76,6 +78,12 @@ export async function updateActivityStatus(
 
 export async function getActivityById(id: string): Promise<Activity> {
   return await api.get<Activity>(`/activities/${id}`);
+}
+
+export async function downloadCertificate(
+  certificateId: string,
+): Promise<Blob> {
+  return await api.getBlob(`/certificates/${certificateId}/file`);
 }
 
 export async function deleteActivity(id: string): Promise<void> {

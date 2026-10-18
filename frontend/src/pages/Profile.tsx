@@ -6,7 +6,6 @@ import { Alert } from "../components/Alert";
 import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { ProfileTabs } from "../features/profile/components/ProfileTabs";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
-import { CertificatesList } from "../features/profile/components/CertificatesList";
 import { ActionsList } from "../features/profile/components/ActionsList";
 import { getProfile, updateProfile } from "../features/profile/services";
 import type { ProfileTab, UserProfile } from "../features/profile/types";
@@ -136,8 +135,6 @@ export function Profile() {
                       }}
                     />
                   )}
-
-                  {activeTab === "certificates" && <CertificatesList />}
 
                   {activeTab === "actions" && <ActionsList />}
                 </div>
