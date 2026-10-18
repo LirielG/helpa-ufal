@@ -22,6 +22,8 @@ const BLOB_URL = "blob:http://localhost/certificado";
 
 const DOWNLOAD_ERROR_MESSAGE =
   "Não foi possível baixar o certificado. Tente novamente.";
+const UNAVAILABLE_MESSAGE =
+  "Este certificado não está mais disponível. Recarregue a página para ver a situação atual.";
 
 function completed(): UserActivity {
   return makeUserActivity({ action: { status: "COMPLETED" } });
@@ -163,15 +165,15 @@ describe("CompletedCard with a certificate", () => {
   });
 
   it.each([
+    ["a network failure", () => HttpResponse.error()],
     [
-      "a 404",
+      "a 500",
       () =>
         HttpResponse.json(
-          { status: 404, message: "Certificate not found." },
-          { status: 404 },
+          { status: 500, message: "Internal server error." },
+          { status: 500 },
         ),
     ],
-    ["a network failure", () => HttpResponse.error()],
   ])(
     "shows a pt-BR message in the card on %s and lets the user retry",
     async (_case, respond) => {
@@ -189,6 +191,27 @@ describe("CompletedCard with a certificate", () => {
       expect(downloads).toEqual([]);
     },
   );
+
+  // The API answers 404 once the attendance stops attesting presence, so a
+  // retry would fail the same way.
+  it("explains the certificate is gone on a 404 and stops offering the download", async () => {
+    signIn();
+    serveFile(() =>
+      HttpResponse.json(
+        { status: 404, message: "Certificate not found." },
+        { status: 404 },
+      ),
+    );
+    const { user } = renderCard(certified());
+
+    await user.click(downloadButton());
+
+    expect(await screen.findByText(UNAVAILABLE_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText(DOWNLOAD_ERROR_MESSAGE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("Atividade de Teste")).toBeInTheDocument();
+    expect(downloads).toEqual([]);
+  });
 
   it("sends the user to the login screen on 401", async () => {
     signIn();

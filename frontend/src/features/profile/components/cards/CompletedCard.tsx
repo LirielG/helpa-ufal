@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { MapPin, Calendar, CircleCheck, Download } from "lucide-react";
+import { ApiError } from "@/services/apiError";
 import { downloadCertificate } from "../../services";
 import type { UserActivity } from "../../types";
 
 const DOWNLOAD_ERROR_MESSAGE =
   "Não foi possível baixar o certificado. Tente novamente.";
+const UNAVAILABLE_MESSAGE =
+  "Este certificado não está mais disponível. Recarregue a página para ver a situação atual.";
 
 /** The API stores the code without its hyphen; people read it as `XXXXX-XXXXX`. */
 function formatValidationCode(code: string): string {
@@ -28,6 +31,9 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
   const { certificate } = activity;
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // The API answers 404 once the attendance stops attesting presence (or the
+  // certificate is otherwise out of reach), so offering a retry is pointless.
+  const [isUnavailable, setIsUnavailable] = useState(false);
 
   // Once homologated, the hours that count are the confirmed ones, which can
   // be lower than what the action planned.
@@ -48,8 +54,13 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
       // Built here rather than parsed from Content-Disposition, which the
       // browser only exposes to scripts when the API lists it as exposed.
       saveFile(blob, `certificado-${certificate.validationCode}.pdf`);
-    } catch {
-      setDownloadError(DOWNLOAD_ERROR_MESSAGE);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setIsUnavailable(true);
+        setDownloadError(UNAVAILABLE_MESSAGE);
+      } else {
+        setDownloadError(DOWNLOAD_ERROR_MESSAGE);
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -90,15 +101,17 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
                 {formatValidationCode(certificate.validationCode)}
               </span>
             </p>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={isDownloading}
-              className="flex items-center gap-2 px-4 py-1.5 bg-[#1B75BB] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="size-4 shrink-0" />
-              {isDownloading ? "Baixando..." : "Baixar certificado"}
-            </button>
+            {!isUnavailable && (
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="flex items-center gap-2 px-4 py-1.5 bg-[#1B75BB] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="size-4 shrink-0" />
+                {isDownloading ? "Baixando..." : "Baixar certificado"}
+              </button>
+            )}
           </div>
           {downloadError && (
             <p role="alert" className="text-sm text-red-600">
