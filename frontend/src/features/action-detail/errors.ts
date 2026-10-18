@@ -50,3 +50,58 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
   // Unknown status: generic error
   return "Erro ao realizar inscrição. Tente novamente.";
 }
+
+export type CancellationErrorResolution =
+  | { kind: "alreadyCancelled" }
+  | { kind: "activityRemoved" }
+  | { kind: "sessionExpired" }
+  | { kind: "message"; text: string };
+
+const GENERIC_CANCELLATION_MESSAGE =
+  "Não foi possível cancelar a inscrição. Tente novamente.";
+
+/**
+ * Decides what the screen does when `DELETE /activities/:id/enroll` fails.
+ *
+ * The two 404s differ only by `message` until the API exposes error codes;
+ * keep that comparison here so the switch to codes stays local.
+ */
+export function resolveCancellationError(
+  error: unknown,
+): CancellationErrorResolution {
+  if (!(error instanceof ApiError)) {
+    return { kind: "message", text: GENERIC_CANCELLATION_MESSAGE };
+  }
+
+  // The HTTP client already notified the session handler.
+  if (error.status === 401) {
+    return { kind: "sessionExpired" };
+  }
+
+  if (error.status === NETWORK_ERROR_STATUS) {
+    return {
+      kind: "message",
+      text: "Falha de comunicação com o servidor. Tente novamente.",
+    };
+  }
+
+  if (error.status === 404) {
+    // A concurrent cancellation already won: the goal state was reached.
+    if (error.message === "Enrollment not found.") {
+      return { kind: "alreadyCancelled" };
+    }
+
+    if (error.message === "Activity not found.") {
+      return { kind: "activityRemoved" };
+    }
+  }
+
+  if (error.status === 409) {
+    return {
+      kind: "message",
+      text: "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
+    };
+  }
+
+  return { kind: "message", text: GENERIC_CANCELLATION_MESSAGE };
+}

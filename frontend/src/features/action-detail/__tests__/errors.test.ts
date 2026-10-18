@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
-import { getEnrollmentErrorMessage } from "../errors";
+import { getEnrollmentErrorMessage, resolveCancellationError } from "../errors";
 
 describe("getEnrollmentErrorMessage", () => {
   describe("401 Unauthorized", () => {
@@ -100,6 +100,74 @@ describe("getEnrollmentErrorMessage", () => {
       const error = new ApiError(500, "Internal server error");
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("Erro ao realizar inscrição. Tente novamente.");
+    });
+  });
+});
+
+describe("resolveCancellationError", () => {
+  it("treats a missing enrollment as already cancelled", () => {
+    const error = new ApiError(404, "Enrollment not found.");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "alreadyCancelled",
+    });
+  });
+
+  it("reports a missing activity as removed", () => {
+    const error = new ApiError(404, "Activity not found.");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "activityRemoved",
+    });
+  });
+
+  it("leaves 401 to the session handler", () => {
+    const error = new ApiError(401, "Token malformatted, expired or invalid.");
+    expect(resolveCancellationError(error)).toEqual({ kind: "sessionExpired" });
+  });
+
+  it("explains that a closed activity cannot be cancelled on 409", () => {
+    const error = new ApiError(409, "Activity is not open for cancellation.");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "message",
+      text: "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
+    });
+  });
+
+  it("reports a communication failure on network error", () => {
+    const error = new ApiError(NETWORK_ERROR_STATUS, "Network request failed");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "message",
+      text: "Falha de comunicação com o servidor. Tente novamente.",
+    });
+  });
+
+  it("falls back to a generic message on 400", () => {
+    const error = new ApiError(400, "Validation error.");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "message",
+      text: "Não foi possível cancelar a inscrição. Tente novamente.",
+    });
+  });
+
+  it("falls back to a generic message on an unknown status", () => {
+    const error = new ApiError(500, "Erro na comunicação com o servidor");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "message",
+      text: "Não foi possível cancelar a inscrição. Tente novamente.",
+    });
+  });
+
+  it("falls back to a generic message on an unknown 404", () => {
+    const error = new ApiError(404, "Route not found.");
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "message",
+      text: "Não foi possível cancelar a inscrição. Tente novamente.",
+    });
+  });
+
+  it("falls back to a generic message when the error is not an ApiError", () => {
+    expect(resolveCancellationError(new Error("boom"))).toEqual({
+      kind: "message",
+      text: "Não foi possível cancelar a inscrição. Tente novamente.",
     });
   });
 });

@@ -13,3 +13,7 @@ export async function getActionById(id: string): Promise<Activity | null> {
 export async function enrollInAction(actionId: string): Promise<void> {
   await api.post<void>(`/activities/${actionId}/enroll`);
 }
+
+export async function cancelEnrollment(actionId: string): Promise<void> {
+  await api.delete<void>(`/activities/${actionId}/enroll`);
+}

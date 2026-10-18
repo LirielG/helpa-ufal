@@ -153,7 +153,7 @@ export function EnrollmentModal({
                   Confirmar inscrição
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Você está prestes a se escrever em:
+                  Você está prestes a se inscrever em:
                 </p>
               </div>
               <div className="w-full bg-gray-100 rounded-xl px-5 py-4 text-left space-y-2">

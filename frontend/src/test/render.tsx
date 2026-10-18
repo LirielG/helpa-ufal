@@ -6,6 +6,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { ToastContainer } from "react-toastify";
 
 export type RenderWithProvidersOptions = Omit<RenderOptions, "wrapper"> & {
   /** URL the router starts at. Defaults to "/". */
@@ -32,6 +33,7 @@ export function renderWithProviders(
         ) : (
           children
         )}
+        <ToastContainer />
       </MemoryRouter>
     );
   }
