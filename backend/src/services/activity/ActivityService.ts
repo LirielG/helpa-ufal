@@ -440,7 +440,8 @@ class ActivityService implements IActivityService {
         ]);
       }
 
-      const approvedEnrollments = activity.slots - activity.availableSlots;
+      const approvedEnrollments =
+        await this._activityRepository.countApprovedEnrollments(activity.id);
       if (data.slots < approvedEnrollments) {
         throw new ValidationError([
           {
