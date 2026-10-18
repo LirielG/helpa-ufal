@@ -1,4 +1,5 @@
 import type { Activity } from "@/services/contracts/activity";
+import type { UserActivityCertificate } from "@/services/contracts/user";
 
 export type { UserProfile } from "@/types/profile";
 
@@ -13,6 +14,10 @@ export interface UserActivity {
   description: string;
   location: string;
   date: string;
+  /** null until the presence is homologated as present; then it can be downloaded. */
+  certificate: UserActivityCertificate | null;
+  /** May be lower than the action's planned hours; 0 while not homologated. */
+  confirmedWorkloadHours: number;
 }
 
 /** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */

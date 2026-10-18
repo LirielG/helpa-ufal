@@ -340,3 +340,62 @@ describe("ActionsList cancellation from the enrolled card", () => {
     expect(screen.getAllByRole("button", { name: "Cancelar" })).toHaveLength(2);
   });
 });
+
+describe("ActionsList certificates", () => {
+  const CERTIFIED_TITLE = "Ação com certificado";
+  const PENDING_TITLE = "Ação sem homologação";
+
+  function certifiedItem(): UserActivityItem {
+    const item = makeUserActivityItem({
+      title: CERTIFIED_TITLE,
+      status: "COMPLETED",
+      certificate: {
+        id: "cert-1",
+        validationCode: "7KQ4MX9T2R",
+        issuedAt: "2026-03-18T12:00:00.000Z",
+      },
+    });
+    return {
+      ...item,
+      enrollment: item.enrollment && {
+        ...item.enrollment,
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 18,
+      },
+    };
+  }
+
+  it("shows the certificate the route returns only on the completed card that has one", async () => {
+    signIn();
+    serveByFilter({
+      completed: [
+        certifiedItem(),
+        makeUserActivityItem({ title: PENDING_TITLE, status: "COMPLETED" }),
+      ],
+    });
+    await openSubTab("completed");
+
+    expect(await screen.findByText(CERTIFIED_TITLE)).toBeInTheDocument();
+    expect(screen.getByText("18 horas homologadas")).toBeInTheDocument();
+    expect(screen.getByText("7KQ4M-X9T2R")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "Baixar certificado" }),
+    ).toHaveLength(1);
+    expect(screen.getByText(PENDING_TITLE)).toBeInTheDocument();
+    expect(screen.getByText("20 horas")).toBeInTheDocument();
+  });
+
+  it.each(["enrolled", "managed"] as const)(
+    "shows nothing about certificates on the %s sub-tab",
+    async (filter) => {
+      signIn();
+      serveByFilter({
+        [filter]: [makeUserActivityItem({ title: KEPT_TITLE })],
+      });
+      await openSubTab(filter);
+
+      expect(await screen.findByText(KEPT_TITLE)).toBeInTheDocument();
+      expect(screen.queryByText(/certificado/i)).not.toBeInTheDocument();
+    },
+  );
+});

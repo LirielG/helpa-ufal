@@ -165,6 +165,8 @@ export function makeUserActivity(
     description: "Descrição da atividade de teste.",
     location: "Campus Arapiraca",
     date: "2026-03-10",
+    certificate: null,
+    confirmedWorkloadHours: 0,
     ...rest,
   };
 }
