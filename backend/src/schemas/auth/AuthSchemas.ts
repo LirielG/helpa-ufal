@@ -6,7 +6,7 @@ export const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
-const passwordField = z.string().refine(isPasswordValid, {
+export const passwordField = z.string().refine(isPasswordValid, {
   message:
     "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.",
 });

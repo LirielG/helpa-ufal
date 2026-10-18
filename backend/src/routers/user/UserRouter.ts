@@ -15,6 +15,12 @@ router.get(
   (req, res, next) => userController.getMe(req, res).catch(next),
 );
 
+router.patch(
+  "/users/me",
+  authMiddleware.auth({ userTypes: "all" }),
+  (req, res, next) => userController.updateMe(req, res).catch(next),
+);
+
 // 401 before 400: an expired session must reach the frontend's global 401
 // handling, never show up as a query error.
 router.get(
