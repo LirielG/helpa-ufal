@@ -71,7 +71,10 @@ class ActivityController implements IActivityController {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!activityId || !uuidRegex.test(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter. Must be a valid UUID.");
+      throw new CustomError(
+        400,
+        "Invalid activityId parameter. Must be a valid UUID.",
+      );
     }
 
     const data = UpdateActivitySchema.parse(req.body);

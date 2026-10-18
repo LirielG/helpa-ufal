@@ -24,11 +24,14 @@ class EnrollmentController implements IEnrollmentController {
   public async enroll(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
-    if (!id || Array.isArray(id))
-      throw new CustomError(400, "Invalid id parameter.");
+    const { activityId } = req.params;
+    if (!activityId || Array.isArray(activityId))
+      throw new CustomError(400, "Invalid activityId parameter.");
 
-    const enrollment = await this._enrollmentService.enroll(req.user.id, id);
+    const enrollment = await this._enrollmentService.enroll(
+      req.user.id,
+      activityId,
+    );
 
     res.status(201).json(enrollment);
   }
@@ -36,11 +39,11 @@ class EnrollmentController implements IEnrollmentController {
   public async cancel(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
-    if (!id || Array.isArray(id))
-      throw new CustomError(400, "Invalid id parameter.");
+    const { activityId } = req.params;
+    if (!activityId || Array.isArray(activityId))
+      throw new CustomError(400, "Invalid activityId parameter.");
 
-    await this._enrollmentService.cancel(req.user.id, id);
+    await this._enrollmentService.cancel(req.user.id, activityId);
 
     res.status(204).send();
   }

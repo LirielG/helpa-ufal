@@ -38,9 +38,9 @@ describe("GET /activities/filters", () => {
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
 
-  it("is not captured by GET /activities/:id", async () => {
-    // The route must be registered BEFORE /activities/:id; "filters" is not a
-    // UUID, so a wrong registration order surfaces here as a 404.
+  it("is not captured by GET /activities/:activityId", async () => {
+    // The route must be registered BEFORE /activities/:activityId; "filters"
+    // is not a UUID, so a wrong registration order surfaces here as a 404.
     const response = await request(app).get("/activities/filters");
 
     expect(response.status).not.toBe(404);

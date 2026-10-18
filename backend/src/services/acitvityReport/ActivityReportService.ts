@@ -32,7 +32,7 @@ class ActivityReportService implements IActivityReportService {
   ): Promise<ActivityReportResponse> {
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
-        { field: "id", message: "id must be a valid UUID." },
+        { field: "activityId", message: "activityId must be a valid UUID." },
       ]);
     }
 

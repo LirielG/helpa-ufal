@@ -22,7 +22,7 @@ async function anOpenActivity(slots = 30) {
   return { author, activity };
 }
 
-describe("POST /activities/:id/enroll", () => {
+describe("POST /activities/:activityId/enroll", () => {
   // ---------- 201 - Created ----------
 
   it("creates an APPROVED enrollment for the authenticated user", async () => {

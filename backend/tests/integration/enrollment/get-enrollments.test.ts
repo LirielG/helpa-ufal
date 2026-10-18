@@ -424,7 +424,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
   it("returns 404 — not 400 — for a non-UUID activity id", async () => {
     // Contract decision for THIS route: identifiers in the path are resource
-    // lookups, never operator input. NOTE: DELETE /activities/:id/enroll
+    // lookups, never operator input. NOTE: DELETE /activities/:activityId/enroll
     // returns 400 for the same input today; the team must reconcile the two.
     const user = await createStudent();
 

@@ -31,8 +31,10 @@ router.get("/activities/:activityId", (req, res, next) =>
   activityController.findById(req, res).catch(next),
 );
 
-router.patch("/activities/:activityId", authMiddleware.auth(), (req, res, next) =>
-  activityController.update(req, res).catch(next),
+router.patch(
+  "/activities/:activityId",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.update(req, res).catch(next),
 );
 
 router.post(
@@ -60,8 +62,10 @@ router.patch(
   (req, res, next) => activityController.updateStatus(req, res).catch(next),
 );
 
-router.delete("/activities/:activityId", authMiddleware.auth(), (req, res, next) =>
-  activityController.delete(req, res).catch(next),
+router.delete(
+  "/activities/:activityId",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.delete(req, res).catch(next),
 );
 
 export default router;

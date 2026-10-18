@@ -293,7 +293,7 @@ class ActivityService implements IActivityService {
   public async findById(id: string): Promise<ActivityFullResponse> {
     if (!isValidUUID(id)) {
       throw new ValidationError([
-        { field: "id", message: "id must be a valid UUID." },
+        { field: "activityId", message: "activityId must be a valid UUID." },
       ]);
     }
 

@@ -11,7 +11,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
 
-describe("DELETE /activities/:id", () => {
+describe("DELETE /activities/:activityId", () => {
   it("returns 204, fills deletedAt and keeps the row in the database", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);

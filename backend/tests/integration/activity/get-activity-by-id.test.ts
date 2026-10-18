@@ -10,7 +10,7 @@ import {
   anAddress,
 } from "../../helpers/factories.js";
 
-describe("GET /activities/:id", () => {
+describe("GET /activities/:activityId", () => {
   it("returns 200 with the full activity detail, including address", async () => {
     const author = await createTeacher();
     const address = anAddress();

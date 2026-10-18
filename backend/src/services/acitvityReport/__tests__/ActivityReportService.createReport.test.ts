@@ -226,7 +226,7 @@ describe("ActivityReportService.createReport", () => {
 
     await expectValidationError(
       service.createReport("not-a-uuid", REPORTER_ID, validInput()),
-      [{ field: "id", message: "id must be a valid UUID." }],
+      [{ field: "activityId", message: "activityId must be a valid UUID." }],
     );
     expect(activityRepository.findById).not.toHaveBeenCalled();
     expect(reportRepository.findByUserAndActivity).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("ActivityReportService.createReport", () => {
         REPORTER_ID,
         validInput(),
       ),
-      [{ field: "id", message: "id must be a valid UUID." }],
+      [{ field: "activityId", message: "activityId must be a valid UUID." }],
     );
     expect(activityRepository.findById).not.toHaveBeenCalled();
   });

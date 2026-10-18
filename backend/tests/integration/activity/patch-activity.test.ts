@@ -12,8 +12,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
 
-describe("PATCH /activities/:id", () => {
-
+describe("PATCH /activities/:activityId", () => {
   it("returns 400 for an empty body", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
@@ -36,7 +35,7 @@ describe("PATCH /activities/:id", () => {
     });
   });
 
-    it("returns 400 when activityId is not a valid UUID", async () => {
+  it("returns 400 when activityId is not a valid UUID", async () => {
     const author = await createTeacher();
 
     const response = await request(app)
@@ -159,7 +158,10 @@ describe("PATCH /activities/:id", () => {
       .send({ title: "Ação inexistente" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -175,14 +177,20 @@ describe("PATCH /activities/:id", () => {
       .send({ title: "Tentativa em ação removida" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it.each(["COMPLETED", "CANCELLED"] as const)(
     "returns 409 when the activity status is %s",
     async (status) => {
       const author = await createTeacher();
-      const activity = await createActivity(author.user.id, { slots: 10, status });
+      const activity = await createActivity(author.user.id, {
+        slots: 10,
+        status,
+      });
 
       const response = await request(app)
         .patch(`/activities/${activity.id}`)
