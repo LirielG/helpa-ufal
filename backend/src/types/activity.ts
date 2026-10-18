@@ -1,5 +1,5 @@
 import { ActivityDetails } from "@prisma/client";
-import type { EnrollmentStatus } from "./enrollment.js";
+import type { EnrollmentResponse, EnrollmentStatus } from "./enrollment.js";
 
 export type ActivityType =
   "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
@@ -51,6 +51,21 @@ export type ActivityDetailsResponse = {
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
   enrollmentStatus?: EnrollmentStatus | null;
+};
+
+export type UserActivityFilter = "enrolled" | "completed" | "managed";
+
+/**
+ * An item of GET /users/me/activities: the activity exactly as
+ * GET /activities/:activityId returns it to an anonymous caller, plus the
+ * token owner's enrollment. `enrollment` carries the status, so the
+ * `enrollmentStatus` shortcut of the detail route is left out.
+ */
+export type UserActivityResponse = Omit<
+  ActivityFullResponse,
+  "enrollmentStatus"
+> & {
+  enrollment: EnrollmentResponse | null;
 };
 
 export type ActivityFilterOptions = {

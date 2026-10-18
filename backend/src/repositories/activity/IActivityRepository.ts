@@ -3,7 +3,12 @@ import type {
   CreateActivityInput,
   UpdateActivityInput,
 } from "@/schemas/activity/ActivitySchemas.js";
-import { ActivityFullResponse, ActivityResponse } from "@/types/activity.js";
+import {
+  ActivityFullResponse,
+  ActivityResponse,
+  UserActivityFilter,
+  UserActivityResponse,
+} from "@/types/activity.js";
 
 export interface IActivityRepository {
   create(authorId: string, data: CreateActivityInput): Promise<ActivityFullResponse>;
@@ -13,6 +18,13 @@ export interface IActivityRepository {
   list(
     filters: IRepositoryListActivitiesFilters,
   ): Promise<IRepositoryListActivitiesResponse>;
+
+  listByUser(
+    userId: string,
+    filter: UserActivityFilter,
+    page: number,
+    limit: number,
+  ): Promise<{ items: UserActivityResponse[]; total: number }>;
 
   update(
     id: string,

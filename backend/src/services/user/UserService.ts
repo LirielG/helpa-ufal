@@ -1,21 +1,30 @@
 import UserRepository from "@/repositories/auth/UserRepository.js";
+import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type {
   IUserRepository,
   UserWithProfile,
 } from "@/repositories/auth/IUserRepository.js";
 import type { IUserService } from "@/services/user/IUserService.js";
 import type { UserProfileResponse } from "@/types/user.js";
+import type { UserActivityResponse } from "@/types/activity.js";
+import type { ListUserActivitiesQuery } from "@/schemas/user/UserActivitySchemas.js";
+import { type Paginated, toPaginated } from "@/types/pagination.js";
 import CustomError from "@/models/error/CustomError.js";
 
 type Props = {
   userRepository?: IUserRepository;
+  activityRepository?: IActivityRepository;
 };
 
 class UserService implements IUserService {
   private _userRepository: IUserRepository;
+  private _activityRepository: IActivityRepository;
 
   constructor(props?: Props) {
     this._userRepository = props?.userRepository ?? new UserRepository();
+    this._activityRepository =
+      props?.activityRepository ?? new ActivityRepository();
   }
 
   public async getProfile(userId: string): Promise<UserProfileResponse> {
@@ -29,6 +38,25 @@ class UserService implements IUserService {
     if (!user) throw new CustomError(404, "User not found.");
 
     return this.toProfileResponse(user);
+  }
+
+  public async listActivities(
+    userId: string,
+    { filter, page, limit }: ListUserActivitiesQuery,
+  ): Promise<Paginated<UserActivityResponse>> {
+    // Same 404 as getProfile, and for the same reason: the history belongs to
+    // the token owner, so a missing user is a missing resource, not a secret.
+    const user = await this._userRepository.findById(userId);
+    if (!user) throw new CustomError(404, "User not found.");
+
+    const { items, total } = await this._activityRepository.listByUser(
+      userId,
+      filter,
+      page,
+      limit,
+    );
+
+    return toPaginated(items, total, page, limit);
   }
 
   private toProfileResponse(user: UserWithProfile): UserProfileResponse {
