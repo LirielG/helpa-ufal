@@ -6,16 +6,13 @@ export type ProfileTab = "personal" | "certificates" | "actions";
 
 export type ActivityStatus = "enrolled" | "completed" | "managed";
 
+/** An action of the profile's "Ações" tab and the display text derived from it. */
 export interface UserActivity {
-  id: string;
-  title: string;
+  /** The action as the enrollment modals of the detail page take it. */
+  action: Activity;
   description: string;
   location: string;
   date: string;
-  status: ActivityStatus;
-  /** Lifecycle status of the action itself, as opposed to the sub-tab in `status`. */
-  activityStatus: Activity["status"];
-  workloadHours?: number;
 }
 
 /** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */

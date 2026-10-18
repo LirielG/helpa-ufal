@@ -1,15 +1,83 @@
 import { describe, expect, it } from "vitest";
 import { API, http, HttpResponse, server } from "@/test/http";
-import { makeAction } from "@/test/factories";
+import {
+  makeAction,
+  makeActionDetail,
+  makeUserActivityItem,
+} from "@/test/factories";
 import { ApiError } from "@/services/apiError";
+import type { UserActivityItem } from "@/services/contracts/user";
 import { fetchUserActivities, updateActivityStatus } from "../services";
 
 const ACTION_ID = "act-status";
 
+function serveUserActivities(items: UserActivityItem[]) {
+  let url: URL | undefined;
+  server.use(
+    http.get(`${API}/users/me/activities`, ({ request }) => {
+      url = new URL(request.url);
+      return HttpResponse.json({
+        items,
+        total: items.length,
+        page: 1,
+        limit: 100,
+        totalPages: 1,
+      });
+    }),
+  );
+  return () => url;
+}
+
 describe("fetchUserActivities", () => {
+  it.each(["enrolled", "completed", "managed"] as const)(
+    "asks the history route for the %s filter",
+    async (filter) => {
+      const requestedUrl = serveUserActivities([]);
+
+      await fetchUserActivities(filter);
+
+      expect(requestedUrl()?.searchParams.get("filter")).toBe(filter);
+    },
+  );
+
+  it("maps each item to the card model, keeping the action for the modals", async () => {
+    const action = makeActionDetail({
+      id: ACTION_ID,
+      title: "Mutirão na Lagoa",
+      status: "IN_PROGRESS",
+      startDate: "2026-08-20T14:00:00.000Z",
+    });
+    const item = makeUserActivityItem({ ...action });
+    serveUserActivities([item]);
+
+    const [activity] = await fetchUserActivities("enrolled");
+
+    expect(activity).toMatchObject({
+      description: "Descrição da ação de teste.",
+      location: "Arapiraca - AL",
+      action: {
+        id: ACTION_ID,
+        title: "Mutirão na Lagoa",
+        status: "IN_PROGRESS",
+      },
+    });
+    expect(activity.date).toMatch(/2026/);
+  });
+
+  it("falls back to the campus when the action has neither address nor details", async () => {
+    serveUserActivities([
+      makeUserActivityItem({ campus: "PENEDO", details: null }),
+    ]);
+
+    const [activity] = await fetchUserActivities("managed");
+
+    expect(activity.location).toBe("UFAL - Campus Penedo");
+    expect(activity.description).toBe("Sem descrição informada.");
+  });
+
   it("rejects with an ApiError so the list can show its loading error", async () => {
     server.use(
-      http.get(`${API}/activities`, () =>
+      http.get(`${API}/users/me/activities`, () =>
         HttpResponse.json(
           { status: 500, message: "Internal server error." },
           { status: 500 },
