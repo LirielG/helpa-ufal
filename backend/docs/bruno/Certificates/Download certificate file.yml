@@ -1,0 +1,123 @@
+info:
+  name: Download certificate file
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/certificates/:certificateId/file"
+  params:
+    - name: certificateId
+      value: 0f8fad5b-d9cb-469f-a165-70867728950e
+      type: path
+      description: Certificate UUID, as `certificate.id` in GET /users/me/activities
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 PDF file
+    description: |-
+      Requested by the holder or by a manager. The body is the PDF bytes (starting with `%PDF-`), generated on this request. Headers:
+      - `Content-Type: application/pdf`
+      - `Content-Disposition: attachment; filename="certificado-7KQ4MX9T2R.pdf"`
+      - `Cache-Control: private, no-store`
+    response:
+      status: 200
+      headers:
+        - name: Content-Type
+          value: application/pdf
+        - name: Content-Disposition
+          value: attachment; filename="certificado-7KQ4MX9T2R.pdf"
+        - name: Cache-Control
+          value: private, no-store
+      body: |-
+        %PDF-1.7 (binary)
+
+  - name: 401 Missing token
+    description: No session cookie was sent.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "No token provided." }
+
+  - name: 401 Invalid or expired token
+    description: A credential was sent but failed verification - malformed, wrong signature or past its expiry.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "Token malformatted, expired or invalid." }
+
+  - name: 401 User no longer exists
+    description: Valid credential, but the user from the token is gone.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "User account not found or inactive." }
+
+  - name: 404 Not found
+    description: The same answer for a malformed id, an unknown id and a certificate the user may not download (neither holder nor manager). A malformed id does not answer 400 here.
+    response:
+      status: 404
+      body: |-
+        { "status": 404, "message": "Certificate not found." }
+
+docs: |-
+  # GET /certificates/:certificateId/file — Download the certificate PDF
+
+  Returns the certificate of a homologated enrollment as a PDF. It backs the download button
+  on the completed-action card of the profile. The PDF is never stored: it is generated on
+  every request from the current data.
+
+  ## Authentication
+  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie. Any
+    user type.
+
+  ## Path params
+  | Param         | Type | Description |
+  |---------------|------|-------------|
+  | certificateId | uuid | `certificate.id` from `GET /users/me/activities` |
+
+  ## Who may download
+  | Caller | Result |
+  |--------|--------|
+  | The holder (`certificate.enrollment.userId`) | 200 |
+  | Any manager (`isManager`, read from the database, not from the token) | 200 |
+  | The activity author, when neither holder nor manager | 404 |
+  | Anyone else | 404 |
+
+  The author already sees name, hours and attendance on the homologation screen, so the PDF
+  adds nothing for them.
+
+  ## Sensitive existence
+  A malformed id, an unknown id and a certificate the caller may not download answer the
+  **same 404** with the same body, so the route never tells whether a certificate exists.
+  This is the exception in [api-conventions.md](../../api-conventions.md) section 4: a
+  malformed id does **not** answer 400 `INVALID_UUID` here.
+
+  ## PDF content
+  | Printed | Source |
+  |---------|--------|
+  | Holder name | `User.fullName`, current value |
+  | Activity title and period | `Activity.title`, `startDate`, `endDate` |
+  | Hours | `Enrollment.confirmedWorkloadHours` (never `ActivityDetails.workloadHours`) |
+  | Issue date and validation code | `Certificate.issuedAt`, `Certificate.validationCode` |
+
+  Correcting the hours on `PUT /enrollments/:enrollmentId/attendance` changes the next
+  download.
+
+  ## Business rules
+  - A certificate of a soft-deleted activity stays downloadable: it is the holder's document.
+  - The file name uses the validation code without hyphen, so it never carries accents or
+    slashes from the activity title.
+
+  ## Validation order
+  1. Authentication (401)
+  2. The user from the token exists (401)
+  3. Existence and permission (404, indistinguishable)
+
+  Error format follows [api-conventions.md](../../api-conventions.md).

@@ -3,6 +3,7 @@ import request from "supertest";
 import type { ActivityStatus, ActivityType } from "@prisma/client";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import {
   anAddress,
   createActivity,
@@ -590,7 +591,7 @@ describe("GET /users/me/activities", () => {
       },
     );
 
-    it("returns each activity as GET /activities/:activityId does, plus the enrollment", async () => {
+    it("returns each activity as GET /activities/:activityId does, plus the enrollment and the certificate", async () => {
       const user = await createTeacher();
       const activity = await createActivity(user.user.id, {
         title: "Oficina de Testes",
@@ -604,7 +605,9 @@ describe("GET /users/me/activities", () => {
       ]);
 
       expect(detail.status).toBe(200);
-      expect(history.body.items).toEqual([{ ...detail.body, enrollment: null }]);
+      expect(history.body.items).toEqual([
+        { ...detail.body, enrollment: null, certificate: null },
+      ]);
     });
 
     it("serializes the user's enrollment in its canonical form", async () => {
@@ -643,6 +646,48 @@ describe("GET /users/me/activities", () => {
       });
       expect(itemOf(response, seed.ids.managedOpen).enrollment).toBeNull();
     });
+
+    it("returns the certificate under completed when presence was homologated, null when not yet", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const homologated = await createActivity(author.user.id, { status: "COMPLETED" });
+      const pending = await createActivity(author.user.id, { status: "COMPLETED" });
+      const enrollment = await createEnrollment(user.user.id, homologated.id);
+      await createEnrollment(user.user.id, pending.id);
+      await new EnrollmentRepository().confirmAttendance(
+        homologated.id,
+        enrollment.id,
+        true,
+        8,
+      );
+      const certificate = await prisma.certificate.findUniqueOrThrow({
+        where: { enrollmentId: enrollment.id },
+      });
+
+      const response = await listActivities(user.token, "?filter=completed");
+
+      expect(response.status).toBe(200);
+      expect(itemOf(response, homologated.id).certificate).toEqual({
+        id: certificate.id,
+        validationCode: certificate.validationCode,
+        issuedAt: certificate.issuedAt.toISOString(),
+      });
+      expect(itemOf(response, pending.id).certificate).toBeNull();
+    });
+
+    it.each(FILTERS)(
+      "always carries certificate on the items of filter=%s",
+      async (filter) => {
+        const seed = await seedHistory();
+
+        const response = await listActivities(seed.user.token, `?filter=${filter}`);
+
+        expect(response.body.items.length).toBeGreaterThan(0);
+        for (const item of response.body.items) {
+          expect(item).toHaveProperty("certificate", null);
+        }
+      },
+    );
 
     it("returns details as null for an activity without details", async () => {
       const user = await createTeacher();

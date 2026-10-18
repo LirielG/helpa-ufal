@@ -55,17 +55,25 @@ export type ActivityFullResponse = ActivityResponse & {
 
 export type UserActivityFilter = "enrolled" | "completed" | "managed";
 
+/** validationCode is in its stored form; the hyphenated display is the client's job. */
+export type UserActivityCertificate = {
+  id: string;
+  validationCode: string;
+  issuedAt: Date;
+};
+
 /**
  * An item of GET /users/me/activities: the activity exactly as
  * GET /activities/:activityId returns it to an anonymous caller, plus the
- * token owner's enrollment. `enrollment` carries the status, so the
- * `enrollmentStatus` shortcut of the detail route is left out.
+ * token owner's enrollment and its certificate. `enrollment` carries the
+ * status, so the `enrollmentStatus` shortcut of the detail route is left out.
  */
 export type UserActivityResponse = Omit<
   ActivityFullResponse,
   "enrollmentStatus"
 > & {
   enrollment: EnrollmentResponse | null;
+  certificate: UserActivityCertificate | null;
 };
 
 export type ActivityFilterOptions = {

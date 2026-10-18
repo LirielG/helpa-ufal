@@ -65,7 +65,8 @@ examples:
                 "confirmedWorkloadHours": 0,
                 "createdAt": "2026-08-02T12:00:00.000Z",
                 "updatedAt": "2026-08-02T12:00:00.000Z"
-              }
+              },
+              "certificate": null
             }
           ],
           "total": 1,
@@ -75,7 +76,7 @@ examples:
         }
 
   - name: 200 filter=completed
-    description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear.
+    description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear. A homologated presence (true) carries its certificate; a not homologated one (null) has certificate null.
     response:
       status: 200
       body: |-
@@ -116,6 +117,11 @@ examples:
                 "confirmedWorkloadHours": 4,
                 "createdAt": "2026-05-28T09:00:00.000Z",
                 "updatedAt": "2026-06-11T10:30:00.000Z"
+              },
+              "certificate": {
+                "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "validationCode": "7KQ4MX9T2R",
+                "issuedAt": "2026-06-11T10:30:00.000Z"
               }
             }
           ],
@@ -144,7 +150,8 @@ examples:
               "availableSlots": 15,
               "status": "OPEN",
               "details": null,
-              "enrollment": null
+              "enrollment": null,
+              "certificate": null
             }
           ],
           "total": 1,
@@ -242,8 +249,13 @@ docs: |-
   | Field        | Description |
   |--------------|-------------|
   | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled` and `completed`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
+  | `certificate` | The certificate of that enrollment: `{ id, validationCode, issuedAt }`, or `null` when there is none. Always present, in every filter. A certificate exists exactly when `enrollment.attendanceConfirmed` is `true` |
 
   The detail route's `enrollmentStatus` is not repeated: `enrollment.status` carries it.
+
+  `certificate.validationCode` comes in its stored form (10 characters, no hyphen); showing it
+  as `7KQ4M-X9T2R` is the screen's job. `certificate.id` is what
+  `GET /certificates/:certificateId/file` takes to download the PDF.
 
   ## Business rules
   - The user only sees their own history.
