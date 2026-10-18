@@ -94,7 +94,7 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
 
       {certificate && (
         <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex flex-col items-start gap-3">
             <p className="text-sm text-gray-600">
               Código de validação:{" "}
               <span className="font-mono font-semibold text-gray-900">
