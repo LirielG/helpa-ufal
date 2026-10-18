@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Certificate, Prisma, PrismaClient } from "@prisma/client";
 import type {
   CertificateForDownload,
+  CertificateForValidation,
   ICertificateRepository,
 } from "@/repositories/certificate/ICertificateRepository.js";
 import { prisma } from "@/database/prisma.js";
@@ -29,6 +30,31 @@ class CertificateRepository implements ICertificateRepository {
         enrollment: {
           select: {
             userId: true,
+            status: true,
+            attendanceConfirmed: true,
+            confirmedWorkloadHours: true,
+            user: { select: { fullName: true } },
+            activity: {
+              select: { title: true, startDate: true, endDate: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // A select, never an include: the route is public, and the holder's email,
+  // registration code and password hash must not even be loaded.
+  public async findByValidationCode(
+    validationCode: string,
+  ): Promise<CertificateForValidation | null> {
+    return this._prisma.certificate.findUnique({
+      where: { validationCode },
+      select: {
+        validationCode: true,
+        issuedAt: true,
+        enrollment: {
+          select: {
             status: true,
             attendanceConfirmed: true,
             confirmedWorkloadHours: true,
