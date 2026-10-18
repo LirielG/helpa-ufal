@@ -3,7 +3,11 @@ import { MapPin, Calendar, Pencil, Trash2, Users } from "lucide-react";
 import type { ActivityStatus } from "@/services/contracts/activity";
 import { ApiError } from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
-import { updateActivityStatus, getActivityById } from "../../services";
+import {
+  updateActivityStatus,
+  getActivityById,
+  deleteActivity,
+} from "../../services";
 import { ConfirmStatusModal } from "./ConfirmStatusModal";
 import { DeleteActionModal } from "./DeleteActionModal";
 
@@ -33,12 +37,14 @@ type ManagedCardProps = {
   activity: UserActivity;
   onEdit: (id: string) => void;
   onManageEnrollments: (id: string) => void;
+  onDelete: (id: string) => void;
 };
 
 export function ManagedCard({
   activity,
   onEdit,
   onManageEnrollments,
+  onDelete,
 }: ManagedCardProps) {
   const [currentStatus, setCurrentStatus] = useState<ActivityStatus>(
     activity.activityStatus,
@@ -49,6 +55,8 @@ export function ManagedCard({
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeletedSuccess, setShowDeletedSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [errorState, setErrorState] = useState<{
     message: string;
@@ -122,6 +130,36 @@ export function ManagedCard({
     } finally {
       setIsLoading(false);
       isSubmittingRef.current = false;
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteActivity(activity.id);
+      setShowDeleteModal(false);
+      setShowDeletedSuccess(true);
+    } catch (err: unknown) {
+      const status = err instanceof ApiError ? err.status : undefined;
+
+      if (status === 401) return;
+
+      // Already removed elsewhere: the outcome the user wanted has happened.
+      if (status === 404) {
+        setShowDeleteModal(false);
+        onDelete(activity.id);
+      } else if (status === 403) {
+        setDeleteError("Você não tem permissão para excluir esta ação.");
+      } else {
+        setDeleteError(
+          "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.",
+        );
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -258,13 +296,18 @@ export function ManagedCard({
       {(showDeleteModal || showDeletedSuccess) && (
         <DeleteActionModal
           isSuccess={showDeletedSuccess}
-          onConfirmDelete={() => {
-            setShowDeleteModal(false);
-            setShowDeletedSuccess(true);
-          }}
+          isLoading={isDeleting}
+          errorMessage={deleteError}
+          onConfirmDelete={handleConfirmDelete}
           onClose={() => {
+            // Removing the card from the list unmounts it, so the success
+            // modal must be dismissed first or it would vanish unseen.
+            if (showDeletedSuccess) {
+              onDelete(activity.id);
+              return;
+            }
             setShowDeleteModal(false);
-            setShowDeletedSuccess(false);
+            setDeleteError(null);
           }}
         />
       )}

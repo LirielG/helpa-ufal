@@ -126,3 +126,7 @@ export async function updateActivityStatus(
 export async function getActivityById(id: string): Promise<Activity> {
   return await api.get<Activity>(`/activities/${id}`);
 }
+
+export async function deleteActivity(id: string): Promise<void> {
+  await api.delete(`/activities/${id}`);
+}

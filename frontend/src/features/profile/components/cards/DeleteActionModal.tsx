@@ -2,12 +2,16 @@ import { X } from "lucide-react";
 
 type DeleteActionModalProps = {
   isSuccess: boolean;
+  isLoading?: boolean;
+  errorMessage?: string | null;
   onConfirmDelete: () => void;
   onClose: () => void;
 };
 
 export function DeleteActionModal({
   isSuccess,
+  isLoading = false,
+  errorMessage,
   onConfirmDelete,
   onClose,
 }: DeleteActionModalProps) {
@@ -50,21 +54,38 @@ export function DeleteActionModal({
         <div className="bg-[#FFF8E7] border border-[#F5E0B3] rounded-xl p-3 text-xs text-gray-800 text-left w-full leading-relaxed">
           <strong>Atenção:</strong> Ao confirmar, você está ciente que a ação
           será completamente excluída e não terá como recorrer.
+          <p className="mt-2">
+            Excluir não é o mesmo que cancelar: uma ação cancelada continua
+            visível no feed, mas uma ação excluída deixa de existir para todos,
+            inclusive para os inscritos.
+          </p>
         </div>
+
+        {errorMessage && (
+          <div
+            role="alert"
+            className="bg-red-100 border border-red-300 text-red-800 text-xs rounded-xl p-3 text-left w-full"
+          >
+            {errorMessage}
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-4 w-full mt-2">
           <button
             type="button"
             onClick={onClose}
-            className="bg-[#C81A17] hover:bg-red-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            disabled={isLoading}
+            className="bg-[#C81A17] hover:bg-red-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer disabled:opacity-50"
           >
             Não
           </button>
           <button
             type="button"
             onClick={onConfirmDelete}
-            className="bg-[#0066FF] hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            disabled={isLoading}
+            className="bg-[#0066FF] hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-xl text-xs flex-1 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1"
           >
-            Sim
+            {isLoading ? "Excluindo..." : "Sim"}
           </button>
         </div>
       </div>

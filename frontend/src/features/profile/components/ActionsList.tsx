@@ -42,6 +42,9 @@ export function ActionsList() {
   const handleManageEnrollments = (id: string) =>
     navigate(`/activity/${id}/enrollments`);
 
+  const handleDelete = (id: string) =>
+    setActivities((current) => current.filter((item) => item.id !== id));
+
   const isManaged = activeSubTab === "managed";
 
   return (
@@ -103,6 +106,7 @@ export function ActionsList() {
                       activity={activity}
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
+                      onDelete={handleDelete}
                     />
                   );
                 }
