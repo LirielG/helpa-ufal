@@ -387,7 +387,7 @@ describe("ActivityService.update", () => {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ slots: 40, availableSlots: 27 })),
-          countApprovedEnrollments: vi.fn().mockResolvedValue(13),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(13),
       },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -407,7 +407,7 @@ describe("ActivityService.update", () => {
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
-    it("reads the approved enrollments from the repository when slots change", async () => {
+  it("reads the approved enrollments from the repository when slots change", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: {
         findById: vi
