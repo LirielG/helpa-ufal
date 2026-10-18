@@ -14,4 +14,10 @@ router.get(
   (req, res, next) => certificateController.downloadFile(req, res).catch(next),
 );
 
+// Public on purpose: whoever checks a certificate has no HELPA account, and a
+// stale session cookie in their browser must not turn the answer into a 401.
+router.get("/certificate-validations/:validationCode", (req, res, next) =>
+  certificateController.validate(req, res).catch(next),
+);
+
 export default router;
