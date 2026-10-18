@@ -7,9 +7,9 @@ info:
 
 http:
   method: DELETE
-  url: "{{baseUrl}}/activities/:id/enroll"
+  url: "{{baseUrl}}/activities/:activityId/enroll"
   params:
-    - name: id
+    - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
@@ -25,10 +25,10 @@ examples:
   - name: 204 - Sucessful
     description: Enrollment canceled successfully. No content returned. The slot is immediately reflected in availableSlots.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -39,12 +39,12 @@ examples:
         type: text
         data: ""
   - name: 400 - Invalid id
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -70,10 +70,10 @@ examples:
   - name: 401 - Unauthenticated
     description: No session cookie was sent.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -93,10 +93,10 @@ examples:
   - name: 401 - Unauthenticated (Invalid token)
     description: The session cookie is invalid or expired.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: "f26559ac-d672-4252-a9a4-d6fe6583d8ec"
           type: path
           description: Activity UUID
@@ -116,10 +116,10 @@ examples:
   - name: 401 - User not found
     description: Token is valid, but the user it identifies no longer exists or is inactive.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -139,10 +139,10 @@ examples:
   - name: 404 - Enrollment not found
     description: No active enrollment for the authenticated user in this activity. Also returned when the enrollment was already canceled or belongs to another user — without revealing other users' enrollments.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -162,10 +162,10 @@ examples:
   - name: 404 - Activity not found
     description: Activity not found, soft-deleted, or id is not a valid UUID.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -185,10 +185,10 @@ examples:
   - name: 409 - Not open
     description: Activity status is not OPEN. Cancellation is only allowed while the activity is OPEN (mirrors the enrollment rule). IN_PROGRESS, COMPLETED and CANCELLED activities return 409. This also makes homologated attendance and hours (US 2.8.1) unreachable by cancellation, since homologation only exists on COMPLETED activities.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -208,10 +208,10 @@ examples:
   - name: 500 - Internal error
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -243,6 +243,6 @@ docs: |-
   - The lookup is always scoped to (activityId, token user): canceling another user's enrollment is indistinguishable from a nonexistent enrollment (404).
   - Canceling an already canceled enrollment returns 404 (not idempotent in the response, but does not corrupt state).
   - availableSlots counts only active enrollments, so the slot is released automatically.
-  - Re-enrollment after canceling is possible via POST /activities/:id/enroll; it reuses the (userId, activityId) record instead of inserting a new row.
+  - Re-enrollment after canceling is possible via POST /activities/:activityId/enroll; it reuses the (userId, activityId) record instead of inserting a new row.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

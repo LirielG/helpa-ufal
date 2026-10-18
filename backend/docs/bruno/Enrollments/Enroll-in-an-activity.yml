@@ -7,9 +7,9 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/activities/:id/enroll"
+  url: "{{baseUrl}}/activities/:activityId/enroll"
   params:
-    - name: id
+    - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
@@ -25,10 +25,10 @@ examples:
   - name: 201 - Successful
     description: Enrollment created successfully. Also returned when a previously canceled enrollment is reactivated — in that case createdAt keeps the record's original creation date and enrolledAt is refreshed to the reactivation moment.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -49,12 +49,12 @@ examples:
           }
 
   - name: 400 - Invalid id
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -80,10 +80,10 @@ examples:
   - name: 401 - Unauthenticated
     description: No session cookie was sent.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -104,10 +104,10 @@ examples:
   - name: 401 - Unauthenticated (Invalid token)
     description: The session cookie is invalid or expired.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -128,10 +128,10 @@ examples:
   - name: 401 - User not found
     description: Token is valid, but the user it identifies no longer exists or is inactive.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -152,10 +152,10 @@ examples:
   - name: 404 - Activity not found
     description: Activity not found, soft-deleted, or id is not a valid UUID. A malformed id is indistinguishable from a nonexistent activity by design (D1).
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -176,10 +176,10 @@ examples:
   - name: 409 - Already enrolled
     description: User already has an active enrollment in this activity.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -200,10 +200,10 @@ examples:
   - name: 409 - No available slots
     description: Activity has no available slots left (availableSlots = 0).
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -224,10 +224,10 @@ examples:
   - name: 409 - Not open
     description: Activity status is not OPEN.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -248,10 +248,10 @@ examples:
   - name: 500 - Internal error
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/enroll"
+      url: "{{baseUrl}}/activities/:activityId/enroll"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -274,7 +274,7 @@ docs: |-
 
   **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
-  - Route: POST /activities/:id/enroll — the activity is identified by the id path param. No request body.
+  - Route: POST /activities/:activityId/enroll — the activity is identified by the activityId path param. No request body.
   - The user is resolved exclusively from the JWT token (never from params, query or body).
   - The token must be valid AND the user must still exist and be active in the database (light hybrid authentication).
   - Validation order: authentication (401) → id format (400) → activity existence (404) → business rules (409). A non-UUID id answers 400 on `activityId`.

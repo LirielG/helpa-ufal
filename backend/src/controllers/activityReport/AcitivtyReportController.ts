@@ -23,13 +23,13 @@ class ActivityReportController implements IActivityReportController {
   public async createReport(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
-    if (!id || Array.isArray(id))
-      throw new CustomError(400, "Invalid id parameter.");
+    const { activityId } = req.params;
+    if (!activityId || Array.isArray(activityId))
+      throw new CustomError(400, "Invalid activityId parameter.");
 
     const data = CreateActivityReportSchema.parse(req.body);
     const report = await this._activityReportService.createReport(
-      id,
+      activityId,
       req.user.id,
       data,
     );

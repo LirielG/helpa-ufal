@@ -49,35 +49,41 @@ class ActivityController implements IActivityController {
   }
 
   public async findById(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
+    const { activityId } = req.params;
 
-    if (!id || Array.isArray(id)) {
-      throw new CustomError(400, "Invalid id parameter.");
+    if (!activityId || Array.isArray(activityId)) {
+      throw new CustomError(400, "Invalid activityId parameter.");
     }
 
-    const activity = await this._activityService.findById(id, req.user?.id);
+    const activity = await this._activityService.findById(
+      activityId,
+      req.user?.id,
+    );
     res.status(200).json(activity);
   }
 
   public async update(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
+    const { activityId } = req.params;
 
-    if (!id || Array.isArray(id)) {
-      throw new CustomError(400, "Invalid id parameter.");
+    if (!activityId || Array.isArray(activityId)) {
+      throw new CustomError(400, "Invalid activityId parameter.");
     }
 
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!id || !uuidRegex.test(id)) {
-      throw new CustomError(400, "Invalid id parameter. Must be a valid UUID.");
+    if (!activityId || !uuidRegex.test(activityId)) {
+      throw new CustomError(
+        400,
+        "Invalid activityId parameter. Must be a valid UUID.",
+      );
     }
 
     const data = UpdateActivitySchema.parse(req.body);
 
     const updatedActivity = await this._activityService.update(
-      id,
+      activityId,
       req.user.id,
       data,
     );
@@ -88,21 +94,20 @@ class ActivityController implements IActivityController {
   public async updateStatus(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
+    const { activityId } = req.params;
 
-    // Verificar se id é string (não array)
-    if (Array.isArray(id)) {
-      throw new CustomError(400, "Invalid id parameter.");
+    if (Array.isArray(activityId)) {
+      throw new CustomError(400, "Invalid activityId parameter.");
     }
 
-    if (!isValidUUID(id)) {
+    if (!isValidUUID(activityId)) {
       throw new CustomError(400, "Invalid UUID format.");
     }
 
     const data = UpdateActivityStatusSchema.parse(req.body);
 
     const updatedActivity = await this._activityService.updateStatus(
-      id,
+      activityId,
       data.status,
       req.user.id,
     );
@@ -113,17 +118,17 @@ class ActivityController implements IActivityController {
   public async delete(req: Request, res: Response): Promise<void> {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
-    const { id } = req.params;
+    const { activityId } = req.params;
 
-    if (!id || Array.isArray(id)) {
-      throw new CustomError(400, "Invalid id parameter.");
+    if (!activityId || Array.isArray(activityId)) {
+      throw new CustomError(400, "Invalid activityId parameter.");
     }
 
-    if (!isValidUUID(id)) {
+    if (!isValidUUID(activityId)) {
       throw new CustomError(400, "Invalid UUID format.");
     }
 
-    await this._activityService.delete(id, req.user.id);
+    await this._activityService.delete(activityId, req.user.id);
 
     res.status(204).send();
   }

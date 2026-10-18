@@ -7,9 +7,9 @@ info:
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/activities/:id/status"
+  url: "{{baseUrl}}/activities/:activityId/status"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -31,10 +31,10 @@ examples:
   - name: 200 Response
     description: Status transitioned successfully.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -68,10 +68,10 @@ examples:
   - name: 400 - Invalid status
     description: status is not IN_PROGRESS, COMPLETED or CANCELLED. OPEN is also rejected here, since no transition leads back to it.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -101,12 +101,12 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -132,10 +132,10 @@ examples:
   - name: 401 Response
     description: Missing, invalid or expired session cookie.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -161,10 +161,10 @@ examples:
   - name: 403 Response
     description: Requester is not the author or a manager.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -190,10 +190,10 @@ examples:
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
@@ -219,10 +219,10 @@ examples:
   - name: 409 - Terminal state
     description: Activity is already COMPLETED or CANCELLED.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -248,10 +248,10 @@ examples:
   - name: 409 - Invalid transition
     description: The target status is not reachable from the current one.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -277,10 +277,10 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/status"
+      url: "{{baseUrl}}/activities/:activityId/status"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID

@@ -5,7 +5,7 @@ import { app } from "@/app.js";
 import { createTeacher, createStudent, createActivity } from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
 
-describe("POST /activities/:id/reports", () => {
+describe("POST /activities/:activityId/reports", () => {
   it("returns 401 without a token", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
@@ -85,7 +85,7 @@ describe("POST /activities/:id/reports", () => {
     expect(response.body).toEqual({
       status: 400,
       message: "Validation error.",
-      errors: [{ field: "id", message: "id must be a valid UUID." }],
+      errors: [{ field: "activityId", message: "activityId must be a valid UUID." }],
     });
   });
 

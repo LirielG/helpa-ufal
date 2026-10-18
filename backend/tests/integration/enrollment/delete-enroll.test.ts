@@ -21,7 +21,7 @@ async function anOpenActivity(slots = 30) {
   return { author, activity };
 }
 
-describe("DELETE /activities/:id/enroll", () => {
+describe("DELETE /activities/:activityId/enroll", () => {
   // ---------- 204 - No Content ----------
 
   it("soft-deletes the enrollment: row kept as CANCELLED, empty response", async () => {

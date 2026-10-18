@@ -11,7 +11,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
 
-describe("DELETE /activities/:id", () => {
+describe("DELETE /activities/:activityId", () => {
   it("returns 204, fills deletedAt and keeps the row in the database", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
@@ -128,7 +128,7 @@ describe("DELETE /activities/:id", () => {
       .expect(401);
   });
 
-  it("returns 400 for an id that is not a UUID", async () => {
+  it("returns 400 for an activityId that is not a UUID", async () => {
     const author = await createTeacher();
 
     await request(app)

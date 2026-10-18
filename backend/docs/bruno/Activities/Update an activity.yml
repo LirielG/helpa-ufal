@@ -7,9 +7,9 @@ info:
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/activities/:id"
+  url: "{{baseUrl}}/activities/:activityId"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -41,10 +41,10 @@ examples:
   - name: 200 Response
     description: Activity updated successfully.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -104,10 +104,10 @@ examples:
   - name: 400 - Invalid body
     description: A field fails schema validation.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -139,10 +139,10 @@ examples:
   - name: 400 - Empty body
     description: No field was sent.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -170,12 +170,12 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -196,15 +196,15 @@ examples:
         data: |-
           {
             "status": 400,
-            "message": "Invalid id parameter. Must be a valid UUID."
+            "message": "Invalid activityId parameter. Must be a valid UUID."
           }
   - name: 401 Response
     description: Missing, invalid or expired session cookie.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -230,10 +230,10 @@ examples:
   - name: 403 Response
     description: Requester is not the author or a manager.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -259,10 +259,10 @@ examples:
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
@@ -288,10 +288,10 @@ examples:
   - name: 409 Response
     description: Activity is COMPLETED or CANCELLED.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -317,10 +317,10 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -350,6 +350,6 @@ docs: |-
   **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can update.
 
   - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
-  - The 200 body is the stored row, not the shape of `GET /activities/:id`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
+  - The 200 body is the stored row, not the shape of `GET /activities/:activityId`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

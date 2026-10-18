@@ -27,41 +27,45 @@ router.get("/activities/filters", (req, res, next) =>
   activityController.listFilters(req, res).catch(next),
 );
 
-router.get("/activities/:id", authMiddleware.auth(), (req, res, next) =>
+router.get("/activities/:activityId", authMiddleware.auth(), (req, res, next) =>
   activityController.findById(req, res).catch(next),
 );
 
-router.patch("/activities/:id", authMiddleware.auth(), (req, res, next) =>
-  activityController.update(req, res).catch(next),
+router.patch(
+  "/activities/:activityId",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.update(req, res).catch(next),
 );
 
 router.post(
-  "/activities/:id/reports",
+  "/activities/:activityId/reports",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) =>
     activityReportController.createReport(req, res).catch(next),
 );
 
 router.post(
-  "/activities/:id/enroll",
+  "/activities/:activityId/enroll",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => enrollmentController.enroll(req, res).catch(next),
 );
 
 router.delete(
-  "/activities/:id/enroll",
+  "/activities/:activityId/enroll",
   authMiddleware.auth({ userTypes: "all" }),
   (req, res, next) => enrollmentController.cancel(req, res).catch(next),
 );
 
 router.patch(
-  "/activities/:id/status",
+  "/activities/:activityId/status",
   authMiddleware.auth(),
   (req, res, next) => activityController.updateStatus(req, res).catch(next),
 );
 
-router.delete("/activities/:id", authMiddleware.auth(), (req, res, next) =>
-  activityController.delete(req, res).catch(next),
+router.delete(
+  "/activities/:activityId",
+  authMiddleware.auth(),
+  (req, res, next) => activityController.delete(req, res).catch(next),
 );
 
 export default router;

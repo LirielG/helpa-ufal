@@ -13,7 +13,7 @@ import {
 import { authHeader } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
 
-describe("PATCH /activities/:id", () => {
+describe("PATCH /activities/:activityId", () => {
   describe.each(["startDate", "endDate"])("%s", (field) => {
     it.each([
       ["date without timezone", "2026-01-01T08:00"],
@@ -76,7 +76,7 @@ describe("PATCH /activities/:id", () => {
     });
   });
 
-    it("returns 400 when id is not a valid UUID", async () => {
+  it("returns 400 when activityId is not a valid UUID", async () => {
     const author = await createTeacher();
 
     const response = await request(app)
@@ -87,7 +87,7 @@ describe("PATCH /activities/:id", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
-      message: "Invalid id parameter. Must be a valid UUID.",
+      message: "Invalid activityId parameter. Must be a valid UUID.",
     });
   });
 
@@ -199,7 +199,10 @@ describe("PATCH /activities/:id", () => {
       .send({ title: "Ação inexistente" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -215,14 +218,20 @@ describe("PATCH /activities/:id", () => {
       .send({ title: "Tentativa em ação removida" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      message: "Activity not found.",
+    });
   });
 
   it.each(["COMPLETED", "CANCELLED"] as const)(
     "returns 409 when the activity status is %s",
     async (status) => {
       const author = await createTeacher();
-      const activity = await createActivity(author.user.id, { slots: 10, status });
+      const activity = await createActivity(author.user.id, {
+        slots: 10,
+        status,
+      });
 
       const response = await request(app)
         .patch(`/activities/${activity.id}`)

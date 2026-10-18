@@ -6,7 +6,7 @@ import { prisma } from "@/database/prisma.js";
 import { createTeacher, createStudent, createManager, createActivity } from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
 
-describe("PATCH /activities/:id/status", () => {
+describe("PATCH /activities/:activityId/status", () => {
 
   it("returns 400 when status is not a valid enum value", async () => {
     const author = await createTeacher();
