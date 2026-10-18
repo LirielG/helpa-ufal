@@ -71,8 +71,11 @@ class UserRepository implements IUserRepository {
           where: { id },
           data: {
             ...(data.fullName !== undefined && { fullName: data.fullName }),
+            // A new password revokes every token issued before it, including
+            // the one making this request.
             ...(data.passwordHash !== undefined && {
               passwordHash: data.passwordHash,
+              tokenVersion: { increment: 1 },
             }),
           },
         });

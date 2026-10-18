@@ -78,19 +78,10 @@ export function updateProfileSchemaFor(userType: UserType) {
     })
     .pipe(
       z.object({
-        fullName: z
-          .string()
-          .trim()
-          .min(1)
-          .optional(),
+        fullName: z.string().trim().min(1).optional(),
         course:
           userType === "TEACHER"
-            ? z
-                .string()
-                .trim()
-                .min(1)
-                .nullable()
-                .optional()
+            ? z.string().trim().min(1).nullable().optional()
             : z.never().optional(),
         currentPassword: z.string().optional(),
         newPassword: passwordField.optional(),
