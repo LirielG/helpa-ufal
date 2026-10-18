@@ -17,6 +17,13 @@ import type { ActivityListItem } from "@/services/contracts/activity";
 import type { FilterOptions } from "../features/dashboard/types";
 import { useActionRegister } from "../hooks/useActionRegister";
 
+const INITIAL_FILTERS: FilterOptions = {
+  area: "all",
+  actionType: "all",
+  availability: "all",
+  search: "",
+};
+
 interface DashboardProps {
   /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
   debounceMs?: number;
@@ -31,20 +38,20 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [helpaHasError, setHelpaHasError] = useState(false);
   const [sigaaHasError, setSigaaHasError] = useState(false);
 
-  const [filters, setFilters] = useState<FilterOptions>({
-    area: "all",
-    actionType: "all",
-    availability: "all",
-    search: "",
-  });
+  const [filters, setFilters] = useState<FilterOptions>(INITIAL_FILTERS);
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   };
+
+  const handleResetFilters = useCallback(() => {
+    setFilters(INITIAL_FILTERS);
+    setPage(1);
+  }, []);
 
   // The field stays controlled by what was typed while the request trails it.
   // Debouncing `filters` as a whole would delay the selects too, which filter
@@ -78,7 +85,7 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
     const isCurrent = () => requestId === latestRequest.current;
 
     setIsLoading(true);
-    setError(null);
+    setHelpaHasError(false);
 
     fetchActions(requestFilters, page)
       .then((res) => {
@@ -91,7 +98,7 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
         if (!isCurrent()) return;
 
         console.error(err);
-        setError("Não foi possível carregar as ações. Tente novamente.");
+        setHelpaHasError(true);
       })
       .finally(() => {
         if (isCurrent()) setIsLoading(false);
@@ -149,11 +156,13 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
               actions={actions}
               filters={filters}
               onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
               page={page}
               totalPages={totalPages}
               onPageChange={setPage}
               isLoading={isLoading}
-              error={error}
+              hasError={helpaHasError}
+              onRetry={loadActions}
             />
           ) : (
             <SigaaFeed
