@@ -177,11 +177,7 @@ export function EditAction() {
     } catch (error: unknown) {
       const status = error instanceof ApiError ? error.status : undefined;
 
-      if (status === 401) {
-        setShowDeleteModal(false);
-        navigate("/login", { replace: true });
-        return;
-      }
+      if (status === 401) return;
 
       if (status === 404) {
         setShowDeleteModal(false);

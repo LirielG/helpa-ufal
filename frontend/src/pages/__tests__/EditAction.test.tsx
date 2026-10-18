@@ -15,6 +15,7 @@ import {
 } from "@/test";
 import type { Activity, ActivityDetails } from "@/services/contracts/activity";
 import type { ActionAddressPayload } from "@/features/action-edit/types";
+import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import { EditAction } from "../EditAction";
 import { signIn } from "@/test/auth";
 import { makeUser } from "@/test/factories";
@@ -99,18 +100,27 @@ function failUpdate(status: number, body: Record<string, unknown> = {}) {
   );
 }
 
+/** Mounts the session handler the way AppRoutes does, so a 401 reaches /login. */
+function SessionExpiry() {
+  useSessionExpiry();
+  return null;
+}
+
 /**
  * The destination routes are part of the tree so a redirect is observed
  * through what ends up on screen, rather than by spying on `useNavigate`.
  */
 function renderEditAction() {
   return render(
-    <Routes>
-      <Route path="/activity/:id/edit" element={<EditAction />} />
-      <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
-      <Route path="/dashboard" element={<h1>Dashboard</h1>} />
-      <Route path="/login" element={<h1>Entrar</h1>} />
-    </Routes>,
+    <>
+      <SessionExpiry />
+      <Routes>
+        <Route path="/activity/:id/edit" element={<EditAction />} />
+        <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+        <Route path="/dashboard" element={<h1>Dashboard</h1>} />
+        <Route path="/login" element={<h1>Entrar</h1>} />
+      </Routes>
+    </>,
     { route: `/activity/${ACTION_ID}/edit` },
   );
 }
