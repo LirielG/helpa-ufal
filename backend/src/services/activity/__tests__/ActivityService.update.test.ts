@@ -69,6 +69,7 @@ function mockRepositories(
       .mockImplementation((id: string, data: object) =>
         Promise.resolve({ id, ...data }),
       ),
+    countApprovedEnrollments: vi.fn().mockResolvedValue(0),
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
@@ -386,6 +387,7 @@ describe("ActivityService.update", () => {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ slots: 40, availableSlots: 27 })),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(13),
       },
     });
     const service = new ActivityService({ activityRepository, userRepository });
@@ -400,6 +402,50 @@ describe("ActivityService.update", () => {
         field: "slots",
         message:
           "slots cannot be reduced below the current number of approved enrollments (13).",
+      },
+    ]);
+    expect(activityRepository.update).not.toHaveBeenCalled();
+  });
+
+  it("reads the approved enrollments from the repository when slots change", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ slots: 40, availableSlots: 40 })),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(0),
+      },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    await service.update("act-1", AUTHOR, { slots: 50 });
+
+    expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledWith(
+      "act-1",
+    );
+  });
+
+  it("rejects slots below the approved enrollments even when approved exceed the current slots", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(makeActivity({ slots: 5, availableSlots: 0 })),
+        countApprovedEnrollments: vi.fn().mockResolvedValue(7),
+      },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+
+    const error = await captureError(
+      service.update("act-1", AUTHOR, { slots: 6 }),
+    );
+
+    expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).errors).toEqual([
+      {
+        field: "slots",
+        message:
+          "slots cannot be reduced below the current number of approved enrollments (7).",
       },
     ]);
     expect(activityRepository.update).not.toHaveBeenCalled();

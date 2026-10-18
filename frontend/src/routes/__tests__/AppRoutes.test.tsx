@@ -119,7 +119,7 @@ describe("AppRoutes", () => {
     it("sends the user to login when a request reports an expired session", async () => {
       server.use(
         http.get(
-          `${API}/activities`,
+          `${API}/users/me/activities`,
           () => new HttpResponse(null, { status: 401 }),
         ),
       );

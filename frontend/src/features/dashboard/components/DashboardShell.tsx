@@ -48,7 +48,7 @@ export function DashboardShell({
     >
       {header && <header>{header}</header>}
 
-      <main className="flex flex-col w-full">{children}</main>
+      <main className="flex-1 flex flex-col w-full">{children}</main>
 
       {footer && <footer>{footer}</footer>}
 

@@ -81,25 +81,21 @@ class EnrollmentController implements IEnrollmentController {
     // never name who homologates.
     const user = req.user as AuthenticatedUser;
 
-    const { activityId, enrollmentId } = req.params;
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(404, "Activity not found.");
-    }
+    const { enrollmentId } = req.params;
     if (!enrollmentId || Array.isArray(enrollmentId)) {
       throw new CustomError(404, "Enrollment not found.");
     }
 
     const body = ConfirmAttendanceBodySchema.parse(req.body);
 
-    const attendance = await this._enrollmentService.confirmAttendance(
+    const enrollment = await this._enrollmentService.confirmAttendance(
       user.id,
-      activityId,
       enrollmentId,
       body,
     );
 
     // Always 200: a correction is not a creation, so there is no 201 here.
-    res.status(200).json(attendance);
+    res.status(200).json(enrollment);
   }
 }
 

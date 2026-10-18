@@ -9,7 +9,7 @@ import type {
   SigaaFilterOptions,
 } from "../types";
 import { SigaaActivityRow } from "./SigaaActivityRow";
-import { SigaaFeedFallback } from "./SigaaFeedFallback";
+import { FeedFallback } from "../../../components/FeedFallback";
 import { SigaaFilterBar } from "./SigaaFilterBar";
 
 interface SigaaFeedProps {
@@ -18,6 +18,23 @@ interface SigaaFeedProps {
   /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
   debounceMs?: number;
 }
+
+const SIGAA_COPY = {
+  error: {
+    eyebrow: "Falha ao carregar",
+    title: "Não foi possível carregar as ações do SIGAA",
+    description:
+      "Tente novamente em instantes. As ações da comunidade no Helpa continuam disponíveis.",
+  },
+  empty: {
+    eyebrow: "Nenhum resultado",
+    title: "Nenhuma ação do SIGAA encontrada",
+    description:
+      "Nenhuma ação corresponde a esses filtros. Tente ajustar a busca.",
+  },
+  retry: "Tentar de novo",
+  exploreHelpa: "Explorar ações no Helpa",
+} as const;
 
 const INITIAL_FILTERS: SigaaFeedFilters = {
   search: "",
@@ -147,18 +164,32 @@ export function SigaaFeed({
       )}
 
       {!isLoading && hasError && (
-        <SigaaFeedFallback
+        <FeedFallback
           variant="error"
-          onRetry={retry}
-          onExploreHelpa={onExploreHelpa}
+          eyebrow={SIGAA_COPY.error.eyebrow}
+          title={SIGAA_COPY.error.title}
+          description={SIGAA_COPY.error.description}
+          primaryAction={{
+            label: SIGAA_COPY.retry,
+            onClick: retry,
+          }}
+          secondaryAction={{
+            label: SIGAA_COPY.exploreHelpa,
+            onClick: onExploreHelpa,
+          }}
         />
       )}
 
       {!isLoading && !hasError && activities.length === 0 && (
-        <SigaaFeedFallback
+        <FeedFallback
           variant="empty"
-          onRetry={retry}
-          onExploreHelpa={onExploreHelpa}
+          eyebrow={SIGAA_COPY.empty.eyebrow}
+          title={SIGAA_COPY.empty.title}
+          description={SIGAA_COPY.empty.description}
+          secondaryAction={{
+            label: SIGAA_COPY.exploreHelpa,
+            onClick: onExploreHelpa,
+          }}
         />
       )}
 

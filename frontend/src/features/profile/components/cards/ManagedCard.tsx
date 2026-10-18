@@ -3,7 +3,11 @@ import { MapPin, Calendar, Pencil, Trash2, Users } from "lucide-react";
 import type { ActivityStatus } from "@/services/contracts/activity";
 import { ApiError } from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
-import { updateActivityStatus, getActivityById } from "../../services";
+import {
+  updateActivityStatus,
+  getActivityById,
+  deleteActivity,
+} from "../../services";
 import { ConfirmStatusModal } from "./ConfirmStatusModal";
 import { DeleteActionModal } from "./DeleteActionModal";
 
@@ -33,15 +37,17 @@ type ManagedCardProps = {
   activity: UserActivity;
   onEdit: (id: string) => void;
   onManageEnrollments: (id: string) => void;
+  onDelete: (id: string) => void;
 };
 
 export function ManagedCard({
   activity,
   onEdit,
   onManageEnrollments,
+  onDelete,
 }: ManagedCardProps) {
   const [currentStatus, setCurrentStatus] = useState<ActivityStatus>(
-    activity.activityStatus,
+    activity.action.status,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [pendingStatus, setPendingStatus] =
@@ -49,6 +55,8 @@ export function ManagedCard({
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeletedSuccess, setShowDeletedSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [errorState, setErrorState] = useState<{
     message: string;
@@ -69,7 +77,7 @@ export function ManagedCard({
         "O status desta ação foi alterado em outro lugar. Exibindo o status atual.",
     });
     try {
-      const updated = await getActivityById(activity.id);
+      const updated = await getActivityById(activity.action.id);
       setCurrentStatus(updated.status);
     } catch (err: unknown) {
       const status = err instanceof ApiError ? err.status : undefined;
@@ -95,7 +103,7 @@ export function ManagedCard({
     setErrorState(null);
 
     try {
-      await updateActivityStatus(activity.id, targetStatus);
+      await updateActivityStatus(activity.action.id, targetStatus);
       setCurrentStatus(targetStatus);
     } catch (err: unknown) {
       const status = err instanceof ApiError ? err.status : undefined;
@@ -125,6 +133,36 @@ export function ManagedCard({
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteActivity(activity.action.id);
+      setShowDeleteModal(false);
+      setShowDeletedSuccess(true);
+    } catch (err: unknown) {
+      const status = err instanceof ApiError ? err.status : undefined;
+
+      if (status === 401) return;
+
+      // Already removed elsewhere: the outcome the user wanted has happened.
+      if (status === 404) {
+        setShowDeleteModal(false);
+        onDelete(activity.action.id);
+      } else if (status === 403) {
+        setDeleteError("Você não tem permissão para excluir esta ação.");
+      } else {
+        setDeleteError(
+          "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.",
+        );
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value as ActivityStatus;
     if (selected === currentStatus || selected === "OPEN") return;
@@ -150,7 +188,7 @@ export function ManagedCard({
         <div className="flex flex-col justify-between gap-3 min-w-0 flex-1">
           <div>
             <h4 className="font-bold text-gray-900 leading-snug text-lg mb-1">
-              {activity.title}
+              {activity.action.title}
             </h4>
             <p className="text-sm text-gray-600">{activity.description}</p>
           </div>
@@ -170,13 +208,13 @@ export function ManagedCard({
         <div className="flex flex-col items-end justify-between self-stretch gap-4 shrink-0">
           <div className="flex flex-col items-start gap-1">
             <label
-              htmlFor={`status-select-${activity.id}`}
+              htmlFor={`status-select-${activity.action.id}`}
               className="text-xs font-medium text-gray-700"
             >
               Status
             </label>
             <select
-              id={`status-select-${activity.id}`}
+              id={`status-select-${activity.action.id}`}
               value={currentStatus}
               onChange={handleSelectChange}
               disabled={isLoading || isTerminal || isLocked}
@@ -205,7 +243,7 @@ export function ManagedCard({
             </button>
             <button
               type="button"
-              onClick={() => onEdit(activity.id)}
+              onClick={() => onEdit(activity.action.id)}
               aria-label="Editar atividade"
               className="text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
@@ -213,7 +251,7 @@ export function ManagedCard({
             </button>
             <button
               type="button"
-              onClick={() => onManageEnrollments(activity.id)}
+              onClick={() => onManageEnrollments(activity.action.id)}
               aria-label="Gerenciar inscritos"
               className="text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
@@ -258,13 +296,18 @@ export function ManagedCard({
       {(showDeleteModal || showDeletedSuccess) && (
         <DeleteActionModal
           isSuccess={showDeletedSuccess}
-          onConfirmDelete={() => {
-            setShowDeleteModal(false);
-            setShowDeletedSuccess(true);
-          }}
+          isLoading={isDeleting}
+          errorMessage={deleteError}
+          onConfirmDelete={handleConfirmDelete}
           onClose={() => {
+            // Removing the card from the list unmounts it, so the success
+            // modal must be dismissed first or it would vanish unseen.
+            if (showDeletedSuccess) {
+              onDelete(activity.action.id);
+              return;
+            }
             setShowDeleteModal(false);
-            setShowDeletedSuccess(false);
+            setDeleteError(null);
           }}
         />
       )}

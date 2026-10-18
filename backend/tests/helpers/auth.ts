@@ -3,7 +3,7 @@ import type { AuthenticatedUser } from "@/types/auth.js";
 
 /**
  * The `id` must match an existing User when the route looks it up
- * (e.g. PATCH /activities/:id/status). Prefer the factories, which return
+ * (e.g. PATCH /activities/:activityId/status). Prefer the factories, which return
  * `{ user, token }` paired.
  */
 export function signToken(user: AuthenticatedUser, expiresIn = "1h"): string {

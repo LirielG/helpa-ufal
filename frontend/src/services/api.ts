@@ -95,6 +95,7 @@ async function request<T>(
   endpoint: string,
   body?: unknown,
   { handleUnauthorized = true, params }: RequestOptions = {},
+  readSuccess: (response: Response) => Promise<unknown> = readBody,
 ): Promise<T> {
   let response: Response;
   const url = `${API_BASE_URL}${endpoint}${buildQueryString(params)}`;
@@ -121,7 +122,7 @@ async function request<T>(
   }
 
   try {
-    return (await readBody(response)) as T;
+    return (await readSuccess(response)) as T;
   } catch {
     throw new ApiError(response.status, COMMUNICATION_ERROR_MESSAGE);
   }
@@ -140,6 +141,14 @@ export const api = {
     return request<T>("POST", endpoint, body, options);
   },
 
+  put<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<T> {
+    return request<T>("PUT", endpoint, body, options);
+  },
+
   patch<T>(
     endpoint: string,
     body?: unknown,
@@ -150,5 +159,12 @@ export const api = {
 
   delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return request<T>("DELETE", endpoint, undefined, options);
+  },
+
+  /** GET for a file: errors still come as JSON, only the success body is binary. */
+  getBlob(endpoint: string, options?: RequestOptions): Promise<Blob> {
+    return request<Blob>("GET", endpoint, undefined, options, (response) =>
+      response.blob(),
+    );
   },
 };

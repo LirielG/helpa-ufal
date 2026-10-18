@@ -28,6 +28,10 @@ import type {
 } from "../features/action-edit/types";
 import { toInputDate, toInputTime } from "../utils";
 import { fetchAreaSuggestions } from "../features/dashboard/services";
+import { useAuthStore } from "../stores/authStore";
+import { deleteActivity } from "../features/profile/services";
+import { DeleteActionModal } from "../features/profile/components/cards/DeleteActionModal";
+import { ApiError } from "../services/apiError";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -55,6 +59,9 @@ export function EditAction() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
+  const user = useAuthStore((state) => state.user);
+  const [actionAuthorId, setActionAuthorId] = useState<string | null>(null);
+
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
   const [loadFailed, setLoadFailed] = useState(false);
   const notFound = !id || loadFailed;
@@ -66,6 +73,10 @@ export function EditAction() {
     null,
   );
   const [isConfirming, setIsConfirming] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [generalError, setGeneralError] = useState<string | null>(null);
 
@@ -110,6 +121,8 @@ export function EditAction() {
         return;
       }
 
+      setActionAuthorId(action.authorId);
+
       reset({
         title: action.title,
         description: action.details?.description ?? "",
@@ -147,6 +160,39 @@ export function EditAction() {
       isMounted = false;
     };
   }, [id, reset]);
+
+  const canDelete = Boolean(
+    user && (user.id === actionAuthorId || user.isManager),
+  );
+
+  const handleDeleteConfirm = async () => {
+    if (!id || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteActivity(id);
+      setShowDeleteModal(false);
+      navigate("/dashboard", { replace: true });
+    } catch (error: unknown) {
+      const status = error instanceof ApiError ? error.status : undefined;
+
+      if (status === 401) return;
+
+      if (status === 404) {
+        setShowDeleteModal(false);
+        navigate("/dashboard", { replace: true });
+      } else if (status === 403) {
+        setDeleteError("Você não tem permissão para excluir esta ação.");
+      } else {
+        setDeleteError(
+          "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.",
+        );
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const buildPayload = (data: ActionEditSchemaType): UpdateActionPayload => {
     const payload: UpdateActionPayload = {};
@@ -481,28 +527,43 @@ export function EditAction() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              size="sm"
-              rounded
-              variant="secondary"
-              className="rounded-full px-8 py-2.5 font-medium"
-              onClick={() => navigate(-1)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              rounded
-              variant="navy"
-              className="rounded-full px-8 py-2.5 font-medium"
-              isLoading={isSubmitting || isConfirming}
-              disabled={isSubmitting || isConfirming}
-            >
-              Salvar
-            </Button>
+          <div className="flex justify-between gap-3 pt-4">
+            {canDelete ? (
+              <Button
+                type="button"
+                size="sm"
+                rounded
+                className="rounded-full px-6 py-2.5 font-medium text-white !bg-[#C81A17] hover:!bg-red-700 transition-colors border-none cursor-pointer"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Excluir ação
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                size="sm"
+                rounded
+                variant="secondary"
+                className="rounded-full px-8 py-2.5 font-medium"
+                onClick={() => navigate(-1)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                rounded
+                variant="navy"
+                className="rounded-full px-8 py-2.5 font-medium"
+                isLoading={isSubmitting || isConfirming}
+                disabled={isSubmitting || isConfirming}
+              >
+                Salvar
+              </Button>
+            </div>
           </div>
         </form>
       </div>
@@ -515,6 +576,18 @@ export function EditAction() {
           setPendingData(null);
         }}
       />
+      {showDeleteModal && (
+        <DeleteActionModal
+          isSuccess={false}
+          isLoading={isDeleting}
+          errorMessage={deleteError}
+          onConfirmDelete={handleDeleteConfirm}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setDeleteError(null);
+          }}
+        />
+      )}
     </DashboardShell>
   );
 }

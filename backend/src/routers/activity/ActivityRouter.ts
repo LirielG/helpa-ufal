@@ -27,7 +27,7 @@ router.get("/activities/filters", (req, res, next) =>
   activityController.listFilters(req, res).catch(next),
 );
 
-router.get("/activities/:activityId", (req, res, next) =>
+router.get("/activities/:activityId", authMiddleware.auth(), (req, res, next) =>
   activityController.findById(req, res).catch(next),
 );
 

@@ -16,12 +16,11 @@ http:
     - name: page
       value: "1"
       type: query
-      description: Page number (default 1)
+      description: Page number
     - name: limit
       value: "10"
       type: query
-      description: Items per page (default 10, maximum 50)
-  auth: inherit
+      description: Items per page
 
 settings:
   encodeUrl: true
@@ -36,9 +35,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -64,34 +60,52 @@ examples:
           {
             "items": [
               {
-                "enrollmentId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-                "fullName": "Maria Clara Santos",
-                "email": "maria.santos@aluno.ufal.br",
-                "registrationCode": "20240012345",
                 "status": "APPROVED",
                 "attendanceConfirmed": true,
-                "confirmedWorkloadHours": 4
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-08-22T21:00:00.000Z",
+                "updatedAt": "2026-08-30T18:45:00.000Z",
+                "user": {
+                  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                  "fullName": "Maria Clara Santos",
+                  "email": "maria.santos@aluno.ufal.br",
+                  "registrationCode": "20240012345"
+                }
               },
               {
-                "enrollmentId": "550e8400-e29b-41d4-a716-446655440000",
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "fullName": "João Pedro Ferreira",
-                "email": "joao.ferreira@aluno.ufal.br",
-                "registrationCode": "20240067890",
                 "status": "APPROVED",
                 "attendanceConfirmed": null,
-                "confirmedWorkloadHours": 0
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-23T14:00:00.000Z",
+                "updatedAt": "2026-08-23T14:00:00.000Z",
+                "user": {
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "fullName": "João Pedro Ferreira",
+                  "email": "joao.ferreira@aluno.ufal.br",
+                  "registrationCode": "20240067890"
+                }
               },
               {
-                "enrollmentId": "6f1c2a34-9b8d-4e7f-a1b2-c3d4e5f60718",
+                "id": "6f1c2a34-9b8d-4e7f-a1b2-c3d4e5f60718",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
                 "userId": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
-                "fullName": "Prof. Ricardo Almeida",
-                "email": "ricardo.almeida@ufal.br",
-                "registrationCode": null,
                 "status": "APPROVED",
                 "attendanceConfirmed": false,
-                "confirmedWorkloadHours": 0
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-24T09:30:00.000Z",
+                "updatedAt": "2026-08-30T18:50:00.000Z",
+                "user": {
+                  "id": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
+                  "fullName": "Prof. Ricardo Almeida",
+                  "email": "ricardo.almeida@ufal.br",
+                  "registrationCode": null
+                }
               }
             ],
             "total": 3,
@@ -105,9 +119,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -131,13 +142,10 @@ examples:
           }
 
   - name: 400 - Invalid query params
-    description: page or limit is not a positive integer, or limit exceeds the maximum of 50. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
+    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -165,13 +173,10 @@ examples:
           }
 
   - name: 400 - Limit above maximum
-    description: limit above 50 is rejected. The ceiling protects the query against unbounded page sizes.
+    description: limit above the route's ceiling is rejected. The ceiling protects the query against unbounded page sizes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -199,7 +204,7 @@ examples:
           }
 
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Session cookie is missing or invalid/expired, or the Bearer token is missing, invalid or expired — or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
+    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -223,7 +228,7 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
 
   - name: 403 - Forbidden
@@ -231,9 +236,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -254,13 +256,10 @@ examples:
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:id/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: not-a-uuid
@@ -289,9 +288,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -314,20 +310,32 @@ examples:
 docs: |-
   Lists the active enrollments of an activity for its creator or a manager.
 
-  - Collection route: GET /activities/:activityId/enrollments, paginated with ?page=1&limit=10 (defaults; limit is capped at 50).
-  - Authentication is hybrid: the middleware accepts an httpOnly session cookie (used by the web frontend) or an Authorization: Bearer token (used by Bruno and scripts). Both resolve the same way, and the identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
-  - The requesting user is resolved exclusively from the credential (cookie or Bearer) — never from params, query or body.
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  ## Query params
+  | Param | Rule | Default |
+  |-------|------|---------|
+  | `page` | positive integer | `1` |
+  | `limit` | positive integer, up to the route's ceiling | `10` |
+
+  Unknown parameters are ignored.
+
+  - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
+  - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
+  - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
   - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
-  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:id/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
+  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
-  - Each item exposes only: enrollmentId, userId, fullName, email, registrationCode, status, attendanceConfirmed and confirmedWorkloadHours. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
+  - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
   - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
   - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
-  - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:id.
+  - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:activityId.
   - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
   - A nonexistent, soft-deleted or non-UUID activity id returns 404.
   - Status filters and sorting are additive evolutions that do not break this contract; the enrolledAt ASC ordering is fixed.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

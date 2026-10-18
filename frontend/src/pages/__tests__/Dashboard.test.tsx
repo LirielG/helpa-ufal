@@ -120,13 +120,15 @@ describe("Dashboard", () => {
 
     render(<Dashboard />);
 
-    const emptyMessage = await screen.findByText(
-      "Nenhuma ação encontrada com esses filtros.",
-    );
-    expect(emptyMessage).toBeInTheDocument();
+    expect(
+      await screen.findByText("Ainda não há ações publicadas no Helpa."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Limpar filtros" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows the error banner when the request fails", async () => {
+  it("shows the error state when the request fails", async () => {
     server.use(
       http.get("*/activities", () => {
         return new HttpResponse(null, { status: 500 });
@@ -135,10 +137,68 @@ describe("Dashboard", () => {
 
     render(<Dashboard />);
 
-    const errorMessage = await screen.findByText(
-      "Não foi possível carregar as ações. Tente novamente.",
+    expect(
+      await screen.findByText("Não foi possível carregar as ações"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Tentar de novo" }),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves the error state once a retry succeeds", async () => {
+    let attempts = 0;
+
+    server.use(
+      http.get("*/activities", () => {
+        attempts += 1;
+
+        return attempts === 1
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json(mockApiActivities);
+      }),
     );
-    expect(errorMessage).toBeInTheDocument();
+
+    const { user } = renderDashboard();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Tentar de novo" }),
+    );
+
+    expect(
+      (await screen.findAllByRole("heading", { name: "Oficina de React" }))[0],
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Não foi possível carregar as ações"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears every filter from the empty state", async () => {
+    const requests = serveActivities((params) =>
+      params.get("type") ? [] : catalogue,
+    );
+
+    const { user } = renderDashboard();
+
+    await screen.findAllByRole("heading", { name: "Ação 1" });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Tipos de ação" }),
+      "palestra",
+    );
+
+    expect(
+      await screen.findByText("Nenhuma ação corresponde a esses filtros."),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Limpar filtros" }));
+
+    expect(
+      (await screen.findAllByRole("heading", { name: "Ação 1" }))[0],
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
+      "all",
+    );
+    expect(requests.at(-1)?.get("type")).toBeNull();
   });
 
   it("opens the action creation form from the header", async () => {
@@ -379,7 +439,7 @@ describe("Dashboard", () => {
       await screen.findByText('Nenhuma ação encontrada para "xilofone".'),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Limpar busca" }));
+    await user.click(screen.getByRole("button", { name: "Limpar filtros" }));
 
     expect(
       (await screen.findAllByRole("heading", { name: "Oficina de React" }))[0],
@@ -407,9 +467,7 @@ describe("Dashboard", () => {
     await search(user, "React");
 
     expect(
-      await screen.findByText(
-        "Não foi possível carregar as ações. Tente novamente.",
-      ),
+      await screen.findByText("Não foi possível carregar as ações"),
     ).toBeInTheDocument();
   });
 
@@ -506,7 +564,7 @@ describe("Dashboard", () => {
     render(<Dashboard />);
 
     expect(
-      await screen.findByText("Nenhuma ação encontrada com esses filtros."),
+      await screen.findByText("Ainda não há ações publicadas no Helpa."),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Paginação" }),

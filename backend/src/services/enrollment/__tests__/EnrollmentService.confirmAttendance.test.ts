@@ -12,6 +12,7 @@ const ACTIVITY_ID = "f26559ac-d672-4252-a9a4-d6fe6583d8ec";
 const ENROLLMENT_ID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d";
 
 const WORKLOAD_HOURS = 20;
+const CREATED_AT = new Date("2026-08-30T10:00:00.000Z");
 const UPDATED_AT = new Date("2026-08-30T18:45:00.000Z");
 
 function anActivity(overrides: Record<string, unknown> = {}) {
@@ -32,6 +33,7 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
     status: "APPROVED",
     attendanceConfirmed: null,
     confirmedWorkloadHours: 0,
+    createdAt: CREATED_AT,
     updatedAt: UPDATED_AT,
     ...overrides,
   };
@@ -55,7 +57,7 @@ function mockRepositories(
   } as unknown as IUserRepository;
 
   const enrollmentRepository = {
-    findByIdAndActivity: vi.fn().mockResolvedValue(anEnrollment()),
+    findById: vi.fn().mockResolvedValue(anEnrollment()),
     // The repository echoes back the persisted pair, so the assertions below
     // check what the service ASKED it to write, not a value it invented.
     confirmAttendance: vi
@@ -103,15 +105,13 @@ function aService(overrides: Parameters<typeof mockRepositories>[0] = {}): {
 describe("EnrollmentService.confirmAttendance", () => {
   // ---------- Happy path and DTO ----------
 
-  it("writes the pair (true, hours) for the activity author and returns the attendance DTO", async () => {
+  it("writes the pair (true, hours) for the activity author and returns the canonical enrollment DTO", async () => {
     const { service, enrollmentRepository } = aService();
 
-    const result = await service.confirmAttendance(
-      AUTHOR_ID,
-      ACTIVITY_ID,
-      ENROLLMENT_ID,
-      { attended: true, workloadHours: 4 },
-    );
+    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
+      attended: true,
+      workloadHours: 4,
+    });
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -120,24 +120,27 @@ describe("EnrollmentService.confirmAttendance", () => {
       4,
     );
     expect(result).toEqual({
+      id: ENROLLMENT_ID,
+      activityId: ACTIVITY_ID,
+      userId: VOLUNTEER_ID,
+      status: "APPROVED",
       attendanceConfirmed: true,
       confirmedWorkloadHours: 4,
+      createdAt: CREATED_AT,
       updatedAt: UPDATED_AT,
     });
   });
 
-  it("looks the enrollment up scoped to the activity — the link is never assumed", async () => {
-    const { service, enrollmentRepository } = aService();
+  it("looks the enrollment up by id and resolves the activity from enrollment.activityId", async () => {
+    const { service, enrollmentRepository, activityRepository } = aService();
 
-    await service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+    await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
       attended: true,
       workloadHours: 4,
     });
 
-    expect(enrollmentRepository.findByIdAndActivity).toHaveBeenCalledWith(
-      ENROLLMENT_ID,
-      ACTIVITY_ID,
-    );
+    expect(enrollmentRepository.findById).toHaveBeenCalledWith(ENROLLMENT_ID);
+    expect(activityRepository.findById).toHaveBeenCalledWith(ACTIVITY_ID);
   });
 
   // ---------- Absence forces zero ----------
@@ -145,12 +148,9 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("attended=false writes (false, 0), ignoring nothing and inventing nothing", async () => {
     const { service, enrollmentRepository } = aService();
 
-    const result = await service.confirmAttendance(
-      AUTHOR_ID,
-      ACTIVITY_ID,
-      ENROLLMENT_ID,
-      { attended: false },
-    );
+    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
+      attended: false,
+    });
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -161,34 +161,7 @@ describe("EnrollmentService.confirmAttendance", () => {
     expect(result.confirmedWorkloadHours).toBe(0);
   });
 
-  it("rejects workloadHours sent together with attended=false", async () => {
-    const { service, enrollmentRepository } = aService();
-
-    await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
-        attended: false,
-        workloadHours: 4,
-      }),
-      422,
-      "workloadHours must be omitted when attended is false.",
-    );
-    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
-  });
-
   // ---------- Hours range ----------
-
-  it("rejects attended=true without workloadHours — (true, 0) is not a valid state", async () => {
-    const { service, enrollmentRepository } = aService();
-
-    await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
-        attended: true,
-      }),
-      422,
-      "workloadHours is required when attended is true.",
-    );
-    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
-  });
 
   it.each([0, -1, 4.5, WORKLOAD_HOURS + 1])(
     "rejects %s hours and writes nothing",
@@ -196,7 +169,7 @@ describe("EnrollmentService.confirmAttendance", () => {
       const { service, enrollmentRepository } = aService();
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
           attended: true,
           workloadHours,
         }),
@@ -212,12 +185,10 @@ describe("EnrollmentService.confirmAttendance", () => {
     async (workloadHours) => {
       const { service, enrollmentRepository } = aService();
 
-      const result = await service.confirmAttendance(
-        AUTHOR_ID,
-        ACTIVITY_ID,
-        ENROLLMENT_ID,
-        { attended: true, workloadHours },
-      );
+      const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
+        attended: true,
+        workloadHours,
+      });
 
       expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
         ACTIVITY_ID,
@@ -239,7 +210,7 @@ describe("EnrollmentService.confirmAttendance", () => {
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
         attended: true,
         workloadHours: 4,
       }),
@@ -260,7 +231,7 @@ describe("EnrollmentService.confirmAttendance", () => {
       });
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
           attended: true,
           workloadHours: 4,
         }),
@@ -278,14 +249,12 @@ describe("EnrollmentService.confirmAttendance", () => {
     async (status) => {
       const { service, enrollmentRepository } = aService({
         enrollment: {
-          findByIdAndActivity: vi
-            .fn()
-            .mockResolvedValue(anEnrollment({ status })),
+          findById: vi.fn().mockResolvedValue(anEnrollment({ status })),
         },
       });
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
           attended: true,
           workloadHours: 4,
         }),
@@ -305,7 +274,7 @@ describe("EnrollmentService.confirmAttendance", () => {
       },
     });
 
-    await service.confirmAttendance(MANAGER_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+    await service.confirmAttendance(MANAGER_ID, ENROLLMENT_ID, {
       attended: true,
       workloadHours: 4,
     });
@@ -319,7 +288,6 @@ describe("EnrollmentService.confirmAttendance", () => {
     await expectCustomError(
       service.confirmAttendance(
         "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
-        ACTIVITY_ID,
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -333,7 +301,7 @@ describe("EnrollmentService.confirmAttendance", () => {
     const { service, enrollmentRepository } = aService();
 
     await expectCustomError(
-      service.confirmAttendance(VOLUNTEER_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+      service.confirmAttendance(VOLUNTEER_ID, ENROLLMENT_ID, {
         attended: true,
         workloadHours: 4,
       }),
@@ -348,7 +316,7 @@ describe("EnrollmentService.confirmAttendance", () => {
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
         attended: true,
         workloadHours: 4,
       }),
@@ -364,7 +332,7 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("overwrites an existing homologation without any extra condition", async () => {
     const { service, enrollmentRepository } = aService({
       enrollment: {
-        findByIdAndActivity: vi.fn().mockResolvedValue(
+        findById: vi.fn().mockResolvedValue(
           anEnrollment({
             attendanceConfirmed: true,
             confirmedWorkloadHours: 4,
@@ -373,12 +341,10 @@ describe("EnrollmentService.confirmAttendance", () => {
       },
     });
 
-    const result = await service.confirmAttendance(
-      AUTHOR_ID,
-      ACTIVITY_ID,
-      ENROLLMENT_ID,
-      { attended: true, workloadHours: 6 },
-    );
+    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
+      attended: true,
+      workloadHours: 6,
+    });
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -392,7 +358,7 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("turns a registered presence into an absence, zeroing the hours", async () => {
     const { service, enrollmentRepository } = aService({
       enrollment: {
-        findByIdAndActivity: vi.fn().mockResolvedValue(
+        findById: vi.fn().mockResolvedValue(
           anEnrollment({
             attendanceConfirmed: true,
             confirmedWorkloadHours: 4,
@@ -401,12 +367,9 @@ describe("EnrollmentService.confirmAttendance", () => {
       },
     });
 
-    const result = await service.confirmAttendance(
-      AUTHOR_ID,
-      ACTIVITY_ID,
-      ENROLLMENT_ID,
-      { attended: false },
-    );
+    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
+      attended: false,
+    });
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -415,37 +378,42 @@ describe("EnrollmentService.confirmAttendance", () => {
       0,
     );
     expect(result).toEqual({
+      id: ENROLLMENT_ID,
+      activityId: ACTIVITY_ID,
+      userId: VOLUNTEER_ID,
+      status: "APPROVED",
       attendanceConfirmed: false,
       confirmedWorkloadHours: 0,
+      createdAt: CREATED_AT,
       updatedAt: UPDATED_AT,
     });
   });
 
   // ---------- Existence and validation order ----------
 
-  it("returns 404 for an activity that does not exist", async () => {
+  it("answers the enrollment 404 when its activity no longer exists (soft-deleted)", async () => {
     const { service, enrollmentRepository } = aService({
       activity: { findById: vi.fn().mockResolvedValue(null) },
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
         attended: true,
         workloadHours: 4,
       }),
       404,
-      "Activity not found.",
+      "Enrollment not found.",
     );
     expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when the enrollment does not belong to the activity", async () => {
+  it("returns 404 when the enrollment does not exist", async () => {
     const { service, enrollmentRepository } = aService({
-      enrollment: { findByIdAndActivity: vi.fn().mockResolvedValue(null) },
+      enrollment: { findById: vi.fn().mockResolvedValue(null) },
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, ENROLLMENT_ID, {
+      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
         attended: true,
         workloadHours: 4,
       }),
@@ -463,7 +431,6 @@ describe("EnrollmentService.confirmAttendance", () => {
     await expectCustomError(
       service.confirmAttendance(
         "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
-        ACTIVITY_ID,
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -473,13 +440,12 @@ describe("EnrollmentService.confirmAttendance", () => {
 
   it("checks enrollment existence (404) before authorization (403)", async () => {
     const { service } = aService({
-      enrollment: { findByIdAndActivity: vi.fn().mockResolvedValue(null) },
+      enrollment: { findById: vi.fn().mockResolvedValue(null) },
     });
 
     await expectCustomError(
       service.confirmAttendance(
         "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
-        ACTIVITY_ID,
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -488,33 +454,18 @@ describe("EnrollmentService.confirmAttendance", () => {
     );
   });
 
-  it("answers 404 for a non-UUID activityId, without touching the database", async () => {
-    const { service, activityRepository, enrollmentRepository } = aService();
-
-    await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, "not-a-uuid", ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
-      404,
-      "Activity not found.",
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
-    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
-  });
-
   it("answers 404 for a non-UUID enrollmentId, without touching the database", async () => {
     const { service, enrollmentRepository } = aService();
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ACTIVITY_ID, "not-a-uuid", {
+      service.confirmAttendance(AUTHOR_ID, "not-a-uuid", {
         attended: true,
         workloadHours: 4,
       }),
       404,
       "Enrollment not found.",
     );
-    expect(enrollmentRepository.findByIdAndActivity).not.toHaveBeenCalled();
+    expect(enrollmentRepository.findById).not.toHaveBeenCalled();
     expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
   });
 
@@ -528,7 +479,6 @@ describe("EnrollmentService.confirmAttendance", () => {
     await expectCustomError(
       service.confirmAttendance(
         "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
-        ACTIVITY_ID,
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),

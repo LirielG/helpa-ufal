@@ -13,7 +13,6 @@ http:
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -28,9 +27,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -42,8 +38,37 @@ examples:
       body:
         type: text
         data: ""
+  - name: 400 - Invalid id
+    description: The activityId in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enroll"
+      method: DELETE
+      params:
+        - name: activityId
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
+          }
   - name: 401 - Unauthenticated
-    description: Unauthenticated. Token header is missing, invalid or expired.
+    description: No session cookie was sent.
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
@@ -63,16 +88,36 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
+          }
+  - name: 401 - Unauthenticated (Invalid token)
+    description: The session cookie is invalid or expired.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enroll"
+      method: DELETE
+      params:
+        - name: activityId
+          value: "f26559ac-d672-4252-a9a4-d6fe6583d8ec"
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Token malformatted, expired or invalid."
           }
   - name: 401 - User not found
     description: Token is valid, but the user it identifies no longer exists or is inactive.
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -96,9 +141,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -122,9 +164,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -148,9 +187,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -174,9 +210,6 @@ examples:
     request:
       url: "{{baseUrl}}/activities/:activityId/enroll"
       method: DELETE
-      headers:
-        - name: Authorization
-          value: Bearer {{apiKey}}
       params:
         - name: activityId
           value: ""
@@ -199,13 +232,17 @@ examples:
 docs: |-
   Cancels the authenticated user's enrollment in the activity.
 
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
   - Enrollment is a top-level entity with a dedicated route: /enroll. The activity is identified by the activityId path param.
   - No request body: the user is resolved exclusively from the JWT token (never from params, query or body).
   - The token must be valid AND the user must still exist and be active in the database (light hybrid authentication).
-  - Validation order: authentication (401) → existence of activity and enrollment (404) → business rules (409).
+  - Validation order: authentication (401) → id format (400) → existence of activity and enrollment (404) → business rules (409).
   - Only activities with status OPEN accept cancellation (mirrors POST /enroll): IN_PROGRESS, COMPLETED or CANCELLED activities return 409. This protects homologated attendance and hours (US 2.8.1) from late cancellation.
   - Cancellation keeps the enrollment record with status CANCELLED, preserving participation history — no row is physically removed.
   - The lookup is always scoped to (activityId, token user): canceling another user's enrollment is indistinguishable from a nonexistent enrollment (404).
   - Canceling an already canceled enrollment returns 404 (not idempotent in the response, but does not corrupt state).
   - availableSlots counts only active enrollments, so the slot is released automatically.
   - Re-enrollment after canceling is possible via POST /activities/:activityId/enroll; it reuses the (userId, activityId) record instead of inserting a new row.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).
