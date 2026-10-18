@@ -58,7 +58,7 @@ export function HelpaFeed({
     Boolean(search) ||
     filters.area !== "all" ||
     filters.actionType !== "all" ||
-    filters.availability !== "all";
+    filters.status !== "all";
 
   const emptyCopy = hasActiveFilters
     ? HELPA_FEED_COPY.emptyFiltered

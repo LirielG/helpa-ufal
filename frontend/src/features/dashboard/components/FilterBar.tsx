@@ -9,7 +9,7 @@ interface FilterBarProps {
 }
 
 const FIELDS: Array<{
-  key: "area" | "actionType" | "availability";
+  key: "area" | "actionType" | "status";
   label: string;
   options: Array<{ value: string; label: string }>;
 }> = [
@@ -20,9 +20,9 @@ const FIELDS: Array<{
     options: FILTER_OPTIONS.actionTypes,
   },
   {
-    key: "availability",
-    label: "Disponibilidade",
-    options: FILTER_OPTIONS.availability,
+    key: "status",
+    label: "Status",
+    options: FILTER_OPTIONS.status,
   },
 ];
 

@@ -7,7 +7,7 @@ import { FilterBar } from "../FilterBar";
 const ALL_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  availability: "all",
+  status: "all",
   search: "",
 };
 
@@ -33,34 +33,29 @@ describe("FilterBar", () => {
     expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
       "all",
     );
-    expect(
-      screen.getByRole("combobox", { name: "Disponibilidade" }),
-    ).toHaveValue("all");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("all");
   });
 
   it("shows the filters it is given as the selected options", () => {
-    renderFilterBar({ actionType: "palestra", availability: "full" });
+    renderFilterBar({ actionType: "palestra", status: "OPEN" });
 
     expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
       "palestra",
     );
-    expect(
-      screen.getByRole("combobox", { name: "Disponibilidade" }),
-    ).toHaveValue("full");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue(
+      "OPEN",
+    );
   });
 
-  it("reports the chosen availability to the parent", async () => {
+  it("reports the chosen status to the parent", async () => {
     const { user, onFilterChange } = renderFilterBar();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Disponibilidade" }),
-      "full",
+      screen.getByRole("combobox", { name: "Status" }),
+      "OPEN",
     );
 
-    expect(onFilterChange).toHaveBeenCalledExactlyOnceWith(
-      "availability",
-      "full",
-    );
+    expect(onFilterChange).toHaveBeenCalledExactlyOnceWith("status", "OPEN");
   });
 
   it("reports the chosen action type to the parent", async () => {
@@ -114,8 +109,8 @@ describe("FilterBar", () => {
     expect(optionLabels("Tipos de ação")).toEqual(
       FILTER_OPTIONS.actionTypes.map((option) => option.label),
     );
-    expect(optionLabels("Disponibilidade")).toEqual(
-      FILTER_OPTIONS.availability.map((option) => option.label),
+    expect(optionLabels("Status")).toEqual(
+      FILTER_OPTIONS.status.map((option) => option.label),
     );
   });
 });

@@ -6,7 +6,7 @@ import type { FilterOptions } from "../types";
 const NO_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  availability: "all",
+  status: "all",
 };
 
 /** GET /activities answers with the slice and the overall count, nothing else. */

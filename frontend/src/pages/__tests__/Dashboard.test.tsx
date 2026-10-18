@@ -384,8 +384,8 @@ describe("Dashboard", () => {
     const afterFirstLoad = requests;
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Disponibilidade" }),
-      "available",
+      screen.getByRole("combobox", { name: "Status" }),
+      "OPEN",
     );
 
     expect(requests).toBe(afterFirstLoad + 1);
@@ -544,8 +544,8 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Disponibilidade" }),
-      "available",
+      screen.getByRole("combobox", { name: "Status" }),
+      "OPEN",
     );
 
     await waitFor(() => {

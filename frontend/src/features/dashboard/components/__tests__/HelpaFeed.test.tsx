@@ -6,7 +6,7 @@ import { HelpaFeed } from "../HelpaFeed";
 const ALL_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  availability: "all",
+  status: "all",
   search: "",
 };
 

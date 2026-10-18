@@ -2,30 +2,8 @@ import type {
   CampusLocation,
   ActivityFormat,
   ActivityType,
+  ActivityStatus,
 } from "@/services/contracts/activity";
-
-export const FILTER_OPTIONS = {
-  areas: [
-    { value: "all", label: "Todas as áreas" },
-    { value: "educacao", label: "Educação" },
-    { value: "saude", label: "Saúde" },
-    { value: "meio-ambiente", label: "Meio Ambiente" },
-    { value: "arquitetura", label: "Arquitetura" },
-  ],
-  actionTypes: [
-    { value: "all", label: "Todos os tipos" },
-    { value: "oficina", label: "Oficina" },
-    { value: "palestra", label: "Palestra" },
-    { value: "evento", label: "Evento" },
-    { value: "servico", label: "Serviço" },
-    { value: "minicurso", label: "Minicurso" },
-  ],
-  availability: [
-    { value: "all", label: "Todas as vagas" },
-    { value: "available", label: "Vagas Disponíveis" },
-    { value: "full", label: "Vagas Esgotadas" },
-  ],
-};
 
 /*** `area` is free text in the API and is rendered as-is on the action detail,
  * so the stored value is the label itself.
@@ -54,6 +32,13 @@ export const ACTION_CAMPUS_LABELS: Record<CampusLocation, string> = {
   SANTANA_IPANEMA: "UFAL - Campus Santana do Ipanema",
 };
 
+export const ACTION_STATUS_LABELS: Record<ActivityStatus, string> = {
+  OPEN: "Inscrições Abertas",
+  IN_PROGRESS: "Em Andamento",
+  COMPLETED: "Finalizada",
+  CANCELLED: "Cancelada",
+};
+
 export const ACTION_TYPE_OPTIONS = (
   Object.keys(ACTION_TYPE_LABELS) as ActivityType[]
 ).map((value) => ({ value, label: ACTION_TYPE_LABELS[value] }));
@@ -65,3 +50,30 @@ export const ACTION_FORMAT_OPTIONS = (
 export const ACTION_CAMPUS_OPTIONS = (
   Object.keys(ACTION_CAMPUS_LABELS) as CampusLocation[]
 ).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
+
+export const ACTION_STATUS_OPTIONS = [
+  { value: "all", label: "Todos os status" },
+  ...(Object.keys(ACTION_STATUS_LABELS) as ActivityStatus[]).map((value) => ({
+    value,
+    label: ACTION_STATUS_LABELS[value],
+  })),
+];
+
+export const FILTER_OPTIONS = {
+  areas: [
+    { value: "all", label: "Todas as áreas" },
+    { value: "educacao", label: "Educação" },
+    { value: "saude", label: "Saúde" },
+    { value: "meio-ambiente", label: "Meio Ambiente" },
+    { value: "arquitetura", label: "Arquitetura" },
+  ],
+  actionTypes: [
+    { value: "all", label: "Todos os tipos" },
+    { value: "oficina", label: "Oficina" },
+    { value: "palestra", label: "Palestra" },
+    { value: "evento", label: "Evento" },
+    { value: "servico", label: "Serviço" },
+    { value: "minicurso", label: "Minicurso" },
+  ],
+  status: ACTION_STATUS_OPTIONS,
+};
