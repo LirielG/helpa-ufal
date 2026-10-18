@@ -20,9 +20,8 @@ import { daysFromNow } from "../../helpers/dates.js";
 
 const activitiesUrl = "/users/me/activities";
 const FILTERS = ["enrolled", "completed", "managed"] as const;
-const FILTER_MESSAGE = "Must be one of: enrolled, completed, managed.";
-const EXPECTED_LOCATION =
-  "Av. Manoel Severino Barbosa, 100, Bom Sucesso, Arapiraca - AL";
+const FILTER_MESSAGE = "filter must be one of: enrolled, completed, managed.";
+const INVALID_QUERY_MESSAGE = "Invalid query parameters.";
 
 function listActivities(token: string, query = "") {
   return request(app)
@@ -31,11 +30,17 @@ function listActivities(token: string, query = "") {
 }
 
 function idsOf(response: request.Response): string[] {
-  return response.body.data.map((item: { id: string }) => item.id);
+  return response.body.items.map((item: { id: string }) => item.id);
 }
 
 function sorted(ids: string[]): string[] {
   return [...ids].sort();
+}
+
+function itemOf(response: request.Response, activityId: string) {
+  return response.body.items.find(
+    (item: { id: string }) => item.id === activityId,
+  );
 }
 
 /** The factory always creates ActivityDetails, so this goes straight to Prisma. */
@@ -242,11 +247,13 @@ describe("GET /users/me/activities", () => {
       );
     });
 
-    it("filter=completed returns APPROVED enrollments with attendance confirmed in COMPLETED activities", async () => {
+    it("filter=completed returns APPROVED enrollments in COMPLETED activities, present or not yet homologated", async () => {
       const response = await listActivities(seed.user.token, "?filter=completed");
 
       expect(response.status).toBe(200);
-      expect(idsOf(response)).toEqual([seed.ids.completedOk]);
+      expect(sorted(idsOf(response))).toEqual(
+        sorted([seed.ids.completedOk, seed.ids.completedNotRecorded]),
+      );
     });
 
     it("filter=managed returns every activity the user authored, in any status", async () => {
@@ -301,7 +308,6 @@ describe("GET /users/me/activities", () => {
 
     it.each([
       ["attendance marked as absent", "completedAbsent"],
-      ["attendance not recorded yet", "completedNotRecorded"],
       ["CANCELLED activity with attendance confirmed", "cancelledConfirmed"],
       ["IN_PROGRESS activity with attendance confirmed", "inProgressConfirmed"],
       ["PENDING enrollment", "completedPending"],
@@ -331,7 +337,7 @@ describe("GET /users/me/activities", () => {
       const managed = await listActivities(moderator.token, "?filter=managed");
       const enrolled = await listActivities(moderator.token, "?filter=enrolled");
 
-      expect(managed.body.data).toEqual([]);
+      expect(managed.body.items).toEqual([]);
       expect(idsOf(enrolled)).toEqual([activity.id]);
     });
 
@@ -470,7 +476,7 @@ describe("GET /users/me/activities", () => {
       const response = await listActivities(token);
 
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe("Validation error.");
+      expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
       expect(response.body.errors).toContainEqual({
         field: "filter",
         message: FILTER_MESSAGE,
@@ -485,7 +491,7 @@ describe("GET /users/me/activities", () => {
         const response = await listActivities(token, `?filter=${value}`);
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toBe("Validation error.");
+        expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
         expect(response.body.errors).toContainEqual({
           field: "filter",
           message: FILTER_MESSAGE,
@@ -499,24 +505,24 @@ describe("GET /users/me/activities", () => {
       const response = await listActivities(token, `?filter=enrolled&page=${page}`);
 
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe("Validation error.");
+      expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
       expect(response.body.errors.map((e: { field: string }) => e.field)).toEqual(["page"]);
     });
 
-    it.each(["0", "-1", "abc", "1.5", "51"])("rejects limit=%s", async (limit) => {
+    it.each(["0", "-1", "abc", "1.5", "101"])("rejects limit=%s", async (limit) => {
       const { token } = await createStudent();
 
       const response = await listActivities(token, `?filter=enrolled&limit=${limit}`);
 
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe("Validation error.");
+      expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
       expect(response.body.errors.map((e: { field: string }) => e.field)).toEqual(["limit"]);
     });
 
     it("collects every invalid parameter instead of stopping at the first", async () => {
       const { token } = await createStudent();
 
-      const response = await listActivities(token, "?filter=nope&page=0&limit=51");
+      const response = await listActivities(token, "?filter=nope&page=0&limit=101");
 
       expect(response.status).toBe(400);
       expect(
@@ -524,12 +530,19 @@ describe("GET /users/me/activities", () => {
       ).toEqual(["filter", "limit", "page"]);
     });
 
-    it("ignores unknown query params", async () => {
+    it("rejects an unknown query param", async () => {
       const { token } = await createStudent();
 
       const response = await listActivities(token, "?filter=enrolled&foo=bar");
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual([
+        {
+          field: "foo",
+          code: "UNKNOWN_PARAMETER",
+          message: "foo is not a supported query parameter.",
+        },
+      ]);
     });
 
     it("answers 400 before checking whether the user exists", async () => {
@@ -560,7 +573,7 @@ describe("GET /users/me/activities", () => {
 
   describe("response", () => {
     it.each(FILTERS)(
-      "returns 200 with an empty list and zeroed meta for filter=%s when the user has nothing",
+      "returns 200 with an empty page for filter=%s when the user has nothing",
       async (filter) => {
         const { token } = await createStudent();
 
@@ -568,105 +581,81 @@ describe("GET /users/me/activities", () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-          data: [],
-          meta: { total: 0, page: 1, limit: 20, totalPages: 0 },
+          items: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
         });
       },
     );
 
-    it("serializes every DTO field as the contract defines", async () => {
+    it("returns each activity as GET /activities/:activityId does, plus the enrollment", async () => {
       const user = await createTeacher();
       const activity = await createActivity(user.user.id, {
         title: "Oficina de Testes",
-        type: "COURSE",
         status: "IN_PROGRESS",
-        description: "Oficina prática de testes.",
-        workloadHours: 8,
         address: anAddress(),
       });
 
-      const response = await listActivities(user.token, "?filter=managed");
+      const [history, detail] = await Promise.all([
+        listActivities(user.token, "?filter=managed"),
+        request(app).get(`/activities/${activity.id}`),
+      ]);
+
+      expect(detail.status).toBe(200);
+      expect(history.body.items).toEqual([{ ...detail.body, enrollment: null }]);
+    });
+
+    it("serializes the user's enrollment in its canonical form", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, { status: "COMPLETED" });
+      const enrollment = await createEnrollment(user.user.id, activity.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 12,
+      });
+
+      const response = await listActivities(user.token, "?filter=completed");
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        data: [
-          {
-            id: activity.id,
-            title: "Oficina de Testes",
-            description: "Oficina prática de testes.",
-            location: EXPECTED_LOCATION,
-            startDate: activity.startDate.toISOString(),
-            status: "IN_PROGRESS",
-            category: "COURSE",
-            workloadHours: 8,
-          },
-        ],
-        meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+      expect(response.body.items[0].enrollment).toEqual({
+        id: enrollment.id,
+        activityId: activity.id,
+        userId: user.user.id,
+        status: "APPROVED",
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 12,
+        createdAt: enrollment.createdAt.toISOString(),
+        updatedAt: enrollment.updatedAt.toISOString(),
       });
     });
 
-    it("never exposes the zipCode or other internal fields", async () => {
-      const user = await createTeacher();
-      await createActivity(user.user.id, { address: anAddress() });
+    it("returns the author's own enrollment under managed when they are enrolled", async () => {
+      const seed = await seedHistory();
 
-      const response = await listActivities(user.token, "?filter=managed");
+      const response = await listActivities(seed.user.token, "?filter=managed");
 
-      expect(Object.keys(response.body.data[0]).sort()).toEqual(
-        [
-          "category",
-          "description",
-          "id",
-          "location",
-          "startDate",
-          "status",
-          "title",
-          "workloadHours",
-        ].sort(),
-      );
-      expect(response.body.data[0].location).not.toContain("57309-005");
+      expect(itemOf(response, seed.ids.managedAndEnrolled).enrollment).toMatchObject({
+        userId: seed.user.user.id,
+        activityId: seed.ids.managedAndEnrolled,
+        status: "APPROVED",
+      });
+      expect(itemOf(response, seed.ids.managedOpen).enrollment).toBeNull();
     });
 
-    it("returns description, location and workloadHours as null for an activity without details", async () => {
+    it("returns details as null for an activity without details", async () => {
       const user = await createTeacher();
       const activity = await createActivityWithoutDetails(user.user.id, {
         title: "Study Group",
-        type: "OTHER",
       });
 
       const response = await listActivities(user.token, "?filter=managed");
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toEqual([
-        {
-          id: activity.id,
-          title: "Study Group",
-          description: null,
-          location: null,
-          startDate: activity.startDate.toISOString(),
-          status: "OPEN",
-          category: "OTHER",
-          workloadHours: null,
-        },
+      expect(response.body.items).toEqual([
+        expect.objectContaining({ id: activity.id, details: null }),
       ]);
-    });
-
-    it("returns location as null when the details have no address", async () => {
-      const user = await createTeacher();
-      await createActivity(user.user.id, {
-        format: "ONLINE",
-        url: "https://meet.example.com/abc",
-        description: "Palestra online.",
-        workloadHours: 4,
-      });
-
-      const response = await listActivities(user.token, "?filter=managed");
-
-      expect(response.status).toBe(200);
-      expect(response.body.data[0]).toMatchObject({
-        description: "Palestra online.",
-        location: null,
-        workloadHours: 4,
-      });
     });
 
     it("orders by startDate descending", async () => {
@@ -678,7 +667,7 @@ describe("GET /users/me/activities", () => {
       const response = await listActivities(user.token, "?filter=managed");
 
       expect(
-        response.body.data.map((item: { title: string }) => item.title),
+        response.body.items.map((item: { title: string }) => item.title),
       ).toEqual(["latest", "middle", "earliest"]);
     });
 
@@ -697,7 +686,7 @@ describe("GET /users/me/activities", () => {
     });
 
     describe("pagination", () => {
-      it("splits results across pages with a consistent meta", async () => {
+      it("splits results across pages with a consistent envelope", async () => {
         const user = await createTeacher();
         for (let day = 1; day <= 5; day += 1) {
           await createActivity(user.user.id, {
@@ -710,12 +699,16 @@ describe("GET /users/me/activities", () => {
         const second = await listActivities(user.token, "?filter=managed&page=2&limit=2");
         const third = await listActivities(user.token, "?filter=managed&page=3&limit=2");
 
-        expect(first.body.meta).toEqual({ total: 5, page: 1, limit: 2, totalPages: 3 });
-        expect(second.body.meta).toEqual({ total: 5, page: 2, limit: 2, totalPages: 3 });
-        expect(third.body.meta).toEqual({ total: 5, page: 3, limit: 2, totalPages: 3 });
-        expect(first.body.data).toHaveLength(2);
-        expect(second.body.data).toHaveLength(2);
-        expect(third.body.data).toHaveLength(1);
+        const pageOf = (response: request.Response) => {
+          const { items: _items, ...envelope } = response.body;
+          return envelope;
+        };
+        expect(pageOf(first)).toEqual({ total: 5, page: 1, limit: 2, totalPages: 3 });
+        expect(pageOf(second)).toEqual({ total: 5, page: 2, limit: 2, totalPages: 3 });
+        expect(pageOf(third)).toEqual({ total: 5, page: 3, limit: 2, totalPages: 3 });
+        expect(first.body.items).toHaveLength(2);
+        expect(second.body.items).toHaveLength(2);
+        expect(third.body.items).toHaveLength(1);
 
         const allIds = [...idsOf(first), ...idsOf(second), ...idsOf(third)];
         expect(new Set(allIds).size).toBe(5);
@@ -730,9 +723,25 @@ describe("GET /users/me/activities", () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-          data: [],
-          meta: { total: 2, page: 4, limit: 2, totalPages: 1 },
+          items: [],
+          total: 2,
+          page: 4,
+          limit: 2,
+          totalPages: 1,
         });
+      });
+
+      it("answers an empty page, not 500, for a page too large to offset", async () => {
+        const user = await createTeacher();
+        await createActivity(user.user.id);
+
+        const response = await listActivities(
+          user.token,
+          "?filter=managed&page=99999999999999999999",
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({ items: [], total: 1, totalPages: 1 });
       });
 
       it("defaults to page 1 and limit 20", async () => {
@@ -741,7 +750,7 @@ describe("GET /users/me/activities", () => {
 
         const response = await listActivities(user.token, "?filter=managed");
 
-        expect(response.body.meta).toEqual({
+        expect(response.body).toMatchObject({
           total: 1,
           page: 1,
           limit: 20,
@@ -756,7 +765,7 @@ describe("GET /users/me/activities", () => {
         const response = await listActivities(user.token, "?filter=managed&limit=100");
 
         expect(response.status).toBe(200);
-        expect(response.body.meta.limit).toBe(50);
+        expect(response.body.limit).toBe(100);
       });
     });
   });

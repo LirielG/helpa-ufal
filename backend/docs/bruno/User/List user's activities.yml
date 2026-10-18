@@ -29,114 +29,150 @@ examples:
       status: 200
       body: |-
         {
-          "data": [
+          "items": [
             {
               "id": "a1b2c3d4-0000-4000-8000-000000000030",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
               "title": "Lagoon Cleanup Volunteer Day",
-              "description": "Volunteer action to collect waste...",
-              "location": "Rua da Lagoa, 100, Pontal da Barra, Maceió - AL",
+              "type": "EXTENSION",
+              "campus": "MACEIO",
               "startDate": "2026-08-20T14:00:00.000Z",
+              "endDate": "2026-08-20T18:00:00.000Z",
+              "slots": 50,
+              "availableSlots": 12,
               "status": "OPEN",
-              "category": "EXTENSION",
-              "workloadHours": 8
+              "details": {
+                "description": "Volunteer action to collect waste around the lagoon.",
+                "area": "Meio Ambiente",
+                "format": "IN_PERSON",
+                "url": null,
+                "workloadHours": 8,
+                "address": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000040",
+                  "addressLine": "Rua da Lagoa, 100",
+                  "district": "Pontal da Barra",
+                  "zipCode": "57010000",
+                  "city": "Maceió",
+                  "state": "AL"
+                }
+              },
+              "enrollment": {
+                "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000030",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": null,
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-02T12:00:00.000Z",
+                "updatedAt": "2026-08-02T12:00:00.000Z"
+              }
             }
           ],
-          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
         }
 
   - name: 200 filter=completed
-    description: Approved enrollment, attendance confirmed (true), and activity status COMPLETED.
+    description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear.
     response:
       status: 200
       body: |-
         {
-          "data": [
+          "items": [
             {
               "id": "a1b2c3d4-0000-4000-8000-000000000032",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
               "title": "Academic Writing Lecture",
-              "description": "Lecture on scientific writing.",
-              "location": "Av. Manoel Severino Barbosa, s/n, Bom Sucesso, Arapiraca - AL",
+              "type": "LECTURE",
+              "campus": "ARAPIRACA",
               "startDate": "2026-06-10T13:00:00.000Z",
+              "endDate": "2026-06-10T17:00:00.000Z",
+              "slots": 80,
+              "availableSlots": 3,
               "status": "COMPLETED",
-              "category": "LECTURE",
-              "workloadHours": 4
+              "details": {
+                "description": "Lecture on scientific writing.",
+                "area": "Educação",
+                "format": "IN_PERSON",
+                "url": null,
+                "workloadHours": 4,
+                "address": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000041",
+                  "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                  "district": "Bom Sucesso",
+                  "zipCode": "57309005",
+                  "city": "Arapiraca",
+                  "state": "AL"
+                }
+              },
+              "enrollment": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000032",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-05-28T09:00:00.000Z",
+                "updatedAt": "2026-06-11T10:30:00.000Z"
+              }
             }
           ],
-          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
         }
 
   - name: 200 filter=managed
-    description: Activities created by the user (Activity.authorId = userId), in any status.
+    description: Activities created by the user (Activity.authorId = userId), in any status. enrollment is null when the author is not enrolled in their own activity, as here; details is null when the activity has no ActivityDetails.
     response:
       status: 200
       body: |-
         {
-          "data": [
-            {
-              "id": "a1b2c3d4-0000-4000-8000-000000000031",
-              "title": "Intro to Programming Workshop",
-              "description": "Programming logic for beginners.",
-              "location": "Av. Manoel Severino Barbosa, s/n, Bom Sucesso, Arapiraca - AL",
-              "startDate": "2026-08-01T08:00:00.000Z",
-              "status": "IN_PROGRESS",
-              "category": "COURSE",
-              "workloadHours": 20
-            }
-          ],
-          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
-        }
-
-  - name: 200 Activity without details
-    description: The activity has no ActivityDetails. description, location and workloadHours come as null, never as an error.
-    response:
-      status: 200
-      body: |-
-        {
-          "data": [
+          "items": [
             {
               "id": "a1b2c3d4-0000-4000-8000-000000000033",
+              "authorId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
               "title": "Study Group",
-              "description": null,
-              "location": null,
+              "type": "OTHER",
+              "campus": "ARAPIRACA",
               "startDate": "2026-09-05T18:00:00.000Z",
+              "endDate": "2026-09-05T20:00:00.000Z",
+              "slots": 15,
+              "availableSlots": 15,
               "status": "OPEN",
-              "category": "OTHER",
-              "workloadHours": null
+              "details": null,
+              "enrollment": null
             }
           ],
-          "meta": { "total": 1, "page": 1, "limit": 20, "totalPages": 1 }
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
         }
 
   - name: 200 Empty list
-    description: No activity matches the filter, or page is beyond the last one. Never 404. total is the real total.
+    description: No activity matches the filter, or page is beyond the last one. Never 404. total is the real total and totalPages is never below 1.
     response:
       status: 200
       body: |-
-        { "data": [], "meta": { "total": 0, "page": 1, "limit": 20, "totalPages": 0 } }
+        { "items": [], "total": 0, "page": 1, "limit": 20, "totalPages": 1 }
 
-  - name: 400 Missing or invalid filter
+  - name: 400 Invalid query
+    description: Every invalid or unknown parameter gets its own entry in errors[].
     response:
       status: 400
       body: |-
         {
           "status": 400,
-          "message": "Validation error.",
+          "message": "Invalid query parameters.",
           "errors": [
-            { "field": "filter", "message": "Must be one of: enrolled, completed, managed." }
-          ]
-        }
-
-  - name: 400 Invalid page or limit
-    description: Fail-collect - every invalid parameter gets its own entry. Messages come from Zod.
-    response:
-      status: 400
-      body: |-
-        {
-          "status": 400,
-          "message": "Validation error.",
-          "errors": [
-            { "field": "page", "message": "<Zod message>" },
-            { "field": "limit", "message": "<Zod message>" }
+            { "field": "filter", "message": "filter must be one of: enrolled, completed, managed." },
+            { "field": "page", "message": "page must be a positive integer." },
+            { "field": "limit", "message": "limit must be at most 100." },
+            { "field": "foo", "code": "UNKNOWN_PARAMETER", "message": "foo is not a supported query parameter." }
           ]
         }
 
@@ -165,72 +201,66 @@ docs: |-
   # GET /users/me/activities — Enrolled, completed and managed activities
 
   Lists the activities linked to the authenticated user according to the chosen filter,
-  in three groups: `enrolled`, `completed` and `managed`. The consuming screen is not
-  defined yet.
+  in three groups: `enrolled`, `completed` and `managed`. It backs the "Ações" tab of the
+  profile.
 
   ## Authentication
-  - `requireAuth`, through the httpOnly `token` cookie.
+  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie.
   - The `userId` is extracted exclusively from the token — never from `params`, `query` or
     `body`. There is no way to ask this route for someone else's activities.
 
   ## Query params
-  | Param  | Type | Required        | Description |
-  |--------|------|-----------------|-------------|
-  | filter | enum | yes             | `enrolled` \| `completed` \| `managed` |
-  | page   | int  | no              | Conventional pagination |
-  | limit  | int  | no              | Conventional pagination |
+  | Param  | Type | Required | Description |
+  |--------|------|----------|-------------|
+  | filter | enum | yes      | `enrolled` \| `completed` \| `managed` |
+  | page   | int  | no       | Conventional pagination |
+  | limit  | int  | no       | Conventional pagination |
 
-  Unknown query params are ignored.
+  Any other parameter answers 400 `UNKNOWN_PARAMETER`.
 
   ## Filter matrix (all with `Activity.deletedAt IS NULL`)
   | filter      | Rule |
   |-------------|------|
   | `enrolled`  | `Enrollment.status = APPROVED` for the user AND `Activity.status` in (`OPEN`, `IN_PROGRESS`) |
-  | `completed` | `Enrollment.status = APPROVED` AND `Enrollment.attendanceConfirmed = true` AND `Activity.status = COMPLETED` |
+  | `completed` | `Enrollment.status = APPROVED` AND `Activity.status = COMPLETED` AND `Enrollment.attendanceConfirmed` is `true` or `null` |
   | `managed`   | `Activity.authorId = userId`, in any `Activity.status` (including `CANCELLED` and `COMPLETED`). Moderators (`Enrollment.isModerator`) are not included unless they are the author |
 
-  `Enrollment.attendanceConfirmed` is tri-state (`null` = not recorded, `true` = present,
-  `false` = absent). Only `true` qualifies for `completed`.
+  `Enrollment.attendanceConfirmed` is tri-state (`null` = not homologated yet, `true` =
+  present, `false` = absent). Only a registered absence leaves `completed`: someone whose
+  attendance nobody homologated yet still took part, and the client tells the two apart
+  through `enrollment.attendanceConfirmed`.
 
   `enrolled` and `completed` are mutually exclusive: `Activity.status` separates them.
   `managed` may overlap with the other two when the author is also enrolled in their own
   activity. The activity then appears in each filter it matches, never duplicated within
   one response.
 
-  ## Field mapping (DTO → database)
-  | Field           | Source |
-  |-----------------|--------|
-  | `id`            | `Activity.id` |
-  | `title`         | `Activity.title` |
-  | `description`   | `ActivityDetails.description` — `null` when the activity has no details |
-  | `startDate`     | `Activity.startDate` |
-  | `status`        | `Activity.status` (enum `OPEN` \| `IN_PROGRESS` \| `COMPLETED` \| `CANCELLED`) |
-  | `category`      | `Activity.type` (enum `EXTENSION` \| `COURSE` \| `EVENT` \| `LECTURE` \| `OTHER`) |
-  | `workloadHours` | `ActivityDetails.workloadHours` — `null` when the activity has no details |
-  | `location`      | `ActivityDetails → Address`, built as `"{addressLine}, {district}, {city} - {state}"`. `zipCode` is not included. `null` when the activity has no `ActivityDetails` or the details have no `Address` (for example, online activities) |
+  ## Item
+  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller
+  (with `details`, `null` when the activity has none), plus:
 
-  Every key is always present; `null` reads as "does not apply to this activity".
+  | Field        | Description |
+  |--------------|-------------|
+  | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled` and `completed`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
+
+  The detail route's `enrollmentStatus` is not repeated: `enrollment.status` carries it.
 
   ## Business rules
   - The user only sees their own history.
-  - `PENDING` or `REJECTED` enrollments never appear in any filter.
+  - `PENDING`, `REJECTED` or `CANCELLED` enrollments never place an activity in
+    `enrolled` or `completed`.
   - Soft-deleted activities (`deletedAt != null`) never appear in any filter.
   - Ordering: `startDate` descending, ties broken by `id`, so pagination is deterministic.
-  - Empty result: 200 with `data: []`, `total: 0`, `totalPages: 0`. A `page` beyond the last
-    one is also 200 with `data: []` and the real `total`.
 
   ## Validation order
   1. Authentication (401)
-  2. Query params (400 — fail-collect: every invalid param appears in `errors[]`)
+  2. Query params (400 — every invalid param appears in `errors[]`)
   3. The user exists (404)
-
-  Validation messages for `page` and `limit` come from Zod and are not part of the contract.
-  The message for `filter` is fixed: "Must be one of: enrolled, completed, managed."
 
   ## Errors
   | Status | When |
   |--------|------|
-  | 400 | Missing or invalid `filter`; invalid `page` or `limit` |
+  | 400 | Missing or invalid `filter`; invalid `page` or `limit`; unknown parameter |
   | 401 | Missing credential, invalid signature, malformed or expired token |
   | 404 | The user from the token no longer exists |
 

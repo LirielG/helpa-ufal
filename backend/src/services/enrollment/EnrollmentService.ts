@@ -25,6 +25,7 @@ import {
   type EnrollmentResponse,
   type EnrollmentWithActivityResponse,
   type ParticipantsListResponse,
+  toEnrollmentResponse,
 } from "@/types/enrollment.js";
 
 /**
@@ -247,7 +248,7 @@ class EnrollmentService implements IEnrollmentService {
       confirmedWorkloadHours,
     );
 
-    return this.toCanonicalEnrollmentResponse(updated);
+    return toEnrollmentResponse(updated);
   }
 
   /**
@@ -292,21 +293,6 @@ class EnrollmentService implements IEnrollmentService {
       activityId: enrollment.activityId,
       userId: enrollment.userId,
       createdAt: enrollment.createdAt,
-    };
-  }
-
-  private toCanonicalEnrollmentResponse(
-    enrollment: Enrollment,
-  ): EnrollmentResponse {
-    return {
-      id: enrollment.id,
-      activityId: enrollment.activityId,
-      userId: enrollment.userId,
-      status: enrollment.status,
-      attendanceConfirmed: enrollment.attendanceConfirmed,
-      confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
-      createdAt: enrollment.createdAt,
-      updatedAt: enrollment.updatedAt,
     };
   }
 

@@ -34,6 +34,22 @@ export type EnrollmentResponse = {
   updatedAt: Date;
 };
 
+/** The canonical enrollment, shared by every route that returns one. */
+export function toEnrollmentResponse(
+  enrollment: EnrollmentResponse,
+): EnrollmentResponse {
+  return {
+    id: enrollment.id,
+    activityId: enrollment.activityId,
+    userId: enrollment.userId,
+    status: enrollment.status,
+    attendanceConfirmed: enrollment.attendanceConfirmed,
+    confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+    createdAt: enrollment.createdAt,
+    updatedAt: enrollment.updatedAt,
+  };
+}
+
 export type EnrollmentUser = {
   id: string;
   fullName: string;
