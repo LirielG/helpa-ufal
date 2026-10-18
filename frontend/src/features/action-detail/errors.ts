@@ -55,6 +55,8 @@ export type CancellationErrorResolution =
   | { kind: "alreadyCancelled" }
   | { kind: "activityRemoved" }
   | { kind: "sessionExpired" }
+  /** The page's copy still says OPEN; the caller should refetch it. */
+  | { kind: "activityClosed"; text: string }
   | { kind: "message"; text: string };
 
 const GENERIC_CANCELLATION_MESSAGE =
@@ -98,7 +100,7 @@ export function resolveCancellationError(
 
   if (error.status === 409) {
     return {
-      kind: "message",
+      kind: "activityClosed",
       text: "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
     };
   }

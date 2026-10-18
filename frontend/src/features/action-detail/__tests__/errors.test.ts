@@ -127,7 +127,7 @@ describe("resolveCancellationError", () => {
   it("explains that a closed activity cannot be cancelled on 409", () => {
     const error = new ApiError(409, "Activity is not open for cancellation.");
     expect(resolveCancellationError(error)).toEqual({
-      kind: "message",
+      kind: "activityClosed",
       text: "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
     });
   });

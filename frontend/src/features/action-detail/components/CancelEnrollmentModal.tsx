@@ -1,15 +1,11 @@
 import { useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { UserMinus, MapPin, Calendar, Clock } from "lucide-react";
+import { UserMinus } from "lucide-react";
 import { Button } from "../../../components/Button";
+import { ActionSummary } from "./ActionSummary";
 import { cancelEnrollment } from "../services";
 import { resolveCancellationError } from "../errors";
 import type { Activity } from "@/services/contracts/activity";
-import { formatDate } from "../../../utils";
-import {
-  ACTION_CAMPUS_LABELS,
-  ACTION_FORMAT_LABELS,
-} from "../../dashboard/constants";
 
 interface CancelEnrollmentModalProps {
   action: Activity;
@@ -17,6 +13,7 @@ interface CancelEnrollmentModalProps {
   /** The enrollment is no longer active, whether by this request or a concurrent one. */
   onCancelled: () => void;
   onActivityRemoved: () => void;
+  onActivityClosed: () => void;
 }
 
 export function CancelEnrollmentModal({
@@ -24,20 +21,13 @@ export function CancelEnrollmentModal({
   onClose,
   onCancelled,
   onActivityRemoved,
+  onActivityClosed,
 }: CancelEnrollmentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // State alone lets a second click of a double click through before the
   // re-render disables the button.
   const inFlight = useRef(false);
-
-  const address = action.details?.address;
-  const format = action.details?.format;
-  const location = address
-    ? `${address.city} - ${address.state}`
-    : format
-      ? ACTION_FORMAT_LABELS[format]
-      : ACTION_CAMPUS_LABELS[action.campus];
 
   const handleConfirm = async () => {
     if (inFlight.current) return;
@@ -61,6 +51,10 @@ export function CancelEnrollmentModal({
           onActivityRemoved();
           break;
         case "sessionExpired":
+          break;
+        case "activityClosed":
+          setErrorMessage(resolution.text);
+          onActivityClosed();
           break;
         case "message":
           setErrorMessage(resolution.text);
@@ -98,21 +92,7 @@ export function CancelEnrollmentModal({
               Você está prestes a cancelar sua inscrição em:
             </p>
           </div>
-          <div className="w-full bg-gray-100 rounded-xl px-5 py-4 text-left space-y-2">
-            <p className="font-semibold text-gray-900">{action.title}</p>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Calendar className="size-4 shrink-0 text-gray-400" />
-              <span>{formatDate(action.startDate)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <MapPin className="size-4 shrink-0 text-gray-400" />
-              <span>{location}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Clock className="size-4 shrink-0 text-gray-400" />
-              <span>{action.details?.workloadHours ?? 0} horas</span>
-            </div>
-          </div>
+          <ActionSummary action={action} />
           <div className="w-full border border-yellow-300 bg-yellow-50 rounded-xl px-5 py-4 text-sm text-left text-yellow-800">
             <span className="font-semibold">Atenção: </span>
             Ao confirmar, a vaga é liberada de imediato e pode ser ocupada por

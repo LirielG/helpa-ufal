@@ -32,6 +32,7 @@ function renderModal() {
   const onClose = vi.fn();
   const onCancelled = vi.fn();
   const onActivityRemoved = vi.fn();
+  const onActivityClosed = vi.fn();
   const action = makeActionDetail({
     id: ACTION_ID,
     title: "Mutirão de Limpeza",
@@ -44,10 +45,11 @@ function renderModal() {
       onClose={onClose}
       onCancelled={onCancelled}
       onActivityRemoved={onActivityRemoved}
+      onActivityClosed={onActivityClosed}
     />,
   );
 
-  return { ...view, onClose, onCancelled, onActivityRemoved };
+  return { ...view, onClose, onCancelled, onActivityRemoved, onActivityClosed };
 }
 
 function getConfirmButton() {
@@ -158,13 +160,14 @@ describe("CancelEnrollmentModal", () => {
         { status: 409 },
       ),
     );
-    const { user, onCancelled } = renderModal();
+    const { user, onCancelled, onActivityClosed } = renderModal();
 
     await user.click(getConfirmButton());
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
     );
+    expect(onActivityClosed).toHaveBeenCalledOnce();
     expect(onCancelled).not.toHaveBeenCalled();
     expect(getConfirmButton()).toBeEnabled();
     expect(getKeepButton()).toBeEnabled();

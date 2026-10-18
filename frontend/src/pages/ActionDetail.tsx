@@ -163,6 +163,7 @@ export function ActionDetail() {
               onClose={() => setShowCancelModal(false)}
               onCancelled={handleCancelled}
               onActivityRemoved={handleActivityRemoved}
+              onActivityClosed={refreshAction}
             />
           )}
 

@@ -272,7 +272,7 @@ describe("ActionDetail enrollment cancellation", () => {
 
   it("keeps Inscrito and explains the closed action on 409", async () => {
     signIn();
-    serveSnapshots(enrolledAction());
+    serveSnapshots(enrolledAction(), enrolledAction({ status: "IN_PROGRESS" }));
     failCancellation(409, "Activity is not open for cancellation.");
     const { user } = renderPage();
 
@@ -283,6 +283,25 @@ describe("ActionDetail enrollment cancellation", () => {
       "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
     );
     expect(screen.getByText("Inscrito")).toBeInTheDocument();
+  });
+
+  it("stops offering the cancellation once a 409 reveals the action closed", async () => {
+    signIn();
+    serveSnapshots(enrolledAction(), enrolledAction({ status: "IN_PROGRESS" }));
+    failCancellation(409, "Activity is not open for cancellation.");
+    const { user } = renderPage();
+
+    await openCancellationModal(user);
+    await confirmCancellation(user);
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "Manter inscrição" }));
+
+    expect(
+      await screen.findByText("Cancelamento não está mais disponível"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Cancelar inscrição" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the enrollment active and shows a pt-BR message on network error", async () => {
