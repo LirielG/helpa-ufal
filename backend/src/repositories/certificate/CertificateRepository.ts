@@ -1,8 +1,47 @@
 import { randomUUID } from "node:crypto";
-import type { Certificate, Prisma } from "@prisma/client";
-import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
+import type { Certificate, Prisma, PrismaClient } from "@prisma/client";
+import type {
+  CertificateForDownload,
+  ICertificateRepository,
+} from "@/repositories/certificate/ICertificateRepository.js";
+import { prisma } from "@/database/prisma.js";
+
+type Props = {
+  prisma?: PrismaClient;
+};
 
 class CertificateRepository implements ICertificateRepository {
+  private _prisma: PrismaClient;
+
+  constructor(props?: Props) {
+    this._prisma = props?.prisma ?? prisma;
+  }
+
+  public async findByIdForDownload(
+    id: string,
+  ): Promise<CertificateForDownload | null> {
+    return this._prisma.certificate.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        validationCode: true,
+        issuedAt: true,
+        enrollment: {
+          select: {
+            userId: true,
+            status: true,
+            attendanceConfirmed: true,
+            confirmedWorkloadHours: true,
+            user: { select: { fullName: true } },
+            activity: {
+              select: { title: true, startDate: true, endDate: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
   public async create(
     tx: Prisma.TransactionClient,
     data: { enrollmentId: string; validationCode: string; issuedAt: Date },

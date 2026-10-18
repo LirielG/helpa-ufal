@@ -227,7 +227,14 @@ class ActivityRepository implements IActivityRepository {
         include: {
           details: { include: { address: true } },
           // @@unique([userId, activityId]) makes this at most one row.
-          enrollments: { where: { userId } },
+          enrollments: {
+            where: { userId },
+            include: {
+              certificate: {
+                select: { id: true, validationCode: true, issuedAt: true },
+              },
+            },
+          },
           _count: {
             select: {
               enrollments: { where: { status: ACTIVE_ENROLLMENT_STATUS } },
@@ -238,10 +245,22 @@ class ActivityRepository implements IActivityRepository {
       this._prisma.activity.count({ where }),
     ]);
 
-    const items = rows.map(({ enrollments, _count, ...activity }) => ({
-      ...toFullResponse(activity, _count.enrollments),
-      enrollment: enrollments[0] ? toEnrollmentResponse(enrollments[0]) : null,
-    }));
+    const items = rows.map(({ enrollments, _count, ...activity }) => {
+      const enrollment = enrollments[0];
+      const certificate = enrollment?.certificate;
+
+      return {
+        ...toFullResponse(activity, _count.enrollments),
+        enrollment: enrollment ? toEnrollmentResponse(enrollment) : null,
+        certificate: certificate
+          ? {
+              id: certificate.id,
+              validationCode: certificate.validationCode,
+              issuedAt: certificate.issuedAt,
+            }
+          : null,
+      };
+    });
 
     return { items, total };
   }
