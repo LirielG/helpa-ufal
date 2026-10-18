@@ -14,10 +14,7 @@ import type {
 } from "../../services/contracts/activity";
 import type { Paginated } from "../../services/contracts/common";
 import type { UserActivityItem } from "../../services/contracts/user";
-import {
-  ACTION_CAMPUS_LABELS,
-  ACTION_FORMAT_LABELS,
-} from "../dashboard/constants";
+import { formatActionLocation } from "../action-detail/location";
 
 // The one `/users/me` client lives on authService; the profile screen asks for
 // the same resource through it, so the session check and this screen cannot
@@ -42,16 +39,6 @@ export async function updateProfile(
 
 const LIST_LIMIT = 100;
 
-function locationOf(item: UserActivityItem): string {
-  const address = item.details?.address;
-  if (address) return `${address.city} - ${address.state}`;
-
-  const format = item.details?.format;
-  return format
-    ? ACTION_FORMAT_LABELS[format]
-    : ACTION_CAMPUS_LABELS[item.campus];
-}
-
 /**
  * The first page of the signed-in user's actions in one sub-tab. The tab has
  * no pagination yet, so it asks for the largest page the route allows.
@@ -69,15 +56,10 @@ export async function fetchUserActivities(
   );
 
   return response.items.map((item) => ({
-    id: item.id,
-    title: item.title,
-    description: item.details?.description || "Sem descrição informada.",
-    location: locationOf(item),
-    date: formatDate(item.startDate),
-    status: filter,
-    activityStatus: item.status,
-    workloadHours: item.details?.workloadHours,
     action: item,
+    description: item.details?.description || "Sem descrição informada.",
+    location: formatActionLocation(item),
+    date: formatDate(item.startDate),
   }));
 }
 

@@ -74,7 +74,7 @@ export function ActionsList() {
   };
 
   const removeActivity = (id: string) =>
-    setActivities((current) => current.filter((item) => item.id !== id));
+    setActivities((current) => current.filter((item) => item.action.id !== id));
 
   const isManaged = activeSubTab === "managed";
   const emptyMessage = SUB_TABS.find((tab) => tab.id === activeSubTab)?.empty;
@@ -126,13 +126,16 @@ export function ActionsList() {
               {activities.map((activity) => {
                 if (activeSubTab === "completed") {
                   return (
-                    <CompletedCard key={activity.id} activity={activity} />
+                    <CompletedCard
+                      key={activity.action.id}
+                      activity={activity}
+                    />
                   );
                 }
                 if (activeSubTab === "managed") {
                   return (
                     <ManagedCard
-                      key={activity.id}
+                      key={activity.action.id}
                       activity={activity}
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
@@ -142,7 +145,7 @@ export function ActionsList() {
                 }
                 return (
                   <EnrolledCard
-                    key={activity.id}
+                    key={activity.action.id}
                     activity={activity}
                     onCancelled={removeActivity}
                   />

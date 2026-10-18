@@ -30,7 +30,9 @@ const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
 
 function managed(activityStatus: ActivityStatus): UserActivity {
-  return makeManagedActivity({ id: ACTION_ID, activityStatus });
+  return makeManagedActivity({
+    action: { id: ACTION_ID, status: activityStatus },
+  });
 }
 
 /** Mounts the session handler the way AppRoutes does, and shows the current path. */
@@ -241,9 +243,7 @@ describe("ManagedCard status control", () => {
     it("shows the workload only when the action has one", async () => {
       const { user } = renderCard(
         makeManagedActivity({
-          id: ACTION_ID,
-          activityStatus: "OPEN",
-          workloadHours: undefined,
+          action: { id: ACTION_ID, status: "OPEN", details: null },
         }),
       );
 
@@ -708,9 +708,7 @@ describe("ManagedCard enrollments entry point", () => {
 describe("EnrolledCard", () => {
   it("does not render the manage enrollments button for actions the user did not create", () => {
     const activity = makeUserActivity({
-      id: "act-2",
-      title: "Plantio de Árvores",
-      status: "enrolled",
+      action: { id: "act-2", title: "Plantio de Árvores" },
     });
 
     render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);

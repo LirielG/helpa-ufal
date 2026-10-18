@@ -15,16 +15,18 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
   // instead of offering a cancellation the API will refuse again.
   const [isClosed, setIsClosed] = useState(false);
 
-  const canCancel = activity.activityStatus === "OPEN" && !isClosed;
+  const canCancel = activity.action.status === "OPEN" && !isClosed;
 
   const handleGone = () => {
     setShowCancelModal(false);
-    onCancelled(activity.id);
+    onCancelled(activity.action.id);
   };
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 transition-all hover:shadow-md flex flex-col gap-3">
-      <h4 className="font-bold text-gray-900 leading-snug">{activity.title}</h4>
+      <h4 className="font-bold text-gray-900 leading-snug">
+        {activity.action.title}
+      </h4>
       <p className="text-sm text-gray-600">{activity.description}</p>
 
       <div className="flex items-center gap-2 text-sm text-gray-600">

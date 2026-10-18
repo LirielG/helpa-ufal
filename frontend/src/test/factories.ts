@@ -152,39 +152,33 @@ export function makeUserActivityItem(
   };
 }
 
+/** A card of the profile's "Ações" tab; `action` overrides reach the action itself. */
 export function makeUserActivity(
-  overrides: Partial<UserActivity> = {},
+  overrides: Partial<Omit<UserActivity, "action">> & {
+    action?: Partial<Activity>;
+  } = {},
 ): UserActivity {
-  const id = overrides.id ?? unique("activity");
-  const activityStatus = overrides.activityStatus ?? "OPEN";
+  const { action, ...rest } = overrides;
 
   return {
-    id,
-    title: "Atividade de Teste",
+    action: makeActionDetail({ title: "Atividade de Teste", ...action }),
     description: "Descrição da atividade de teste.",
     location: "Campus Arapiraca",
     date: "2026-03-10",
-    status: "enrolled",
-    activityStatus,
-    workloadHours: 20,
-    action: makeActionDetail({
-      id,
-      title: overrides.title ?? "Atividade de Teste",
-      status: activityStatus,
-    }),
-    ...overrides,
+    ...rest,
   };
 }
 
 /** An action the signed-in user manages, as listed in the "managed" sub-tab. */
 export function makeManagedActivity(
-  overrides: Partial<UserActivity> = {},
+  overrides: Parameters<typeof makeUserActivity>[0] = {},
 ): UserActivity {
   return makeUserActivity({
-    title: "Campanha de Arrecadação de Agasalhos",
-    status: "managed",
-    activityStatus: "OPEN",
     ...overrides,
+    action: {
+      title: "Campanha de Arrecadação de Agasalhos",
+      ...overrides.action,
+    },
   });
 }
 

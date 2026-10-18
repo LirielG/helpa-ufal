@@ -53,19 +53,15 @@ describe("fetchUserActivities", () => {
     const [activity] = await fetchUserActivities("enrolled");
 
     expect(activity).toMatchObject({
-      id: ACTION_ID,
-      title: "Mutirão na Lagoa",
       description: "Descrição da ação de teste.",
       location: "Arapiraca - AL",
-      status: "enrolled",
-      activityStatus: "IN_PROGRESS",
-      workloadHours: 20,
+      action: {
+        id: ACTION_ID,
+        title: "Mutirão na Lagoa",
+        status: "IN_PROGRESS",
+      },
     });
     expect(activity.date).toMatch(/2026/);
-    expect(activity.action).toMatchObject({
-      id: ACTION_ID,
-      status: "IN_PROGRESS",
-    });
   });
 
   it("falls back to the campus when the action has neither address nor details", async () => {
@@ -77,7 +73,6 @@ describe("fetchUserActivities", () => {
 
     expect(activity.location).toBe("UFAL - Campus Penedo");
     expect(activity.description).toBe("Sem descrição informada.");
-    expect(activity.workloadHours).toBeUndefined();
   });
 
   it("rejects with an ApiError so the list can show its loading error", async () => {
