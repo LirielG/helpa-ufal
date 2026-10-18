@@ -16,6 +16,8 @@ export interface UserActivity {
   /** Lifecycle status of the action itself, as opposed to the sub-tab in `status`. */
   activityStatus: Activity["status"];
   workloadHours?: number;
+  /** The action as the enrollment modals of the detail page take it. */
+  action: Activity;
 }
 
 /** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */

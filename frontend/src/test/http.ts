@@ -8,8 +8,8 @@ import {
   makeEnrollment,
   makeSigaaActivity,
   makeUser,
+  makeUserActivityItem,
 } from "./factories";
-
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -48,6 +48,16 @@ export const handlers = [
       cndb: null,
     });
   }),
+
+  http.get(`${API}/users/me/activities`, () =>
+    HttpResponse.json({
+      items: [makeUserActivityItem()],
+      total: 1,
+      page: 1,
+      limit: 100,
+      totalPages: 1,
+    }),
+  ),
 
   http.get(`${API}/activities`, () =>
     HttpResponse.json({

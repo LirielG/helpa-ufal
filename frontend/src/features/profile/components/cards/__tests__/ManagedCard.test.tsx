@@ -713,7 +713,7 @@ describe("EnrolledCard", () => {
       status: "enrolled",
     });
 
-    render(<EnrolledCard activity={activity} />);
+    render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);
 
     expect(
       screen.queryByRole("button", { name: "Gerenciar inscritos" }),

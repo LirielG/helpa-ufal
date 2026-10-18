@@ -4,6 +4,7 @@ import type {
   EnrollmentListItem,
   EnrollmentUser,
 } from "@/services/contracts/enrollment";
+import type { UserActivityItem } from "@/services/contracts/user";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 
@@ -125,18 +126,52 @@ export function makeSigaaActivity(
   };
 }
 
+/**
+ * Item of GET /users/me/activities: an approved enrollment of the signed-in
+ * user in an OPEN action, with no certificate yet.
+ */
+export function makeUserActivityItem(
+  overrides: Partial<UserActivityItem> = {},
+): UserActivityItem {
+  const action = { ...makeActionDetail(), ...overrides };
+
+  return {
+    ...action,
+    enrollment: {
+      id: unique("enrollment"),
+      activityId: action.id,
+      userId: unique("user"),
+      status: "APPROVED",
+      attendanceConfirmed: null,
+      confirmedWorkloadHours: 0,
+      createdAt: NOW,
+      updatedAt: NOW,
+    },
+    certificate: null,
+    ...overrides,
+  };
+}
+
 export function makeUserActivity(
   overrides: Partial<UserActivity> = {},
 ): UserActivity {
+  const id = overrides.id ?? unique("activity");
+  const activityStatus = overrides.activityStatus ?? "OPEN";
+
   return {
-    id: unique("activity"),
+    id,
     title: "Atividade de Teste",
     description: "Descrição da atividade de teste.",
     location: "Campus Arapiraca",
     date: "2026-03-10",
     status: "enrolled",
-    activityStatus: "OPEN",
+    activityStatus,
     workloadHours: 20,
+    action: makeActionDetail({
+      id,
+      title: overrides.title ?? "Atividade de Teste",
+      status: activityStatus,
+    }),
     ...overrides,
   };
 }
