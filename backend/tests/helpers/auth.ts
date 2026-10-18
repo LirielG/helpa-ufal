@@ -5,9 +5,15 @@ import type { AuthenticatedUser } from "@/types/auth.js";
  * The `id` must match an existing User when the route looks it up
  * (e.g. PATCH /activities/:activityId/status). Prefer the factories, which return
  * `{ user, token }` paired.
+ *
+ * Without `tokenVersion` the token carries no claim, which the middleware reads
+ * as version 0 — the stored default, so fixtures need not set it.
  */
-export function signToken(user: AuthenticatedUser, expiresIn = "1h"): string {
-  return signJwt(user, expiresIn);
+export function signToken(
+  user: Omit<AuthenticatedUser, "tokenVersion"> & { tokenVersion?: number },
+  expiresIn = "1h",
+): string {
+  return signJwt(user as AuthenticatedUser, expiresIn);
 }
 
 export function studentToken(id: string, isManager = false): string {

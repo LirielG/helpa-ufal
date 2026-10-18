@@ -27,6 +27,15 @@ class UserRepository implements IUserRepository {
     });
   }
 
+  public async findTokenVersionById(
+    id: string,
+  ): Promise<{ tokenVersion: number } | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: { tokenVersion: true },
+    });
+  }
+
   public async findProfileById(id: string): Promise<UserWithProfile | null> {
     return this._prisma.user.findUnique({
       where: { id },
