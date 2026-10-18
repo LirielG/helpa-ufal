@@ -18,7 +18,7 @@ import { CompletedCard } from "../CompletedCard";
 
 const CERTIFICATE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const FILE_URL = `${API}/certificates/${CERTIFICATE_ID}/file`;
-const BLOB_URL = "blob:http://localhost/certificado";
+const BLOB_URL = `blob:${window.location.origin}/certificado`;
 
 const DOWNLOAD_ERROR_MESSAGE =
   "Não foi possível baixar o certificado. Tente novamente.";
