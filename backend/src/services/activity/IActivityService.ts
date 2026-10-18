@@ -12,14 +12,14 @@ import {
 
 export interface IActivityService {
   create(
-    authorId: string,
-    data: CreateActivityInput,
-  ): Promise<ActivityResponse>;
+    authorId: string, 
+    data: CreateActivityInput): 
+    Promise<ActivityFullResponse>;
   list(
     filters: IListActivitiesFilters,
     userId?: string,
   ): Promise<IListActivitiesResponse>;
-  findById(id: string): Promise<ActivityFullResponse>;
+  findById(id: string, userId?: string): Promise<ActivityFullResponse>;
   update(
     id: string,
     userId: string,

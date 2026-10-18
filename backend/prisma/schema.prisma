@@ -65,6 +65,7 @@ model User {
   passwordHash String
   userType     UserType
   isManager    Boolean  @default(false)
+  tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -179,7 +180,6 @@ model Certificate {
   id             String   @id @default(uuid())
   enrollmentId   String   @unique
   validationCode String   @unique
-  fileUrl        String
   issuedAt       DateTime
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

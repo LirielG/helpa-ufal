@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
@@ -8,7 +9,9 @@ import { Pagination } from "@/components/Pagination";
 import { EnrollmentTable } from "@/features/enrollment-management/components/EnrollmentTable";
 import { EnrollmentListHeader } from "@/features/enrollment-management/components/EnrollmentListHeader";
 import { useEnrollments } from "@/features/enrollment-management/useEnrollments";
-import { useActionSlots } from "@/features/enrollment-management/useActionSlots";
+import { useEnrollmentActivity } from "@/features/enrollment-management/useEnrollmentActivity";
+import { AttendanceModal } from "@/features/enrollment-management/components/AttendanceModal";
+import type { EnrollmentListItem } from "@/services/contracts/enrollment";
 
 /**
  * Page that displays the list of volunteers enrolled in an activity.
@@ -21,10 +24,34 @@ export function EnrollmentsPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Two parallel requests: enrollments list + activity metadata (for slots).
-  const { data, page, totalPages, isLoading, error, goToPage } =
+  // Two parallel requests: enrollments list + activity metadata (slots,
+  // status and workload).
+  const { data, page, totalPages, isLoading, error, goToPage, applyAttendance } =
     useEnrollments(id);
-  const { slots, availableSlots } = useActionSlots(id);
+  const { activity, reload: reloadActivity } = useEnrollmentActivity(id);
+  const [homologating, setHomologating] = useState<EnrollmentListItem | null>(
+    null,
+  );
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Without the activity there is no status to check nor workload to cap the
+  // hours, so the control stays hidden until both are known.
+  const workloadCeiling =
+    activity?.status === "COMPLETED" ? activity.details?.workloadHours : undefined;
+
+  const openHomologation = (enrollment: EnrollmentListItem) => {
+    setNotice(null);
+    setHomologating(enrollment);
+  };
+
+  // The status or the enrollment changed since the list loaded: refetch both,
+  // so the controls match what the server will accept.
+  const handleStale = (message: string) => {
+    setHomologating(null);
+    setNotice(message);
+    void goToPage(page);
+    reloadActivity();
+  };
 
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
@@ -39,6 +66,8 @@ export function EnrollmentsPage() {
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">Inscritos</h1>
         </div>
+
+        {notice && <Alert type="warning" message={notice} />}
 
         {isLoading && (
           <p className="text-gray-500 text-center py-12" role="status">
@@ -63,8 +92,9 @@ export function EnrollmentsPage() {
           <>
             <EnrollmentListHeader
               total={data.total}
-              slots={slots}
-              availableSlots={availableSlots}
+              totalPresent={data.totalPresent}
+              slots={activity?.slots ?? null}
+              availableSlots={activity?.availableSlots ?? null}
             />
 
             {data.items.length === 0 ? (
@@ -76,7 +106,12 @@ export function EnrollmentsPage() {
               </div>
             ) : (
               <>
-                <EnrollmentTable enrollments={data.items} />
+                <EnrollmentTable
+                  enrollments={data.items}
+                  onHomologate={
+                    workloadCeiling === undefined ? undefined : openHomologation
+                  }
+                />
                 <Pagination
                   page={page}
                   totalPages={totalPages}
@@ -87,6 +122,19 @@ export function EnrollmentsPage() {
           </>
         )}
       </div>
+
+      {homologating && workloadCeiling !== undefined && (
+        <AttendanceModal
+          enrollment={homologating}
+          workloadCeiling={workloadCeiling}
+          onClose={() => setHomologating(null)}
+          onSaved={(updated) => {
+            applyAttendance(updated);
+            setHomologating(null);
+          }}
+          onStale={handleStale}
+        />
+      )}
     </DashboardShell>
   );
 }

@@ -20,7 +20,11 @@ import {
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
-import type { ActionType, ActionFormat, ActionCampus } from "../types";
+import type {
+  ActivityType,
+  ActivityFormat,
+  CampusLocation,
+} from "@/services/contracts/activity";
 import { fetchAreaSuggestions } from "../services";
 
 const addressSchema = z.object({
@@ -133,14 +137,14 @@ const STEP1_FIELDS = new Set<string>(["title", "description", "area", "type"]);
 interface CreateActivityPayload {
   title: string;
   description: string;
-  type: ActionType;
-  campus: ActionCampus;
+  type: ActivityType;
+  campus: CampusLocation;
   area: string;
   startDate: string;
   endDate: string;
   slots: number;
   workloadHours: number;
-  format: ActionFormat;
+  format: ActivityFormat;
   url?: string;
   address?: {
     addressLine: string;
@@ -276,8 +280,8 @@ export function ActionRegister({
         const payload: CreateActivityPayload = {
           title: data.title,
           description: data.description?.trim() || "Descrição não informada.",
-          type: data.type as ActionType,
-          campus: data.campus as ActionCampus,
+          type: data.type as ActivityType,
+          campus: data.campus as CampusLocation,
           area: data.area.trim(),
           startDate: new Date(
             `${data.startDate}T${data.startTime}:00`,
@@ -285,7 +289,7 @@ export function ActionRegister({
           endDate: new Date(`${data.endDate}T${data.endTime}:00`).toISOString(),
           slots: data.slots as number,
           workloadHours: data.workloadHours as number,
-          format: data.format as ActionFormat,
+          format: data.format as ActivityFormat,
           ...(needsUrl && data.url?.trim() ? { url: data.url.trim() } : {}),
           ...(needsAddress && data.address
             ? {

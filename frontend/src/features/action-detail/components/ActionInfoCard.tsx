@@ -10,11 +10,11 @@ import {
   ACTION_CAMPUS_LABELS,
   ACTION_FORMAT_LABELS,
 } from "../../dashboard/constants";
-import type { ActionDetail } from "../types";
+import type { Activity } from "@/services/contracts/activity";
 import { formatDate, formatTime } from "../../../utils";
 
 interface ActionInfoCardProps {
-  action: ActionDetail;
+  action: Activity;
 }
 
 function InfoRow({
@@ -47,7 +47,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
       <ul className="space-y-4">
         <InfoRow
           icon={<Building2 className="size-5 text-gray-400" />}
-          label="Campus / Instituição"
+          label="Campus"
         >
           <span className="font-medium text-gray-900">
             {ACTION_CAMPUS_LABELS[action.campus] ?? "Não informado"}

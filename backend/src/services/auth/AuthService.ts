@@ -41,6 +41,7 @@ class AuthService implements IAuthService {
       id: user.id,
       userType: user.userType,
       isManager: user.isManager,
+      tokenVersion: user.tokenVersion,
     };
 
     const loginUser: UserResponse = {

@@ -289,6 +289,23 @@ describe("ActivityService.list", () => {
     },
   );
 
+  it("rejects invalid format with an error in the 'format' field", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    const error = await captureValidationError(
+      service.list({ format: "INVALID_FORMAT" }),
+    );
+
+    expect(error.errors).toEqual([
+      {
+        field: "format",
+        message:
+          "format must be one of the following: IN_PERSON, ONLINE, HYBRID.",
+      },
+    ]);
+  });
+
   it.each(["asc", "desc"])(
     "repassa o order válido %s ao repositório",
     async (order) => {

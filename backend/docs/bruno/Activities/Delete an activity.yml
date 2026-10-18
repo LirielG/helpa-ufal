@@ -7,9 +7,9 @@ info:
 
 http:
   method: DELETE
-  url: "{{baseUrl}}/activities/:id"
+  url: "{{baseUrl}}/activities/:activityId"
   params:
-    - name: id
+    - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
       description: Activity UUID
@@ -25,14 +25,11 @@ examples:
   - name: 204 Response
     description: Activity soft-deleted successfully. No content returned.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
     response:
@@ -41,17 +38,37 @@ examples:
       body:
         type: text
         data: ""
-  - name: 401 Response
-    description: Unauthenticated.
+  - name: 400 Response
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Invalid UUID format."
+          }
+  - name: 401 Response
+    description: Missing, invalid or expired session cookie.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: DELETE
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
     response:
@@ -64,20 +81,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 401,
+            "message": "Unauthenticated."
           }
   - name: 403 Response
-    description: Forbidden.
+    description: Requester is not the author or a manager.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
     response:
@@ -90,20 +104,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 403,
+            "message": "You do not have permission to delete this activity."
           }
   - name: 404 Response
     description: Activity not found or already deleted.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
     response:
@@ -116,20 +127,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 404,
+            "message": "Activity not found."
           }
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
     response:
@@ -142,8 +150,13 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 500,
+            "message": "Internal server error."
           }
 
-docs: <br/>
+docs: |-
+  Soft-deletes an activity: it stops showing up in listings and in `GET /activities/:activityId`. Deleting it a second time answers 404.
+
+  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can delete.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

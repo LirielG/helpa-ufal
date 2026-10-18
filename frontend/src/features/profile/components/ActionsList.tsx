@@ -6,11 +6,22 @@ import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
 
-
-const SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
-  { id: "enrolled", label: "Atividades Inscritas" },
-  { id: "completed", label: "Atividades Concluídas" },
-  { id: "managed", label: "Atividades Gerenciadas" },
+const SUB_TABS: Array<{ id: ActivityStatus; label: string; empty: string }> = [
+  {
+    id: "enrolled",
+    label: "Atividades Inscritas",
+    empty: "Você não está inscrito em nenhuma ação no momento.",
+  },
+  {
+    id: "completed",
+    label: "Atividades Concluídas",
+    empty: "Você ainda não concluiu nenhuma ação.",
+  },
+  {
+    id: "managed",
+    label: "Atividades Gerenciadas",
+    empty: "Você ainda não criou nenhuma ação.",
+  },
 ];
 
 export function ActionsList() {
@@ -21,20 +32,31 @@ export function ActionsList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadActivities = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    // A slower answer of the sub-tab the user just left must not overwrite
+    // the one now on screen.
+    let isCurrent = true;
 
-        setActivities(await fetchUserActivities(activeSubTab));
+    const loadActivities = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const list = await fetchUserActivities(activeSubTab);
+        if (isCurrent) setActivities(list);
       } catch {
-        setError("Não foi possível carregar as atividades. Tente novamente.");
+        if (isCurrent) {
+          setError("Não foi possível carregar as atividades. Tente novamente.");
+        }
       } finally {
-        setIsLoading(false);
+        if (isCurrent) setIsLoading(false);
       }
     };
 
     loadActivities();
+
+    return () => {
+      isCurrent = false;
+    };
   }, [activeSubTab]);
 
   const handleEdit = (id: string) => navigate(`/activity/${id}/edit`);
@@ -42,7 +64,20 @@ export function ActionsList() {
   const handleManageEnrollments = (id: string) =>
     navigate(`/activity/${id}/enrollments`);
 
+  // Clearing here, not in the effect, keeps the previous tab's items from
+  // rendering for one frame with the new tab's cards and controls.
+  const selectSubTab = (tab: ActivityStatus) => {
+    if (tab === activeSubTab) return;
+    setActivities([]);
+    setIsLoading(true);
+    setActiveSubTab(tab);
+  };
+
+  const removeActivity = (id: string) =>
+    setActivities((current) => current.filter((item) => item.action.id !== id));
+
   const isManaged = activeSubTab === "managed";
+  const emptyMessage = SUB_TABS.find((tab) => tab.id === activeSubTab)?.empty;
 
   return (
     <div className="space-y-6">
@@ -53,7 +88,7 @@ export function ActionsList() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveSubTab(tab.id)}
+              onClick={() => selectSubTab(tab.id)}
               className={`flex-1 whitespace-nowrap px-4 py-3 -mb-px border-b-2 text-sm transition cursor-pointer ${
                 isActive
                   ? "border-[#1B75BB] text-[#1B75BB] font-bold"
@@ -79,9 +114,7 @@ export function ActionsList() {
       {!isLoading && !error && (
         <>
           {activities.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              Nenhuma atividade encontrada.
-            </p>
+            <p className="text-gray-500 text-center py-8">{emptyMessage}</p>
           ) : (
             <div
               className={
@@ -93,20 +126,30 @@ export function ActionsList() {
               {activities.map((activity) => {
                 if (activeSubTab === "completed") {
                   return (
-                    <CompletedCard key={activity.id} activity={activity} />
+                    <CompletedCard
+                      key={activity.action.id}
+                      activity={activity}
+                    />
                   );
                 }
                 if (activeSubTab === "managed") {
                   return (
                     <ManagedCard
-                      key={activity.id}
+                      key={activity.action.id}
                       activity={activity}
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
+                      onDelete={removeActivity}
                     />
                   );
                 }
-                return <EnrolledCard key={activity.id} activity={activity} />;
+                return (
+                  <EnrolledCard
+                    key={activity.action.id}
+                    activity={activity}
+                    onCancelled={removeActivity}
+                  />
+                );
               })}
             </div>
           )}

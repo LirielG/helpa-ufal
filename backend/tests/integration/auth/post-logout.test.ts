@@ -11,7 +11,7 @@ const LOGOUT_URL = "/auth/logout";
 const LOGIN_URL = "/auth/login";
 
 // Sonda de autenticação — rota protegida EXISTENTE (ver post-register.test.ts
-// para o porquê de não usarmos /activities/:id/enroll).
+// para o porquê de não usarmos /activities/:activityId/enroll).
 const probeUrl = () => `/activities/${randomUUID()}/reports`;
 const probeBody = { category: "SPAM" };
 

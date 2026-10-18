@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import UserService from "@/services/user/UserService.js";
 import type { IUserService } from "@/services/user/IUserService.js";
 import type { IUserController } from "@/controllers/user/IUserController.js";
+import type { ListUserActivitiesQuery } from "@/schemas/user/UserActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
 import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
 import { authCookieOptions } from "@/config/auth-cookie.js";
@@ -39,6 +40,16 @@ class UserController implements IUserController {
     }
 
     res.status(200).json(profile);
+  }
+
+  public async listActivities(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+
+    // Parsed and defaulted by validateQuery(ListUserActivitiesQuerySchema) on the route.
+    const query = res.locals.validatedQuery as ListUserActivitiesQuery;
+    const page = await this._userService.listActivities(req.user.id, query);
+
+    res.status(200).json(page);
   }
 }
 

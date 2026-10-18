@@ -1,7 +1,9 @@
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import UserRepository from "@/repositories/auth/UserRepository.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -13,12 +15,16 @@ import type {
   IListActivitiesResponse,
 } from "./IActivityService.js";
 import type { Activity } from "@prisma/client";
-import { CampusLocation } from "@prisma/client";
+import {
+  ActivityFormat,
+  ActivityStatus,
+  ActivityType,
+  CampusLocation,
+} from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
   ActivityResponse,
-  ActivityStatus,
   ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
@@ -54,22 +60,35 @@ function isInvalidFilterValue(
 type Props = {
   activityRepository?: IActivityRepository;
   userRepository?: IUserRepository;
+  enrollmentRepository?: IEnrollmentRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
   private _userRepository: IUserRepository;
+  private _enrollmentRepository: IEnrollmentRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
     this._userRepository = props?.userRepository ?? new UserRepository();
+    this._enrollmentRepository =
+      props?.enrollmentRepository ?? new EnrollmentRepository();
   }
 
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<ActivityResponse> {
+  ): Promise<ActivityFullResponse> {
+    const author = await this._userRepository.findById(authorId);
+
+    if (!author) {
+      throw new CustomError(
+        403,
+        "You do not have permission to create an activity.",
+      );
+    }
+
     const now = new Date();
     const durationDays =
       (data.endDate.getTime() - data.startDate.getTime()) /
@@ -153,20 +172,7 @@ class ActivityService implements IActivityService {
 
     const newActivity = await this._activityRepository.create(authorId, data);
 
-    const activityResponse: ActivityResponse = {
-      id: newActivity.id,
-      authorId: newActivity.authorId,
-      title: newActivity.title,
-      type: newActivity.type,
-      campus: newActivity.campus,
-      startDate: newActivity.startDate,
-      endDate: newActivity.endDate,
-      slots: newActivity.slots,
-      availableSlots: newActivity.slots,
-      status: newActivity.status,
-    };
-
-    return activityResponse;
+    return newActivity;
   }
 
   public async list(
@@ -207,9 +213,11 @@ class ActivityService implements IActivityService {
 
     const filterErrors = [];
 
-    const validTypes = ["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"];
-    const validFormats = ["IN_PERSON", "ONLINE", "HYBRID"];
-    const validStatuses = ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+    // Derived from the Prisma enums, so a value added to schema.prisma is
+    // accepted and listed in the error message without editing this service.
+    const validTypes: readonly string[] = Object.values(ActivityType);
+    const validFormats: readonly string[] = Object.values(ActivityFormat);
+    const validStatuses: readonly string[] = Object.values(ActivityStatus);
 
     // Derived from the Prisma enum (never hand-written): campus is a DB enum
     // column, so an unknown value would otherwise blow up in the driver (500).
@@ -294,10 +302,13 @@ class ActivityService implements IActivityService {
     return { areas };
   }
 
-  public async findById(id: string): Promise<ActivityFullResponse> {
+  public async findById(
+    id: string,
+    userId?: string,
+  ): Promise<ActivityFullResponse> {
     if (!isValidUUID(id)) {
       throw new ValidationError([
-        { field: "id", message: "id must be a valid UUID." },
+        { field: "activityId", message: "activityId must be a valid UUID." },
       ]);
     }
 
@@ -307,7 +318,18 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
-    return activity;
+    // Absent and null mean different things to the client: absent = no
+    // session recognized, null = authenticated but never enrolled.
+    if (!userId) {
+      return activity;
+    }
+
+    const enrollment = await this._enrollmentRepository.findByUserAndActivity(
+      userId,
+      id,
+    );
+
+    return { ...activity, enrollmentStatus: enrollment?.status ?? null };
   }
 
   public async update(
@@ -418,7 +440,8 @@ class ActivityService implements IActivityService {
         ]);
       }
 
-      const approvedEnrollments = activity.slots - activity.availableSlots;
+      const approvedEnrollments =
+        await this._activityRepository.countApprovedEnrollments(activity.id);
       if (data.slots < approvedEnrollments) {
         throw new ValidationError([
           {

@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { UserPlus, CheckCircle, MapPin, Calendar, Clock } from "lucide-react";
+import { UserPlus, CheckCircle } from "lucide-react";
 import { Button } from "../../../components/Button";
+import { ActionSummary } from "./ActionSummary";
 import { Alert } from "../../../components/Alert";
 import { enrollInAction } from "../services";
 import { getEnrollmentErrorMessage } from "../errors";
-import type { ActionDetail } from "../types";
-import { formatDate } from "../../../utils";
+import type { Activity } from "@/services/contracts/activity";
 import { ApiError } from "../../../services/apiError";
-import {
-  ACTION_CAMPUS_LABELS,
-  ACTION_FORMAT_LABELS,
-} from "../../dashboard/constants";
 
 type ModalStep = "confirm" | "loading" | "success" | "error";
 
 interface EnrollmentModalProps {
-  action: ActionDetail;
+  action: Activity;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -30,14 +26,6 @@ export function EnrollmentModal({
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const address = action.details?.address;
-  const format = action.details?.format;
-  const location = address
-    ? `${address.city} - ${address.state}`
-    : format
-      ? ACTION_FORMAT_LABELS[format]
-      : ACTION_CAMPUS_LABELS[action.campus];
 
   const handleConfirm = async () => {
     if (isSubmitting) return; // Prevent double-click
@@ -153,24 +141,10 @@ export function EnrollmentModal({
                   Confirmar inscrição
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Você está prestes a se escrever em:
+                  Você está prestes a se inscrever em:
                 </p>
               </div>
-              <div className="w-full bg-gray-100 rounded-xl px-5 py-4 text-left space-y-2">
-                <p className="font-semibold text-gray-900">{action.title}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="size-4 shrink-0 text-gray-400" />
-                  <span>{formatDate(action.startDate)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="size-4 shrink-0 text-gray-400" />
-                  <span>{location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock className="size-4 shrink-0 text-gray-400" />
-                  <span>{action.details?.workloadHours ?? 0} horas</span>
-                </div>
-              </div>
+              <ActionSummary action={action} />
               <div className="w-full border border-yellow-300 bg-yellow-50 rounded-xl px-5 py-4 text-sm text-left text-yellow-800">
                 <span className="font-semibold">Atenção: </span>
                 Ao confirmar, você se compromete a participar da atividade.

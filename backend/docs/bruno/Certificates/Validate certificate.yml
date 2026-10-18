@@ -1,0 +1,100 @@
+info:
+  name: Validate certificate
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/certificate-validations/:validationCode"
+  params:
+    - name: validationCode
+      value: 7KQ4M-X9T2R
+      type: path
+      description: The code printed on the certificate, as typed by the person checking it
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Valid certificate
+    description: The code belongs to a certificate whose enrollment still attests presence.
+    response:
+      status: 200
+      headers:
+        - name: Content-Type
+          value: application/json; charset=utf-8
+        - name: Cache-Control
+          value: no-store
+      body: |-
+        {
+          "validationCode": "7KQ4MX9T2R",
+          "holderName": "Maria Silva Souza",
+          "activityTitle": "Semana da Computação — Oficina de Git",
+          "activityStartDate": "2026-06-10T13:00:00.000Z",
+          "activityEndDate": "2026-06-12T21:00:00.000Z",
+          "workloadHours": 8,
+          "issuedAt": "2026-06-15T12:00:00.000Z"
+        }
+
+  - name: 404 Not found
+    description: The same answer for a code that cannot be a code after normalization, an unknown code and a certificate whose enrollment no longer attests presence.
+    response:
+      status: 404
+      body: |-
+        { "status": 404, "message": "Certificate not found." }
+
+docs: |-
+  # GET /certificate-validations/:validationCode — Validate a certificate
+
+  Confirms that a code printed on a HELPA certificate belongs to a real certificate and returns
+  what the document attests. It backs the public validation page, used by whoever received the
+  certificate (course coordination, employer, registrar's office).
+
+  ## Authentication
+  - **Public.** No authentication middleware: the person checking has no HELPA account. A
+    session cookie, valid or not, is ignored and never turns the answer into a 401.
+
+  ## Path params
+  | Param          | Type   | Description |
+  |----------------|--------|-------------|
+  | validationCode | string | The printed code, in any of the accepted spellings below |
+
+  ## Code normalization
+  The backend normalizes the code; the client passes on what was typed. Spaces and hyphens
+  (including the Unicode dashes) are removed, letters are uppercased, and the Crockford
+  look-alikes are read as digits: `O` → `0`, `I` and `L` → `1`. So `7kq4m x9t2r`,
+  `7KQ4M-X9T2R` and `7KQ4MX9T2R` find the same certificate. The result must be 10 Crockford
+  Base32 characters; anything else answers 404.
+
+  ## Response
+  Exactly what the PDF prints, nothing about the holder beyond the name:
+
+  | Field | Source |
+  |-------|--------|
+  | validationCode | `Certificate.validationCode`, stored form without hyphen |
+  | holderName | `User.fullName`, current value |
+  | activityTitle, activityStartDate, activityEndDate | `Activity.title`, `startDate`, `endDate` |
+  | workloadHours | `Enrollment.confirmedWorkloadHours` (never `ActivityDetails.workloadHours`) |
+  | issuedAt | `Certificate.issuedAt` |
+
+  Dates are ISO 8601 UTC. Formatting the code with a hyphen is up to the screen. The 200 is
+  sent with `Cache-Control: no-store`: a corrected presence turns it into a 404, and no cache
+  may keep showing the certificate as valid.
+
+  ## Sensitive existence
+  A malformed code and an unknown code answer the **same 404** with the same body, and a
+  malformed code is rejected without querying the database. Telling them apart would hand out
+  the valid format. There is no 400 on this route: it has no query and no body.
+
+  ## Business rules
+  - A certificate of a soft-deleted activity keeps validating: it is the holder's document.
+  - When the presence is corrected to an absence, the certificate is deleted and its code
+    answers 404. There is no "revoked" state.
+  - The certificate only validates while the enrollment is `APPROVED` with
+    `attendanceConfirmed = true`. Otherwise the route answers the same 404.
+
+  Error format follows [api-conventions.md](../../api-conventions.md).

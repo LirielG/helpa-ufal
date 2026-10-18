@@ -5,11 +5,12 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   makeAction,
   makeActionDetail,
+  makeCertificateValidation,
   makeEnrollment,
   makeSigaaActivity,
   makeUser,
+  makeUserActivityItem,
 } from "./factories";
-
 
 /** Base URL every handler is built from. Exported so a test can override one. */
 export const API = config.apiUrl;
@@ -48,6 +49,16 @@ export const handlers = [
       cndb: null,
     });
   }),
+
+  http.get(`${API}/users/me/activities`, () =>
+    HttpResponse.json({
+      items: [makeUserActivityItem()],
+      total: 1,
+      page: 1,
+      limit: 100,
+      totalPages: 1,
+    }),
+  ),
 
   http.get(`${API}/activities`, () =>
     HttpResponse.json({
@@ -92,6 +103,10 @@ export const handlers = [
       limit: 20,
       totalPresent: 0,
     }),
+  ),
+
+  http.get(`${API}/certificate-validations/:validationCode`, () =>
+    HttpResponse.json(makeCertificateValidation()),
   ),
 ];
 

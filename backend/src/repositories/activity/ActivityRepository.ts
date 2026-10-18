@@ -1,4 +1,9 @@
-import type { PrismaClient, Activity, ActivityStatus } from "@prisma/client";
+import type {
+  PrismaClient,
+  Prisma,
+  Activity,
+  ActivityStatus,
+} from "@prisma/client";
 import type {
   IActivityRepository,
   IRepositoryListActivitiesFilters,
@@ -9,11 +14,92 @@ import type {
   UpdateActivityInput,
 } from "@/schemas/activity/ActivitySchemas.js";
 import { prisma } from "@/database/prisma.js";
-import { ActivityFullResponse } from "@/types/activity.js";
+import {
+  ActivityFullResponse,
+  UserActivityFilter,
+  UserActivityResponse,
+} from "@/types/activity.js";
+import {
+  ACTIVE_ENROLLMENT_STATUS,
+  toEnrollmentResponse,
+} from "@/types/enrollment.js";
 
 type Props = {
   prisma?: PrismaClient;
 };
+
+type ActivityWithDetails = Prisma.ActivityGetPayload<{
+  include: { details: { include: { address: true } } };
+}>;
+
+function userActivityWhere(
+  userId: string,
+  filter: UserActivityFilter,
+): Prisma.ActivityWhereInput {
+  switch (filter) {
+    case "enrolled":
+      return {
+        deletedAt: null,
+        status: { in: ["OPEN", "IN_PROGRESS"] },
+        enrollments: { some: { userId, status: ACTIVE_ENROLLMENT_STATUS } },
+      };
+    case "completed":
+      return {
+        deletedAt: null,
+        status: "COMPLETED",
+        enrollments: {
+          some: {
+            userId,
+            status: ACTIVE_ENROLLMENT_STATUS,
+            // Only a registered absence (false) leaves the history: a
+            // participant whose attendance nobody homologated yet (null)
+            // still took part. `{ not: false }` would not do, since SQL
+            // drops NULL from that comparison too.
+            OR: [{ attendanceConfirmed: true }, { attendanceConfirmed: null }],
+          },
+        },
+      };
+    case "managed":
+      return { deletedAt: null, authorId: userId };
+  }
+}
+
+function toFullResponse(
+  activity: ActivityWithDetails,
+  approvedCount: number,
+): ActivityFullResponse {
+  return {
+    id: activity.id,
+    authorId: activity.authorId,
+    title: activity.title,
+    type: activity.type,
+    campus: activity.campus,
+    startDate: activity.startDate,
+    endDate: activity.endDate,
+    slots: activity.slots,
+    availableSlots: Math.max(0, activity.slots - approvedCount),
+    status: activity.status,
+    details: activity.details
+      ? {
+          description: activity.details.description,
+          area: activity.details.area,
+          format: activity.details.format,
+          url: activity.details.url ?? null,
+          workloadHours: activity.details.workloadHours,
+          address: activity.details.address
+            ? {
+                id: activity.details.address.id,
+                addressLine: activity.details.address.addressLine,
+                district: activity.details.address.district,
+                zipCode: activity.details.address.zipCode,
+                city: activity.details.address.city,
+                state: activity.details.address.state,
+              }
+            : null,
+        }
+      : null,
+  };
+}
 
 class ActivityRepository implements IActivityRepository {
   private _prisma: PrismaClient;
@@ -25,7 +111,7 @@ class ActivityRepository implements IActivityRepository {
   public async create(
     authorId: string,
     data: CreateActivityInput,
-  ): Promise<Activity> {
+  ): Promise<ActivityFullResponse> {
     return this._prisma.$transaction(async (tx) => {
       const activity = await tx.activity.create({
         data: {
@@ -41,10 +127,20 @@ class ActivityRepository implements IActivityRepository {
       });
 
       let addressId: string | null = null;
+      let createdAddress = null;
 
-      if (data.format !== "ONLINE") {
+      if (data.format !== "ONLINE" && data.address) {
         const address = await tx.address.create({ data: data.address });
         addressId = address.id;
+        
+        createdAddress = {
+          id: address.id,
+          addressLine: address.addressLine,
+          district: address.district,
+          zipCode: address.zipCode,
+          city: address.city,
+          state: address.state,
+        };
       }
 
       await tx.activityDetails.create({
@@ -59,7 +155,26 @@ class ActivityRepository implements IActivityRepository {
         },
       });
 
-      return activity;
+      return {
+        id: activity.id,
+        authorId: activity.authorId,
+        title: activity.title,
+        type: activity.type,
+        campus: activity.campus,
+        startDate: activity.startDate,
+        endDate: activity.endDate,
+        slots: activity.slots,
+        availableSlots: activity.slots,
+        status: activity.status as ActivityStatus,
+        details: {
+          description: data.description,
+          area: data.area,
+          format: data.format,
+          url: data.url ?? null,
+          workloadHours: data.workloadHours,
+          address: createdAddress,
+        },
+      };
     });
   }
 
@@ -76,44 +191,78 @@ class ActivityRepository implements IActivityRepository {
       this._prisma.enrollment.count({
         where: {
           activityId: id,
-          status: "APPROVED",
+          status: ACTIVE_ENROLLMENT_STATUS,
         },
       }),
     ]);
 
     if (!result) return null;
 
-    return {
-      id: result.id,
-      authorId: result.authorId,
-      title: result.title,
-      type: result.type,
-      campus: result.campus,
-      startDate: result.startDate,
-      endDate: result.endDate,
-      slots: result.slots,
-      availableSlots: Math.max(0, result.slots - approvedCount),
-      status: result.status,
-      details: result.details
-        ? {
-            description: result.details.description,
-            area: result.details.area,
-            format: result.details.format,
-            url: result.details.url ?? null,
-            workloadHours: result.details.workloadHours,
-            address: result.details.address
-              ? {
-                  id: result.details.address.id,
-                  addressLine: result.details.address.addressLine,
-                  district: result.details.address.district,
-                  zipCode: result.details.address.zipCode,
-                  city: result.details.address.city,
-                  state: result.details.address.state,
-                }
-              : null,
-          }
-        : null,
-    };
+    return toFullResponse(result, approvedCount);
+  }
+
+  public async listByUser(
+    userId: string,
+    filter: UserActivityFilter,
+    page: number,
+    limit: number,
+  ): Promise<{ items: UserActivityResponse[]; total: number }> {
+    const where = userActivityWhere(userId, filter);
+    const skip = (page - 1) * limit;
+
+    // The query schema bounds page from below only, so a huge page yields an
+    // offset Prisma rejects (500). No row can live that far out: answer the
+    // empty page past the last one that the contract promises.
+    if (!Number.isSafeInteger(skip)) {
+      return { items: [], total: await this._prisma.activity.count({ where }) };
+    }
+
+    const [rows, total] = await this._prisma.$transaction([
+      this._prisma.activity.findMany({
+        where,
+        skip,
+        take: limit,
+        // id breaks startDate ties, so a page boundary never repeats or skips a row.
+        orderBy: [{ startDate: "desc" }, { id: "asc" }],
+        include: {
+          details: { include: { address: true } },
+          // @@unique([userId, activityId]) makes this at most one row.
+          enrollments: {
+            where: { userId },
+            include: {
+              certificate: {
+                select: { id: true, validationCode: true, issuedAt: true },
+              },
+            },
+          },
+          _count: {
+            select: {
+              enrollments: { where: { status: ACTIVE_ENROLLMENT_STATUS } },
+            },
+          },
+        },
+      }),
+      this._prisma.activity.count({ where }),
+    ]);
+
+    const items = rows.map(({ enrollments, _count, ...activity }) => {
+      const enrollment = enrollments[0];
+      const certificate = enrollment?.certificate;
+
+      return {
+        ...toFullResponse(activity, _count.enrollments),
+        enrollment: enrollment ? toEnrollmentResponse(enrollment) : null,
+        certificate: certificate
+          ? {
+              id: certificate.id,
+              validationCode: certificate.validationCode,
+              issuedAt: certificate.issuedAt,
+            }
+          : null,
+      };
+    });
+
+    return { items, total };
   }
 
   public async list(

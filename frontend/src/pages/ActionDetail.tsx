@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -10,22 +9,25 @@ import { ActionHero } from "../features/action-detail/components/ActionHero";
 import { ActionDescription } from "../features/action-detail/components/ActionDescription";
 import { ActionInfoCard } from "../features/action-detail/components/ActionInfoCard";
 import { EnrollmentModal } from "../features/action-detail/components/EnrollmentModal";
+import { CancelEnrollmentModal } from "../features/action-detail/components/CancelEnrollmentModal";
+import { EnrollmentActions } from "../features/action-detail/components/EnrollmentActions";
 import { getActionById } from "../features/action-detail/services";
 import { ReportActionButton } from "../features/report/components/ReportActionButton";
 import { ReportActionModal } from "../features/report/ReportActionModal";
 import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
-import type { ActionDetail as ActionDetailType } from "../features/action-detail/types";
+import type { Activity } from "@/services/contracts/activity";
 
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
 
-  const [action, setAction] = useState<ActionDetailType | null>(null);
+  const [action, setAction] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   // No route tells whether the user already reported this action, so this
   // only reflects what happened while the page is open; a reload falls back
@@ -51,13 +53,25 @@ export function ActionDetail() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
-  const handleEnrollmentSuccess = async () => {
-    // Refetch action data to reflect updated available slots
+  // The server is the source of the slots and of enrollmentStatus, so both
+  // enrolling and cancelling refetch instead of patching the local copy.
+  const refreshAction = async () => {
     if (!id) return;
     const updatedAction = await getActionById(id);
     if (updatedAction) {
       setAction(updatedAction);
     }
+  };
+
+  const handleCancelled = () => {
+    setShowCancelModal(false);
+    void refreshAction();
+  };
+
+  const handleActivityRemoved = () => {
+    setShowCancelModal(false);
+    setAction(null);
+    setError("Esta ação não existe mais.");
   };
 
   return (
@@ -115,18 +129,11 @@ export function ActionDetail() {
                   <ActionInfoCard action={action} />
 
                   {isAuthenticated && (
-                    <Button
-                      variant="navy"
-                      size="lg"
-                      disabled={action.availableSlots === 0}
-                      onClick={() => setShowModal(true)}
-                      className="flex items-center justify-center gap-3 rounded-xl"
-                    >
-                      <Users className="size-6" />
-                      {action.availableSlots === 0
-                        ? "Vagas esgotadas"
-                        : "Inscrever-se"}
-                    </Button>
+                    <EnrollmentActions
+                      action={action}
+                      onEnroll={() => setShowModal(true)}
+                      onCancel={() => setShowCancelModal(true)}
+                    />
                   )}
 
                   {/* The API answers 401 to visitors and 403 to the author. */}
@@ -146,7 +153,17 @@ export function ActionDetail() {
             <EnrollmentModal
               action={action}
               onClose={() => setShowModal(false)}
-              onSuccess={handleEnrollmentSuccess}
+              onSuccess={refreshAction}
+            />
+          )}
+
+          {showCancelModal && (
+            <CancelEnrollmentModal
+              action={action}
+              onClose={() => setShowCancelModal(false)}
+              onCancelled={handleCancelled}
+              onActivityRemoved={handleActivityRemoved}
+              onActivityClosed={refreshAction}
             />
           )}
 

@@ -32,6 +32,7 @@ export function ConfirmStatusModal({
 }: ConfirmStatusModalProps) {
   const isCompleted = pendingStatus === "COMPLETED";
   const copy = isCompleted ? COMPLETE_COPY : CANCEL_COPY;
+  const workloadHours = activity.action.details?.workloadHours;
 
   return (
     <div
@@ -60,7 +61,9 @@ export function ConfirmStatusModal({
         </div>
 
         <div className="bg-gray-100/80 rounded-xl p-4 w-full text-left flex flex-col gap-2">
-          <h4 className="font-bold text-[#0A2540] text-sm">{activity.title}</h4>
+          <h4 className="font-bold text-[#0A2540] text-sm">
+            {activity.action.title}
+          </h4>
           <div className="flex flex-col gap-1 text-xs text-gray-700 font-medium">
             <span className="flex items-center gap-2">
               <Calendar className="size-3.5 text-gray-800" />
@@ -70,10 +73,10 @@ export function ConfirmStatusModal({
               <MapPin className="size-3.5 text-gray-800" />
               {activity.location}
             </span>
-            {activity.workloadHours !== undefined && (
+            {workloadHours !== undefined && (
               <span className="flex items-center gap-2">
                 <Clock className="size-3.5 text-gray-800" />
-                {activity.workloadHours} horas
+                {workloadHours} horas
               </span>
             )}
           </div>

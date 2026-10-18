@@ -40,6 +40,27 @@ export const EnvSchema = z.object({
       }
     })
     .default("http://localhost:5173"),
+  // Public address of the frontend, printed in the certificate's QR code.
+  // Kept apart from CORS_ORIGIN on purpose: if CORS ever accepts a second
+  // origin, the printed link must not change with it. Unlike CORS_ORIGIN the
+  // path is kept (the frontend may live under one); only the trailing slash
+  // is dropped so `${APP_PUBLIC_URL}/validar` never doubles it. Query and
+  // fragment are refused, since the appended path would land inside them.
+  APP_PUBLIC_URL: z
+    .url({ protocol: /^https?$/ })
+    .transform((value, ctx) => {
+      const url = new URL(value);
+      if (url.search || url.hash) {
+        ctx.addIssue({
+          code: "custom",
+          message: "APP_PUBLIC_URL must not have a query string or fragment.",
+        });
+        return z.NEVER;
+      }
+      // Rebuilt from the parsed parts: URL lowercases scheme and host.
+      return `${url.origin}${url.pathname}`.replace(/\/+$/, "");
+    })
+    .default("http://localhost:5173"),
   // SameSite policy for the session cookie. "none" only works with
   // secure=true (NODE_ENV=production) — see .env.example.
   COOKIE_SAME_SITE: z.enum(["strict", "lax", "none"]).default("strict"),

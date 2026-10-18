@@ -39,6 +39,58 @@ describe("EnvSchema — CORS_ORIGIN", () => {
   });
 });
 
+describe("EnvSchema — APP_PUBLIC_URL", () => {
+  it("defaults to http://localhost:5173 when unset", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.APP_PUBLIC_URL).toBe("http://localhost:5173");
+  });
+
+  it("accepts a custom http(s) URL, keeping its path", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      APP_PUBLIC_URL: "https://helpa.ufal.br/app",
+    });
+
+    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
+  });
+
+  it.each([
+    ["https://helpa.ufal.br/", "https://helpa.ufal.br"],
+    ["https://helpa.ufal.br/app/", "https://helpa.ufal.br/app"],
+  ])("removes the trailing slash from %s", (value, expected) => {
+    const parsed = EnvSchema.parse({ ...minimalEnv, APP_PUBLIC_URL: value });
+
+    expect(parsed.APP_PUBLIC_URL).toBe(expected);
+  });
+
+  it("lowercases scheme and host, so the printed address never shows HTTPS://", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      APP_PUBLIC_URL: "HTTPS://Helpa.UFAL.br/app",
+    });
+
+    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
+  });
+
+  // `/validar/<code>` is appended to the value, which would land inside a
+  // query string or fragment.
+  it.each([
+    "helpa.ufal.br",
+    "ftp://helpa.ufal.br",
+    "https://helpa.ufal.br/?utm=x",
+    "https://helpa.ufal.br/#/",
+  ])("rejects %s, naming the variable in the error", (value) => {
+    const result = EnvSchema.safeParse({
+      ...minimalEnv,
+      APP_PUBLIC_URL: value,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["APP_PUBLIC_URL"]);
+  });
+});
+
 describe("EnvSchema — COOKIE_SAME_SITE", () => {
   it("defaults to strict (criteria 1)", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });

@@ -27,6 +27,7 @@ export type UpdateProfileData = {
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<UserWithProfileAndHash | null>;
+  findTokenVersionById(id: string): Promise<{ tokenVersion: number } | null>;
   findProfileById(id: string): Promise<UserWithProfile | null>;
   updateProfile(id: string, data: UpdateProfileData): Promise<UserWithProfile>;
 

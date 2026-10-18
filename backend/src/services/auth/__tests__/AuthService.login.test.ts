@@ -21,6 +21,7 @@ function aUser(overrides: Partial<User> = {}): User {
     passwordHash: PASSWORD_HASH,
     userType: "STUDENT",
     isManager: false,
+    tokenVersion: 0,
     createdAt: new Date("2026-08-26T21:00:00.000Z"),
     updatedAt: new Date("2026-08-26T21:00:00.000Z"),
     ...overrides,
@@ -59,6 +60,17 @@ describe("AuthService.login", () => {
       userType: "STUDENT",
       isManager: false,
     });
+  });
+
+  it("signs the user's current tokenVersion into the token", async () => {
+    const userRepository = mockRepository({
+      findByEmail: vi.fn().mockResolvedValue(aUser({ tokenVersion: 4 })),
+    });
+    const service = new AuthService({ userRepository });
+
+    const result = await service.login(LOGIN_INPUT);
+
+    expect(verifyJwt(result.token)).toMatchObject({ tokenVersion: 4 });
   });
 
   it("throws 401 when the email does not exist", async () => {
@@ -105,6 +117,7 @@ describe("AuthService.login", () => {
       "iat",
       "id",
       "isManager",
+      "tokenVersion",
       "userType",
     ]);
     expect(payload.exp - payload.iat).toBe(3600);

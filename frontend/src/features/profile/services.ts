@@ -1,5 +1,4 @@
 import { api, authService } from "../../services";
-import { useAuthStore } from "../../stores/authStore";
 import type { UpdateProfileRequest } from "../../types";
 import { formatDate } from "../../utils/date";
 import type {
@@ -9,8 +8,13 @@ import type {
   UserActivity,
 } from "./types";
 import type { UserProfile } from "../../types/profile";
-import type { Action, PaginatedResponse } from "../dashboard/types";
-import type { ActionDetail } from "../action-detail/types";
+import type {
+  Activity,
+  ActivityListItem,
+} from "../../services/contracts/activity";
+import type { Paginated } from "../../services/contracts/common";
+import type { UserActivityItem } from "../../services/contracts/user";
+import { formatActionLocation } from "../action-detail/location";
 
 // The one `/users/me` client lives on authService; the profile screen asks for
 // the same resource through it, so the session check and this screen cannot
@@ -33,92 +37,55 @@ export async function updateProfile(
   };
 }
 
-// The endpoint may answer with the array itself, wrapped in `data`, or in `activities` (PaginatedResponse)
-type ActivitiesResponse =
-  | UserActivity[]
-  | { data?: UserActivity[] }
-  | PaginatedResponse<Action>;
+const LIST_LIMIT = 100;
 
 /**
- * TEMPORARY WORKAROUND — remove in #118, do not keep.
- *
- * `GET /activities` ignores `filter` and returns the paginated public listing,
- * so the "managed" tab is approximated here by keeping the actions whose
- * `authorId` is the signed-in user. Two consequences until the real route lands:
- * - only the first 50 actions of the public listing are considered; a managed
- *   action beyond that does not show up;
- * - "enrolled" and "completed" return nothing, as there is no source for them.
- *
- * The replacement is `GET /users/me/activities` (#60), wired into this tab by
- * #118. When that lands, delete the `authorId` filter and the Action →
- * UserActivity mapping below and consume the endpoint's response directly.
+ * The first page of the signed-in user's actions in one sub-tab. The tab has
+ * no pagination yet, so it asks for the largest page the route allows.
  */
 export async function fetchUserActivities(
   filter: ActivityStatus,
 ): Promise<UserActivity[]> {
-  const response = await api.get<ActivitiesResponse>(
-    `/activities?filter=${filter}&page=1&limit=50`,
+  const params = new URLSearchParams({
+    filter,
+    page: "1",
+    limit: String(LIST_LIMIT),
+  });
+  const response = await api.get<Paginated<UserActivityItem>>(
+    `/users/me/activities?${params}`,
   );
 
-  let rawList: (UserActivity | Action)[] = [];
-
-  if (Array.isArray(response)) {
-    rawList = response;
-  } else if ("data" in response && Array.isArray(response.data)) {
-    rawList = response.data;
-  } else if ("activities" in response && Array.isArray(response.activities)) {
-    rawList = response.activities;
-  }
-
-  const currentUser = useAuthStore.getState().user;
-
-  // If the backend returned raw Action objects from /activities, map them to UserActivity
-  const mappedList: UserActivity[] = rawList
-    .filter((item) => {
-      if ("status" in item && (item.status === "enrolled" || item.status === "completed" || item.status === "managed")) {
-        return item.status === filter;
-      }
-
-      // Backend Action items:
-      if (filter === "managed") {
-        return "authorId" in item && currentUser ? item.authorId === currentUser.id : false;
-      }
-
-      // For enrolled and completed tabs, backend doesn't have /users/me/enrollments yet
-      return false;
-    })
-    .map((item) => {
-      if ("location" in item) {
-        return item as UserActivity;
-      }
-
-      const action = item as Action;
-      return {
-        id: action.id,
-        title: action.title,
-        description: action.details?.description || "Sem descrição informada.",
-        location: action.campus ? `Campus ${action.campus}` : "Local não informado",
-        date: formatDate(action.startDate),
-        status: filter,
-        activityStatus: action.status,
-        workloadHours: action.details?.workloadHours,
-      };
-    });
-
-  return mappedList;
+  return response.items.map((item) => ({
+    action: item,
+    description: item.details?.description || "Sem descrição informada.",
+    location: formatActionLocation(item),
+    date: formatDate(item.startDate),
+    certificate: item.certificate,
+    confirmedWorkloadHours: item.enrollment?.confirmedWorkloadHours ?? 0,
+  }));
 }
 
 export async function updateActivityStatus(
   id: string,
   status: ActivityStatusTransition,
-): Promise<Omit<Action, "details">> {
+): Promise<Omit<ActivityListItem, "details">> {
   const body: UpdateActivityStatusRequest = { status };
-  return await api.patch<Omit<Action, "details">>(
+  return await api.patch<Omit<ActivityListItem, "details">>(
     `/activities/${id}/status`,
     body,
   );
 }
 
-export async function getActivityById(id: string): Promise<ActionDetail> {
-  return await api.get<ActionDetail>(`/activities/${id}`);
+export async function getActivityById(id: string): Promise<Activity> {
+  return await api.get<Activity>(`/activities/${id}`);
+}
+
+export async function downloadCertificate(
+  certificateId: string,
+): Promise<Blob> {
+  return await api.getBlob(`/certificates/${certificateId}/file`);
+}
+
+export async function deleteActivity(id: string): Promise<void> {
+  await api.delete(`/activities/${id}`);
 }

@@ -1,7 +1,11 @@
-import type { Enrollment } from "../types";
+import { Button } from "@/components/Button";
+import type { EnrollmentListItem } from "@/services/contracts/enrollment";
+import { AttendanceBadge } from "./AttendanceBadge";
 
 interface EnrollmentTableProps {
-  enrollments: Enrollment[];
+  enrollments: EnrollmentListItem[];
+  /** Absent while the activity is not COMPLETED: attendance cannot be homologated yet. */
+  onHomologate?: (enrollment: EnrollmentListItem) => void;
 }
 
 /**
@@ -16,7 +20,10 @@ interface EnrollmentTableProps {
  * - registrationCode is rendered as an empty string when null — teachers
  *   have no registration code and the cell must never display "null".
  */
-export function EnrollmentTable({ enrollments }: EnrollmentTableProps) {
+export function EnrollmentTable({
+  enrollments,
+  onHomologate,
+}: EnrollmentTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="min-w-full text-sm" aria-label="Lista de inscritos">
@@ -31,24 +38,56 @@ export function EnrollmentTable({ enrollments }: EnrollmentTableProps) {
             <th scope="col" className="px-4 py-3 text-left font-semibold">
               Matrícula
             </th>
+            <th scope="col" className="px-4 py-3 text-left font-semibold">
+              Presença
+            </th>
+            {onHomologate && (
+              <th scope="col" className="px-4 py-3 text-right font-semibold">
+                <span className="sr-only">Ações</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
-          {enrollments.map((enrollment) => (
-            <tr
-              key={enrollment.enrollmentId}
-              className="hover:bg-gray-50 transition-colors"
-            >
-              <td className="px-4 py-3 font-medium text-gray-900">
-                {enrollment.fullName}
-              </td>
-              <td className="px-4 py-3 text-gray-600">{enrollment.email}</td>
-              <td className="px-4 py-3 text-gray-500">
-                {/* Explicit empty string when null — never display "null" */}
-                {enrollment.registrationCode ?? ""}
-              </td>
-            </tr>
-          ))}
+          {enrollments.map((enrollment) => {
+            const isFirstHomologation = enrollment.attendanceConfirmed === null;
+
+            return (
+              <tr
+                key={enrollment.id}
+                className="hover:bg-gray-50 transition-colors"
+              >
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {enrollment.user.fullName}
+                </td>
+                <td className="px-4 py-3 text-gray-600">
+                  {enrollment.user.email}
+                </td>
+                <td className="px-4 py-3 text-gray-500">
+                  {/* Explicit empty string when null — never display "null" */}
+                  {enrollment.user.registrationCode ?? ""}
+                </td>
+                <td className="px-4 py-3">
+                  <AttendanceBadge enrollment={enrollment} />
+                </td>
+                {onHomologate && (
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="whitespace-nowrap"
+                      aria-label={`${
+                        isFirstHomologation ? "Homologar" : "Editar"
+                      } presença de ${enrollment.user.fullName}`}
+                      onClick={() => onHomologate(enrollment)}
+                    >
+                      {isFirstHomologation ? "Homologar" : "Editar"}
+                    </Button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

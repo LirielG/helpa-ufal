@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
+import { prisma } from "@/database/prisma.js";
 import { anAddress, createTeacher, createStudent } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
@@ -24,6 +25,83 @@ function validPayload(overrides: Record<string, unknown> = {}) {
 }
 
 describe("POST /activities", () => {
+  describe.each(["startDate", "endDate"])("%s", (field) => {
+    it.each([
+      ["date without timezone", "2026-01-01T08:00"],
+      ["date only", "2026-01-01"],
+      ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+      ["numeric timestamp", 1767225600000],
+    ])(
+      "returns 400 when it is not ISO 8601 in UTC with Z (%s)",
+      async (_, invalidDate) => {
+        const author = await createTeacher();
+
+        const response = await request(app)
+          .post("/activities")
+          .set(...authHeader(author.token))
+          .send(validPayload({ [field]: invalidDate }));
+
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field })]),
+        );
+      },
+    );
+  });
+
+  it("creates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
+    const author = await createTeacher();
+    const startDate = daysFromNow(30).toISOString();
+    const endDate = daysFromNow(44).toISOString();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ startDate, endDate }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.startDate).toBe(startDate);
+    expect(response.body.endDate).toBe(endDate);
+  });
+
+  // The POST response does not include details, so url and address are read back via GET.
+  it("creates an IN_PERSON activity with url: null and stores url as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(
+        validPayload({
+          format: "IN_PERSON",
+          url: null,
+          address: anAddress(),
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.url).toBeNull();
+  });
+
+  it("creates an ONLINE activity with address: null and stores address as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(
+        validPayload({
+          format: "ONLINE",
+          address: null,
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.address).toBeNull();
+  });
+
   it("returns 401 without a token", async () => {
     const response = await request(app).post("/activities").send(validPayload());
     expect(response.status).toBe(401);
@@ -49,6 +127,29 @@ describe("POST /activities", () => {
       .set(...authHeader(expiredToken))
       .send(validPayload());
     expect(response.status).toBe(401);
+  });
+
+  it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
+    const teacher = await createTeacher();
+
+    await prisma.teacher.deleteMany({ where: { userId: teacher.user.id } });
+    await prisma.user.delete({ where: { id: teacher.user.id } });
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(teacher.token))
+      .send(validPayload());
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      status: 403,
+      message: "You do not have permission to create an activity.",
+    });
+
+    const count = await prisma.activity.count({
+      where: { authorId: teacher.user.id },
+    });
+    expect(count).toBe(0);
   });
 
   it.each([
@@ -177,6 +278,9 @@ describe("POST /activities", () => {
       .send(validPayload({ format: "ONLINE", address: anAddress() }));
 
     expect(response.status).toBe(201);
+    
+    expect(response.body.details.format).toBe("ONLINE");
+    expect(response.body.details.address).toBeNull();
 
     const persisted = await request(app).get(`/activities/${response.body.id}`);
     expect(persisted.body.details.format).toBe("ONLINE");
@@ -195,6 +299,11 @@ describe("POST /activities", () => {
         .send(validPayload({ format, address }));
 
       expect(response.status).toBe(201);
+      
+      expect(response.body.details.address).toEqual({
+        id: expect.any(String),
+        ...address,
+      });
 
       const persisted = await request(app).get(`/activities/${response.body.id}`);
       expect(persisted.body.details.address).toEqual({

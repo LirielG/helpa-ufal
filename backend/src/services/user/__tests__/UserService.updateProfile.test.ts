@@ -5,7 +5,6 @@ import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 /**
- * Spec for issue #95 (service layer of PATCH /users/me).
  * Contract: docs/bruno/User/Update user's profile.yml.
  *
  * Names this suite pins down for #59:

@@ -16,48 +16,58 @@ export const ACTIVE_ENROLLMENT_STATUS: EnrollmentStatus = "APPROVED";
 // switch to "PENDING" (though the vacancy count remains based on "APPROVED").
 export const ENROLLMENT_INITIAL_STATUS: EnrollmentStatus = "APPROVED";
 
-export type EnrollmentResponse = {
+export type EnrollResponse = {
   id: string;
   activityId: string;
   userId: string;
   createdAt: Date;
 };
 
-// Exactly these 8 fields — never a spread of the Prisma object, because the
-// repository's include carries user.passwordHash along.
-export type ParticipantResponse = {
-  enrollmentId: string;
+export type EnrollmentResponse = {
+  id: string;
+  activityId: string;
   userId: string;
+  status: EnrollmentStatus;
+  attendanceConfirmed: boolean | null;
+  confirmedWorkloadHours: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/** The canonical enrollment, shared by every route that returns one. */
+export function toEnrollmentResponse(
+  enrollment: EnrollmentResponse,
+): EnrollmentResponse {
+  return {
+    id: enrollment.id,
+    activityId: enrollment.activityId,
+    userId: enrollment.userId,
+    status: enrollment.status,
+    attendanceConfirmed: enrollment.attendanceConfirmed,
+    confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+    createdAt: enrollment.createdAt,
+    updatedAt: enrollment.updatedAt,
+  };
+}
+
+export type EnrollmentUser = {
+  id: string;
   fullName: string;
   email: string;
   /** Only student.registrationCode is exposed; professors get null by minimization. */
   registrationCode: string | null;
-  status: EnrollmentStatus;
-  /** Tri-state: null = not homologated, true = present, false = registered absence. */
-  attendanceConfirmed: boolean | null;
-  /** Significant only when attendanceConfirmed is true; 0 otherwise (structural). */
-  confirmedWorkloadHours: number;
+};
+
+export type EnrollmentParticipantResponse = EnrollmentResponse & {
+  user: EnrollmentUser;
 };
 
 /** Body of the attendance homologation: the outcome only, never the target. */
-export type ConfirmAttendanceInput = {
-  attended: boolean;
-  workloadHours?: number;
-};
-
-/**
- * Homologation response: the attendance state of the enrollment and nothing else.
- */
-export type AttendanceResponse = {
-  /** Tri-state: null = not homologated, true = present, false = registered absence. */
-  attendanceConfirmed: boolean | null;
-  /** Significant only when attendanceConfirmed is true; 0 otherwise (structural). */
-  confirmedWorkloadHours: number;
-  updatedAt: Date;
-};
+export type ConfirmAttendanceInput =
+  { attended: false } | { attended: true; workloadHours: number };
 
 export type ParticipantsListResponse = {
-  items: ParticipantResponse[];
+  items: EnrollmentParticipantResponse[];
   /** Global count of APPROVED enrollments — never affected by the current page. */
   total: number;
   page: number;

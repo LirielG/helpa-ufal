@@ -13,12 +13,12 @@ import {
   waitFor,
   within,
 } from "@/test";
-import type {
-  ActionDetail,
-  ActionDetails,
-} from "@/features/action-detail/types";
+import type { Activity, ActivityDetails } from "@/services/contracts/activity";
 import type { ActionAddressPayload } from "@/features/action-edit/types";
+import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import { EditAction } from "../EditAction";
+import { signIn } from "@/test/auth";
+import { makeUser } from "@/test/factories";
 
 const ACTION_ID = "action-1";
 
@@ -30,18 +30,18 @@ const ADDRESS: ActionAddressPayload = {
   state: "AL",
 };
 
-type EditableAction = ActionDetail & { details: ActionDetails };
+type EditableAction = Activity & { details: ActivityDetails };
 
 function editableAction(
-  details: Partial<ActionDetails> = {},
-  action: Partial<ActionDetail> = {},
+  details: Partial<ActivityDetails> = {},
+  action: Partial<Activity> = {},
 ): EditableAction {
   const base = makeActionDetail({ id: ACTION_ID, ...action });
 
   return {
     ...base,
     details: {
-      ...(base.details as ActionDetails),
+      ...(base.details as ActivityDetails),
       area: "Robótica",
       url: "https://exemplo.com/oficina",
       address: { id: "address-1", ...ADDRESS },
@@ -50,7 +50,7 @@ function editableAction(
   };
 }
 
-function mockAction(action: ActionDetail = editableAction()) {
+function mockAction(action: Activity = editableAction()) {
   // The literal id, not `:id`: an override on `:id` would also answer
   // GET /activities/filters, which the area field calls.
   server.use(
@@ -78,6 +78,20 @@ function spyOnUpdate(onResponse?: () => Promise<void>) {
   return onRequest;
 }
 
+function recordDeletes(
+  respond: () => Response | Promise<Response> = () =>
+    new HttpResponse(null, { status: 204 }),
+) {
+  const requests: unknown[] = [];
+  server.use(
+    http.delete(`${API}/activities/${ACTION_ID}`, async () => {
+      requests.push(true);
+      return respond();
+    }),
+  );
+  return requests;
+}
+
 function failUpdate(status: number, body: Record<string, unknown> = {}) {
   server.use(
     http.patch(`${API}/activities/:id`, () =>
@@ -86,17 +100,27 @@ function failUpdate(status: number, body: Record<string, unknown> = {}) {
   );
 }
 
+/** Mounts the session handler the way AppRoutes does, so a 401 reaches /login. */
+function SessionExpiry() {
+  useSessionExpiry();
+  return null;
+}
+
 /**
  * The destination routes are part of the tree so a redirect is observed
  * through what ends up on screen, rather than by spying on `useNavigate`.
  */
 function renderEditAction() {
   return render(
-    <Routes>
-      <Route path="/activity/:id/edit" element={<EditAction />} />
-      <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
-      <Route path="/login" element={<h1>Entrar</h1>} />
-    </Routes>,
+    <>
+      <SessionExpiry />
+      <Routes>
+        <Route path="/activity/:id/edit" element={<EditAction />} />
+        <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+        <Route path="/dashboard" element={<h1>Dashboard</h1>} />
+        <Route path="/login" element={<h1>Entrar</h1>} />
+      </Routes>
+    </>,
     { route: `/activity/${ACTION_ID}/edit` },
   );
 }
@@ -295,6 +319,90 @@ describe("EditAction", () => {
       );
     },
   );
+
+  it("asks for the link of an online action with the create form's message", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.clear(screen.getByLabelText("Link para o evento"));
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+      ),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("blocks an invalid link on an online action", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "nao-e-um-link");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText("Informe uma URL válida"),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("saves an in-person switch even if the hidden link is invalid", async () => {
+    mockAction(editableAction({ format: "ONLINE" }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "nao-e-um-link");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "IN_PERSON",
+    );
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        format: "IN_PERSON",
+        address: ADDRESS,
+      }),
+    );
+  });
+
+  it("drops an edited link when the action becomes in-person", async () => {
+    mockAction(editableAction({ format: "ONLINE" }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "https://exemplo.com/novo");
+    await user.selectOptions(
+      screen.getByLabelText("Formato da ação"),
+      "IN_PERSON",
+    );
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        format: "IN_PERSON",
+        address: ADDRESS,
+      }),
+    );
+  });
 
   it("uppercases a state typed in lower case", async () => {
     mockAction();
@@ -796,5 +904,146 @@ describe("EditAction", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe("EditAction deletion", () => {
+  it("does not show the delete action button when user is not author nor manager", async () => {
+    mockAction(editableAction({}, { authorId: "author-123" }));
+    signIn(makeUser({ id: "other-user", isManager: false }));
+
+    renderEditAction();
+
+    await findTitleField();
+
+    expect(
+      screen.queryByRole("button", { name: "Excluir ação" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows delete button and redirects to /dashboard when creator deletes action with 204", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    const requests = recordDeletes();
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const deleteBtn = screen.getByRole("button", { name: "Excluir ação" });
+    await user.click(deleteBtn);
+
+    expect(
+      screen.getByRole("heading", { name: "Confirmar exclusão" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(requests).toHaveLength(1);
+  });
+
+  it("allows a manager who is not the author to see delete button and delete action", async () => {
+    mockAction(editableAction({}, { authorId: "author-123" }));
+    signIn(makeUser({ id: "manager-user", isManager: true }));
+    const requests = recordDeletes();
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(requests).toHaveLength(1);
+  });
+
+  it("does not send DELETE request when user cancels the deletion modal", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    const requests = recordDeletes();
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Não" }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Confirmar exclusão" }),
+    ).not.toBeInTheDocument();
+    expect(requests).toHaveLength(0);
+    expect(screen.getByLabelText("Título")).toBeInTheDocument();
+  });
+
+  it("redirects to /dashboard silently on 404 response without system error", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Not found" }, { status: 404 }),
+    );
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+  });
+
+  it("shows pt-BR error message in modal when deletion responds with 403", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Forbidden" }, { status: 403 }),
+    );
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(
+      await screen.findByText("Você não tem permissão para excluir esta ação."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+  });
+
+  it("redirects to /login when deletion responds with 401", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    recordDeletes(() =>
+      HttpResponse.json({ message: "Unauthorized" }, { status: 401 }),
+    );
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Entrar")).toBeInTheDocument();
+  });
+
+  it("does not send multiple DELETE requests on double clicking confirm", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    const requests = recordDeletes();
+
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.dblClick(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
   });
 });

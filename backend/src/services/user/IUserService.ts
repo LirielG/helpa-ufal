@@ -1,4 +1,7 @@
 import type { UserProfileResponse } from "@/types/user.js";
+import type { UserActivityResponse } from "@/types/activity.js";
+import type { Paginated } from "@/types/pagination.js";
+import type { ListUserActivitiesQuery } from "@/schemas/user/UserActivitySchemas.js";
 
 export type UpdateProfileInput = {
   fullName?: string;
@@ -13,4 +16,8 @@ export interface IUserService {
     userId: string,
     input: UpdateProfileInput,
   ): Promise<UserProfileResponse>;
+  listActivities(
+    userId: string,
+    query: ListUserActivitiesQuery,
+  ): Promise<Paginated<UserActivityResponse>>;
 }

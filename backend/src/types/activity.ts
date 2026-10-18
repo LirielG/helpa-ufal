@@ -1,4 +1,5 @@
 import { ActivityDetails } from "@prisma/client";
+import type { EnrollmentResponse, EnrollmentStatus } from "./enrollment.js";
 
 export type ActivityType =
   "EXTENSION" | "COURSE" | "EVENT" | "LECTURE" | "OTHER";
@@ -49,6 +50,30 @@ export type ActivityDetailsResponse = {
 
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
+  enrollmentStatus?: EnrollmentStatus | null;
+};
+
+export type UserActivityFilter = "enrolled" | "completed" | "managed";
+
+/** validationCode is in its stored form; the hyphenated display is the client's job. */
+export type UserActivityCertificate = {
+  id: string;
+  validationCode: string;
+  issuedAt: Date;
+};
+
+/**
+ * An item of GET /users/me/activities: the activity exactly as
+ * GET /activities/:activityId returns it to an anonymous caller, plus the
+ * token owner's enrollment and its certificate. `enrollment` carries the
+ * status, so the `enrollmentStatus` shortcut of the detail route is left out.
+ */
+export type UserActivityResponse = Omit<
+  ActivityFullResponse,
+  "enrollmentStatus"
+> & {
+  enrollment: EnrollmentResponse | null;
+  certificate: UserActivityCertificate | null;
 };
 
 export type ActivityFilterOptions = {

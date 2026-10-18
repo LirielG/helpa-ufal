@@ -45,7 +45,7 @@ examples:
         data: |-
           {
             "status": 500,
-            "message": ""
+            "message": "Internal server error."
           }
 
 docs: |-
@@ -54,12 +54,8 @@ docs: |-
   Returns the distinct activity areas, so the frontend can populate the
   dashboard's area filter dynamically (US 2.1.2) instead of hardcoding values.
 
-  > Contract first: this route is **not implemented yet** (issue #158). The
-  > "(coming soon)" suffix is removed from the file name when it ships.
-
-  ## Authentication
-  - None. Public route, like `GET /activities`. A token may be sent (the
-    collection inherits one), but it is ignored.
+  **Authentication:** public, like `GET /activities`. A session cookie, if
+  sent, is ignored.
 
   ## Source and eligibility
   - Values come from `ActivityDetails.area`, considering only activities whose
@@ -91,4 +87,4 @@ docs: |-
   |--------|------|
   | 500    | Unexpected server error |
 
-  > Error body follows the API default (`{ status, message }`).
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

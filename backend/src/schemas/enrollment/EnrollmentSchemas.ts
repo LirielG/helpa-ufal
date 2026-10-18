@@ -1,9 +1,5 @@
 import { z } from "zod";
-
-// Contract message pinned by docs/bruno/Enrollments/List Activity Enrollments.yml
-// and by tests/integration/enrollment/get-enrollments.test.ts — changing it
-// here changes the public error body.
-export const INVALID_QUERY_MESSAGE = "Invalid query parameters.";
+import type { ConfirmAttendanceInput } from "@/types/enrollment.js";
 
 /**
  * GET /activities/:activityId/enrollments — ?page=1&limit=10 (limit capped at 50).
@@ -33,14 +29,36 @@ export type ListParticipantsQuery = z.output<
 >;
 
 /**
- * workloadHours is deliberately NOT .int(): the range, the ceiling and the
- * attended/workloadHours combination are business rules and answer 422, so
- * only a wrong TYPE may fail here (400). A fractional value is a number and
- * must reach the service.
+ * The attended/workloadHours combination depends only on the body, so it is
+ * checked here and answers 400 before any lookup. workloadHours is
+ * deliberately NOT .int(): the range and the activity's ceiling depend on
+ * stored data and answer 422 in the service, so a fractional value must
+ * reach it.
  */
 export const ConfirmAttendanceBodySchema = z
   .object({
     attended: z.boolean(),
     workloadHours: z.number().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (!data.attended && data.workloadHours !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["workloadHours"],
+        message: "workloadHours must be omitted when attended is false.",
+      });
+    }
+    if (data.attended && data.workloadHours === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["workloadHours"],
+        message: "workloadHours is required when attended is true.",
+      });
+    }
+  })
+  .transform((data): ConfirmAttendanceInput =>
+    data.attended && data.workloadHours !== undefined
+      ? { attended: true, workloadHours: data.workloadHours }
+      : { attended: false },
+  );

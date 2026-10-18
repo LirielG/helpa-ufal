@@ -7,9 +7,9 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/activities/:id/reports"
+  url: "{{baseUrl}}/activities/:activityId/reports"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -20,7 +20,6 @@ http:
         "category": "MISINFORMATION",
         "description": "The address provided is incorrect."
       }
-  auth: inherit
 
 settings:
   encodeUrl: true
@@ -33,14 +32,11 @@ examples:
   - name: 201 Response
     description: Report registered successfully.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -60,24 +56,56 @@ examples:
         type: json
         data: |-
           {
-            "id": "",
-            "activityId": "",
-            "userId": "",
-            "category": "SPAM",
-            "description": "",
-            "createdAt": ""
+            "id": "3e5eee74-ec02-4551-a959-0c89ac78105d",
+            "activityId": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+            "userId": "3d117a38-e6cd-4429-ab23-72ac93a790e2",
+            "category": "MISINFORMATION",
+            "description": "The address provided is incorrect.",
+            "createdAt": "2026-10-17T15:08:52.911Z"
           }
-  - name: 400 Response
-    description: Validation error.
+  - name: 400 - Invalid body
+    description: category is not one of the accepted values.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "category": "FOO"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "category",
+                "message": "Invalid option: expected one of \"SPAM\"|\"INAPPROPRIATE_CONTENT\"|\"MISINFORMATION\"|\"DUPLICATE\"|\"OTHER\""
+              }
+            ]
+          }
+  - name: 400 - Invalid id
+    description: The activityId in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/reports"
+      method: POST
+      params:
+        - name: activityId
+          value: "not-a-uuid"
           type: path
           description: Activity UUID
       body:
@@ -101,22 +129,19 @@ examples:
             "message": "Validation error.",
             "errors": [
               {
-                "field": "",
-                "message": ""
+                "field": "activityId",
+                "message": "activityId must be a valid UUID."
               }
             ]
           }
-  - name: 401 Response
-    description: Unauthenticated.
+  - name: 401 - Missing token
+    description: No session cookie was sent.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -136,20 +161,47 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 401,
+            "message": "No token provided."
+          }
+  - name: 401 - Invalid token
+    description: The session cookie is invalid or expired.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/reports"
+      method: POST
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "category": "MISINFORMATION",
+            "description": "The address provided is incorrect."
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Token malformatted, expired or invalid."
           }
   - name: 403 Response
-    description: Forbidden. The activity author cannot report their own activity.
+    description: The author tried to report their own activity.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -169,20 +221,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 403,
+            "message": "Activity authors cannot report their own activity."
           }
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
       body:
@@ -202,20 +251,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 404,
+            "message": "Activity not found."
           }
   - name: 409 Response
-    description: Conflict.
+    description: The user already reported this activity.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -235,20 +281,17 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 409,
+            "message": "You have already reported this activity."
           }
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
-      headers:
-        - name: token
-          value: "{{apiKey}}"
       params:
-        - name: id
-          value: ""
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
       body:
@@ -268,8 +311,13 @@ examples:
         type: json
         data: |-
           {
-            "status": 0,
-            "message": ""
+            "status": 500,
+            "message": "Internal server error."
           }
 
-docs: Registers a report against an activity. Any authenticated user can report, except the activity's own author. Each user can only report a given activity once.
+docs: |-
+  Registers a report against an activity. Any authenticated user can report, except the activity's own author. Each user can only report a given activity once.
+
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

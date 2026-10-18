@@ -26,11 +26,7 @@ export interface IEnrollmentRepository {
     activityId: string,
   ): Promise<Enrollment | null>;
 
-  /* Scoped lookup: an enrollment of another activity reads as nonexistent */
-  findByIdAndActivity(
-    enrollmentId: string,
-    activityId: string,
-  ): Promise<Enrollment | null>;
+  findById(enrollmentId: string): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
   enroll(userId: string, activityId: string): Promise<Enrollment>;
@@ -51,14 +47,16 @@ export interface IEnrollmentRepository {
   /* Foundation for the "Subscribed Actions" tab (Epic 3): lists only APPROVED items */
   findActiveByUserId(
     userId: string,
-    skip?: number,
-    take?: number,
+    skip: number,
+    take: number,
   ): Promise<{ items: EnrollmentWithActivity[]; total: number }>;
 
+  /* skip/take, the same vocabulary as findActiveByUserId. The service owns the
+     page -> skip conversion, so a repository call can never carry a page. */
   findByActivityId(
     activityId: string,
-    page: number,
-    limit: number,
+    skip: number,
+    take: number,
   ): Promise<{
     items: EnrollmentWithParticipant[];
     total: number;

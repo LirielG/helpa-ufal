@@ -11,19 +11,48 @@ import type {
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
+import ValidationError, {
+  type ValidationErrorItem,
+} from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 import type { Enrollment } from "@prisma/client";
 import {
   ACTIVE_ENROLLMENT_STATUS,
-  type AttendanceResponse,
   type ConfirmAttendanceInput,
+  type EnrollResponse,
   type EnrollmentListResponse,
+  type EnrollmentParticipantResponse,
   type EnrollmentResponse,
   type EnrollmentWithActivityResponse,
-  type ParticipantResponse,
   type ParticipantsListResponse,
+  toEnrollmentResponse,
 } from "@/types/enrollment.js";
+
+/**
+ * The single place where the 1-based page/limit of the service becomes the
+ * skip of the repository, and the guard for callers that bypass the HTTP
+ * validateQuery: page 0 would build skip -10, which Prisma rejects as a 500.
+ *
+ * Invalid values answer 400 with the same items as the route schema, never a
+ * silent clamp (api-conventions, section 3). The upper bound on limit is
+ * enforced by the route schema only.
+ */
+function toSkip(page: number, limit: number): number {
+  const errors: ValidationErrorItem[] = [];
+
+  if (!Number.isInteger(page) || page < 1) {
+    errors.push({ field: "page", message: "page must be a positive integer." });
+  }
+  if (!Number.isInteger(limit) || limit < 1) {
+    errors.push({
+      field: "limit",
+      message: "limit must be a positive integer.",
+    });
+  }
+  if (errors.length > 0) throw new ValidationError(errors);
+
+  return (page - 1) * limit;
+}
 
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
@@ -47,7 +76,7 @@ class EnrollmentService implements IEnrollmentService {
   public async enroll(
     userId: string,
     activityId: string,
-  ): Promise<EnrollmentResponse> {
+  ): Promise<EnrollResponse> {
     await this.requireUser(userId);
 
     if (!isValidUUID(activityId)) {
@@ -99,7 +128,7 @@ class EnrollmentService implements IEnrollmentService {
     page = 1,
     limit = 10,
   ): Promise<EnrollmentListResponse> {
-    const skip = (page - 1) * limit;
+    const skip = toSkip(page, limit);
     const { items, total } =
       await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
@@ -135,10 +164,11 @@ class EnrollmentService implements IEnrollmentService {
       );
     }
 
+    const skip = toSkip(page, limit);
     const { items, total, totalPresent } =
       await this._enrollmentRepository.findByActivityId(
         activityId,
-        page,
+        skip,
         limit,
       );
 
@@ -155,33 +185,29 @@ class EnrollmentService implements IEnrollmentService {
 
   public async confirmAttendance(
     userId: string,
-    activityId: string,
     enrollmentId: string,
     input: ConfirmAttendanceInput,
-  ): Promise<AttendanceResponse> {
+  ): Promise<EnrollmentResponse> {
     const user = await this.requireUser(userId);
 
     // A malformed id is a lookup that finds nothing, never operator input: it
     // answers the same 404 as a nonexistent or soft-deleted row, so the route
     // never reveals which ids are merely badly shaped.
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(404, "Activity not found.");
-    }
-
-    const activity = await this._activityRepository.findById(activityId);
-    if (!activity) {
-      throw new CustomError(404, "Activity not found.");
-    }
-
     if (!isValidUUID(enrollmentId)) {
       throw new CustomError(404, "Enrollment not found.");
     }
 
-    const enrollment = await this._enrollmentRepository.findByIdAndActivity(
-      enrollmentId,
-      activityId,
-    );
+    const enrollment = await this._enrollmentRepository.findById(enrollmentId);
     if (!enrollment) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    // The path names only the enrollment, so an enrollment whose activity was
+    // soft-deleted reads as the same 404 as one that never existed.
+    const activity = await this._activityRepository.findById(
+      enrollment.activityId,
+    );
+    if (!activity) {
       throw new CustomError(404, "Enrollment not found.");
     }
 
@@ -216,17 +242,13 @@ class EnrollmentService implements IEnrollmentService {
     );
 
     const updated = await this._enrollmentRepository.confirmAttendance(
-      activityId,
+      enrollment.activityId,
       enrollmentId,
       input.attended,
       confirmedWorkloadHours,
     );
 
-    return {
-      attendanceConfirmed: updated.attendanceConfirmed,
-      confirmedWorkloadHours: updated.confirmedWorkloadHours,
-      updatedAt: updated.updatedAt,
-    };
+    return toEnrollmentResponse(updated);
   }
 
   /**
@@ -239,20 +261,7 @@ class EnrollmentService implements IEnrollmentService {
     workloadCeiling: number,
   ): number {
     if (!input.attended) {
-      if (input.workloadHours !== undefined) {
-        throw new CustomError(
-          422,
-          "workloadHours must be omitted when attended is false.",
-        );
-      }
       return 0;
-    }
-
-    if (input.workloadHours === undefined) {
-      throw new CustomError(
-        422,
-        "workloadHours is required when attended is true.",
-      );
     }
 
     if (
@@ -278,7 +287,7 @@ class EnrollmentService implements IEnrollmentService {
     return user;
   }
 
-  private toEnrollResponse(enrollment: Enrollment): EnrollmentResponse {
+  private toEnrollResponse(enrollment: Enrollment): EnrollResponse {
     return {
       id: enrollment.id,
       activityId: enrollment.activityId,
@@ -310,18 +319,22 @@ class EnrollmentService implements IEnrollmentService {
 
   private toParticipantResponse(
     enrollment: EnrollmentWithParticipant,
-  ): ParticipantResponse {
+  ): EnrollmentParticipantResponse {
     return {
-      enrollmentId: enrollment.id,
+      id: enrollment.id,
+      activityId: enrollment.activityId,
       userId: enrollment.userId,
-      fullName: enrollment.user.fullName,
-      email: enrollment.user.email,
-      // Field-by-field stays as a second line of defense, but the repository
-      // now selects only these fields — passwordHash never leaves the database.
-      registrationCode: enrollment.user.student?.registrationCode ?? null,
       status: enrollment.status,
       attendanceConfirmed: enrollment.attendanceConfirmed,
       confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+      createdAt: enrollment.createdAt,
+      updatedAt: enrollment.updatedAt,
+      user: {
+        id: enrollment.user.id,
+        fullName: enrollment.user.fullName,
+        email: enrollment.user.email,
+        registrationCode: enrollment.user.student?.registrationCode ?? null,
+      },
     };
   }
 }
