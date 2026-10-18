@@ -96,7 +96,7 @@ function AuthenticCertificate({
         <h2 className="text-lg font-semibold">Certificado autêntico</h2>
       </div>
       <p className="mt-1 text-sm text-green-900">
-        Este código corresponde a um certificado emitido pela HELPA.
+        Este código corresponde a um certificado emitido pelo Helpa.
       </p>
 
       <dl className="mt-5 grid gap-4 sm:grid-cols-2">
