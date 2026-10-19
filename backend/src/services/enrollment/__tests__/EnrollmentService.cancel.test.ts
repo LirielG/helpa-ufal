@@ -116,7 +116,7 @@ describe("EnrollmentService.cancel", () => {
       service.cancel(USER_ID, ACTIVITY_ID),
       404,
       "Activity not found.",
-      "ACTIVITY_NOT_FOUND"
+      "ACTIVITY_NOT_FOUND",
     );
     expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
@@ -142,7 +142,7 @@ describe("EnrollmentService.cancel", () => {
         service.cancel(USER_ID, ACTIVITY_ID),
         409,
         "Activity is not open for cancellation.",
-        "CONFLICT"
+        "CONFLICT",
       );
       expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
     },
@@ -154,9 +154,11 @@ describe("EnrollmentService.cancel", () => {
     const { activityRepository, userRepository, enrollmentRepository } =
       mockRepositories({
         enrollment: {
-          cancel: vi
-            .fn()
-            .mockRejectedValue(new CustomError(404, "Enrollment not found.", { code: "ENROLLMENT_NOT_FOUND" })),
+          cancel: vi.fn().mockRejectedValue(
+            new CustomError(404, "Enrollment not found.", {
+              code: "ENROLLMENT_NOT_FOUND",
+            }),
+          ),
         },
       });
     const service = new EnrollmentService({
@@ -169,7 +171,7 @@ describe("EnrollmentService.cancel", () => {
       service.cancel(USER_ID, ACTIVITY_ID),
       404,
       "Enrollment not found.",
-      "ENROLLMENT_NOT_FOUND"
+      "ENROLLMENT_NOT_FOUND",
     );
   });
 });

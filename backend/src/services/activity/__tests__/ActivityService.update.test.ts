@@ -405,7 +405,9 @@ describe("ActivityService.update", () => {
           "slots cannot be reduced below the current number of approved enrollments (13).",
       },
     ]);
-    expect((error as ValidationError).details).toEqual({ approvedEnrollments: 13 });
+    expect((error as ValidationError).details).toEqual({
+      approvedEnrollments: 13,
+    });
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
@@ -450,7 +452,9 @@ describe("ActivityService.update", () => {
           "slots cannot be reduced below the current number of approved enrollments (7).",
       },
     ]);
-    expect((error as ValidationError).details).toEqual({ approvedEnrollments: 7 });
+    expect((error as ValidationError).details).toEqual({
+      approvedEnrollments: 7,
+    });
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 

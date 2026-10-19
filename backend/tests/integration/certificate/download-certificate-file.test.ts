@@ -15,7 +15,11 @@ import {
 import { authCookie } from "../../helpers/auth.js";
 
 const UNKNOWN_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
-const NOT_FOUND = { status: 404, code: "NOT_FOUND", message: "Certificate not found." };
+const NOT_FOUND = {
+  status: 404,
+  code: "NOT_FOUND",
+  message: "Certificate not found.",
+};
 
 /** A certificate issued the way the product issues it: by homologating presence. */
 async function anIssuedCertificate() {

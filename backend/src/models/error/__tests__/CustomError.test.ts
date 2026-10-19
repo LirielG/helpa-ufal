@@ -38,7 +38,9 @@ describe("CustomError", () => {
   });
 
   it("exposes the details it was given", () => {
-    const error = new CustomError(409, "Conflict.", { details: { field: "x" } });
+    const error = new CustomError(409, "Conflict.", {
+      details: { field: "x" },
+    });
 
     expect(error.details).toEqual({ field: "x" });
   });

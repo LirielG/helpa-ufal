@@ -21,11 +21,11 @@ export type SpecificErrorCode =
 
 export type ErrorCode = GenericErrorCode | SpecificErrorCode;
 
-// src/models/error/ErrorCodes.ts
 export type ErrorItemCode =
   | "VALIDATION_ERROR"
   | "UNKNOWN_PARAMETER"
   | "INVALID_UUID"
+  | "INVALID_DATETIME"
   | "BELOW_APPROVED_ENROLLMENTS";
 
 export type ErrorDetails = Record<string, unknown>;

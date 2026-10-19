@@ -32,7 +32,6 @@ describe("ValidationError", () => {
     expect(new ValidationError(items).errors).toEqual(items);
   });
 
-
   it("keeps an explicit item code", () => {
     const items: ValidationErrorItem[] = [
       { field: "slots", code: "BELOW_APPROVED_ENROLLMENTS", message: "Bad." },

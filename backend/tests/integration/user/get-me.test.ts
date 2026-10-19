@@ -194,6 +194,10 @@ describe("GET /users/me", () => {
       .set(...authHeader(student.token));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "User not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "User not found.",
+    });
   });
 });

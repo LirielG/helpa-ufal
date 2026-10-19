@@ -338,7 +338,9 @@ describe("GET /activities/:activityId/enrollments", () => {
       expect(response.status).toBe(400);
       expect(response.body.status).toBe(400);
       expect(response.body.message).toBe("Invalid query parameters.");
-      expect(response.body.errors).toEqual([{ field, code: "VALIDATION_ERROR", message }]);
+      expect(response.body.errors).toEqual([
+        { field, code: "VALIDATION_ERROR", message },
+      ]);
     },
   );
 

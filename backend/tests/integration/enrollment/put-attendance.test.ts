@@ -377,7 +377,11 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "", code: "VALIDATION_ERROR", message: 'Unrecognized key: "userId"' },
+      {
+        field: "",
+        code: "VALIDATION_ERROR",
+        message: 'Unrecognized key: "userId"',
+      },
     ]);
   });
 

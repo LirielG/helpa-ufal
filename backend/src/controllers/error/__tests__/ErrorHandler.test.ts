@@ -24,7 +24,10 @@ const sent = (res: FakeResponse) =>
 
 function aZodError() {
   const result = z
-    .object({ slots: z.number().min(1), address: z.object({ zipCode: z.string() }) })
+    .object({
+      slots: z.number().min(1),
+      address: z.object({ zipCode: z.string() }),
+    })
     .safeParse({ slots: -5, address: { zipCode: 1 } });
   if (result.success) throw new Error("Expected the parse to fail.");
   return result.error;
@@ -47,7 +50,12 @@ describe("ErrorHandler.zodErrorHandler", () => {
     const next = vi.fn();
     const error = new Error("boom");
 
-    errorHandler.zodErrorHandler(error, req, asResponse(aResponse()), next as NextFunction);
+    errorHandler.zodErrorHandler(
+      error,
+      req,
+      asResponse(aResponse()),
+      next as NextFunction,
+    );
 
     expect(next).toHaveBeenCalledWith(error);
   });
@@ -63,8 +71,16 @@ describe("ErrorHandler.zodErrorHandler", () => {
       code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "slots", code: "VALIDATION_ERROR", message: expect.any(String) },
-        { field: "address.zipCode", code: "VALIDATION_ERROR", message: expect.any(String) },
+        {
+          field: "slots",
+          code: "VALIDATION_ERROR",
+          message: expect.any(String),
+        },
+        {
+          field: "address.zipCode",
+          code: "VALIDATION_ERROR",
+          message: expect.any(String),
+        },
       ],
     });
   });
@@ -75,7 +91,12 @@ describe("ErrorHandler.validationErrorHandler", () => {
     const next = vi.fn();
     const error = new CustomError(404, "Not found.");
 
-    errorHandler.validationErrorHandler(error, req, asResponse(aResponse()), next as NextFunction);
+    errorHandler.validationErrorHandler(
+      error,
+      req,
+      asResponse(aResponse()),
+      next as NextFunction,
+    );
 
     expect(next).toHaveBeenCalledWith(error);
   });
@@ -85,7 +106,11 @@ describe("ErrorHandler.validationErrorHandler", () => {
     const error = new ValidationError(
       [
         { field: "page", message: "page must be a positive integer." },
-        { field: "foo", code: "UNKNOWN_PARAMETER", message: "foo is not a supported query parameter." },
+        {
+          field: "foo",
+          code: "UNKNOWN_PARAMETER",
+          message: "foo is not a supported query parameter.",
+        },
       ],
       "Invalid query parameters.",
     );
@@ -98,8 +123,16 @@ describe("ErrorHandler.validationErrorHandler", () => {
       code: "VALIDATION_ERROR",
       message: "Invalid query parameters.",
       errors: [
-        { field: "page", code: "VALIDATION_ERROR", message: "page must be a positive integer." },
-        { field: "foo", code: "UNKNOWN_PARAMETER", message: "foo is not a supported query parameter." },
+        {
+          field: "page",
+          code: "VALIDATION_ERROR",
+          message: "page must be a positive integer.",
+        },
+        {
+          field: "foo",
+          code: "UNKNOWN_PARAMETER",
+          message: "foo is not a supported query parameter.",
+        },
       ],
     });
   });
@@ -118,7 +151,9 @@ describe("ErrorHandler.validationErrorHandler", () => {
       status: 400,
       code: "VALIDATION_ERROR",
       message: "Validation error.",
-      errors: [{ field: "slots", code: "BELOW_APPROVED_ENROLLMENTS", message: "Bad." }],
+      errors: [
+        { field: "slots", code: "BELOW_APPROVED_ENROLLMENTS", message: "Bad." },
+      ],
       details: { approvedEnrollments: 12 },
     });
   });
@@ -132,7 +167,12 @@ describe("ErrorHandler.prismaErrorHandler", () => {
       clientVersion: "test",
     });
 
-    errorHandler.prismaErrorHandler(error, req, asResponse(aResponse()), next as NextFunction);
+    errorHandler.prismaErrorHandler(
+      error,
+      req,
+      asResponse(aResponse()),
+      next as NextFunction,
+    );
 
     expect(next).toHaveBeenCalledWith(error);
   });
@@ -144,7 +184,12 @@ describe("ErrorHandler.prismaErrorHandler", () => {
   ])("answers ALREADY_IN_USE with the field for %s", (field, message) => {
     const res = aResponse();
 
-    errorHandler.prismaErrorHandler(p2002({ target: [field] }), req, asResponse(res), vi.fn());
+    errorHandler.prismaErrorHandler(
+      p2002({ target: [field] }),
+      req,
+      asResponse(res),
+      vi.fn(),
+    );
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(sent(res)).toEqual({
@@ -202,7 +247,12 @@ describe("ErrorHandler.defaultHandler", () => {
   ] as const)("answers CustomError(%i) with the generic %s", (status, code) => {
     const res = aResponse();
 
-    errorHandler.defaultHandler(new CustomError(status, "Some message."), req, asResponse(res), vi.fn());
+    errorHandler.defaultHandler(
+      new CustomError(status, "Some message."),
+      req,
+      asResponse(res),
+      vi.fn(),
+    );
 
     expect(res.status).toHaveBeenCalledWith(status);
     expect(sent(res)).toEqual({ status, code, message: "Some message." });
@@ -210,10 +260,14 @@ describe("ErrorHandler.defaultHandler", () => {
 
   it("writes the specific code and the details of a CustomError", () => {
     const res = aResponse();
-    const error = new CustomError(409, "No available slots for this activity.", {
-      code: "NO_AVAILABLE_SLOTS",
-      details: { slots: 30 },
-    });
+    const error = new CustomError(
+      409,
+      "No available slots for this activity.",
+      {
+        code: "NO_AVAILABLE_SLOTS",
+        details: { slots: 30 },
+      },
+    );
 
     errorHandler.defaultHandler(error, req, asResponse(res), vi.fn());
 
@@ -228,7 +282,12 @@ describe("ErrorHandler.defaultHandler", () => {
   it("answers an unknown error with 500 INTERNAL_ERROR and no internal detail", () => {
     const res = aResponse();
 
-    errorHandler.defaultHandler(new Error("secret internals"), req, asResponse(res), vi.fn());
+    errorHandler.defaultHandler(
+      new Error("secret internals"),
+      req,
+      asResponse(res),
+      vi.fn(),
+    );
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(sent(res)).toEqual({
@@ -242,7 +301,12 @@ describe("ErrorHandler.defaultHandler", () => {
     envMock.NODE_ENV = "development";
     const res = aResponse();
 
-    errorHandler.defaultHandler(new Error("boom"), req, asResponse(res), vi.fn());
+    errorHandler.defaultHandler(
+      new Error("boom"),
+      req,
+      asResponse(res),
+      vi.fn(),
+    );
 
     expect(sent(res)).toMatchObject({
       status: 500,

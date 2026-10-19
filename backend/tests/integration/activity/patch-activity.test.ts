@@ -347,7 +347,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(200);
     expect(response.body.slots).toBe(1);
   });
-  
+
   it("preserves fields not sent in a partial update", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, {

@@ -1,8 +1,5 @@
 import CustomError from "@/models/error/CustomError.js";
-import type {
-  ErrorDetails,
-  ErrorItemCode,
-} from "@/models/error/ErrorCodes.js";
+import type { ErrorDetails, ErrorItemCode } from "@/models/error/ErrorCodes.js";
 
 // Input shape: `code` stays optional so existing call sites do not change.
 // The default is applied when the item is serialized (toApiErrorItems).

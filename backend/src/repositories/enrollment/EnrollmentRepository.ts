@@ -120,9 +120,13 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (existing && existing.status !== "CANCELLED") {
-        throw new CustomError(409, "User is already enrolled in this activity.", {
-          code: "ALREADY_ENROLLED",
-        });
+        throw new CustomError(
+          409,
+          "User is already enrolled in this activity.",
+          {
+            code: "ALREADY_ENROLLED",
+          },
+        );
       }
 
       const approvedCount = await tx.enrollment.count({
@@ -167,9 +171,13 @@ class EnrollmentRepository implements IEnrollmentRepository {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          throw new CustomError(409, "User is already enrolled in this activity.", {
-            code: "ALREADY_ENROLLED",
-          });
+          throw new CustomError(
+            409,
+            "User is already enrolled in this activity.",
+            {
+              code: "ALREADY_ENROLLED",
+            },
+          );
         }
         throw error;
       }
