@@ -68,13 +68,15 @@ examples:
         type: json
         data: |-
           {
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Validation error.",
             "errors": [
-              {
-                "field": "activityId",
-                "message": "activityId must be a valid UUID."
-              }
+              { 
+                field: "activityId",
+                code: "VALIDATION_ERROR", 
+                message: "activityId must be a valid UUID.",
+              },
             ]
           }
   - name: 401 - Unauthenticated
@@ -97,6 +99,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "No token provided."
           }
@@ -121,6 +124,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "Token malformatted, expired or invalid."
           }
@@ -145,6 +149,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "User account not found or inactive."
           }
@@ -169,6 +174,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "ACTIVITY_NOT_FOUND",
             "status": 404,
             "message": "Activity not found."
           }
@@ -192,7 +198,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "ALREADY_ENROLLED",
             "status": 409,
             "message": "User is already enrolled in this activity."
           }
@@ -216,7 +223,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "NO_AVAILABLE_SLOTS",
             "status": 409,
             "message": "No available slots for this activity."
           }
@@ -240,7 +248,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
             "status": 409,
             "message": "Activity is not open for enrollment."
           }
@@ -264,7 +273,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "INTERNAL_ERROR",
             "status": 500,
             "message": "Internal server error."
           }

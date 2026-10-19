@@ -127,10 +127,12 @@ examples:
         type: json
         data: |-
           {
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Validation error.",
             "errors": [
               {
+                "code": "VALIDATION_ERROR",
                 "field": "slots",
                 "message": "Too small: expected number to be >=1"
               }
@@ -160,10 +162,12 @@ examples:
         type: json
         data: |-
           {
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Validation error.",
             "errors": [
               {
+                "code": "VALIDATION_ERROR",
                 "field": "",
                 "message": "Body cannot be empty. At least one field must be provided."
               }
@@ -196,7 +200,48 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Invalid activityId parameter. Must be a valid UUID."
+          }
+  - name: 400 - Slots below approved enrollments
+    description: slots is lower than the number of APPROVED enrollments. The count is in details.approvedEnrollments and in the message. Status stays 400 for now (a change to 422 is planned, see api-conventions section 4).
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "slots": 2
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "slots",
+                "code": "BELOW_APPROVED_ENROLLMENTS",
+                "message": "slots cannot be reduced below the current number of approved enrollments (12)."
+              }
+            ],
+            "details": {
+              "approvedEnrollments": 12
+            }
           }
   - name: 401 Response
     description: Missing, invalid or expired session cookie.
@@ -224,6 +269,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "Unauthenticated."
           }
@@ -252,7 +298,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "FORBIDDEN",
             "status": 403,
             "message": "You do not have permission to update this activity."
           }
@@ -281,7 +328,8 @@ examples:
       body:
         type: json
         data: |-
-          {
+          { 
+            "code": "NOT_FOUND",
             "status": 404,
             "message": "Activity not found."
           }
@@ -311,6 +359,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "CONFLICT",
             "status": 409,
             "message": "Activity cannot be updated because it is already CANCELLED."
           }
@@ -340,6 +389,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "INTERNAL_ERROR",
             "status": 500,
             "message": "Internal server error."
           }
