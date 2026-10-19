@@ -13,6 +13,7 @@ const meUrl = "/users/me";
 const loginUrl = "/auth/login";
 const REVOKED_TOKEN_BODY = {
   status: 401,
+  code: "UNAUTHENTICATED",
   message: "Token malformatted, expired or invalid.",
 };
 

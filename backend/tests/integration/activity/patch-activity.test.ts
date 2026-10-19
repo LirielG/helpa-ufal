@@ -6,6 +6,7 @@ import { prisma } from "@/database/prisma.js";
 import {
   anAddress,
   createActivity,
+  createEnrollment,
   createManager,
   createStudent,
   createTeacher,
@@ -66,10 +67,12 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
         {
           field: "",
+          code: "VALIDATION_ERROR",
           message: "Body cannot be empty. At least one field must be provided.",
         },
       ],
@@ -87,6 +90,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Invalid activityId parameter. Must be a valid UUID.",
     });
   });
@@ -124,6 +128,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "You do not have permission to update this activity.",
     });
   });
@@ -186,6 +191,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "You do not have permission to update this activity.",
     });
   });
@@ -201,6 +207,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -220,6 +227,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -241,11 +249,75 @@ describe("PATCH /activities/:activityId", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
+        code: "CONFLICT",
         message: `Activity cannot be updated because it is already ${status}.`,
       });
     },
   );
 
+  it("returns 400 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const students = await Promise.all([
+      createStudent(),
+      createStudent(),
+      createStudent(),
+    ]);
+    for (const student of students) {
+      await createEnrollment(student.user.id, activity.id);
+    }
+    // A canceled enrollment must not count as approved.
+    const canceled = await createStudent();
+    await createEnrollment(canceled.user.id, activity.id, {
+      status: "CANCELLED",
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ slots: 2 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "slots",
+          code: "BELOW_APPROVED_ENROLLMENTS",
+          message:
+            "slots cannot be reduced below the current number of approved enrollments (3).",
+        },
+      ],
+      details: { approvedEnrollments: 3 },
+    });
+    // Acceptance criterion: the number in `details` is the one in the message.
+    expect(response.body.errors[0].message).toContain(
+      `(${response.body.details.approvedEnrollments}).`,
+    );
+
+    const stored = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(stored.slots).toBe(10);
+  });
+
+  it("accepts slots equal to the approved enrollments, without details", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const student = await createStudent();
+    await createEnrollment(student.user.id, activity.id);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ slots: 1 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.slots).toBe(1);
+  });
+  
   it("preserves fields not sent in a partial update", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, {
@@ -324,6 +396,7 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
     });
     expect(response.body.errors).toEqual(

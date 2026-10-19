@@ -400,10 +400,12 @@ describe("ActivityService.update", () => {
     expect((error as ValidationError).errors).toEqual([
       {
         field: "slots",
+        code: "BELOW_APPROVED_ENROLLMENTS",
         message:
           "slots cannot be reduced below the current number of approved enrollments (13).",
       },
     ]);
+    expect((error as ValidationError).details).toEqual({ approvedEnrollments: 13 });
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 
@@ -440,14 +442,15 @@ describe("ActivityService.update", () => {
       service.update("act-1", AUTHOR, { slots: 6 }),
     );
 
-    expect(error).toBeInstanceOf(ValidationError);
     expect((error as ValidationError).errors).toEqual([
       {
         field: "slots",
+        code: "BELOW_APPROVED_ENROLLMENTS",
         message:
           "slots cannot be reduced below the current number of approved enrollments (7).",
       },
     ]);
+    expect((error as ValidationError).details).toEqual({ approvedEnrollments: 7 });
     expect(activityRepository.update).not.toHaveBeenCalled();
   });
 

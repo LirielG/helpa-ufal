@@ -80,6 +80,7 @@ describe("POST /auth/login", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "Invalid credentials.",
     });
   });
@@ -95,6 +96,7 @@ describe("POST /auth/login", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "Invalid credentials.",
     });
   });

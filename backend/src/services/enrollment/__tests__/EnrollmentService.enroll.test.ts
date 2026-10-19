@@ -132,6 +132,7 @@ describe("EnrollmentService.enroll", () => {
       service.enroll(USER_ID, ACTIVITY_ID),
       404,
       "Activity not found.",
+      "ACTIVITY_NOT_FOUND",
     );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
@@ -155,6 +156,7 @@ describe("EnrollmentService.enroll", () => {
         service.enroll(USER_ID, ACTIVITY_ID),
         409,
         "Activity is not open for enrollment.",
+        "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
       );
       expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
     },

@@ -333,6 +333,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.body.errors).toEqual([
       expect.objectContaining({
         field: "workloadHours",
+        code: "VALIDATION_ERROR",
         message: "workloadHours must be omitted when attended is false.",
       }),
     ]);
@@ -356,6 +357,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.body.errors).toEqual([
       expect.objectContaining({
         field: "workloadHours",
+        code: "VALIDATION_ERROR",
         message: "workloadHours is required when attended is true.",
       }),
     ]);
@@ -375,7 +377,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "", message: 'Unrecognized key: "userId"' },
+      { field: "", code: "VALIDATION_ERROR", message: 'Unrecognized key: "userId"' },
     ]);
   });
 
@@ -391,6 +393,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "No token provided.",
     });
     await expect(attendanceOf(enrollment.id)).resolves.toEqual({
@@ -410,6 +413,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "Token malformatted, expired or invalid.",
     });
   });
@@ -457,6 +461,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "User account not found or inactive.",
     });
   });
@@ -475,6 +480,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "Only the activity creator or a manager can confirm attendance.",
     });
     await expect(attendanceOf(enrollment.id)).resolves.toEqual({
@@ -511,6 +517,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Enrollment not found.",
     });
   });
@@ -530,6 +537,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Enrollment not found.",
     });
     // Soft delete hides the activity but preserves the attendance data.
@@ -550,6 +558,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Enrollment not found.",
     });
   });
@@ -571,6 +580,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
+        code: "CONFLICT",
         message: "Attendance can only be confirmed for completed activities.",
       });
       await expect(attendanceOf(enrollment.id)).resolves.toEqual({
@@ -596,6 +606,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
+        code: "CONFLICT",
         message: "Only approved enrollments can have attendance confirmed.",
       });
       await expect(attendanceOf(enrollment.id)).resolves.toEqual({
@@ -620,6 +631,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       expect(response.status).toBe(422);
       expect(response.body).toEqual({
         status: 422,
+        code: "UNPROCESSABLE",
         message:
           "workloadHours must be an integer between 1 and the activity's workload hours.",
       });

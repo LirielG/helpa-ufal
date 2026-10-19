@@ -62,9 +62,11 @@ class AuthService implements IAuthService {
     const existingUser = await this._userRepository.findByEmail(data.email);
 
     if (existingUser) {
-      throw new CustomError(409, "Email already in use.");
+      throw new CustomError(409, "Email already in use.", {
+        code: "ALREADY_IN_USE",
+        details: { field: "email" },
+      });
     }
-
     const passwordHash = await bcryptjs.hash(data.password, 12);
 
     const newUser = await this._userRepository.createWithSubtype({

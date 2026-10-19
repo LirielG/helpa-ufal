@@ -22,6 +22,7 @@ describe("PATCH /activities/:activityId/status", () => {
         expect(response.body.errors).toEqual([
       {
         field: "status",
+        code: "VALIDATION_ERROR",
         message: 'Invalid option: expected one of "IN_PROGRESS"|"COMPLETED"|"CANCELLED"',
       },
     ]);
@@ -77,6 +78,7 @@ describe("PATCH /activities/:activityId/status", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "CONFLICT",
       message: "Cannot transition from OPEN to COMPLETED.",
     });
   });
@@ -93,6 +95,7 @@ describe("PATCH /activities/:activityId/status", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "CONFLICT",
       message: "Activity is already CANCELLED and cannot be transitioned.",
     });
   });
@@ -110,6 +113,7 @@ describe("PATCH /activities/:activityId/status", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "Forbidden. Requester is not the author or a manager.",
     });
   });
@@ -123,7 +127,7 @@ describe("PATCH /activities/:activityId/status", () => {
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -139,7 +143,7 @@ describe("PATCH /activities/:activityId/status", () => {
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
   
@@ -161,6 +165,7 @@ describe("PATCH /activities/:activityId/status", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "Forbidden. Requester is not the author or a manager.",
     });
   });

@@ -200,7 +200,7 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
     expect(response.body.errors).toEqual([
-      { field: "limit", message: "limit can not exceed 100." },
+      { field: "limit", code: "VALIDATION_ERROR", message: "limit can not exceed 100." },
     ]);
   });
 

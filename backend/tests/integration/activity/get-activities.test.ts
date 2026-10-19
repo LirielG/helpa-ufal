@@ -45,7 +45,7 @@ describe("GET /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
     expect(response.body.errors).toEqual([
-      { field: "limit", message: "limit can not exceed 100." },
+      { field: "limit", code: "VALIDATION_ERROR", message: "limit can not exceed 100." },
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("GET /activities", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
+      { field: "page", code: "VALIDATION_ERROR", message: "page must be a positive integer." },
     ]);
   });
 
@@ -143,7 +143,7 @@ describe("GET /activities", () => {
 /**
  * Issues #210 (empty filter / fractional pagination) and #211 (invalid
  * campus). These replace the old "accepted silently" behavior with a 400 in
- * the offending field, keeping the existing `{ field, message }` format.
+ * the offending field, keeping the existing `{ field, code: "VALIDATION_ERROR", message }` format.
  */
 describe("GET /activities — strict query validation", () => {
   // ---------- #210: present-and-empty filter ----------
@@ -155,6 +155,7 @@ describe("GET /activities — strict query validation", () => {
     expect(response.body.errors).toEqual([
       {
         field: "type",
+        code: "VALIDATION_ERROR",
         message:
           "type must be one of the following: EXTENSION, COURSE, EVENT, LECTURE, OTHER.",
       },
@@ -189,7 +190,7 @@ describe("GET /activities — strict query validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "limit", message: "limit must be a positive integer." },
+      { field: "limit", code: "VALIDATION_ERROR", message: "limit must be a positive integer." },
     ]);
   });
 
@@ -198,7 +199,7 @@ describe("GET /activities — strict query validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "limit", message: "limit must be a positive integer." },
+      { field: "limit", code: "VALIDATION_ERROR", message: "limit must be a positive integer." },
     ]);
   });
 
@@ -207,7 +208,7 @@ describe("GET /activities — strict query validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
+      { field: "page", code: "VALIDATION_ERROR", message: "page must be a positive integer." },
     ]);
   });
 

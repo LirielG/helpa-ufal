@@ -8,6 +8,8 @@ export async function expectHttpError(
   promise: Promise<unknown>,
   status: number,
   message?: string,
+  code?: string,
+  details?: Record<string, unknown>,
 ): Promise<void> {
   try {
     await promise;
@@ -37,6 +39,7 @@ async function catchError(promise: Promise<unknown>): Promise<unknown> {
 export async function expectValidationError(
   promise: Promise<unknown>,
   expectedErrors: ValidationErrorItem[],
+  expected?: { details?: Record<string, unknown> },
 ): Promise<void> {
   const error = await catchError(promise);
   expect(error).toBeInstanceOf(ValidationError);

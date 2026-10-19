@@ -210,8 +210,9 @@ describe("GET /reports", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Invalid query parameters.",
-      errors: [{ field, message }],
+      errors: [{ field, code: "VALIDATION_ERROR", message }],
     });
   });
 
@@ -273,6 +274,7 @@ describe("GET /reports", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "User account not found or inactive.",
     });
   });
@@ -294,6 +296,7 @@ describe("GET /reports", () => {
       expect(response.status).toBe(403);
       expect(response.body).toEqual({
         status: 403,
+        code: "FORBIDDEN",
         message: "User is not a manager.",
       });
     },

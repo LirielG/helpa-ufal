@@ -122,11 +122,13 @@ describe("AuthService.register", () => {
     const service = new AuthService({ userRepository });
 
     await expectHttpError(
-      service.register(STUDENT_INPUT),
-      409,
-      "Email already in use.",
-    );
-    expect(userRepository.createWithSubtype).not.toHaveBeenCalled();
+    service.register(STUDENT_INPUT),
+    409,
+    "Email already in use.",
+    "ALREADY_IN_USE",
+    { field: "email" },
+  );
+  expect(userRepository.createWithSubtype).not.toHaveBeenCalled();
   });
 
   it("propagates repository failures", async () => {

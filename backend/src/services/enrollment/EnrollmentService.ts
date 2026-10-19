@@ -87,11 +87,15 @@ class EnrollmentService implements IEnrollmentService {
 
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
-      throw new CustomError(404, "Activity not found.");
+      throw new CustomError(404, "Activity not found.", {
+        code: "ACTIVITY_NOT_FOUND",
+      });
     }
 
     if (activity.status !== "OPEN") {
-      throw new CustomError(409, "Activity is not open for enrollment.");
+      throw new CustomError(409, "Activity is not open for enrollment.", {
+        code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+      });
     }
 
     const enrollment = await this._enrollmentRepository.enroll(
@@ -113,11 +117,15 @@ class EnrollmentService implements IEnrollmentService {
 
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
-      throw new CustomError(404, "Activity not found.");
+      throw new CustomError(404, "Activity not found.", {
+        code: "ACTIVITY_NOT_FOUND",
+      });
     }
 
     if (activity.status !== "OPEN") {
-      throw new CustomError(409, "Activity is not open for cancellation.");
+      throw new CustomError(409, "Activity is not open for cancellation.", {
+        code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+      });
     }
 
     await this._enrollmentRepository.cancel(userId, activityId);

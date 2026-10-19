@@ -108,7 +108,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // remains as a fast-path (fails fast without opening a transaction),
       // this one is the actual source of truth for the error ordering.
       if (activity.status !== "OPEN") {
-        throw new CustomError(409, "Activity is not open for enrollment.");
+        throw new CustomError(409, "Activity is not open for enrollment.", {
+          code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+        });
       }
 
       const existing = await tx.enrollment.findUnique({
@@ -116,10 +118,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (existing && existing.status !== "CANCELLED") {
-        throw new CustomError(
-          409,
-          "User is already enrolled in this activity.",
-        );
+        throw new CustomError(409, "User is already enrolled in this activity.", {
+          code: "ALREADY_ENROLLED",
+        });
       }
 
       const approvedCount = await tx.enrollment.count({
@@ -127,7 +128,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (approvedCount >= activity.slots) {
-        throw new CustomError(409, "No available slots for this activity.");
+        throw new CustomError(409, "No available slots for this activity.", {
+          code: "NO_AVAILABLE_SLOTS",
+        });
       }
 
       if (existing) {
@@ -162,10 +165,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          throw new CustomError(
-            409,
-            "User is already enrolled in this activity.",
-          );
+          throw new CustomError(409, "User is already enrolled in this activity.", {
+            code: "ALREADY_ENROLLED",
+          });
         }
         throw error;
       }
@@ -182,7 +184,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
     });
 
     if (result.count === 0) {
-      throw new CustomError(404, "Enrollment not found.");
+      throw new CustomError(404, "Enrollment not found.", {
+        code: "ENROLLMENT_NOT_FOUND",
+      });
     }
   }
 
@@ -199,7 +203,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // checks stay as a fast path; these are the authoritative ones.
       const activity = await lockActivityForAttendance(tx, activityId);
       if (!activity) {
-        throw new CustomError(404, "Activity not found.");
+        throw new CustomError(404, "Activity not found.", { code: "ACTIVITY_NOT_FOUND" });
       }
 
       if (activity.status !== "COMPLETED") {
