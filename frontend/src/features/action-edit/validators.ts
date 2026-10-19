@@ -3,6 +3,7 @@ import {
   ACTIVITY_TITLE_MAX_LENGTH,
   ACTIVITY_TITLE_TOO_LONG_MESSAGE,
 } from "../../validators/limits";
+import { activityDescriptionSchema } from "../../validators/activity";
 
 /** Same list the API validates `address.state` against. */
 const BRAZILIAN_STATES = [
@@ -53,10 +54,7 @@ export const ActionEditSchema = z
       .min(1, "O título é obrigatório")
       .min(3, "O título deve ter no mínimo 3 caracteres")
       .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
-    description: z
-      .string()
-      .min(1, "A descrição é obrigatória")
-      .min(10, "A descrição deve ter no mínimo 10 caracteres"),
+    description: activityDescriptionSchema,
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
     startTime: z.string().min(1, "O horário de início é obrigatório"),
