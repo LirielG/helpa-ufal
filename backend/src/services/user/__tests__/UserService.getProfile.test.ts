@@ -136,6 +136,21 @@ describe("UserService.getProfile", () => {
     );
   });
 
+  it("answers 404 for a missing user even when the hours query would fail", async () => {
+    const enrollmentRepository = {
+      sumConfirmedHoursByUserId: vi
+        .fn()
+        .mockRejectedValue(new Error("connection lost")),
+    } as unknown as IEnrollmentRepository;
+    const service = serviceWith(mockRepository(null), enrollmentRepository);
+
+    await expectCustomError(
+      service.getProfile(USER_ID),
+      404,
+      "User not found.",
+    );
+  });
+
   it("fails with 500 when the user has no academic profile row", async () => {
     const service = serviceWith(mockRepository(aStudentRow({ student: null })));
 

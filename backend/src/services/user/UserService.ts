@@ -39,10 +39,7 @@ class UserService implements IUserService {
   }
 
   public async getProfile(userId: string): Promise<UserProfileResponse> {
-    const [user, totalWorkloadHours] = await Promise.all([
-      this._userRepository.findProfileById(userId),
-      this._enrollmentRepository.sumConfirmedHoursByUserId(userId),
-    ]);
+    const user = await this._userRepository.findProfileById(userId);
 
     // 404, not the 401 the enrollment routes return for the same situation
     // (EnrollmentService.requireUser): there the status hides whether someone
@@ -50,6 +47,9 @@ class UserService implements IUserService {
     // there is nothing to conceal, and "valid credential, resource gone" is
     // exactly what 404 means.
     if (!user) throw new CustomError(404, "User not found.");
+
+    const totalWorkloadHours =
+      await this._enrollmentRepository.sumConfirmedHoursByUserId(userId);
 
     return this.toProfileResponse(user, totalWorkloadHours);
   }
