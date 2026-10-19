@@ -570,4 +570,153 @@ describe("Dashboard", () => {
       screen.queryByRole("navigation", { name: "Paginação" }),
     ).not.toBeInTheDocument();
   });
+
+  describe("status filter", () => {
+    /** One action per status, so every cut the API makes is told apart. */
+    const actionsByStatus = (
+      ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const
+    ).map((status) => ({
+      ...mockApiActivities.activities[0],
+      id: `action-${status}`,
+      title: `Ação ${status}`,
+      status,
+    }));
+
+    function serveByStatus(): URLSearchParams[] {
+      return serveActivities((params) => {
+        const status = params.get("status");
+        return status
+          ? actionsByStatus.filter((action) => action.status === status)
+          : actionsByStatus;
+      });
+    }
+
+    function statusSelect() {
+      return screen.getByRole("combobox", { name: "Status" });
+    }
+
+    function cardTitles() {
+      return screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent);
+    }
+
+    it.each([
+      ["Inscrições Abertas", "OPEN"],
+      ["Em Andamento", "IN_PROGRESS"],
+      ["Finalizada", "COMPLETED"],
+      ["Cancelada", "CANCELLED"],
+    ] as const)(
+      "asks the API for the %s cut and badges its cards with the same label",
+      async (label, status) => {
+        const requests = serveByStatus();
+        const { user } = renderDashboard();
+
+        await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
+
+        await user.selectOptions(statusSelect(), label);
+
+        await waitFor(() => {
+          expect(cardTitles()).toEqual([`Ação ${status}`]);
+        });
+        expect(requests.at(-1)?.get("status")).toBe(status);
+        // The option shares the text, so only the badge counts here.
+        expect(screen.getByText(label, { selector: "span" })).toBeVisible();
+      },
+    );
+
+    it("sends the status and the action type in the same request", async () => {
+      const requests = serveByStatus();
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
+
+      await user.selectOptions(statusSelect(), "IN_PROGRESS");
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Tipos de ação" }),
+        "palestra",
+      );
+
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("type")).toBe("LECTURE");
+      });
+      expect(requests.at(-1)?.get("status")).toBe("IN_PROGRESS");
+    });
+
+    it("drops `status` from the request when every status is chosen again", async () => {
+      const requests = serveByStatus();
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
+
+      await user.selectOptions(statusSelect(), "CANCELLED");
+      await waitFor(() => {
+        expect(cardTitles()).toEqual(["Ação CANCELLED"]);
+      });
+
+      await user.selectOptions(statusSelect(), "Todos os status");
+
+      await waitFor(() => {
+        expect(cardTitles()).toHaveLength(actionsByStatus.length);
+      });
+      expect(requests.at(-1)?.has("status")).toBe(false);
+    });
+
+    it("restarts the pagination at page 1 when the status changes", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+
+      await user.click(screen.getByRole("button", { name: "Próxima página" }));
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("page")).toBe("2");
+      });
+
+      await user.selectOptions(statusSelect(), "OPEN");
+
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("status")).toBe("OPEN");
+      });
+      expect(requests.at(-1)?.get("page")).toBe("1");
+    });
+
+    it("shows the filtered empty state when no action has the status", async () => {
+      serveActivities((params) => (params.has("status") ? [] : catalogue));
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+
+      await user.selectOptions(statusSelect(), "CANCELLED");
+
+      expect(
+        await screen.findByText("Nenhuma ação corresponde a esses filtros."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Limpar filtros" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the error state when the status request fails", async () => {
+      server.use(
+        http.get("*/activities", ({ request }) =>
+          new URL(request.url).searchParams.has("status")
+            ? new HttpResponse(null, { status: 500 })
+            : HttpResponse.json(mockApiActivities),
+        ),
+      );
+      const { user } = renderDashboard();
+
+      await screen.findAllByRole("heading", { name: "Oficina de React" });
+
+      await user.selectOptions(statusSelect(), "OPEN");
+
+      expect(
+        await screen.findByText("Não foi possível carregar as ações"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Tentar de novo" }),
+      ).toBeInTheDocument();
+    });
+  });
 });
