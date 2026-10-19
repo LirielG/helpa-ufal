@@ -47,6 +47,7 @@ export const handlers = [
       registrationCode: "2026000001",
       course: "Ciência da Computação",
       cndb: null,
+      totalWorkloadHours: 0,
     });
   }),
 

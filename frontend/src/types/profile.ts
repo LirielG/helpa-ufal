@@ -14,4 +14,6 @@ export interface UserProfile {
   course: string | null;
   cndb: string | null;
   createdAt: string;
+  /** Sum of the hours homologated to the user, computed by the backend. */
+  totalWorkloadHours: number;
 }

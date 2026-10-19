@@ -165,7 +165,10 @@ describe("updateProfile", () => {
     server.use(
       http.patch(`${API}/users/me`, async ({ request: req }) => {
         request = { method: req.method, body: await req.json() };
-        return HttpResponse.json({ fullName: "Nome Salvo" });
+        return HttpResponse.json({
+          fullName: "Nome Salvo",
+          totalWorkloadHours: 0,
+        });
       }),
     );
 

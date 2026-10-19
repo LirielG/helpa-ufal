@@ -9,6 +9,7 @@ import {
   screen,
   server,
   signIn,
+  within,
 } from "@/test";
 import type { UserProfile } from "@/types/profile";
 import { useAuthStore } from "@/stores/authStore";
@@ -34,6 +35,7 @@ function profileOf(overrides: Partial<UserProfile> = {}): UserProfile {
     registrationCode: "2026000001",
     course: "Ciência da Computação",
     cndb: null,
+    totalWorkloadHours: 0,
     ...overrides,
   };
 }
@@ -100,6 +102,21 @@ function countProfileReads() {
     }),
   );
   return () => reads;
+}
+
+/** Answers every profile read with the given total of homologated hours. */
+function serveTotalWorkloadHours(totalWorkloadHours: number) {
+  server.use(
+    http.get(`${API}/users/me`, () =>
+      HttpResponse.json(profileOf({ totalWorkloadHours })),
+    ),
+  );
+}
+
+/** The box with the total, found by the caption under it. */
+async function findContributionCounter() {
+  const caption = await screen.findByText("Total contribuído");
+  return caption.parentElement!;
 }
 
 function findNameField() {
@@ -443,5 +460,71 @@ describe("Profile — personal data", () => {
       ).toBeInTheDocument();
       expect(onUpdate).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("Profile — total contributed", () => {
+  it("shows the total of homologated hours", async () => {
+    signIn();
+    serveTotalWorkloadHours(40);
+    renderProfile();
+
+    const counter = await findContributionCounter();
+
+    expect(within(counter).getByText("40")).toBeInTheDocument();
+    expect(within(counter).getByText("horas")).toBeInTheDocument();
+  });
+
+  it("pads a total of zero to two digits", async () => {
+    signIn();
+    serveTotalWorkloadHours(0);
+    renderProfile();
+
+    const counter = await findContributionCounter();
+
+    expect(within(counter).getByText("00")).toBeInTheDocument();
+    expect(within(counter).getByText("horas")).toBeInTheDocument();
+  });
+
+  it("uses the singular label for one hour", async () => {
+    signIn();
+    serveTotalWorkloadHours(1);
+    renderProfile();
+
+    const counter = await findContributionCounter();
+
+    expect(within(counter).getByText("01")).toBeInTheDocument();
+    expect(within(counter).getByText("hora")).toBeInTheDocument();
+  });
+
+  it("shows a three-digit total in full", async () => {
+    signIn();
+    serveTotalWorkloadHours(120);
+    renderProfile();
+
+    const counter = await findContributionCounter();
+
+    expect(within(counter).getByText("120")).toBeInTheDocument();
+  });
+
+  it("keeps the total the update returns after saving the name", async () => {
+    signIn({ fullName: "Joana Ribeiro" });
+    serveTotalWorkloadHours(40);
+    spyOnUpdate((body) =>
+      HttpResponse.json(
+        profileOf({
+          ...(body as Partial<UserProfile>),
+          totalWorkloadHours: 41,
+        }),
+      ),
+    );
+    const { user } = renderProfile();
+
+    await replaceName(user, "Joana Ribeiro Lima");
+    await user.click(getSaveButton());
+    await screen.findByText("Perfil atualizado com sucesso.");
+
+    const counter = await findContributionCounter();
+    expect(within(counter).getByText("41")).toBeInTheDocument();
   });
 });

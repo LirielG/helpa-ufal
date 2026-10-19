@@ -7,6 +7,7 @@ type ProfileCardProps = {
 
 export function ProfileCard({ user }: ProfileCardProps) {
   const initials = getInitials(user.fullName) || "P";
+  const hours = user.totalWorkloadHours;
 
   return (
     <section className="bg-white rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4">
@@ -34,10 +35,10 @@ export function ProfileCard({ user }: ProfileCardProps) {
       <div className="shrink-0 text-center">
         <div className="bg-[#ADF7F9] rounded-2xl px-6 py-4 min-w-22">
           <span className="block text-3xl font-bold leading-none text-[#002147]">
-            00
+            {String(hours).padStart(2, "0")}
           </span>
           <span className="block text-[11px] font-medium text-[#002147] mt-1">
-            horas
+            {hours === 1 ? "hora" : "horas"}
           </span>
         </div>
         <p className="text-xs text-gray-500 mt-2">Total contribuído</p>

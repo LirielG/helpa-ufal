@@ -198,6 +198,7 @@ describe("authStore", () => {
           registrationCode: "2026000001",
           course: null,
           cndb: null,
+          totalWorkloadHours: 0,
         }),
       );
 
@@ -252,7 +253,9 @@ describe("authStore", () => {
     });
 
     it("skips the request when no user is stored", async () => {
-      const calls = countMeRequests(() => HttpResponse.json(makeUser()));
+      const calls = countMeRequests(() =>
+        HttpResponse.json({ ...makeUser(), totalWorkloadHours: 0 }),
+      );
 
       await store().verifySession();
 
@@ -262,7 +265,9 @@ describe("authStore", () => {
 
     it("sends a single request for concurrent and repeated calls", async () => {
       const user = signIn();
-      const calls = countMeRequests(() => HttpResponse.json(user));
+      const calls = countMeRequests(() =>
+        HttpResponse.json({ ...user, totalWorkloadHours: 0 }),
+      );
 
       await Promise.all([store().verifySession(), store().verifySession()]);
       await store().verifySession();
@@ -272,7 +277,9 @@ describe("authStore", () => {
 
     it("does not bring back a user who logged out during the check", async () => {
       const user = signIn();
-      countMeRequests(() => HttpResponse.json(user));
+      countMeRequests(() =>
+        HttpResponse.json({ ...user, totalWorkloadHours: 0 }),
+      );
 
       const verification = store().verifySession();
       store().setUser(null);

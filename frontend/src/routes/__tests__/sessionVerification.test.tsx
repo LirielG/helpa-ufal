@@ -47,6 +47,7 @@ function meResponse(user: User, overrides: Partial<UserProfile> = {}) {
     registrationCode: "2026000001",
     course: "Ciência da Computação",
     cndb: null,
+    totalWorkloadHours: 0,
     ...overrides,
   };
 }
