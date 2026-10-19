@@ -459,6 +459,21 @@ describe("ActionRegister", () => {
     });
   });
 
+  // A browser runs the click's default action after React has already
+  // rendered step 2, so a reused button would submit the form on arrival.
+  // jsdom does not reproduce that ordering, hence the check on the element.
+  it("does not reuse the next button as the submit button", async () => {
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+    const next = screen.getByRole("button", { name: /Próximo/i });
+
+    await fillStep1(user);
+
+    expect(next).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("alert")).toHaveLength(0);
+  });
+
   it("names the current step for screens without the side bar", async () => {
     const { user } = render(
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,

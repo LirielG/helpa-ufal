@@ -858,8 +858,12 @@ export function ActionRegister({
                   </button>
                 )}
 
+                {/* Distinct keys keep React from turning this same button into
+                    the submit one: the step changes before the browser runs the
+                    click's default action, which would then submit step 2. */}
                 {step === 1 ? (
                   <button
+                    key="next"
                     type="button"
                     onClick={handleStep1Next}
                     className="flex-1 sm:flex-none px-6 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#1B75BB] transition-colors"
@@ -868,6 +872,7 @@ export function ActionRegister({
                   </button>
                 ) : (
                   <button
+                    key="submit"
                     type="submit"
                     disabled={isSubmitting}
                     className="flex-1 sm:flex-none px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-green-800 transition-colors disabled:opacity-50"
