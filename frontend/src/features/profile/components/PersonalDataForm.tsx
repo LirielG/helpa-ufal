@@ -7,7 +7,7 @@ import { PasswordField } from "../../auth/components/PasswordField";
 import { PasswordGuidelines } from "../../auth/components/PasswordGuidelines";
 import { AuthField } from "../../auth/components/AuthField";
 import {
-  EditProfileSchema,
+  editProfileSchemaFor,
   type EditProfileFields,
 } from "../../../validators/profile";
 import type { UpdateProfileRequest } from "../../../types";
@@ -44,7 +44,7 @@ export function PersonalDataForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<EditProfileFields>({
-    resolver: zodResolver(EditProfileSchema),
+    resolver: zodResolver(editProfileSchemaFor(user.fullName)),
     mode: "onSubmit",
     defaultValues: {
       fullName: user.fullName,

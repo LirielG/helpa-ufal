@@ -318,6 +318,23 @@ describe("Profile — personal data", () => {
       expect(useAuthStore.getState().user).toBeNull();
     });
 
+    it("changes the password of a user whose saved name predates the length limit", async () => {
+      signIn({ fullName: "a".repeat(FULL_NAME_MAX_LENGTH + 10) });
+      const onUpdate = spyOnUpdate();
+      const { user } = renderProfile();
+
+      await fillPasswordChange(user);
+      await user.click(getSaveButton());
+
+      await screen.findByText(
+        "Senha alterada. Entre novamente com a nova senha.",
+      );
+      expect(onUpdate).toHaveBeenCalledExactlyOnceWith({
+        currentPassword: CURRENT_PASSWORD,
+        newPassword: NEW_PASSWORD,
+      });
+    });
+
     it("shows a wrong current password on its field and keeps the form filled", async () => {
       signIn();
       failUpdate(403, {
