@@ -1,63 +1,67 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import type { ActivityStatus, UserActivity } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
-
-const SUB_TABS: Array<{ id: ActivityStatus; label: string; empty: string }> = [
-  {
-    id: "enrolled",
-    label: "Atividades Inscritas",
-    empty: "Você não está inscrito em nenhuma ação no momento.",
-  },
-  {
-    id: "completed",
-    label: "Atividades Concluídas",
-    empty: "Você ainda não concluiu nenhuma ação.",
-  },
-  {
-    id: "managed",
-    label: "Atividades Gerenciadas",
-    empty: "Você ainda não criou nenhuma ação.",
-  },
-];
+import { PROFILE_SUB_TABS } from "../constants";
+import { useActionRegister } from "../../../hooks/useActionRegister";
+import { EmptyActionsList } from "./EmptyActionsList";
 
 export function ActionsList() {
   const navigate = useNavigate();
+  const { openRegisterModal, setOnSuccessCallback } = useActionRegister();
   const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
+
+  const reloadActivities = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    setReloadCount((count) => count + 1);
+  }, []);
 
   useEffect(() => {
     // A slower answer of the sub-tab the user just left must not overwrite
     // the one now on screen.
     let isCurrent = true;
 
-    const loadActivities = async () => {
-      setIsLoading(true);
-      setError(null);
-
+    const load = async () => {
       try {
         const list = await fetchUserActivities(activeSubTab);
-        if (isCurrent) setActivities(list);
+        if (isCurrent) {
+          setActivities(list);
+          setError(null);
+        }
       } catch {
         if (isCurrent) {
           setError("Não foi possível carregar as atividades. Tente novamente.");
         }
       } finally {
-        if (isCurrent) setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadActivities();
+    load();
 
     return () => {
       isCurrent = false;
     };
-  }, [activeSubTab]);
+  }, [activeSubTab, reloadCount]);
+
+  useEffect(() => {
+    if (activeSubTab === "managed") {
+      setOnSuccessCallback(reloadActivities);
+      return () => {
+        setOnSuccessCallback(undefined);
+      };
+    }
+  }, [activeSubTab, setOnSuccessCallback, reloadActivities]);
 
   const handleEdit = (id: string) => navigate(`/activity/${id}/edit`);
 
@@ -69,6 +73,7 @@ export function ActionsList() {
   const selectSubTab = (tab: ActivityStatus) => {
     if (tab === activeSubTab) return;
     setActivities([]);
+    setError(null);
     setIsLoading(true);
     setActiveSubTab(tab);
   };
@@ -77,12 +82,11 @@ export function ActionsList() {
     setActivities((current) => current.filter((item) => item.action.id !== id));
 
   const isManaged = activeSubTab === "managed";
-  const emptyMessage = SUB_TABS.find((tab) => tab.id === activeSubTab)?.empty;
 
   return (
     <div className="space-y-6">
       <nav className="flex items-center gap-2 border-b border-gray-200">
-        {SUB_TABS.map((tab) => {
+        {PROFILE_SUB_TABS.map((tab) => {
           const isActive = tab.id === activeSubTab;
           return (
             <button
@@ -114,7 +118,11 @@ export function ActionsList() {
       {!isLoading && !error && (
         <>
           {activities.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">{emptyMessage}</p>
+            <EmptyActionsList
+              subTab={activeSubTab}
+              onNavigate={(route) => navigate(route)}
+              onOpenRegisterModal={openRegisterModal}
+            />
           ) : (
             <div
               className={
