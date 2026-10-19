@@ -473,14 +473,14 @@ describe("Profile — total contributed", () => {
     expect(within(counter).getByText("horas")).toBeInTheDocument();
   });
 
-  it("pads a total of zero to two digits", async () => {
+  it("shows a total of zero", async () => {
     signIn();
     serveTotalWorkloadHours(0);
     renderProfile();
 
     const counter = await findContributionCounter();
 
-    expect(within(counter).getByText("00")).toBeInTheDocument();
+    expect(within(counter).getByText("0")).toBeInTheDocument();
     expect(within(counter).getByText("horas")).toBeInTheDocument();
   });
 
@@ -491,7 +491,7 @@ describe("Profile — total contributed", () => {
 
     const counter = await findContributionCounter();
 
-    expect(within(counter).getByText("01")).toBeInTheDocument();
+    expect(within(counter).getByText("1")).toBeInTheDocument();
     expect(within(counter).getByText("hora")).toBeInTheDocument();
   });
 

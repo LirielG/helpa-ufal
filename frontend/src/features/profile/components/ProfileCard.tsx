@@ -41,7 +41,7 @@ export function ProfileCard({ user }: ProfileCardProps) {
       >
         <div className="bg-[#ADF7F9] rounded-2xl px-6 py-4 min-w-22">
           <span className="block text-3xl font-bold leading-none text-[#002147]">
-            {String(hours).padStart(2, "0")}
+            {hours}
           </span>
           <span className="block text-[11px] font-medium text-[#002147] mt-1">
             {hours === 1 ? "hora" : "horas"}
