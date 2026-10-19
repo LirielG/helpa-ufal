@@ -27,24 +27,8 @@ export const EMPTY_STATE_CONFIGS: Record<ActivityStatus, EmptyStateConfig> = {
   },
 };
 
-export const PROFILE_SUB_TABS: Array<{
-  id: ActivityStatus;
-  label: string;
-  empty: string;
-}> = [
-  {
-    id: "enrolled",
-    label: "Atividades Inscritas",
-    empty: "Você não está inscrito em nenhuma ação no momento.",
-  },
-  {
-    id: "completed",
-    label: "Atividades Concluídas",
-    empty: "Você ainda não concluiu nenhuma ação.",
-  },
-  {
-    id: "managed",
-    label: "Atividades Gerenciadas",
-    empty: "Você ainda não criou nenhuma ação.",
-  },
+export const PROFILE_SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
+  { id: "enrolled", label: "Atividades Inscritas" },
+  { id: "completed", label: "Atividades Concluídas" },
+  { id: "managed", label: "Atividades Gerenciadas" },
 ];

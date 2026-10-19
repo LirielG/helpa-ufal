@@ -14,8 +14,6 @@ export function EmptyActionsList({
 }: EmptyActionsListProps) {
   const config = EMPTY_STATE_CONFIGS[subTab];
 
-  if (!config) return null;
-
   const handleClick = () => {
     if (config.actionType === "navigate" && config.targetRoute) {
       onNavigate(config.targetRoute);
@@ -32,14 +30,7 @@ export function EmptyActionsList({
       <button
         type="button"
         onClick={handleClick}
-        className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors cursor-pointer"
-        style={{ backgroundColor: "#00579A" }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = "#004377";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = "#00579A";
-        }}
+        className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors cursor-pointer bg-[#00579A] hover:bg-[#004377] focus-visible:bg-[#004377]"
       >
         {config.buttonLabel}
       </button>
