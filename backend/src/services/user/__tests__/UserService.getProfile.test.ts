@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import UserService from "../UserService.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -47,11 +48,22 @@ function mockRepository(row: unknown) {
   } as unknown as IUserRepository;
 }
 
+function mockEnrollmentRepository(totalWorkloadHours = 0) {
+  return {
+    sumConfirmedHoursByUserId: vi.fn().mockResolvedValue(totalWorkloadHours),
+  } as unknown as IEnrollmentRepository;
+}
+
+function serviceWith(
+  userRepository: IUserRepository,
+  enrollmentRepository = mockEnrollmentRepository(),
+) {
+  return new UserService({ userRepository, enrollmentRepository });
+}
+
 describe("UserService.getProfile", () => {
   it("builds the STUDENT profile and drops every internal field", async () => {
-    const service = new UserService({
-      userRepository: mockRepository(aStudentRow()),
-    });
+    const service = serviceWith(mockRepository(aStudentRow()));
 
     const profile = await service.getProfile(USER_ID);
 
@@ -65,14 +77,13 @@ describe("UserService.getProfile", () => {
       course: "Ciência da Computação",
       cndb: null,
       createdAt: CREATED_AT,
+      totalWorkloadHours: 0,
     });
     expect(Object.keys(profile)).not.toContain("passwordHash");
   });
 
   it("builds the TEACHER profile and drops every internal field", async () => {
-    const service = new UserService({
-      userRepository: mockRepository(aTeacherRow()),
-    });
+    const service = serviceWith(mockRepository(aTeacherRow()));
 
     const profile = await service.getProfile(USER_ID);
 
@@ -86,21 +97,37 @@ describe("UserService.getProfile", () => {
       course: null,
       cndb: "CNDB-9988",
       createdAt: CREATED_AT,
+      totalWorkloadHours: 0,
     });
     expect(Object.keys(profile)).not.toContain("passwordHash");
   });
 
   it("asks the repository for the id it was given, and no other", async () => {
     const repository = mockRepository(aStudentRow());
-    const service = new UserService({ userRepository: repository });
+    const service = serviceWith(repository);
 
     await service.getProfile(USER_ID);
 
     expect(repository.findProfileById).toHaveBeenCalledExactlyOnceWith(USER_ID);
   });
 
+  it("returns the owner's homologated hours as totalWorkloadHours", async () => {
+    const enrollmentRepository = mockEnrollmentRepository(12);
+    const service = serviceWith(
+      mockRepository(aStudentRow()),
+      enrollmentRepository,
+    );
+
+    const profile = await service.getProfile(USER_ID);
+
+    expect(profile.totalWorkloadHours).toBe(12);
+    expect(
+      enrollmentRepository.sumConfirmedHoursByUserId,
+    ).toHaveBeenCalledExactlyOnceWith(USER_ID);
+  });
+
   it("fails with 404 when the user does not exist", async () => {
-    const service = new UserService({ userRepository: mockRepository(null) });
+    const service = serviceWith(mockRepository(null));
 
     await expectCustomError(
       service.getProfile(USER_ID),
@@ -110,9 +137,7 @@ describe("UserService.getProfile", () => {
   });
 
   it("fails with 500 when the user has no academic profile row", async () => {
-    const service = new UserService({
-      userRepository: mockRepository(aStudentRow({ student: null })),
-    });
+    const service = serviceWith(mockRepository(aStudentRow({ student: null })));
 
     await expectCustomError(
       service.getProfile(USER_ID),

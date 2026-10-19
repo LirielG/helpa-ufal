@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import bcryptjs from "bcryptjs";
 import UserService from "../UserService.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 /**
@@ -63,18 +64,30 @@ function aTeacherRow(overrides: Record<string, unknown> = {}) {
   });
 }
 
-function setup(row: unknown, updatedRow: unknown = row) {
+function setup(
+  row: unknown,
+  updatedRow: unknown = row,
+  totalWorkloadHours = 0,
+) {
   const findById = vi.fn().mockResolvedValue(row);
   const update = vi.fn().mockResolvedValue(updatedRow);
+  const sumHours = vi.fn().mockResolvedValue(totalWorkloadHours);
   const repository = {
     findById,
     updateProfile: update,
   } as unknown as IUserRepository;
+  const enrollmentRepository = {
+    sumConfirmedHoursByUserId: sumHours,
+  } as unknown as IEnrollmentRepository;
 
   return {
-    service: new UserService({ userRepository: repository }),
+    service: new UserService({
+      userRepository: repository,
+      enrollmentRepository,
+    }),
     findById,
     update,
+    sumHours,
   };
 }
 
@@ -264,6 +277,7 @@ describe("UserService.updateProfile", () => {
         course: "Ciência da Computação",
         cndb: null,
         createdAt: CREATED_AT,
+        totalWorkloadHours: 0,
       });
       expect(Object.keys(profile)).not.toContain("passwordHash");
     });
@@ -288,8 +302,20 @@ describe("UserService.updateProfile", () => {
         course: null,
         cndb: "CNDB-9988",
         createdAt: CREATED_AT,
+        totalWorkloadHours: 0,
       });
       expect(Object.keys(profile)).not.toContain("passwordHash");
+    });
+
+    it("returns the owner's homologated hours as totalWorkloadHours", async () => {
+      const { service, sumHours } = setup(aStudentRow(), aStudentRow(), 12);
+
+      const profile = await service.updateProfile(USER_ID, {
+        fullName: "Maria",
+      });
+
+      expect(profile.totalWorkloadHours).toBe(12);
+      expect(sumHours).toHaveBeenCalledExactlyOnceWith(USER_ID);
     });
 
     it("fails with 500 when the updated user has no academic profile row", async () => {

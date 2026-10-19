@@ -1,6 +1,8 @@
 import UserRepository from "@/repositories/auth/UserRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type {
   IUserRepository,
   UserWithProfile,
@@ -20,20 +22,27 @@ import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 type Props = {
   userRepository?: IUserRepository;
   activityRepository?: IActivityRepository;
+  enrollmentRepository?: IEnrollmentRepository;
 };
 
 class UserService implements IUserService {
   private _userRepository: IUserRepository;
   private _activityRepository: IActivityRepository;
+  private _enrollmentRepository: IEnrollmentRepository;
 
   constructor(props?: Props) {
     this._userRepository = props?.userRepository ?? new UserRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._enrollmentRepository =
+      props?.enrollmentRepository ?? new EnrollmentRepository();
   }
 
   public async getProfile(userId: string): Promise<UserProfileResponse> {
-    const user = await this._userRepository.findProfileById(userId);
+    const [user, totalWorkloadHours] = await Promise.all([
+      this._userRepository.findProfileById(userId),
+      this._enrollmentRepository.sumConfirmedHoursByUserId(userId),
+    ]);
 
     // 404, not the 401 the enrollment routes return for the same situation
     // (EnrollmentService.requireUser): there the status hides whether someone
@@ -42,7 +51,7 @@ class UserService implements IUserService {
     // exactly what 404 means.
     if (!user) throw new CustomError(404, "User not found.");
 
-    return this.toProfileResponse(user);
+    return this.toProfileResponse(user, totalWorkloadHours);
   }
 
   public async updateProfile(
@@ -84,7 +93,10 @@ class UserService implements IUserService {
       ...(newHash !== undefined && { passwordHash: newHash }),
     });
 
-    return this.toProfileResponse(updatedUser);
+    const totalWorkloadHours =
+      await this._enrollmentRepository.sumConfirmedHoursByUserId(userId);
+
+    return this.toProfileResponse(updatedUser, totalWorkloadHours);
   }
 
   public async listActivities(
@@ -106,7 +118,10 @@ class UserService implements IUserService {
     return toPaginated(items, total, page, limit);
   }
 
-  private toProfileResponse(user: UserWithProfile): UserProfileResponse {
+  private toProfileResponse(
+    user: UserWithProfile,
+    totalWorkloadHours: number,
+  ): UserProfileResponse {
     const profile = this.academicProfile(user);
 
     return {
@@ -119,6 +134,7 @@ class UserService implements IUserService {
       course: profile.course,
       cndb: profile.cndb,
       createdAt: user.createdAt,
+      totalWorkloadHours,
     };
   }
 

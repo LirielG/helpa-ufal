@@ -12,4 +12,6 @@ export type UserProfileResponse = {
   /** Null for a STUDENT: the field only exists on Teacher. */
   cndb: string | null;
   createdAt: Date;
+  /** Sum of confirmedWorkloadHours over the user's homologated presences. */
+  totalWorkloadHours: number;
 };
