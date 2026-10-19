@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
+import { GENERIC_ERROR_CODES } from "@/models/error/ErrorCodes.js";
+import { toApiErrorItems } from "@/models/error/toApiErrorItems.js";
 import { env } from "@/config/env.js";
 import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 
@@ -29,11 +31,14 @@ class ErrorHandler {
 
     res.status(400).json({
       status: 400,
+      code: GENERIC_ERROR_CODES[400],
       message: "Validation error.",
-      errors: err.issues.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      })),
+      errors: toApiErrorItems(
+        err.issues.map((e) => ({
+          field: e.path.join("."),
+          message: e.message,
+        })),
+      ),
     });
   }
 
@@ -48,10 +53,12 @@ class ErrorHandler {
       return;
     }
 
-    res.status(400).json({
-      status: 400,
+    res.status(err.statusCode).json({
+      status: err.statusCode,
+      code: err.code,
       message: err.message,
-      errors: err.errors,
+      errors: toApiErrorItems(err.errors),
+      details: err.details,
     });
   }
 
@@ -78,11 +85,15 @@ class ErrorHandler {
       ? UNIQUE_FIELD_MESSAGES[knownField]
       : "This value is already in use.";
 
-    // Intentionally only { status, message }: no `meta`, no constraint/table
-    // name, no stack — nothing here should let internal schema details leak.
+    // Intentionally only { status, code, message, details }: `details.field`
+    // is the whitelist key, never the raw column. No `meta`, no
+    // constraint/table name, no stack — nothing here should let internal
+    // schema details leak.
     res.status(409).json({
       status: 409,
+      code: "ALREADY_IN_USE",
       message,
+      details: knownField ? { field: knownField } : undefined,
     });
   }
 
@@ -95,7 +106,9 @@ class ErrorHandler {
     if (err instanceof CustomError) {
       res.status(err.statusCode).json({
         status: err.statusCode,
+        code: err.code,
         message: err.message,
+        details: err.details,
       });
       return;
     }
@@ -107,6 +120,7 @@ class ErrorHandler {
 
     res.status(500).json({
       status: 500,
+      code: GENERIC_ERROR_CODES[500],
       message: "Internal server error.",
       stack,
     });

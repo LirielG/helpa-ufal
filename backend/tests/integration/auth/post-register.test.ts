@@ -141,6 +141,7 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
     });
     expect(response.body.errors).toEqual(
@@ -232,7 +233,9 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "ALREADY_IN_USE",
       message: "Email already in use.",
+      details: { field: "email" },
     });
     const rows = await prisma.user.count({ where: { email: payload.email } });
     expect(rows).toBe(1);
@@ -250,7 +253,9 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "ALREADY_IN_USE",
       message: "Registration code already in use.",
+      details: { field: "registrationCode" },
     });
 
     // Nothing was created for the failed attempt: the transaction rolled
@@ -275,7 +280,9 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "ALREADY_IN_USE",
       message: "Registration code already in use.",
+      details: { field: "registrationCode" },
     });
 
     const users = await prisma.user.count({ where: { email: second.email } });
@@ -292,7 +299,9 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "ALREADY_IN_USE",
       message: "CNDB already in use.",
+      details: { field: "cndb" },
     });
 
     const users = await prisma.user.count({ where: { email: second.email } });
@@ -324,10 +333,16 @@ describe("POST /auth/register", () => {
       .post(REGISTER_URL)
       .send(aStudentPayload({ registrationCode: first.registrationCode }));
 
-    expect(Object.keys(response.body).sort()).toEqual(["message", "status"]);
+    expect(Object.keys(response.body).sort()).toEqual([
+      "code",
+      "details",
+      "message",
+      "status",
+    ]);
     const raw = JSON.stringify(response.body);
     expect(raw).not.toMatch(/prisma/i);
     expect(raw).not.toMatch(/_key/);
     expect(raw).not.toMatch(/select |insert |constraint/i);
+    expect(response.body.details).toEqual({ field: "registrationCode" });
   });
 });

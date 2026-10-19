@@ -81,7 +81,7 @@ describe("GET /activities/:activityId", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "activityId", message: "activityId must be a valid UUID." },
+      { field: "activityId", code: "VALIDATION_ERROR", message: "activityId must be a valid UUID." },
     ]);
   });
 
@@ -89,7 +89,7 @@ describe("GET /activities/:activityId", () => {
     const response = await request(app).get(`/activities/${randomUUID()}`);
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -102,7 +102,7 @@ describe("GET /activities/:activityId", () => {
     const response = await request(app).get(`/activities/${activity.id}`);
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
   describe("enrollmentStatus", () => {

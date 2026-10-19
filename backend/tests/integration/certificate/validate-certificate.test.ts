@@ -11,7 +11,11 @@ import {
 } from "../../helpers/factories.js";
 import { authCookie, invalidToken } from "../../helpers/auth.js";
 
-const NOT_FOUND = { status: 404, message: "Certificate not found." };
+const NOT_FOUND = {
+  status: 404,
+  code: "NOT_FOUND",
+  message: "Certificate not found.",
+};
 
 /** A certificate issued the way the product issues it: by homologating presence. */
 async function anIssuedCertificate() {

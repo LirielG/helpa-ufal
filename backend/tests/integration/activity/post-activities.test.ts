@@ -144,6 +144,7 @@ describe("POST /activities", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "You do not have permission to create an activity.",
     });
 
@@ -205,9 +206,10 @@ describe("POST /activities", () => {
         expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "address", message: "Invalid input: expected object, received undefined" },
+        { field: "address", code: "VALIDATION_ERROR", message: "Invalid input: expected object, received undefined" },
       ],
     });
   });
@@ -223,9 +225,10 @@ describe("POST /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "address", message: "Invalid input: expected object, received undefined" },
+        { field: "address", code: "VALIDATION_ERROR", message: "Invalid input: expected object, received undefined" },
       ],
     });
   });
@@ -248,9 +251,10 @@ describe("POST /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "url", message: "Invalid input: expected string, received undefined" },
+        { field: "url", code: "VALIDATION_ERROR", message: "Invalid input: expected string, received undefined" },
       ],
     });
   });
@@ -343,7 +347,7 @@ describe("POST /activities", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "startDate", message: "startDate must be before endDate." },
+      { field: "startDate", code: "VALIDATION_ERROR", message: "startDate must be before endDate." },
     ]);
   });
 
@@ -363,7 +367,7 @@ describe("POST /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual(
       expect.arrayContaining([
-        { field: "endDate", message: "Activity duration cannot exceed 365 days." },
+        { field: "endDate", code: "VALIDATION_ERROR", message: "Activity duration cannot exceed 365 days." },
       ]),
     );
   });
@@ -406,7 +410,7 @@ describe("POST /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual(
       expect.arrayContaining([
-        { field: "slots", message: "slots cannot exceed 10000." },
+        { field: "slots", code: "VALIDATION_ERROR", message: "slots cannot exceed 10000." },
       ]),
     );
   });
@@ -432,6 +436,7 @@ describe("POST /activities", () => {
       expect.arrayContaining([
         {
           field: "workloadHours",
+          code: "VALIDATION_ERROR",
           message: "workloadHours cannot exceed the total duration of the activity.",
         },
       ]),

@@ -119,6 +119,7 @@ describe("PUT /reports/:reportId/resolution", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
         {
@@ -138,6 +139,7 @@ describe("PUT /reports/:reportId/resolution", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Report not found.",
     });
   });
@@ -176,6 +178,7 @@ describe("PUT /reports/:reportId/resolution", () => {
     expect(existing.status).toBe(403);
     expect(existing.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "User is not a manager.",
     });
 

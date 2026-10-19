@@ -338,7 +338,9 @@ describe("GET /activities/:activityId/enrollments", () => {
       expect(response.status).toBe(400);
       expect(response.body.status).toBe(400);
       expect(response.body.message).toBe("Invalid query parameters.");
-      expect(response.body.errors).toEqual([{ field, message }]);
+      expect(response.body.errors).toEqual([
+        { field, code: "VALIDATION_ERROR", message },
+      ]);
     },
   );
 
@@ -394,6 +396,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "User account not found or inactive.",
     });
   });
@@ -410,6 +413,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -428,6 +432,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -445,6 +450,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -484,6 +490,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message:
         "Only the activity creator or a manager can view the enrollment list.",
     });

@@ -47,6 +47,7 @@ const CURRENT_REQUIRED = "Current password is required to set a new password.";
 const POLICY_MESSAGE = registrationPolicyMessage();
 const REVOKED_TOKEN_BODY = {
   status: 401,
+  code: "UNAUTHENTICATED",
   message: "Token malformatted, expired or invalid.",
 };
 
@@ -62,7 +63,16 @@ const PROTECTED_COLUMNS = [
 ].filter((column) => column !== "fullName" && column !== "course");
 
 function validationError(errors: Array<{ field: string; message: string }>) {
-  return { status: 400, message: "Validation error.", errors };
+  return {
+    status: 400,
+    code: "VALIDATION_ERROR",
+    message: "Validation error.",
+    errors: errors.map(({ field, message }) => ({
+      field,
+      code: "VALIDATION_ERROR",
+      message,
+    })),
+  };
 }
 
 function patchMe(token: string, body?: unknown) {
@@ -280,8 +290,12 @@ describe("PATCH /users/me", () => {
       expect(response.body.errors).toHaveLength(2);
       expect(response.body.errors).toEqual(
         expect.arrayContaining([
-          { field: "cndb", message: IMMUTABLE },
-          { field: "registrationCode", message: IMMUTABLE },
+          { field: "cndb", code: "VALIDATION_ERROR", message: IMMUTABLE },
+          {
+            field: "registrationCode",
+            code: "VALIDATION_ERROR",
+            message: IMMUTABLE,
+          },
         ]),
       );
       const stored = await readUser(teacher.user.id);
@@ -306,7 +320,9 @@ describe("PATCH /users/me", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.errors).toEqual(
-        expect.arrayContaining([{ field: "isManager", message: IMMUTABLE }]),
+        expect.arrayContaining([
+          { field: "isManager", code: "VALIDATION_ERROR", message: IMMUTABLE },
+        ]),
       );
       expect((await readUser(manager.user.id)).isManager).toBe(true);
     });
@@ -327,9 +343,9 @@ describe("PATCH /users/me", () => {
       expect(response.body.errors).toHaveLength(3);
       expect(response.body.errors).toEqual(
         expect.arrayContaining([
-          { field: "isManager", message: IMMUTABLE },
-          { field: "email", message: IMMUTABLE },
-          { field: "userType", message: IMMUTABLE },
+          { field: "isManager", code: "VALIDATION_ERROR", message: IMMUTABLE },
+          { field: "email", code: "VALIDATION_ERROR", message: IMMUTABLE },
+          { field: "userType", code: "VALIDATION_ERROR", message: IMMUTABLE },
         ]),
       );
     });
@@ -488,6 +504,7 @@ describe("PATCH /users/me", () => {
       expect(response.status).toBe(403);
       expect(response.body).toEqual({
         status: 403,
+        code: "FORBIDDEN",
         message: "Current password is incorrect.",
       });
       expect((await readUser(student.user.id)).passwordHash).toBe(before);
@@ -539,6 +556,7 @@ describe("PATCH /users/me", () => {
       expect(response.status).toBe(422);
       expect(response.body).toEqual({
         status: 422,
+        code: "UNPROCESSABLE",
         message: "New password must be different from the current password.",
       });
       expect((await readUser(student.user.id)).passwordHash).toBe(before);
@@ -769,7 +787,11 @@ describe("PATCH /users/me", () => {
       const response = await patchMe(student.token, { fullName: "Maria" });
 
       expect(response.status).toBe(404);
-      expect(response.body).toEqual({ status: 404, message: "User not found." });
+      expect(response.body).toEqual({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "User not found.",
+      });
     });
   });
 

@@ -164,9 +164,10 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
-              { "field": "attended", "message": "Invalid input: expected boolean, received string" }
+              { "field": "attended", "code": "VALIDATION_ERROR", "message": "Invalid input: expected boolean, received string" }
             ]
           }
   - name: 400 - Invalid attended/workloadHours combination
@@ -197,9 +198,10 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
-              { "field": "workloadHours", "message": "workloadHours must be omitted when attended is false." }
+              { "field": "workloadHours", "code": "VALIDATION_ERROR", "message": "workloadHours must be omitted when attended is false." }
             ]
           }
   - name: 401 - Unauthenticated
@@ -222,6 +224,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "No token provided."
           }
@@ -245,6 +248,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "User account not found or inactive."
           }
@@ -275,11 +279,12 @@ examples:
         type: json
         data: |-
           {
+            "code": "FORBIDDEN",
             "status": 403,
             "message": "Only the activity creator or a manager can confirm attendance."
           }
   - name: 404 - Enrollment not found
-    description: No enrollment with this id, a non-UUID enrollmentId, or an enrollment whose activity was soft-deleted. A malformed id is a lookup that finds nothing, so the three cases answer exactly this 404 and are indistinguishable from the outside.
+    description: No enrollment with this id, a non-UUID enrollmentId, or an enrollment whose activity was soft-deleted. A malformed id is a lookup that finds nothing, so the three cases answer exactly this 404 and are indistinguishable from the outside; Answers the generic NOT_FOUND, unlike DELETE /activities/:activityId/enroll, which uses `ENROLLMENT_NOT_FOUND` no screen needs to tell them apart here yet..
     request:
       url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
       method: PUT
@@ -305,6 +310,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "NOT_FOUND",
             "status": 404,
             "message": "Enrollment not found."
           }
@@ -335,6 +341,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "CONFLICT",
             "status": 409,
             "message": "Attendance can only be confirmed for completed activities."
           }
@@ -365,6 +372,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "CONFLICT",
             "status": 409,
             "message": "Only approved enrollments can have attendance confirmed."
           }
@@ -395,6 +403,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNPROCESSABLE",
             "status": 422,
             "message": "workloadHours must be an integer between 1 and the activity's workload hours."
           }
@@ -425,6 +434,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "INTERNAL_ERROR",
             "status": 500,
             "message": "Internal server error."
           }

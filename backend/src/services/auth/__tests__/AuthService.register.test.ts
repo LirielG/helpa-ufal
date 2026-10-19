@@ -125,6 +125,8 @@ describe("AuthService.register", () => {
       service.register(STUDENT_INPUT),
       409,
       "Email already in use.",
+      "ALREADY_IN_USE",
+      { field: "email" },
     );
     expect(userRepository.createWithSubtype).not.toHaveBeenCalled();
   });

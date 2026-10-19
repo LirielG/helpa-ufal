@@ -165,10 +165,11 @@ examples:
         type: json
         data: |-
           {
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Invalid query parameters.",
             "errors": [
-              { "field": "page", "message": "page must be a positive integer." }
+              { "field": "page", "code": "VALIDATION_ERROR", "message": "page must be a positive integer." }
             ]
           }
 
@@ -196,10 +197,11 @@ examples:
         type: json
         data: |-
           {
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Invalid query parameters.",
             "errors": [
-              { "field": "limit", "message": "limit must be at most 50." }
+              { "field": "limit", "code": "VALIDATION_ERROR", "message": "limit must be at most 50." }
             ]
           }
 
@@ -227,6 +229,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "No token provided."
           }
@@ -251,12 +254,13 @@ examples:
         type: json
         data: |-
           {
+            "code": "FORBIDDEN",
             "status": 403,
             "message": "Only the activity creator or a manager can view the enrollment list."
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -279,6 +283,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "NOT_FOUND",
             "status": 404,
             "message": "Activity not found."
           }
@@ -303,6 +308,7 @@ examples:
         type: json
         data: |-
           {
+            "code": "INTERNAL_ERROR",
             "status": 500,
             "message": "Internal server error."
           }

@@ -152,6 +152,7 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "User account not found or inactive.",
     });
   });
@@ -168,6 +169,7 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ACTIVITY_NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -189,6 +191,7 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ACTIVITY_NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -209,6 +212,7 @@ describe("POST /activities/:activityId/enroll", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
+        code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
         message: "Activity is not open for enrollment.",
       });
     },
@@ -229,6 +233,7 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "ALREADY_ENROLLED",
       message: "User is already enrolled in this activity.",
     });
 
@@ -254,6 +259,7 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       status: 409,
+      code: "NO_AVAILABLE_SLOTS",
       message: "No available slots for this activity.",
     });
   });

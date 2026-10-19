@@ -99,7 +99,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // Lock BEFORE any read, and `slots` read UNDER the lock.
       const activity = await lockActivityForCapacity(tx, activityId);
       if (!activity) {
-        throw new CustomError(404, "Activity not found.");
+        throw new CustomError(404, "Activity not found.", {
+          code: "ACTIVITY_NOT_FOUND",
+        });
       }
 
       // Re-check under the lock: the value read here is the only one
@@ -108,7 +110,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // remains as a fast-path (fails fast without opening a transaction),
       // this one is the actual source of truth for the error ordering.
       if (activity.status !== "OPEN") {
-        throw new CustomError(409, "Activity is not open for enrollment.");
+        throw new CustomError(409, "Activity is not open for enrollment.", {
+          code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+        });
       }
 
       const existing = await tx.enrollment.findUnique({
@@ -119,6 +123,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
         throw new CustomError(
           409,
           "User is already enrolled in this activity.",
+          {
+            code: "ALREADY_ENROLLED",
+          },
         );
       }
 
@@ -127,7 +134,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (approvedCount >= activity.slots) {
-        throw new CustomError(409, "No available slots for this activity.");
+        throw new CustomError(409, "No available slots for this activity.", {
+          code: "NO_AVAILABLE_SLOTS",
+        });
       }
 
       if (existing) {
@@ -165,6 +174,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
           throw new CustomError(
             409,
             "User is already enrolled in this activity.",
+            {
+              code: "ALREADY_ENROLLED",
+            },
           );
         }
         throw error;
@@ -182,7 +194,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
     });
 
     if (result.count === 0) {
-      throw new CustomError(404, "Enrollment not found.");
+      throw new CustomError(404, "Enrollment not found.", {
+        code: "ENROLLMENT_NOT_FOUND",
+      });
     }
   }
 

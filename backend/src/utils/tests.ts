@@ -8,6 +8,8 @@ export async function expectHttpError(
   promise: Promise<unknown>,
   status: number,
   message?: string,
+  code?: string,
+  details?: Record<string, unknown>,
 ): Promise<void> {
   try {
     await promise;
@@ -17,6 +19,8 @@ export async function expectHttpError(
       status,
     );
     if (message) expect((error as CustomError).message).toBe(message);
+    if (code) expect((error as CustomError).code).toBe(code);
+    if (details) expect((error as CustomError).details).toEqual(details);
     return;
   }
   throw new Error(
@@ -37,12 +41,16 @@ async function catchError(promise: Promise<unknown>): Promise<unknown> {
 export async function expectValidationError(
   promise: Promise<unknown>,
   expectedErrors: ValidationErrorItem[],
+  expected?: { details?: Record<string, unknown> },
 ): Promise<void> {
   const error = await catchError(promise);
   expect(error).toBeInstanceOf(ValidationError);
   expect((error as ValidationError).statusCode).toBe(400);
   expect((error as ValidationError).message).toBe("Validation error.");
   expect((error as ValidationError).errors).toEqual(expectedErrors);
+  if (expected?.details) {
+    expect((error as ValidationError).details).toEqual(expected.details);
+  }
 }
 
 /** Asserts a CustomError with the given status that is not a ValidationError. */

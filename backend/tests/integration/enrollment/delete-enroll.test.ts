@@ -122,6 +122,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
+      code: "UNAUTHENTICATED",
       message: "User account not found or inactive.",
     });
   });
@@ -138,6 +139,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ACTIVITY_NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -158,6 +160,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ACTIVITY_NOT_FOUND",
       message: "Activity not found.",
     });
   });
@@ -173,6 +176,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ENROLLMENT_NOT_FOUND",
       message: "Enrollment not found.",
     });
   });
@@ -191,6 +195,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ENROLLMENT_NOT_FOUND",
       message: "Enrollment not found.",
     });
   });
@@ -210,6 +215,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       status: 404,
+      code: "ENROLLMENT_NOT_FOUND",
       message: "Enrollment not found.",
     });
 

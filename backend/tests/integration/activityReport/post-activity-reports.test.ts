@@ -55,6 +55,7 @@ describe("POST /activities/:activityId/reports", () => {
     expect(second.status).toBe(409);
     expect(second.body).toEqual({
       status: 409,
+      code: "CONFLICT",
       message: "You have already reported this activity.",
     });
   });
@@ -84,8 +85,9 @@ describe("POST /activities/:activityId/reports", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
+      code: "VALIDATION_ERROR",
       message: "Validation error.",
-      errors: [{ field: "activityId", message: "activityId must be a valid UUID." }],
+      errors: [{ field: "activityId", code: "VALIDATION_ERROR", message: "activityId must be a valid UUID." }],
     });
   });
 
@@ -98,7 +100,7 @@ describe("POST /activities/:activityId/reports", () => {
       .send({ category: "SPAM", description: "Activity does not exist." });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
     it("returns 404 for a soft-deleted activity", async () => {
@@ -115,7 +117,7 @@ describe("POST /activities/:activityId/reports", () => {
       .send({ category: "SPAM", description: "Activity was soft-deleted." });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, message: "Activity not found." });
+    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
   });
 
   it("returns 403 when the activity author tries to report their own activity", async () => {
@@ -130,6 +132,7 @@ describe("POST /activities/:activityId/reports", () => {
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
       status: 403,
+      code: "FORBIDDEN",
       message: "Activity authors cannot report their own activity.",
     });
   });

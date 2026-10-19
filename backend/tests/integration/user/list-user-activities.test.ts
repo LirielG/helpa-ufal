@@ -423,7 +423,7 @@ describe("GET /users/me/activities", () => {
       const response = await request(app).get(`${activitiesUrl}${query}`);
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({ status: 401, message: "No token provided." });
+      expect(response.body).toEqual({ status: 401, code: "UNAUTHENTICATED", message: "No token provided." });
     });
 
     it.each([
@@ -437,6 +437,7 @@ describe("GET /users/me/activities", () => {
       expect(response.status).toBe(401);
       expect(response.body).toEqual({
         status: 401,
+        code: "UNAUTHENTICATED",
         message: "Token malformatted, expired or invalid.",
       });
     });
@@ -455,6 +456,7 @@ describe("GET /users/me/activities", () => {
       expect(response.status).toBe(401);
       expect(response.body).toEqual({
         status: 401,
+        code: "UNAUTHENTICATED",
         message: "Token malformatted, expired or invalid.",
       });
     });
@@ -480,6 +482,7 @@ describe("GET /users/me/activities", () => {
       expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
       expect(response.body.errors).toContainEqual({
         field: "filter",
+        code: "VALIDATION_ERROR",
         message: FILTER_MESSAGE,
       });
     });
@@ -495,6 +498,7 @@ describe("GET /users/me/activities", () => {
         expect(response.body.message).toBe(INVALID_QUERY_MESSAGE);
         expect(response.body.errors).toContainEqual({
           field: "filter",
+          code: "VALIDATION_ERROR",
           message: FILTER_MESSAGE,
         });
       },
@@ -566,7 +570,7 @@ describe("GET /users/me/activities", () => {
       const response = await listActivities(student.token, "?filter=enrolled");
 
       expect(response.status).toBe(404);
-      expect(response.body).toEqual({ status: 404, message: "User not found." });
+      expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "User not found." });
     });
   });
 
