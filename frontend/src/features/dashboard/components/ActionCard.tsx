@@ -32,6 +32,29 @@ export function ActionCard({ action }: ActionCardProps) {
     OTHER: "Outros",
   };
 
+  // Enrollment is only accepted while the action is OPEN, so any other status
+  // hides the slots badge instead of advertising spots nobody can take.
+  const getSlotsBadge = () => {
+    if (action.status !== "OPEN") return null;
+
+    if (action.availableSlots <= 0) {
+      return {
+        label: "Vagas esgotadas",
+        className: "bg-red-50 text-red-800 border-red-200",
+      };
+    }
+
+    return {
+      label:
+        action.availableSlots === 1
+          ? "1 vaga disponível"
+          : `${action.availableSlots} vagas disponíveis`,
+      className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    };
+  };
+
+  const slotsBadge = getSlotsBadge();
+
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
       <div className="relative h-48 overflow-hidden shrink-0">
@@ -62,10 +85,16 @@ export function ActionCard({ action }: ActionCardProps) {
           <span>{formatDate(action.startDate)}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Users className="size-4 shrink-0 text-gray-400" />
-          <span>{action.availableSlots} vagas disponíveis</span>
-        </div>
+        {slotsBadge && (
+          <div className="flex items-center">
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border ${slotsBadge.className}`}
+            >
+              <Users className="size-3.5 shrink-0" />
+              <span>{slotsBadge.label}</span>
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <span className="text-sm font-medium text-gray-700 capitalize">
