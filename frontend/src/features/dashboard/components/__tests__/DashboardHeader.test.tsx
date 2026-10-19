@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Route, Routes, useLocation } from "react-router";
-import { makeLoginRequest, render, screen, signIn } from "@/test";
-import { GuestRoute } from "@/routes/GuestRoute";
-import { Login } from "@/pages/Login";
+import {
+  CurrentUrl,
+  render,
+  renderWithAuthPages,
+  screen,
+  signIn,
+  submitLoginForm,
+} from "@/test";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
 
@@ -77,37 +82,21 @@ describe("DashboardHeader", () => {
     });
   });
 
-  it("brings a visitor who signs in from Entrar back to the same action", async () => {
-    const { user } = render(
-      <Routes>
-        <Route
-          path="/activity/:id"
-          element={
-            <DashboardShell header={<DashboardHeader />}>
-              <p>Detalhe</p>
-            </DashboardShell>
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <GuestRoute>
-              <Login />
-            </GuestRoute>
-          }
-        />
-        <Route path="/dashboard" element={<h1>Painel</h1>} />
-      </Routes>,
-      { route: "/activity/act-1" },
+  it("brings a visitor who signs in from Entrar back to the same page, query string included", async () => {
+    const { user } = renderWithAuthPages(
+      "/activity/:id",
+      <DashboardShell header={<DashboardHeader />}>
+        <CurrentUrl />
+      </DashboardShell>,
+      "/activity/act-1?origem=compartilhado",
     );
-    const credentials = makeLoginRequest();
 
     await user.click(screen.getByRole("button", { name: "Entrar" }));
-    await user.type(screen.getByLabelText("Usuário"), credentials.email);
-    await user.type(screen.getByLabelText("Senha"), credentials.password);
-    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    await submitLoginForm(user);
 
-    expect(await screen.findByText("Detalhe")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("status", { name: "URL atual" }),
+    ).toHaveTextContent("/activity/act-1?origem=compartilhado");
     expect(
       screen.getByRole("button", { name: "Abrir perfil" }),
     ).toBeInTheDocument();

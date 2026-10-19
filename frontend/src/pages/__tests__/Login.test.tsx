@@ -10,13 +10,10 @@ import {
   render,
   screen,
   server,
-  userEvent,
+  submitLoginForm,
 } from "@/test";
-import type { LoginRequest } from "@/types";
 import { GuestRoute } from "@/routes/GuestRoute";
 import { Login } from "../Login";
-
-type TestUser = ReturnType<typeof userEvent.setup>;
 
 /**
  * The destination route is part of the tree so the redirect is observed
@@ -39,12 +36,6 @@ function renderLoginWithDashboard() {
     </Routes>,
     { route: "/login" },
   );
-}
-
-async function submitLogin(user: TestUser, credentials: LoginRequest) {
-  await user.type(screen.getByLabelText("Usuário"), credentials.email);
-  await user.type(screen.getByLabelText("Senha"), credentials.password);
-  await user.click(screen.getByRole("button", { name: "Entrar" }));
 }
 
 /**
@@ -77,7 +68,7 @@ describe("Login", () => {
     const { user } = renderLoginWithDashboard();
     const credentials = makeLoginRequest();
 
-    await submitLogin(user, credentials);
+    await submitLoginForm(user, credentials);
 
     expect(
       await screen.findByRole("heading", { name: "Painel" }),
@@ -101,7 +92,7 @@ describe("Login", () => {
     const onLoginRequest = spyOnLoginRequest();
     const { user } = renderLoginWithDashboard();
 
-    await submitLogin(user, makeLoginRequest({ email: "usuario@ufal" }));
+    await submitLoginForm(user, makeLoginRequest({ email: "usuario@ufal" }));
 
     expect(await screen.findByText("E-mail inválido")).toBeInTheDocument();
     expect(onLoginRequest).not.toHaveBeenCalled();
@@ -120,7 +111,7 @@ describe("Login", () => {
     const { user } = renderLoginWithDashboard();
     const credentials = makeLoginRequest();
 
-    await submitLogin(user, credentials);
+    await submitLoginForm(user, credentials);
 
     expect(
       await screen.findByText("Credenciais inválidas"),
@@ -139,7 +130,7 @@ describe("Login", () => {
     const { user } = renderLoginWithDashboard();
     const credentials = makeLoginRequest();
 
-    await submitLogin(user, credentials);
+    await submitLoginForm(user, credentials);
 
     expect(
       await screen.findByText("Erro na comunicação com o servidor"),
@@ -158,7 +149,7 @@ describe("Login", () => {
     const { user } = renderLoginWithDashboard();
     const credentials = makeLoginRequest();
 
-    await submitLogin(user, credentials);
+    await submitLoginForm(user, credentials);
 
     const submitButton = await screen.findByRole("button", {
       name: "Carregando...",

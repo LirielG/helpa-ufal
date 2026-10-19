@@ -4,13 +4,23 @@ type AuthFooterLinkProps = {
   prefix: string;
   linkText: string;
   to: string;
+  state?: unknown;
 };
 
-export function AuthFooterLink({ prefix, linkText, to }: AuthFooterLinkProps) {
+export function AuthFooterLink({
+  prefix,
+  linkText,
+  to,
+  state,
+}: AuthFooterLinkProps) {
   return (
     <p className="text-gray-600 text-center">
       {prefix}{" "}
-      <Link to={to} className="text-blue-600 hover:text-blue-700 font-medium">
+      <Link
+        to={to}
+        state={state}
+        className="text-blue-600 hover:text-blue-700 font-medium"
+      >
         {linkText}
       </Link>
     </p>

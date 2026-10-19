@@ -5,17 +5,17 @@ import {
   HttpResponse,
   http,
   makeActionDetail,
-  makeLoginRequest,
   render,
+  renderWithAuthPages,
   screen,
   server,
   signIn,
+  submitLoginForm,
+  submitStudentSignUpForm,
 } from "@/test";
 import type { Activity } from "@/services/contracts/activity";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
-import { GuestRoute } from "@/routes/GuestRoute";
 import { ActionDetail } from "../ActionDetail";
-import { Login } from "../Login";
 
 const ACTION_ID = "act-cancellation";
 
@@ -38,22 +38,11 @@ function renderPage() {
   );
 }
 
-/** The real login, so a visitor's round trip ends where GuestRoute sends it. */
-function renderPageWithLogin() {
-  return render(
-    <Routes>
-      <Route path="/activity/:id" element={<ActionDetail />} />
-      <Route
-        path="/login"
-        element={
-          <GuestRoute>
-            <Login />
-          </GuestRoute>
-        }
-      />
-      <Route path="/dashboard" element={<h1>Painel</h1>} />
-    </Routes>,
-    { route: `/activity/${ACTION_ID}` },
+function renderPageWithAuthPages() {
+  return renderWithAuthPages(
+    "/activity/:id",
+    <ActionDetail />,
+    `/activity/${ACTION_ID}`,
   );
 }
 
@@ -140,15 +129,12 @@ describe("ActionDetail enrollment states", () => {
     serveSnapshots(
       makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 4 }),
     );
-    const { user } = renderPageWithLogin();
-    const credentials = makeLoginRequest();
+    const { user } = renderPageWithAuthPages();
 
     await user.click(
       await screen.findByRole("button", { name: "Entrar para se inscrever" }),
     );
-    await user.type(screen.getByLabelText("Usuário"), credentials.email);
-    await user.type(screen.getByLabelText("Senha"), credentials.password);
-    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    await submitLoginForm(user);
 
     expect(
       await screen.findByRole("button", { name: /Inscrever-se/ }),
@@ -156,6 +142,39 @@ describe("ActionDetail enrollment states", () => {
     expect(
       screen.queryByRole("button", { name: "Entrar para se inscrever" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("brings a visitor who signs up from Criar conta back to the same action", async () => {
+    serveSnapshots(
+      makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 4 }),
+    );
+    const { user } = renderPageWithAuthPages();
+
+    await user.click(await screen.findByRole("link", { name: "Criar conta" }));
+    await submitStudentSignUpForm(user);
+    await submitLoginForm(user);
+
+    expect(
+      await screen.findByRole("button", { name: /Inscrever-se/ }),
+    ).toBeEnabled();
+  });
+
+  it("brings a visitor who switches from the login to the sign-up back to the same action", async () => {
+    serveSnapshots(
+      makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 4 }),
+    );
+    const { user } = renderPageWithAuthPages();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Entrar para se inscrever" }),
+    );
+    await user.click(screen.getByRole("link", { name: "Criar conta" }));
+    await submitStudentSignUpForm(user);
+    await submitLoginForm(user);
+
+    expect(
+      await screen.findByRole("button", { name: /Inscrever-se/ }),
+    ).toBeEnabled();
   });
 
   it("shows Vagas esgotadas, without the sign-in invite, to a visitor of a full action", async () => {
@@ -414,7 +433,9 @@ describe("ActionDetail enrollment cancellation", () => {
     await openCancellationModal(user);
     await confirmCancellation(user);
 
-    expect(await screen.findByText("Entrar")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
   });
 
   it("enrolls again through the normal flow after cancelling", async () => {

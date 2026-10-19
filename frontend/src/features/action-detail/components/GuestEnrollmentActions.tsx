@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "../../../components/Button";
 import { getUnavailableEnrollmentLabel } from "../enrollment";
 import { UnavailableEnrollmentButton } from "./UnavailableEnrollmentButton";
+import type { ReturnToState } from "@/routes/GuestRoute";
 import type { Activity } from "@/services/contracts/activity";
 
 interface GuestEnrollmentActionsProps {
@@ -19,6 +20,7 @@ export function GuestEnrollmentActions({
   const navigate = useNavigate();
   const location = useLocation();
   const unavailableLabel = getUnavailableEnrollmentLabel(action);
+  const returnTo: ReturnToState = { from: location };
 
   // No point inviting someone to sign in for an enrollment they cannot make.
   if (unavailableLabel) {
@@ -30,7 +32,7 @@ export function GuestEnrollmentActions({
       <Button
         variant="navy"
         size="lg"
-        onClick={() => navigate("/login", { state: { from: location } })}
+        onClick={() => navigate("/login", { state: returnTo })}
         className="flex items-center justify-center gap-3 rounded-xl"
       >
         <Users className="size-6" />
@@ -40,6 +42,7 @@ export function GuestEnrollmentActions({
         Não tem conta?{" "}
         <Link
           to="/register"
+          state={returnTo}
           className="font-medium text-[#1B75BB] hover:underline"
         >
           Criar conta

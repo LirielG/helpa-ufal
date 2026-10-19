@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
 import { useAuthStore } from "../stores/authStore";
 import { SessionLoader } from "./SessionLoader";
+import type { ReturnToState } from "./GuestRoute";
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -18,7 +19,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location } satisfies ReturnToState}
+        replace
+      />
+    );
   }
 
   return children;

@@ -4,6 +4,7 @@ import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { getInitials } from "../../../utils/helpers";
+import type { ReturnToState } from "../../../routes/GuestRoute";
 
 const CREATE_ACTION_LABEL = "Criar uma ação";
 const LOGIN_LABEL = "Entrar";
@@ -16,7 +17,8 @@ export function DashboardHeader() {
 
   // A visitor would fill the whole form only to lose it on the 401, so the
   // button goes to the login instead; GuestRoute brings them back here.
-  const goToLogin = () => navigate("/login", { state: { from: location } });
+  const goToLogin = () =>
+    navigate("/login", { state: { from: location } satisfies ReturnToState });
 
   const handleLogout = async () => {
     await logout();
