@@ -172,7 +172,7 @@ describe("EditAction", () => {
     renderEditAction();
 
     expect(await findTitleField()).toHaveValue(action.title);
-    expect(screen.getByPlaceholderText(/Descreva os detalhes/)).toHaveValue(
+    expect(screen.getByLabelText("Descrição")).toHaveValue(
       action.details!.description,
     );
     expect(screen.getByLabelText("Número de vagas")).toHaveValue(action.slots);
@@ -483,7 +483,7 @@ describe("EditAction", () => {
       const { user } = renderEditAction();
 
       await findTitleField();
-      const description = screen.getByPlaceholderText(/Descreva os detalhes/);
+      const description = screen.getByLabelText("Descrição");
       await user.clear(description);
       await user.type(description, "Oficina 2");
       await user.click(getSaveButton());
@@ -500,7 +500,7 @@ describe("EditAction", () => {
       const { user } = renderEditAction();
 
       await findTitleField();
-      await user.clear(screen.getByPlaceholderText(/Descreva os detalhes/));
+      await user.clear(screen.getByLabelText("Descrição"));
       await user.click(getSaveButton());
 
       expect(
