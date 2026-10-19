@@ -16,7 +16,7 @@ import {
   ACTION_TYPE_OPTIONS,
 } from "../features/dashboard/constants";
 import {
-  ActionEditSchema,
+  actionEditSchemaFor,
   type ActionEditSchemaType,
 } from "../features/action-edit/validators";
 import { getActionById } from "../features/action-detail/services";
@@ -61,6 +61,7 @@ export function EditAction() {
 
   const user = useAuthStore((state) => state.user);
   const [actionAuthorId, setActionAuthorId] = useState<string | null>(null);
+  const [savedDescription, setSavedDescription] = useState("");
 
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
   const [loadFailed, setLoadFailed] = useState(false);
@@ -88,7 +89,7 @@ export function EditAction() {
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
-    resolver: zodResolver(ActionEditSchema),
+    resolver: zodResolver(actionEditSchemaFor(savedDescription)),
     mode: "onSubmit",
   });
 
@@ -122,6 +123,7 @@ export function EditAction() {
       }
 
       setActionAuthorId(action.authorId);
+      setSavedDescription(action.details?.description ?? "");
 
       reset({
         title: action.title,

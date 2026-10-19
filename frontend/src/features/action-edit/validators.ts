@@ -47,14 +47,14 @@ const REQUIRED_ADDRESS_FIELDS = [
   ["state", "Informe o estado"],
 ] as const;
 
-export const ActionEditSchema = z
+const actionEditBaseSchema = z
   .object({
     title: z
       .string()
       .min(1, "O título é obrigatório")
       .min(3, "O título deve ter no mínimo 3 caracteres")
       .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
-    description: activityDescriptionSchema,
+    description: z.string().trim(),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
     startTime: z.string().min(1, "O horário de início é obrigatório"),
@@ -161,4 +161,24 @@ export const ActionEditSchema = z
     }
   });
 
-export type ActionEditSchemaType = z.infer<typeof ActionEditSchema>;
+/**
+ * The description rule only binds a description the user is changing: actions
+ * created while the description was optional may hold a shorter one, and that
+ * must not block an unrelated edit.
+ */
+export function actionEditSchemaFor(savedDescription: string) {
+  return actionEditBaseSchema.superRefine(({ description }, ctx) => {
+    if (description === savedDescription.trim()) return;
+
+    const result = activityDescriptionSchema.safeParse(description);
+    if (!result.success) {
+      ctx.addIssue({
+        code: "custom",
+        message: result.error.issues[0].message,
+        path: ["description"],
+      });
+    }
+  });
+}
+
+export type ActionEditSchemaType = z.infer<typeof actionEditBaseSchema>;
