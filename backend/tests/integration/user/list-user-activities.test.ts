@@ -3,6 +3,7 @@ import request from "supertest";
 import type { ActivityStatus, ActivityType } from "@prisma/client";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
+import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import {
   anAddress,
@@ -68,6 +69,39 @@ async function createActivityWithoutDetails(
       ...overrides,
     },
   });
+}
+
+/**
+ * A COMPLETED activity where `userId` had their presence homologated, which
+ * issues the certificate, and that the author deleted afterwards. Goes through
+ * the repositories so the certificate and deletedAt are the real ones.
+ */
+async function createDeletedWithCertificate(
+  authorId: string,
+  userId: string,
+  overrides: { startDate?: Date } = {},
+) {
+  const activity = await createActivity(authorId, {
+    status: "COMPLETED",
+    ...overrides,
+  });
+  const enrollment = await createEnrollment(userId, activity.id);
+  await new EnrollmentRepository().confirmAttendance(
+    activity.id,
+    enrollment.id,
+    true,
+    8,
+  );
+  await new ActivityRepository().softDelete(activity.id);
+
+  const [{ deletedAt }, certificate] = await Promise.all([
+    prisma.activity.findUniqueOrThrow({ where: { id: activity.id } }),
+    prisma.certificate.findUniqueOrThrow({
+      where: { enrollmentId: enrollment.id },
+    }),
+  ]);
+
+  return { activity, certificate, deletedAt: deletedAt as Date };
 }
 
 /**
@@ -343,7 +377,7 @@ describe("GET /users/me/activities", () => {
     });
 
     it.each(FILTERS)(
-      "filter=%s never returns a soft-deleted activity",
+      "filter=%s never returns a soft-deleted activity that issued the user no certificate",
       async (filter) => {
         const response = await listActivities(seed.user.token, `?filter=${filter}`);
         const returned = idsOf(response);
@@ -354,6 +388,93 @@ describe("GET /users/me/activities", () => {
         expect(returned).not.toContain(seed.ids.managedDeleted);
       },
     );
+  });
+
+  // ---------- Soft-deleted activities ----------
+
+  // The certificate outlives the activity and stays downloadable, so the
+  // history keeps listing it: completed is the only way to reach its id.
+  describe("soft-deleted activities", () => {
+    it("filter=completed lists an activity deleted after the certificate was issued", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const { activity, certificate, deletedAt } =
+        await createDeletedWithCertificate(author.user.id, user.user.id);
+
+      const response = await listActivities(user.token, "?filter=completed");
+
+      expect(response.status).toBe(200);
+      expect(idsOf(response)).toEqual([activity.id]);
+      expect(response.body.items[0]).toMatchObject({
+        deletedAt: deletedAt.toISOString(),
+        certificate: {
+          id: certificate.id,
+          validationCode: certificate.validationCode,
+          issuedAt: certificate.issuedAt.toISOString(),
+        },
+      });
+    });
+
+    it.each([
+      ["absent", false],
+      ["not homologated", null],
+    ])(
+      "filter=completed leaves out a deleted activity where the user was %s",
+      async (_label, attendanceConfirmed) => {
+        const user = await createStudent();
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id, {
+          status: "COMPLETED",
+          deletedAt: new Date(),
+        });
+        await createEnrollment(user.user.id, activity.id, { attendanceConfirmed });
+
+        const response = await listActivities(user.token, "?filter=completed");
+
+        expect(response.status).toBe(200);
+        expect(response.body.items).toEqual([]);
+      },
+    );
+
+    it.each(["enrolled", "managed"] as const)(
+      "filter=%s leaves out a deleted activity even when it issued the user a certificate",
+      async (filter) => {
+        // The author enrolled in their own activity, so it would match managed too.
+        const user = await createTeacher();
+        await createDeletedWithCertificate(user.user.id, user.user.id);
+
+        const response = await listActivities(user.token, `?filter=${filter}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.items).toEqual([]);
+      },
+    );
+
+    it("counts the deleted activity in total and totalPages", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      for (const day of [1, 2]) {
+        const active = await createActivity(author.user.id, {
+          status: "COMPLETED",
+          startDate: daysFromNow(day),
+        });
+        await createEnrollment(user.user.id, active.id, { attendanceConfirmed: true });
+      }
+      const { activity } = await createDeletedWithCertificate(
+        author.user.id,
+        user.user.id,
+        { startDate: daysFromNow(-1) },
+      );
+
+      const first = await listActivities(user.token, "?filter=completed&limit=2");
+      const second = await listActivities(
+        user.token,
+        "?filter=completed&page=2&limit=2",
+      );
+
+      expect(first.body).toMatchObject({ total: 3, totalPages: 2 });
+      expect(idsOf(second)).toEqual([activity.id]);
+    });
   });
 
   // ---------- Isolation between users ----------
@@ -595,7 +716,7 @@ describe("GET /users/me/activities", () => {
       },
     );
 
-    it("returns each activity as GET /activities/:activityId does, plus the enrollment and the certificate", async () => {
+    it("returns each activity as GET /activities/:activityId does, plus deletedAt, the enrollment and the certificate", async () => {
       const user = await createTeacher();
       const activity = await createActivity(user.user.id, {
         title: "Oficina de Testes",
@@ -610,7 +731,7 @@ describe("GET /users/me/activities", () => {
 
       expect(detail.status).toBe(200);
       expect(history.body.items).toEqual([
-        { ...detail.body, enrollment: null, certificate: null },
+        { ...detail.body, deletedAt: null, enrollment: null, certificate: null },
       ]);
     });
 
@@ -689,6 +810,20 @@ describe("GET /users/me/activities", () => {
         expect(response.body.items.length).toBeGreaterThan(0);
         for (const item of response.body.items) {
           expect(item).toHaveProperty("certificate", null);
+        }
+      },
+    );
+
+    it.each(FILTERS)(
+      "carries deletedAt null on the active items of filter=%s",
+      async (filter) => {
+        const seed = await seedHistory();
+
+        const response = await listActivities(seed.user.token, `?filter=${filter}`);
+
+        expect(response.body.items.length).toBeGreaterThan(0);
+        for (const item of response.body.items) {
+          expect(item).toHaveProperty("deletedAt", null);
         }
       },
     );

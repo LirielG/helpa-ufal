@@ -67,11 +67,14 @@ export type UserActivityCertificate = {
  * GET /activities/:activityId returns it to an anonymous caller, plus the
  * token owner's enrollment and its certificate. `enrollment` carries the
  * status, so the `enrollmentStatus` shortcut of the detail route is left out.
+ * `deletedAt` is non-null only under `completed`, for a deleted activity that
+ * issued the owner a certificate.
  */
 export type UserActivityResponse = Omit<
   ActivityFullResponse,
   "enrollmentStatus"
 > & {
+  deletedAt: Date | null;
   enrollment: EnrollmentResponse | null;
   certificate: UserActivityCertificate | null;
 };
