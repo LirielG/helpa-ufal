@@ -11,6 +11,8 @@ type ErrorPayload = {
   message?: string | string[];
   error?: string;
   errors?: ValidationError[];
+  code?: unknown;
+  details?: unknown;
 };
 
 export type RequestOptions = {
@@ -87,6 +89,13 @@ async function toApiError(response: Response): Promise<ApiError> {
     response.status,
     readErrorMessage(payload),
     Array.isArray(payload.errors) ? payload.errors : [],
+    {
+      code: typeof payload.code === "string" ? payload.code : undefined,
+      details:
+        payload.details && typeof payload.details === "object"
+          ? (payload.details as Record<string, unknown>)
+          : undefined,
+    },
   );
 }
 
