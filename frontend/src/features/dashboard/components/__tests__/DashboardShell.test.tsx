@@ -68,6 +68,10 @@ async function fillStep1(user: UserEvent) {
     "Mutirão de Saúde",
   );
   await user.type(
+    registerDialog().getByLabelText("Descrição completa"),
+    "Atendimento gratuito à comunidade.",
+  );
+  await user.type(
     registerDialog().getByLabelText(/Área de atuação/i),
     "Educação",
   );

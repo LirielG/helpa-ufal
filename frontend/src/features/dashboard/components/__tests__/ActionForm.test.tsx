@@ -42,6 +42,10 @@ async function fillStep1(user: UserEvent, area = "Educação") {
     screen.getByPlaceholderText("Digite o título da sua ação"),
     "Mutirão de Saúde",
   );
+  await user.type(
+    screen.getByLabelText("Descrição completa"),
+    "Atendimento gratuito à comunidade.",
+  );
 
   await user.type(getAreaField(), area);
   await user.selectOptions(screen.getByLabelText("Tipo da ação"), "EXTENSION");
@@ -211,10 +215,15 @@ describe("ActionRegister", () => {
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
     );
 
-    await user.click(screen.getByPlaceholderText("Digite o título da sua ação"));
+    await user.click(
+      screen.getByPlaceholderText("Digite o título da sua ação"),
+    );
     await user.paste("a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1));
     await user.type(getAreaField(), "Educação");
-    await user.selectOptions(screen.getByLabelText("Tipo da ação"), "EXTENSION");
+    await user.selectOptions(
+      screen.getByLabelText("Tipo da ação"),
+      "EXTENSION",
+    );
     await user.click(screen.getByRole("button", { name: /Próximo/i }));
 
     expect(
@@ -357,6 +366,96 @@ describe("ActionRegister", () => {
       expect(
         await screen.findByText("Sua ação foi registrada com sucesso!"),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("description field", () => {
+    async function submitStep1WithDescription(
+      user: UserEvent,
+      description: string,
+    ) {
+      await user.type(
+        screen.getByPlaceholderText("Digite o título da sua ação"),
+        "Mutirão de Saúde",
+      );
+      if (description) {
+        await user.type(
+          screen.getByLabelText("Descrição completa"),
+          description,
+        );
+      }
+      await user.type(getAreaField(), "Educação");
+      await user.selectOptions(
+        screen.getByLabelText("Tipo da ação"),
+        "EXTENSION",
+      );
+      await user.click(screen.getByRole("button", { name: /Próximo/i }));
+    }
+
+    function step2Heading() {
+      return screen.queryByRole("heading", {
+        name: "Conte-nos onde e quando será",
+      });
+    }
+
+    it("keeps an empty description on step 1 and says it is required", async () => {
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await submitStep1WithDescription(user, "");
+
+      expect(
+        await screen.findByText("A descrição é obrigatória"),
+      ).toBeInTheDocument();
+      expect(step2Heading()).toBeNull();
+    });
+
+    it("keeps a description shorter than 10 characters on step 1", async () => {
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await submitStep1WithDescription(user, "123456789");
+
+      expect(
+        await screen.findByText("A descrição deve ter no mínimo 10 caracteres"),
+      ).toBeInTheDocument();
+      expect(step2Heading()).toBeNull();
+    });
+
+    it("advances with a description of exactly 10 characters", async () => {
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await submitStep1WithDescription(user, "1234567890");
+
+      expect(
+        await screen.findByRole("heading", {
+          name: "Conte-nos onde e quando será",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("sends the typed description without the spaces around it", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await submitStep1WithDescription(user, "  Oficina de leitura  ");
+      await screen.findByRole("heading", {
+        name: "Conte-nos onde e quando será",
+      });
+      await fillStep2(user);
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ description: "Oficina de leitura" }),
+        ),
+      );
     });
   });
 

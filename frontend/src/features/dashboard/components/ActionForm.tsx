@@ -23,6 +23,7 @@ import {
   ACTIVITY_TITLE_MAX_LENGTH,
   ACTIVITY_TITLE_TOO_LONG_MESSAGE,
 } from "../../../validators/limits";
+import { activityDescriptionSchema } from "../../../validators/activity";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type {
   ActivityType,
@@ -44,7 +45,7 @@ const baseSchema = z.object({
     .string()
     .min(1, "Informe um título válido.")
     .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
-  description: z.string().optional(),
+  description: activityDescriptionSchema,
   area: z.string().trim().min(1, "Informe uma área de atuação válida."),
   type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] as const, {
     error: "Selecione um tipo de ação válido.",
@@ -286,7 +287,7 @@ export function ActionRegister({
       try {
         const payload: CreateActivityPayload = {
           title: data.title,
-          description: data.description?.trim() || "Descrição não informada.",
+          description: data.description,
           type: data.type as ActivityType,
           campus: data.campus as CampusLocation,
           area: data.area.trim(),
@@ -442,10 +443,7 @@ export function ActionRegister({
                       htmlFor="description"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      Descrição completa{" "}
-                      <span className="text-gray-400 font-normal">
-                        (opcional)
-                      </span>
+                      Descrição completa
                     </label>
                     <textarea
                       id="description"
