@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -252,8 +252,13 @@ export function ActionRegister({
   const needsUrl = format === "ONLINE" || format === "HYBRID";
   const needsAddress = format === "IN_PERSON" || format === "HYBRID";
 
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Both steps share one scroll area, so without this step 2 opens wherever
+  // step 1 was scrolled to, hiding its heading and the mobile step label.
   useEffect(() => {
     setGeneralError(null);
+    if (scrollAreaRef.current) scrollAreaRef.current.scrollTop = 0;
   }, [step]);
 
   function handleCancelClick() {
@@ -411,8 +416,14 @@ export function ActionRegister({
             className="flex flex-col flex-1 min-h-0"
             noValidate
           >
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-6 pb-4 md:px-8 md:pt-8">
-              <p className="md:hidden mb-3 text-xs font-semibold text-[#1B75BB]">
+            <div
+              ref={scrollAreaRef}
+              className="flex-1 min-h-0 overflow-y-auto px-5 pt-6 pb-4 md:px-8 md:pt-8"
+            >
+              <p
+                aria-live="polite"
+                className="md:hidden mb-3 text-xs font-semibold text-[#1B75BB]"
+              >
                 Etapa {step} de 2 · {STEP_NAMES[step]}
               </p>
               {generalError && (
