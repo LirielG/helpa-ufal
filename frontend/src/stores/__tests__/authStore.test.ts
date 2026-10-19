@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { API, server, http, HttpResponse } from "@/test";
-import { makeLoginRequest, makeUser, signIn, signOut } from "@/test";
+import {
+  makeLoginRequest,
+  makeRegisterRequest,
+  makeUser,
+  signIn,
+  signOut,
+} from "@/test";
 import { setSessionExpiredHandler } from "@/services/session";
 import { useAuthStore } from "@/stores/authStore";
 
@@ -30,11 +36,15 @@ describe("authStore", () => {
       expect(store().isLoading).toBe(false);
     });
 
-    it("returns false, keeps user null and stores the API message on failure", async () => {
+    it("returns false, keeps user null and stores the translated message on failure", async () => {
       server.use(
         http.post(`${API}/auth/login`, () =>
           HttpResponse.json(
-            { message: "Credenciais inválidas" },
+            {
+              status: 401,
+              code: "UNAUTHENTICATED",
+              message: "Invalid credentials.",
+            },
             { status: 401 },
           ),
         ),
@@ -44,7 +54,43 @@ describe("authStore", () => {
 
       expect(result).toBe(false);
       expect(store().user).toBeNull();
-      expect(store().error).toBe("Credenciais inválidas");
+      expect(store().error).toBe("E-mail ou senha incorretos.");
+      expect(store().isLoading).toBe(false);
+    });
+  });
+
+  describe("register", () => {
+    it("returns once the account is created, without signing in", async () => {
+      await store().register(makeRegisterRequest());
+
+      expect(store().user).toBeNull();
+      expect(store().isLoading).toBe(false);
+    });
+
+    // The sign-up screen translates the failure itself, since only it can put
+    // a message on a form field.
+    it("rethrows the API error without storing a message", async () => {
+      server.use(
+        http.post(`${API}/auth/register`, () =>
+          HttpResponse.json(
+            {
+              status: 409,
+              code: "ALREADY_IN_USE",
+              message: "Email already in use.",
+              details: { field: "email" },
+            },
+            { status: 409 },
+          ),
+        ),
+      );
+
+      const failure = store().register(makeRegisterRequest());
+
+      await expect(failure).rejects.toMatchObject({
+        status: 409,
+        code: "ALREADY_IN_USE",
+      });
+      expect(store().error).toBeNull();
       expect(store().isLoading).toBe(false);
     });
   });
@@ -53,7 +99,14 @@ describe("authStore", () => {
     it("clears the error without touching the user", async () => {
       server.use(
         http.post(`${API}/auth/login`, () =>
-          HttpResponse.json({ message: "Erro de teste" }, { status: 400 }),
+          HttpResponse.json(
+            {
+              status: 400,
+              code: "VALIDATION_ERROR",
+              message: "Validation error.",
+            },
+            { status: 400 },
+          ),
         ),
       );
       await store().login(makeLoginRequest());
@@ -89,7 +142,14 @@ describe("authStore", () => {
       signIn();
       server.use(
         http.post(`${API}/auth/logout`, () =>
-          HttpResponse.json({ message: "Erro ao sair" }, { status: 400 }),
+          HttpResponse.json(
+            {
+              status: 400,
+              code: "VALIDATION_ERROR",
+              message: "Validation error.",
+            },
+            { status: 400 },
+          ),
         ),
       );
 

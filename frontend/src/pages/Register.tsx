@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { z } from "zod";
 import { Button, Alert, Tooltip } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { RegisterSchema } from "../validators/auth";
+import { RegisterSchema, type RegisterFields } from "../validators/auth";
 import type { RegisterRequest } from "../types";
 import { AuthField } from "../features/auth/components/AuthField";
 import { AuthFooterLink } from "../features/auth/components/AuthFooterLink";
@@ -14,6 +13,7 @@ import { PasswordField } from "../features/auth/components/PasswordField";
 import PasswordGuidelines from "../features/auth/components/PasswordGuidelines";
 import { ProfileSelector } from "../features/auth/components/ProfileSelector";
 import { REGISTER_SUCCESS_MESSAGE } from "../features/auth/constants/messages";
+import { handleRegisterApiErrors } from "../features/auth/errors";
 import { PROFILE_OPTIONS } from "../features/auth/constants/profileOptions";
 import type { ProfileType } from "../features/auth/types";
 import type { ReturnToState } from "../routes/GuestRoute";
@@ -28,10 +28,8 @@ const defaultFields = {
   cndb: "",
 };
 
-type RegisterFields = z.infer<typeof RegisterSchema>;
-
 export function Register() {
-  const { register: registerUser, isLoading, error: authError } = useAuth();
+  const { register: registerUser, isLoading } = useAuth();
   const navigate = useNavigate();
   const { state } = useLocation();
   // Handed back to the login so signing in after the sign-up still returns
@@ -41,6 +39,7 @@ export function Register() {
   };
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -48,6 +47,7 @@ export function Register() {
     watch,
     formState: { errors },
     reset,
+    setError,
   } = useForm<RegisterFields>({
     resolver: zodResolver(RegisterSchema),
     defaultValues: {
@@ -72,18 +72,24 @@ export function Register() {
       registrationCode: data.registrationCode,
       ...(data.userType === "teacher" ? { cndb: data.cndb } : {}),
     };
-    const created = await registerUser(payload);
+    setFormError(null);
 
-    if (created) {
-      navigate("/login", {
-        replace: true,
-        state: { ...returnTo, successMessage: REGISTER_SUCCESS_MESSAGE },
-      });
+    try {
+      await registerUser(payload);
+    } catch (error) {
+      setFormError(handleRegisterApiErrors(error, setError));
+      return;
     }
+
+    navigate("/login", {
+      replace: true,
+      state: { ...returnTo, successMessage: REGISTER_SUCCESS_MESSAGE },
+    });
   };
 
   const selectProfile = (type: ProfileType) => {
     setSelectedType(type);
+    setFormError(null);
     reset({ ...defaultFields, userType: type } as RegisterFields);
   };
 
@@ -163,9 +169,9 @@ export function Register() {
         </div>
       </div>
 
-      {authError && (
+      {formError && (
         <div className="mb-6">
-          <Alert type="error" message={authError} />
+          <Alert type="error" message={formError} />
         </div>
       )}
 

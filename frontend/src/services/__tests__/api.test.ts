@@ -152,6 +152,40 @@ describe("api client", () => {
       ]);
     });
 
+    it("keeps the code and the details of the error body", async () => {
+      server.use(
+        http.post(URL, () =>
+          HttpResponse.json(
+            {
+              status: 409,
+              code: "ALREADY_IN_USE",
+              message: "Email already in use.",
+              details: { field: "email" },
+            },
+            { status: 409 },
+          ),
+        ),
+      );
+
+      const error = await catchApiError(api.post(ENDPOINT, {}));
+
+      expect(error.code).toBe("ALREADY_IN_USE");
+      expect(error.details).toEqual({ field: "email" });
+    });
+
+    it("leaves code and details undefined when the body has neither", async () => {
+      server.use(
+        http.post(URL, () =>
+          HttpResponse.json({ message: "Validation error." }, { status: 400 }),
+        ),
+      );
+
+      const error = await catchApiError(api.post(ENDPOINT, {}));
+
+      expect(error.code).toBeUndefined();
+      expect(error.details).toBeUndefined();
+    });
+
     it("falls back to the API message when a 400 carries no errors array", async () => {
       server.use(
         http.post(URL, () =>

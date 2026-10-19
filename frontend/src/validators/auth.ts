@@ -67,6 +67,8 @@ export const RegisterSchema = z
     path: ["confirmPassword"],
   });
 
+export type RegisterFields = z.infer<typeof RegisterSchema>;
+
 // ---- UTILS PARA TRANSFORMAR ERROS ZOD PARA ValidationError ----
 
 export function zodToValidationErrors(zodErr: z.ZodError): ValidationError[] {

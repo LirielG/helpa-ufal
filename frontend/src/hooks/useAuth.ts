@@ -6,6 +6,7 @@ export const useAuth = () => {
   const logout = useAuthStore((state) => state.logout);
   const isLoading = useAuthStore((state) => state.isLoading);
   const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
   const user = useAuthStore((state) => state.user);
 
   return {
@@ -14,6 +15,7 @@ export const useAuth = () => {
     logout,
     isLoading,
     error,
+    clearError,
     isAuthenticated: !!user,
     user,
   };

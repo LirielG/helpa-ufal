@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes } from "react-router";
 import {
   API,
   HttpResponse,
@@ -98,42 +98,107 @@ describe("Login", () => {
     expect(onLoginRequest).not.toHaveBeenCalled();
   });
 
-  it("shows the error message returned by the server and stays on login", async () => {
+  it("translates wrong credentials and stays on login", async () => {
     server.use(
       http.post(`${API}/auth/login`, () =>
         HttpResponse.json(
-          { message: "Credenciais inválidas" },
+          {
+            status: 401,
+            code: "UNAUTHENTICATED",
+            message: "Invalid credentials.",
+          },
           { status: 401 },
         ),
       ),
     );
 
     const { user } = renderLoginWithDashboard();
-    const credentials = makeLoginRequest();
 
-    await submitLoginForm(user, credentials);
+    await submitLoginForm(user, makeLoginRequest());
 
     expect(
-      await screen.findByText("Credenciais inválidas"),
+      await screen.findByText("E-mail ou senha incorretos."),
     ).toBeInTheDocument();
+    expect(screen.queryByText("Invalid credentials.")).toBeNull();
     expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Painel" })).toBeNull();
   });
 
-  it("shows a communication error when the server fails without a message", async () => {
+  it("shows the same text whatever the API message says", async () => {
     server.use(
       http.post(`${API}/auth/login`, () =>
-        HttpResponse.json({}, { status: 500 }),
+        HttpResponse.json(
+          {
+            status: 401,
+            code: "UNAUTHENTICATED",
+            message: "Any other wording.",
+          },
+          { status: 401 },
+        ),
       ),
     );
 
     const { user } = renderLoginWithDashboard();
-    const credentials = makeLoginRequest();
 
-    await submitLoginForm(user, credentials);
+    await submitLoginForm(user, makeLoginRequest());
 
     expect(
-      await screen.findByText("Erro na comunicação com o servidor"),
+      await screen.findByText("E-mail ou senha incorretos."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Any other wording.")).toBeNull();
+  });
+
+  it("drops a failed login's message once the visitor leaves the screen", async () => {
+    server.use(
+      http.post(`${API}/auth/login`, () =>
+        HttpResponse.json(
+          {
+            status: 401,
+            code: "UNAUTHENTICATED",
+            message: "Invalid credentials.",
+          },
+          { status: 401 },
+        ),
+      ),
+    );
+    const { user } = render(
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Link to="/login">Voltar</Link>} />
+      </Routes>,
+      { route: "/login" },
+    );
+
+    await submitLoginForm(user, makeLoginRequest());
+    await screen.findByText("E-mail ou senha incorretos.");
+    await user.click(screen.getByRole("link", { name: "Criar conta" }));
+    await user.click(screen.getByRole("link", { name: "Voltar" }));
+
+    expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
+    expect(screen.queryByText("E-mail ou senha incorretos.")).toBeNull();
+  });
+
+  it.each([
+    ["the request gets no response", () => HttpResponse.error()],
+    [
+      "the server fails",
+      () =>
+        HttpResponse.json(
+          { status: 500, code: "INTERNAL_ERROR", message: "Internal error." },
+          { status: 500 },
+        ),
+    ],
+  ])("shows the connection error when %s", async (_case, respond) => {
+    server.use(http.post(`${API}/auth/login`, respond));
+
+    const { user } = renderLoginWithDashboard();
+
+    await submitLoginForm(user, makeLoginRequest());
+
+    expect(
+      await screen.findByText(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      ),
     ).toBeInTheDocument();
   });
 
