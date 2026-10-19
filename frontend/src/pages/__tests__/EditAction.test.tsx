@@ -462,6 +462,54 @@ describe("EditAction", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
+  describe("description saved before the length rule", () => {
+    it("saves another field without touching the short description", async () => {
+      mockAction(editableAction({ description: "Oficina" }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const slots = await screen.findByLabelText("Número de vagas");
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+      expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    });
+
+    it("blocks a changed description below the minimum length", async () => {
+      mockAction(editableAction({ description: "Oficina" }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+      const description = screen.getByPlaceholderText(/Descreva os detalhes/);
+      await user.clear(description);
+      await user.type(description, "Oficina 2");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("A descrição deve ter no mínimo 10 caracteres"),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("blocks a cleared description", async () => {
+      mockAction(editableAction({ description: "Oficina" }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+      await user.clear(screen.getByPlaceholderText(/Descreva os detalhes/));
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("A descrição é obrigatória"),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
   it("keeps an action editable when its area is outside the suggestions", async () => {
     mockAction(editableAction({ area: "Tecnologia e Inovação" }));
     const onUpdate = spyOnUpdate();
