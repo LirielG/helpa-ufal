@@ -39,7 +39,8 @@ examples:
             "registrationCode": "20240012345",
             "course": "Ciência da Computação",
             "cndb": null,
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 12
           }
   - name: 200 Teacher changes course
     description: Body with a new course string on a TEACHER. Only teachers may send course.
@@ -57,7 +58,8 @@ examples:
             "registrationCode": "1234567",
             "course": "Engenharia de Computação",
             "cndb": "CNDB-9988",
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 24
           }
   - name: 200 Teacher clears course
     description: Body with course null on a TEACHER. The course is removed - a teacher with no course is a legitimate state.
@@ -75,7 +77,8 @@ examples:
             "registrationCode": "1234567",
             "course": null,
             "cndb": "CNDB-9988",
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 24
           }
   - name: 200 Password changed
     description: Body with currentPassword and newPassword. Every token issued before this request, including the one that made it, stops working and the next call answers 401. The response also clears the session cookie (same options as logout). The client must send the user back to the login screen.
@@ -93,7 +96,8 @@ examples:
             "registrationCode": "20240012345",
             "course": "Ciência da Computação",
             "cndb": null,
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 12
           }
   - name: 400 No updatable field
     description: Body is empty, absent, or has only currentPassword. Nothing to change is an error, not a silent 200.
@@ -256,7 +260,7 @@ docs: |-
   | `currentPassword` | all          | **required** with `newPassword`; only checked against the stored hash, the policy is not applied to it |
 
   Anything else is **400** and **nothing is persisted** (atomic rejection): `email`, `userType`,
-  `isManager`, `registrationCode`, `cndb`, `id`, `createdAt`, unknown keys, and `course` sent by
+  `isManager`, `registrationCode`, `cndb`, `id`, `createdAt`, `totalWorkloadHours`, unknown keys, and `course` sent by
   a STUDENT (any value). Every offending key appears in `errors[]`, each with
   `This field cannot be updated.` (fail-collect). Messages for invalid values come from Zod.
 
@@ -267,7 +271,9 @@ docs: |-
 
   ## Response — 200 OK
   Same DTO as GET /users/me, already updated. `passwordHash` and other internal fields are never
-  serialized. Sending a value equal to the current one is a valid 200.
+  serialized. Sending a value equal to the current one is a valid 200. `totalWorkloadHours` is
+  computed as in GET /users/me: the sum of the user's homologated hours, which this route never
+  changes.
 
   ## Validation order
   1. Authentication (401)

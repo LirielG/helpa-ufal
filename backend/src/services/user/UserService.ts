@@ -1,6 +1,8 @@
 import UserRepository from "@/repositories/auth/UserRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type {
   IUserRepository,
   UserWithProfile,
@@ -20,16 +22,20 @@ import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 type Props = {
   userRepository?: IUserRepository;
   activityRepository?: IActivityRepository;
+  enrollmentRepository?: IEnrollmentRepository;
 };
 
 class UserService implements IUserService {
   private _userRepository: IUserRepository;
   private _activityRepository: IActivityRepository;
+  private _enrollmentRepository: IEnrollmentRepository;
 
   constructor(props?: Props) {
     this._userRepository = props?.userRepository ?? new UserRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
+    this._enrollmentRepository =
+      props?.enrollmentRepository ?? new EnrollmentRepository();
   }
 
   public async getProfile(userId: string): Promise<UserProfileResponse> {
@@ -42,7 +48,10 @@ class UserService implements IUserService {
     // exactly what 404 means.
     if (!user) throw new CustomError(404, "User not found.");
 
-    return this.toProfileResponse(user);
+    const totalWorkloadHours =
+      await this._enrollmentRepository.sumConfirmedHoursByUserId(userId);
+
+    return this.toProfileResponse(user, totalWorkloadHours);
   }
 
   public async updateProfile(
@@ -78,13 +87,16 @@ class UserService implements IUserService {
       newHash = await bcryptjs.hash(input.newPassword, BCRYPT_SALT_ROUNDS);
     }
 
-    const updatedUser = await this._userRepository.updateProfile(userId, {
-      ...(input.fullName !== undefined && { fullName: input.fullName }),
-      ...(input.course !== undefined && { course: input.course }),
-      ...(newHash !== undefined && { passwordHash: newHash }),
-    });
+    const [updatedUser, totalWorkloadHours] = await Promise.all([
+      this._userRepository.updateProfile(userId, {
+        ...(input.fullName !== undefined && { fullName: input.fullName }),
+        ...(input.course !== undefined && { course: input.course }),
+        ...(newHash !== undefined && { passwordHash: newHash }),
+      }),
+      this._enrollmentRepository.sumConfirmedHoursByUserId(userId),
+    ]);
 
-    return this.toProfileResponse(updatedUser);
+    return this.toProfileResponse(updatedUser, totalWorkloadHours);
   }
 
   public async listActivities(
@@ -106,7 +118,10 @@ class UserService implements IUserService {
     return toPaginated(items, total, page, limit);
   }
 
-  private toProfileResponse(user: UserWithProfile): UserProfileResponse {
+  private toProfileResponse(
+    user: UserWithProfile,
+    totalWorkloadHours: number,
+  ): UserProfileResponse {
     const profile = this.academicProfile(user);
 
     return {
@@ -119,6 +134,7 @@ class UserService implements IUserService {
       course: profile.course,
       cndb: profile.cndb,
       createdAt: user.createdAt,
+      totalWorkloadHours,
     };
   }
 

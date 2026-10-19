@@ -44,6 +44,9 @@ export interface IEnrollmentRepository {
 
   countApprovedByActivityId(activityId: string): Promise<number>;
 
+  /* Hours of every homologated presence of the user, deleted activities included */
+  sumConfirmedHoursByUserId(userId: string): Promise<number>;
+
   /* Foundation for the "Subscribed Actions" tab (Epic 3): lists only APPROVED items */
   findActiveByUserId(
     userId: string,

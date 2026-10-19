@@ -344,6 +344,21 @@ class EnrollmentRepository implements IEnrollmentRepository {
     });
   }
 
+  public async sumConfirmedHoursByUserId(userId: string): Promise<number> {
+    // No filter on Activity.deletedAt: deleting an activity does not undo the
+    // hours it homologated, and their certificate stays valid.
+    const { _sum } = await this._prisma.enrollment.aggregate({
+      _sum: { confirmedWorkloadHours: true },
+      where: {
+        userId,
+        status: ACTIVE_ENROLLMENT_STATUS,
+        attendanceConfirmed: true,
+      },
+    });
+
+    return _sum.confirmedWorkloadHours ?? 0;
+  }
+
   public async findActiveByUserId(
     userId: string,
     skip: number,

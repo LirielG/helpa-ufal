@@ -31,7 +31,8 @@ examples:
             "registrationCode": "20240012345",
             "course": "Ciência da Computação",
             "cndb": null,
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 12
           }
   - name: 200 Teacher profile
     description: Valid token belonging to a TEACHER user. registrationCode and cndb come from the Teacher row.
@@ -49,7 +50,8 @@ examples:
             "registrationCode": "1234567",
             "course": "Engenharia de Software",
             "cndb": "CNDB-9988",
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 24
           }
   - name: 200 Teacher with no course
     description: A teacher with no course attached is a legitimate state — course comes as null, never as an error.
@@ -67,7 +69,8 @@ examples:
             "registrationCode": "1234567",
             "course": null,
             "cndb": "CNDB-9988",
-            "createdAt": "2026-01-15T10:30:00.000Z"
+            "createdAt": "2026-01-15T10:30:00.000Z",
+            "totalWorkloadHours": 0
           }
   - name: 401 Missing token
     description: No session cookie was sent.
@@ -143,6 +146,7 @@ docs: |-
   | `course`           | `Student.course` or `Teacher.course` — **may be `null` for `TEACHER`** |
   | `cndb`             | `Teacher.cndb` — always `null` for `STUDENT` |
   | `createdAt`        | `User.createdAt` |
+  | `totalWorkloadHours` | Sum of `Enrollment.confirmedWorkloadHours` over the user's enrollments with `status = APPROVED` and `attendanceConfirmed = true` |
 
   ## Business rules
   - Flat response: the academic fields are flattened into the payload instead of being nested
@@ -151,8 +155,9 @@ docs: |-
   - `passwordHash` and other internal fields are never serialized: the repository `select` does
     not even load them, and the service maps the DTO field by field.
   - `registrationCode`, `course`, `cndb` and `userType` are read-only here (see PATCH /users/me).
-  - Participation totals (e.g. hours) are not part of this payload — actions and hours are
-    leaving the profile screen.
+  - `totalWorkloadHours` is computed on every read and is `0`, never `null`, when nothing was
+    homologated. It counts the hours of activities deleted after homologation, whose certificates
+    stay valid, and it is the same for students and teachers.
   - `updatedAt` is not returned; the profile screen has no use for it.
 
   ## Errors

@@ -45,19 +45,40 @@ function userActivityWhere(
       };
     case "completed":
       return {
-        deletedAt: null,
         status: "COMPLETED",
-        enrollments: {
-          some: {
-            userId,
-            status: ACTIVE_ENROLLMENT_STATUS,
-            // Only a registered absence (false) leaves the history: a
-            // participant whose attendance nobody homologated yet (null)
-            // still took part. `{ not: false }` would not do, since SQL
-            // drops NULL from that comparison too.
-            OR: [{ attendanceConfirmed: true }, { attendanceConfirmed: null }],
+        OR: [
+          {
+            deletedAt: null,
+            enrollments: {
+              some: {
+                userId,
+                status: ACTIVE_ENROLLMENT_STATUS,
+                // Only a registered absence (false) leaves the history: a
+                // participant whose attendance nobody homologated yet (null)
+                // still took part. `{ not: false }` would not do, since SQL
+                // drops NULL from that comparison too.
+                OR: [
+                  { attendanceConfirmed: true },
+                  { attendanceConfirmed: null },
+                ],
+              },
+            },
           },
-        },
+          // A deleted activity stays only for those it issued a certificate
+          // to: the certificate remains valid and downloadable, and this list
+          // is the only place the client gets its id from.
+          {
+            deletedAt: { not: null },
+            enrollments: {
+              some: {
+                userId,
+                status: ACTIVE_ENROLLMENT_STATUS,
+                attendanceConfirmed: true,
+                certificate: { isNot: null },
+              },
+            },
+          },
+        ],
       };
     case "managed":
       return { deletedAt: null, authorId: userId };
@@ -251,6 +272,7 @@ class ActivityRepository implements IActivityRepository {
 
       return {
         ...toFullResponse(activity, _count.enrollments),
+        deletedAt: activity.deletedAt,
         enrollment: enrollment ? toEnrollmentResponse(enrollment) : null,
         certificate: certificate
           ? {

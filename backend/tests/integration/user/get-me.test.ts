@@ -3,6 +3,8 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import {
+  createActivity,
+  createEnrollment,
   createManager,
   createStudent,
   createTeacher,
@@ -40,6 +42,7 @@ describe("GET /users/me", () => {
       course: "Ciência da Computação",
       cndb: null,
       createdAt: student.user.createdAt.toISOString(),
+      totalWorkloadHours: 0,
     });
   });
 
@@ -66,6 +69,7 @@ describe("GET /users/me", () => {
       course: "Engenharia de Software",
       cndb: "CNDB-9988",
       createdAt: teacher.user.createdAt.toISOString(),
+      totalWorkloadHours: 0,
     });
   });
 
@@ -149,6 +153,119 @@ describe("GET /users/me", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.id).toBe(student.user.id);
+  });
+
+  // ---------- totalWorkloadHours ----------
+
+  describe("totalWorkloadHours", () => {
+    async function totalOf(token: string): Promise<number> {
+      const response = await request(app)
+        .get(meUrl)
+        .set(...authHeader(token));
+      expect(response.status).toBe(200);
+      return response.body.totalWorkloadHours;
+    }
+
+    /** An enrollment of `userId` in a fresh COMPLETED activity. */
+    async function enrollIn(
+      userId: string,
+      enrollment: Parameters<typeof createEnrollment>[2],
+      activity: { deletedAt?: Date } = {},
+    ) {
+      const author = await createTeacher();
+      const created = await createActivity(author.user.id, {
+        status: "COMPLETED",
+        ...activity,
+      });
+      return createEnrollment(userId, created.id, enrollment);
+    }
+
+    it("is 0 for a user with no enrollment", async () => {
+      const student = await createStudent();
+
+      const response = await request(app)
+        .get(meUrl)
+        .set(...authHeader(student.token));
+
+      expect(response.status).toBe(200);
+      expect(response.body.totalWorkloadHours).toBe(0);
+    });
+
+    it("adds up the hours of every homologated presence", async () => {
+      const student = await createStudent();
+      await enrollIn(student.user.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+      });
+      await enrollIn(student.user.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 4,
+      });
+
+      expect(await totalOf(student.token)).toBe(12);
+    });
+
+    // The hours are written by hand to prove the filter, not the 0 that
+    // homologation would store, is what keeps them out.
+    it.each([
+      ["not homologated", null],
+      ["absent", false],
+    ])(
+      "leaves out an APPROVED enrollment whose attendance is %s",
+      async (_label, attendanceConfirmed) => {
+        const student = await createStudent();
+        await enrollIn(student.user.id, {
+          attendanceConfirmed,
+          confirmedWorkloadHours: 8,
+        });
+
+        expect(await totalOf(student.token)).toBe(0);
+      },
+    );
+
+    it("leaves out a CANCELLED enrollment even with hours recorded", async () => {
+      const student = await createStudent();
+      await enrollIn(student.user.id, {
+        status: "CANCELLED",
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+      });
+
+      expect(await totalOf(student.token)).toBe(0);
+    });
+
+    it("keeps the hours of an activity deleted after homologation", async () => {
+      const student = await createStudent();
+      await enrollIn(
+        student.user.id,
+        { attendanceConfirmed: true, confirmedWorkloadHours: 6 },
+        { deletedAt: new Date() },
+      );
+
+      expect(await totalOf(student.token)).toBe(6);
+    });
+
+    it("never counts another user's hours", async () => {
+      const student = await createStudent();
+      const other = await createStudent();
+      await enrollIn(other.user.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 10,
+      });
+
+      expect(await totalOf(student.token)).toBe(0);
+      expect(await totalOf(other.token)).toBe(10);
+    });
+
+    it("counts a TEACHER's homologated presences too", async () => {
+      const teacher = await createTeacher();
+      await enrollIn(teacher.user.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 3,
+      });
+
+      expect(await totalOf(teacher.token)).toBe(3);
+    });
   });
 
   // ---------- 401 - Unauthenticated ----------

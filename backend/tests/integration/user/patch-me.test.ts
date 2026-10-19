@@ -4,6 +4,8 @@ import bcryptjs from "bcryptjs";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import {
+  createActivity,
+  createEnrollment,
   createManager,
   createStudent,
   createTeacher,
@@ -820,6 +822,7 @@ describe("PATCH /users/me", () => {
         course: "Ciência da Computação",
         cndb: null,
         createdAt: student.user.createdAt.toISOString(),
+        totalWorkloadHours: 0,
       });
       expect(response.body).toEqual((await getMe(student.token)).body);
     });
@@ -845,7 +848,28 @@ describe("PATCH /users/me", () => {
         course: null,
         cndb: "CNDB-9988",
         createdAt: teacher.user.createdAt.toISOString(),
+        totalWorkloadHours: 0,
       });
+    });
+
+    it("returns the same totalWorkloadHours as GET /users/me", async () => {
+      const student = await createStudent();
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, {
+        status: "COMPLETED",
+      });
+      await createEnrollment(student.user.id, activity.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+      });
+
+      const response = await patchMe(student.token, { fullName: "Nome Novo" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.totalWorkloadHours).toBe(8);
+      expect(response.body.totalWorkloadHours).toBe(
+        (await getMe(student.token)).body.totalWorkloadHours,
+      );
     });
 
     it.each([
