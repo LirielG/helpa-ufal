@@ -72,11 +72,11 @@ examples:
             "status": 400,
             "message": "Validation error.",
             "errors": [
-              { 
-                field: "activityId",
-                code: "VALIDATION_ERROR", 
-                message: "activityId must be a valid UUID.",
-              },
+              {
+                "field": "activityId",
+                "code": "VALIDATION_ERROR",
+                "message": "activityId must be a valid UUID."
+              }
             ]
           }
   - name: 401 - Unauthenticated
@@ -198,7 +198,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "ALREADY_ENROLLED",
             "status": 409,
             "message": "User is already enrolled in this activity."
@@ -223,7 +223,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "NO_AVAILABLE_SLOTS",
             "status": 409,
             "message": "No available slots for this activity."
@@ -248,7 +248,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
             "status": 409,
             "message": "Activity is not open for enrollment."
@@ -273,7 +273,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "INTERNAL_ERROR",
             "status": 500,
             "message": "Internal server error."

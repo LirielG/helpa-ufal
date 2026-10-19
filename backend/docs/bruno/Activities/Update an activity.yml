@@ -165,10 +165,12 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
                 "field": "title",
+                "code": "VALIDATION_ERROR",
                 "message": "Too big: expected string to have <=150 characters"
               }
             ]
@@ -333,7 +335,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "FORBIDDEN",
             "status": 403,
             "message": "You do not have permission to update this activity."
@@ -363,7 +365,7 @@ examples:
       body:
         type: json
         data: |-
-          { 
+          {
             "code": "NOT_FOUND",
             "status": 404,
             "message": "Activity not found."

@@ -165,7 +165,7 @@ examples:
         type: json
         data: |-
           {
-            "code": "VALIDATION_ERROR", 
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Invalid query parameters.",
             "errors": [
@@ -197,7 +197,7 @@ examples:
         type: json
         data: |-
           {
-            "code": "VALIDATION_ERROR", 
+            "code": "VALIDATION_ERROR",
             "status": 400,
             "message": "Invalid query parameters.",
             "errors": [
@@ -229,7 +229,7 @@ examples:
         type: json
         data: |-
           {
-            "code": "UNAUTHENTICATED", 
+            "code": "UNAUTHENTICATED",
             "status": 401,
             "message": "No token provided."
           }
@@ -254,13 +254,13 @@ examples:
         type: json
         data: |-
           {
-            "code": "FORBIDDEN", 
+            "code": "FORBIDDEN",
             "status": 403,
             "message": "Only the activity creator or a manager can view the enrollment list."
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note; Generic NOT_FOUND.ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes..
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
