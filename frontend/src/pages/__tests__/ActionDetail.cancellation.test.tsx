@@ -5,6 +5,7 @@ import {
   HttpResponse,
   http,
   makeActionDetail,
+  makeLoginRequest,
   render,
   screen,
   server,
@@ -12,7 +13,9 @@ import {
 } from "@/test";
 import type { Activity } from "@/services/contracts/activity";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
+import { GuestRoute } from "@/routes/GuestRoute";
 import { ActionDetail } from "../ActionDetail";
+import { Login } from "../Login";
 
 const ACTION_ID = "act-cancellation";
 
@@ -31,6 +34,25 @@ function renderPage() {
         <Route path="/login" element={<h1>Entrar</h1>} />
       </Routes>
     </>,
+    { route: `/activity/${ACTION_ID}` },
+  );
+}
+
+/** The real login, so a visitor's round trip ends where GuestRoute sends it. */
+function renderPageWithLogin() {
+  return render(
+    <Routes>
+      <Route path="/activity/:id" element={<ActionDetail />} />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+      <Route path="/dashboard" element={<h1>Painel</h1>} />
+    </Routes>,
     { route: `/activity/${ACTION_ID}` },
   );
 }
@@ -95,16 +117,80 @@ function confirmCancellation(user: ReturnType<typeof render>["user"]) {
 }
 
 describe("ActionDetail enrollment states", () => {
-  it("shows nothing to enroll or cancel to a visitor", async () => {
-    serveSnapshots(makeActionDetail({ id: ACTION_ID }));
+  it("invites a visitor to sign in to enroll in an open action with slots", async () => {
+    serveSnapshots(
+      makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 4 }),
+    );
     renderPage();
 
-    await screen.findByText("Oficina de Programação");
+    expect(
+      await screen.findByRole("button", { name: "Entrar para se inscrever" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("link", { name: "Criar conta" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
     expect(
       screen.queryByRole("button", { name: /Inscrever-se|Cancelar inscrição/ }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Inscrito")).not.toBeInTheDocument();
   });
+
+  it("brings a visitor who signs in back to the same action, ready to enroll", async () => {
+    serveSnapshots(
+      makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 4 }),
+    );
+    const { user } = renderPageWithLogin();
+    const credentials = makeLoginRequest();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Entrar para se inscrever" }),
+    );
+    await user.type(screen.getByLabelText("Usuário"), credentials.email);
+    await user.type(screen.getByLabelText("Senha"), credentials.password);
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(
+      await screen.findByRole("button", { name: /Inscrever-se/ }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "Entrar para se inscrever" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows Vagas esgotadas, without the sign-in invite, to a visitor of a full action", async () => {
+    serveSnapshots(
+      makeActionDetail({ id: ACTION_ID, status: "OPEN", availableSlots: 0 }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: /Vagas esgotadas/ }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Entrar para se inscrever" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Criar conta" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
+    "shows Inscrição indisponível, without the sign-in invite, to a visitor of a %s action",
+    async (status) => {
+      serveSnapshots(
+        makeActionDetail({ id: ACTION_ID, status, availableSlots: 4 }),
+      );
+      renderPage();
+
+      expect(
+        await screen.findByRole("button", { name: /Inscrição indisponível/ }),
+      ).toBeDisabled();
+      expect(
+        screen.queryByRole("button", { name: "Entrar para se inscrever" }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it.each(["APPROVED", "PENDING"] as const)(
     "shows Inscrito and Cancelar inscrição for a %s enrollment in an open action",

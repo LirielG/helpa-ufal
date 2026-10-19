@@ -1,5 +1,7 @@
 import { CheckCircle, UserMinus, Users } from "lucide-react";
 import { Button } from "../../../components/Button";
+import { getUnavailableEnrollmentLabel } from "../enrollment";
+import { UnavailableEnrollmentButton } from "./UnavailableEnrollmentButton";
 import type { Activity } from "@/services/contracts/activity";
 
 interface EnrollmentActionsProps {
@@ -52,25 +54,10 @@ export function EnrollmentActions({
     );
   }
 
-  const label =
-    action.enrollmentStatus === "REJECTED" || !isOpen
-      ? "Inscrição indisponível"
-      : action.availableSlots === 0
-        ? "Vagas esgotadas"
-        : null;
+  const unavailableLabel = getUnavailableEnrollmentLabel(action);
 
-  if (label) {
-    return (
-      <Button
-        variant="secondary"
-        size="lg"
-        disabled
-        className="flex items-center justify-center gap-3 rounded-xl"
-      >
-        <Users className="size-6" />
-        {label}
-      </Button>
-    );
+  if (unavailableLabel) {
+    return <UnavailableEnrollmentButton label={unavailableLabel} />;
   }
 
   return (
