@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/render";
 import { API, http, HttpResponse, server } from "@/test/http";
 import { makeUserActivityItem } from "@/test/factories";
@@ -8,6 +8,18 @@ import type {
   UserActivityItem,
 } from "@/services/contracts/user";
 import { ActionsList } from "../ActionsList";
+import { useActionRegisterStore } from "@/stores/actionRegisterStore";
+
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 const DELETED_TITLE = "Ação a ser excluída";
 const KEPT_TITLE = "Ação que permanece";
@@ -56,6 +68,9 @@ async function openSubTab(filter: UserActivityFilter) {
 }
 
 describe("ActionsList sub-tabs", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
   it("shows a different list of the signed-in user on each sub-tab", async () => {
     signIn();
     serveByFilter({
@@ -124,17 +139,24 @@ describe("ActionsList sub-tabs", () => {
   });
 
   it.each([
-    ["enrolled", "Você não está inscrito em nenhuma ação no momento."],
-    ["completed", "Você ainda não concluiu nenhuma ação."],
-    ["managed", "Você ainda não criou nenhuma ação."],
+    [
+      "enrolled",
+      "Você não está inscrito em nenhuma ação no momento.",
+      "Explorar ações",
+    ],
+    ["completed", "Você ainda não concluiu nenhuma ação.", "Explorar ações"],
+    ["managed", "Você ainda não criou nenhuma ação.", "Criar uma ação"],
   ] as const)(
     "shows the empty state of the %s sub-tab",
-    async (filter, text) => {
+    async (filter, text, buttonLabel) => {
       signIn();
       serveByFilter({});
       await openSubTab(filter);
 
       expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: buttonLabel }),
+      ).toBeInTheDocument();
     },
   );
 
@@ -153,6 +175,57 @@ describe("ActionsList sub-tabs", () => {
     expect(
       screen.getByRole("button", { name: "Atividades Gerenciadas" }),
     ).toBeInTheDocument();
+  });
+
+  it("navigates to /dashboard when clicking 'Explorar ações' on enrolled empty state", async () => {
+    signIn();
+    serveByFilter({});
+    const { user } = await openSubTab("enrolled");
+
+    const button = await screen.findByRole("button", {
+      name: "Explorar ações",
+    });
+    await user.click(button);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("navigates to /dashboard when clicking 'Explorar ações' on completed empty state", async () => {
+    signIn();
+    serveByFilter({});
+    const { user } = await openSubTab("completed");
+
+    const button = await screen.findByRole("button", {
+      name: "Explorar ações",
+    });
+    await user.click(button);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("opens register modal when clicking 'Criar uma ação' on managed empty state and reloads list after creation", async () => {
+    signIn();
+    serveByFilter({ managed: [] });
+    const { user } = await openSubTab("managed");
+
+    const button = await screen.findByRole("button", {
+      name: "Criar uma ação",
+    });
+    await user.click(button);
+
+    expect(useActionRegisterStore.getState().isOpen).toBe(true);
+
+    serveByFilter({
+      managed: [
+        makeUserActivityItem({ title: "Nova Ação Criada", enrollment: null }),
+      ],
+    });
+
+    const callback = useActionRegisterStore.getState().onSuccessCallback;
+    expect(callback).toBeDefined();
+    callback?.();
+
+    expect(await screen.findByText("Nova Ação Criada")).toBeInTheDocument();
   });
 });
 
