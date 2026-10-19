@@ -1,123 +1,114 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LogOut, Pencil } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Alert, Button, Input } from "../../../components";
 import { PasswordField } from "../../auth/components/PasswordField";
 import { PasswordGuidelines } from "../../auth/components/PasswordGuidelines";
 import { AuthField } from "../../auth/components/AuthField";
 import {
-  EditProfileSchema,
+  editProfileSchemaFor,
   type EditProfileFields,
 } from "../../../validators/profile";
 import type { UpdateProfileRequest } from "../../../types";
 import type { UserProfile } from "../types";
 import { getInitials } from "../../../utils/helpers";
+import { handleProfileApiErrors } from "../handleProfileApiErrors";
+
+const USER_TYPE_LABELS: Record<UserProfile["userType"], string> = {
+  STUDENT: "Estudante",
+  TEACHER: "Docente",
+};
+
+type Feedback = { type: "error" | "success" | "info"; message: string };
 
 type PersonalDataFormProps = {
   user: UserProfile;
-  onSubmit: (data: UpdateProfileRequest) => Promise<void>;
+  /** Saves the changes; rejects with the API error when the save fails. */
+  onSave: (data: UpdateProfileRequest) => Promise<void>;
   onLogout: () => void;
-  isSaving: boolean;
-  error: string | null;
-  success: boolean;
-  onDismissFeedback: () => void;
 };
 
 export function PersonalDataForm({
   user,
-  onSubmit,
+  onSave,
   onLogout,
-  isSaving,
-  error,
-  success,
-  onDismissFeedback,
 }: PersonalDataFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
-    undefined,
-  );
-  const avatarInputRef = useRef<HTMLInputElement>(null);
+  // The current password has its own toggle: checking what was typed in the
+  // new one must not put the current one on screen too.
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitted },
+    setError,
+    formState: { errors, isSubmitting },
   } = useForm<EditProfileFields>({
-    resolver: zodResolver(EditProfileSchema),
+    resolver: zodResolver(editProfileSchemaFor(user.fullName)),
     mode: "onSubmit",
     defaultValues: {
       fullName: user.fullName,
-      email: user.email,
-      password: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmNewPassword: "",
     },
   });
 
-  const passwordValue = useWatch({ control, name: "password" }) ?? "";
+  const newPasswordValue = useWatch({ control, name: "newPassword" }) ?? "";
 
-  const submit = handleSubmit((data) => {
-    return onSubmit({
-      fullName: data.fullName,
-      email: data.email,
-      password: data.password?.trim() ? data.password : undefined,
-    });
-  });
+  const submit = handleSubmit(async (data) => {
+    setFeedback(null);
 
-  // Avatar upload is a local preview only until the upload API is ready.
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAvatarPreview(URL.createObjectURL(file));
+    // The API answers 400 to a body without changes, and rejects fields it
+    // does not let the user edit, so only what changed is sent.
+    const changes: UpdateProfileRequest = {};
+    // The schema trims the typed name, so the stored one is trimmed too before
+    // comparing: a stray space saved long ago is not a change the user made.
+    if (data.fullName !== user.fullName.trim())
+      changes.fullName = data.fullName;
+    if (data.newPassword) {
+      changes.currentPassword = data.currentPassword;
+      changes.newPassword = data.newPassword;
     }
-  };
+
+    if (Object.keys(changes).length === 0) {
+      setFeedback({ type: "info", message: "Nenhuma alteração para salvar." });
+      return;
+    }
+
+    try {
+      await onSave(changes);
+      setFeedback({
+        type: "success",
+        message: "Perfil atualizado com sucesso.",
+      });
+    } catch (error) {
+      const message = handleProfileApiErrors(error, setError);
+      if (message) setFeedback({ type: "error", message });
+    }
+  });
 
   const initials = getInitials(user.fullName) || "P";
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="space-y-5" noValidate>
       <h3 className="text-xl font-bold text-gray-900">Editar Perfil</h3>
 
-      {error && (
-        <Alert type="error" message={error} onClose={onDismissFeedback} />
-      )}
-      {success && (
+      {feedback && (
         <Alert
-          type="success"
-          message="Perfil atualizado com sucesso."
-          onClose={onDismissFeedback}
+          type={feedback.type}
+          message={feedback.message}
+          onClose={() => setFeedback(null)}
         />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-start">
         <div className="flex justify-center md:justify-start md:pt-2">
-          <div className="relative">
-            <div className="size-28 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-medium text-3xl leading-none shrink-0 overflow-hidden select-none">
-              {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt={user.fullName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => avatarInputRef.current?.click()}
-              className="absolute bottom-1 right-1 p-2 rounded-full bg-blue-100 text-[#072C59] ring-4 ring-white hover:bg-blue-200 transition cursor-pointer"
-              aria-label="Alterar foto de perfil"
-            >
-              <Pencil className="size-4" />
-            </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
+          <div className="size-28 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-medium text-3xl leading-none shrink-0 select-none">
+            <span>{initials}</span>
           </div>
         </div>
 
@@ -129,24 +120,14 @@ export function PersonalDataForm({
             registration={register("fullName")}
           />
 
-          <AuthField
-            label="Email"
-            type="email"
-            placeholder="meu.email@exemplo.com"
-            error={errors.email?.message}
-            registration={register("email")}
-          />
+          <Input label="Email" value={user.email} disabled readOnly />
 
-          <PasswordField
-            label="Senha"
-            placeholder="********"
-            error={isSubmitted ? errors.password?.message : undefined}
-            registration={register("password")}
-            showPassword={showPassword}
-            onTogglePassword={() => setShowPassword((value) => !value)}
+          <Input
+            label="Tipo de perfil"
+            value={USER_TYPE_LABELS[user.userType]}
+            disabled
+            readOnly
           />
-
-          <PasswordGuidelines password={passwordValue} />
 
           <Input
             label="Matrícula"
@@ -156,11 +137,46 @@ export function PersonalDataForm({
           />
 
           <Input label="Curso" value={user.course ?? ""} disabled readOnly />
+
+          <div className="space-y-5 pt-2">
+            <h4 className="text-base font-semibold text-gray-900">
+              Alterar senha
+            </h4>
+
+            <PasswordField
+              label="Senha atual"
+              placeholder="********"
+              error={errors.currentPassword?.message}
+              registration={register("currentPassword")}
+              showPassword={showCurrentPassword}
+              onTogglePassword={() => setShowCurrentPassword((value) => !value)}
+            />
+
+            <PasswordField
+              label="Nova senha"
+              placeholder="********"
+              error={errors.newPassword?.message}
+              registration={register("newPassword")}
+              showPassword={showNewPassword}
+              onTogglePassword={() => setShowNewPassword((value) => !value)}
+            />
+
+            <PasswordGuidelines password={newPasswordValue} />
+
+            <PasswordField
+              label="Confirmar nova senha"
+              placeholder="********"
+              error={errors.confirmNewPassword?.message}
+              registration={register("confirmNewPassword")}
+              showPassword={showNewPassword}
+              onTogglePassword={() => setShowNewPassword((value) => !value)}
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-4 pt-2">
-        <Button type="submit" variant="navy" size="md" isLoading={isSaving}>
+        <Button type="submit" variant="navy" size="md" isLoading={isSubmitting}>
           Salvar alterações
         </Button>
 

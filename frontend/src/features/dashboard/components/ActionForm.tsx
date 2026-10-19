@@ -19,6 +19,10 @@ import {
 } from "lucide-react";
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
+import {
+  ACTIVITY_TITLE_MAX_LENGTH,
+  ACTIVITY_TITLE_TOO_LONG_MESSAGE,
+} from "../../../validators/limits";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type {
   ActivityType,
@@ -36,7 +40,10 @@ const addressSchema = z.object({
 });
 
 const baseSchema = z.object({
-  title: z.string().min(1, "Informe um título válido."),
+  title: z
+    .string()
+    .min(1, "Informe um título válido.")
+    .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
   description: z.string().optional(),
   area: z.string().trim().min(1, "Informe uma área de atuação válida."),
   type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"] as const, {

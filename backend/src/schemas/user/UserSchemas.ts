@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 import { passwordField } from "@/schemas/auth/AuthSchemas.js";
 
 type UserType = "STUDENT" | "TEACHER";
@@ -78,7 +79,7 @@ export function updateProfileSchemaFor(userType: UserType) {
     })
     .pipe(
       z.object({
-        fullName: z.string().trim().min(1).optional(),
+        fullName: z.string().trim().min(1).max(FULL_NAME_MAX_LENGTH).optional(),
         course:
           userType === "TEACHER"
             ? z.string().trim().min(1).nullable().optional()

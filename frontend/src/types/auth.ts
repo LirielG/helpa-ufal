@@ -21,10 +21,14 @@ export interface User {
   updatedAt?: string;
 }
 
+/**
+ * Body of `PATCH /users/me`: only what changes is sent. A new password needs
+ * the current one alongside it.
+ */
 export interface UpdateProfileRequest {
-  fullName: string;
-  email: string;
-  password?: string;
+  fullName?: string;
+  currentPassword?: string;
+  newPassword?: string;
 }
 
 export interface RegisterRequest {

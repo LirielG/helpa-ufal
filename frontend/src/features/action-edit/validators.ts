@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  ACTIVITY_TITLE_MAX_LENGTH,
+  ACTIVITY_TITLE_TOO_LONG_MESSAGE,
+} from "../../validators/limits";
 
 /** Same list the API validates `address.state` against. */
 const BRAZILIAN_STATES = [
@@ -47,7 +51,8 @@ export const ActionEditSchema = z
     title: z
       .string()
       .min(1, "O título é obrigatório")
-      .min(3, "O título deve ter no mínimo 3 caracteres"),
+      .min(3, "O título deve ter no mínimo 3 caracteres")
+      .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
     description: z
       .string()
       .min(1, "A descrição é obrigatória")

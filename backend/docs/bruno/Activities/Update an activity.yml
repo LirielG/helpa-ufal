@@ -136,6 +136,41 @@ examples:
               }
             ]
           }
+  - name: 400 - Title too long
+    description: title is limited to 150 characters, the length the certificate's two title lines are sized for.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Programa de Formação Continuada em Tecnologias Educacionais, Robótica Livre e Pensamento Computacional para Professores da Rede Pública do Agreste Alag"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "title",
+                "message": "Too big: expected string to have <=150 characters"
+              }
+            ]
+          }
   - name: 400 - Empty body
     description: No field was sent.
     request:

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
+import { useNavigate } from "react-router";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -14,19 +16,19 @@ import { useAuthStore } from "../stores/authStore";
 import type { UpdateProfileRequest } from "../types";
 import bgDashboard from "../assets/bg.svg";
 
+const PASSWORD_CHANGED_MESSAGE =
+  "Senha alterada. Entre novamente com a nova senha.";
+
 export function Profile() {
   const { logout, user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
+  const navigate = useNavigate();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("personal");
-
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -38,44 +40,41 @@ export function Profile() {
       .finally(() => setIsLoading(false));
   };
 
+  // Keyed on the id, not the user object: saving the name replaces the stored
+  // user, and the save response already carries the fresh profile.
+  const userId = user?.id;
+
   // ProtectedRoute keeps a signed-out visitor from ever reaching this screen,
-  // so the guard below only exists to narrow `User | null`.
+  // so the guard below only exists to narrow `string | undefined`.
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     getProfile()
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
-  }, [user]);
+  }, [userId]);
 
-  const handleSubmit = async (data: UpdateProfileRequest) => {
-    if (!profile) return;
+  const handleSave = async (data: UpdateProfileRequest) => {
+    const updated = await updateProfile(data);
 
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
-    try {
-      const updated = await updateProfile(profile, data);
-      setProfile(updated);
-      ////Changes made here were done solely to avoid errors in Profile.tsx
-      if (user) {
-        setUser({
-          ...user,
-          fullName: updated.fullName,
-          email: updated.email,
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      setSaveSuccess(true);
-    } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : "Erro ao salvar o perfil.",
-      );
-    } finally {
-      setIsSaving(false);
+    // A new password revokes every session, this one included, and the API
+    // has already cleared the cookie: the user has to sign in again. Dropping
+    // the user makes ProtectedRoute redirect to /login on its own, without
+    // the message; flushing it first lets the navigation below come last and
+    // win. Navigating before dropping the user fails too: GuestRoute sends a
+    // signed-in visitor away from /login.
+    if (data.newPassword !== undefined) {
+      flushSync(() => setUser(null));
+      navigate("/login", {
+        replace: true,
+        state: { successMessage: PASSWORD_CHANGED_MESSAGE },
+      });
+      return;
     }
+
+    setProfile(updated);
+    if (user) setUser({ ...user, fullName: updated.fullName });
   };
 
   const handleLogout = async () => {
@@ -124,15 +123,8 @@ export function Profile() {
                   {activeTab === "personal" && (
                     <PersonalDataForm
                       user={profile}
-                      onSubmit={handleSubmit}
+                      onSave={handleSave}
                       onLogout={handleLogout}
-                      isSaving={isSaving}
-                      error={saveError}
-                      success={saveSuccess}
-                      onDismissFeedback={() => {
-                        setSaveError(null);
-                        setSaveSuccess(false);
-                      }}
                     />
                   )}
 
