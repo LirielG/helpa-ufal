@@ -1,31 +1,28 @@
 import { MapPin, Calendar, Users } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
-import type { ActivityListItem } from "@/services/contracts/activity";
+import type {
+  ActivityListItem,
+  ActivityStatus,
+} from "@/services/contracts/activity";
+import { ACTION_STATUS_LABELS } from "../constants";
 
 interface ActionCardProps {
   action: ActivityListItem;
 }
 
+const STATUS_STYLES: Record<ActivityStatus, string> = {
+  OPEN: "bg-green-100 text-green-800 border-green-200",
+  IN_PROGRESS: "bg-blue-100 text-blue-800 border-blue-200",
+  COMPLETED: "bg-gray-100 text-gray-800 border-gray-200",
+  CANCELLED: "bg-red-100 text-red-800 border-red-200",
+};
+
 export function ActionCard({ action }: ActionCardProps) {
-  const statusConfig: Record<string, { label: string; className: string }> = {
-    OPEN: {
-      label: "Inscrições Abertas",
-      className: "bg-green-100 text-green-800 border-green-200",
-    },
-    IN_PROGRESS: {
-      label: "Em Andamento",
-      className: "bg-blue-100 text-blue-800 border-blue-200",
-    },
-    COMPLETED: {
-      label: "Finalizada",
-      className: "bg-gray-100 text-gray-800 border-gray-200",
-    },
-    CANCELLED: {
-      label: "Cancelada",
-      className: "bg-red-100 text-red-800 border-red-200",
-    },
-  };
+  const statusLabel =
+    ACTION_STATUS_LABELS[action.status] || action.status || "Indisponível";
+  const statusStyle =
+    STATUS_STYLES[action.status] || "bg-gray-100 text-gray-800 border-gray-200";
 
   const typeMap: Record<string, string> = {
     EXTENSION: "Extensão",
@@ -35,10 +32,33 @@ export function ActionCard({ action }: ActionCardProps) {
     OTHER: "Outros",
   };
 
-  const status = statusConfig[action.status] || {
-    label: action.status || "Indisponível",
-    className: "bg-gray-100 text-gray-800 border-gray-200",
+  const showSlotsBadge =
+    action.status !== "COMPLETED" && action.status !== "CANCELLED";
+
+  const getSlotsBadge = () => {
+    if (!showSlotsBadge) return null;
+
+    if (action.availableSlots <= 0) {
+      return {
+        label: "Vagas esgotadas",
+        className: "bg-red-50 text-red-800 border-red-200",
+      };
+    }
+
+    if (action.availableSlots === 1) {
+      return {
+        label: "1 vaga disponível",
+        className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+      };
+    }
+
+    return {
+      label: `${action.availableSlots} vagas disponíveis`,
+      className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    };
   };
+
+  const slotsBadge = getSlotsBadge();
 
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
@@ -70,19 +90,25 @@ export function ActionCard({ action }: ActionCardProps) {
           <span>{formatDate(action.startDate)}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Users className="size-4 shrink-0 text-gray-400" />
-          <span>{action.availableSlots} vagas disponíveis</span>
-        </div>
+        {slotsBadge && (
+          <div className="flex items-center">
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border ${slotsBadge.className}`}
+            >
+              <Users className="size-3.5 shrink-0" />
+              <span>{slotsBadge.label}</span>
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
           <span className="text-sm font-medium text-gray-700 capitalize">
             {typeMap[action.type] || action.type}
           </span>
           <span
-            className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${status.className}`}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusStyle}`}
           >
-            {status.label}
+            {statusLabel}
           </span>
         </div>
 

@@ -1,21 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test";
 import { ActionCard } from "../ActionCard";
-import type { ActivityListItem } from "@/services/contracts/activity";
+import type {
+  ActivityListItem,
+  ActivityStatus,
+} from "@/services/contracts/activity";
+
+function makeAction(
+  overrides: Partial<ActivityListItem> = {},
+): ActivityListItem {
+  return {
+    id: "action-42",
+    title: "Oficina de Robótica",
+    campus: "UFAL, Arapiraca - AL",
+    startDate: "2026-05-09T12:00:00Z",
+    endDate: "2026-05-10T12:00:00Z",
+    availableSlots: 25,
+    slots: 30,
+    status: "OPEN",
+    type: "COURSE",
+    ...overrides,
+  } as ActivityListItem;
+}
 
 describe("ActionCard", () => {
   it("shows the title, location, date and number of spots", () => {
-    const action = {
-      id: "action-42",
-      title: "Oficina de Robótica",
-      campus: "UFAL, Arapiraca - AL",
-      startDate: "2026-05-09T12:00:00Z",
-      availableSlots: 25,
-      status: "OPEN",
-      type: "COURSE",
-    } as unknown as ActivityListItem;
-
-    render(<ActionCard action={action} />);
+    render(<ActionCard action={makeAction()} />);
 
     expect(
       screen.getByRole("heading", { name: "Oficina de Robótica" }),
@@ -27,17 +37,80 @@ describe("ActionCard", () => {
   });
 
   it("links to the detail page of its own action", () => {
-    const action = {
-      id: "action-42",
-      type: "COURSE",
-      status: "OPEN",
-    } as unknown as ActivityListItem;
-
-    render(<ActionCard action={action} />);
+    render(<ActionCard action={makeAction()} />);
 
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
       "/activity/action-42",
     );
+  });
+
+  it("formats 1 spot in singular", () => {
+    render(<ActionCard action={makeAction({ availableSlots: 1 })} />);
+
+    expect(screen.getByText("1 vaga disponível")).toBeInTheDocument();
+  });
+
+  it("shows 'Vagas esgotadas' when availableSlots is 0 and does not display '0'", () => {
+    render(<ActionCard action={makeAction({ availableSlots: 0 })} />);
+
+    expect(screen.getByText("Vagas esgotadas")).toBeInTheDocument();
+    expect(screen.queryByText(/0 vaga/i)).not.toBeInTheDocument();
+  });
+
+  it("handles 3-digit spot count correctly", () => {
+    render(<ActionCard action={makeAction({ availableSlots: 120 })} />);
+
+    expect(screen.getByText("120 vagas disponíveis")).toBeInTheDocument();
+  });
+
+  it("hides the slots badge for COMPLETED actions", () => {
+    render(
+      <ActionCard
+        action={makeAction({ status: "COMPLETED", availableSlots: 10 })}
+      />,
+    );
+
+    expect(screen.getByText("Finalizada")).toBeInTheDocument();
+    expect(screen.queryByText(/vaga/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the slots badge for CANCELLED actions", () => {
+    render(
+      <ActionCard
+        action={makeAction({ status: "CANCELLED", availableSlots: 10 })}
+      />,
+    );
+
+    expect(screen.getByText("Cancelada")).toBeInTheDocument();
+    expect(screen.queryByText(/vaga/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["OPEN", "Inscrições Abertas"],
+    ["IN_PROGRESS", "Em Andamento"],
+    ["COMPLETED", "Finalizada"],
+    ["CANCELLED", "Cancelada"],
+  ] as const)(
+    "renders the correct label for status %s",
+    (status, expectedLabel) => {
+      render(
+        <ActionCard
+          action={makeAction({ status: status as ActivityStatus })}
+        />,
+      );
+
+      expect(screen.getByText(expectedLabel)).toBeInTheDocument();
+    },
+  );
+
+  it("falls back to status string for unknown status", () => {
+    render(
+      <ActionCard
+        action={makeAction({ status: "UNKNOWN_STATUS" as ActivityStatus })}
+      />,
+    );
+
+    expect(screen.getByText("UNKNOWN_STATUS")).toBeInTheDocument();
   });
 });

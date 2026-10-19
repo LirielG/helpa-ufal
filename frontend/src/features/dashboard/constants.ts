@@ -2,6 +2,7 @@ import type {
   CampusLocation,
   ActivityFormat,
   ActivityType,
+  ActivityStatus,
 } from "@/services/contracts/activity";
 
 export const FILTER_OPTIONS = {
@@ -52,6 +53,13 @@ export const ACTION_CAMPUS_LABELS: Record<CampusLocation, string> = {
   RIO_LARGO: "UFAL - Campus Rio Largo",
   DELMIRO_GOUVEIA: "UFAL - Campus Delmiro Gouveia",
   SANTANA_IPANEMA: "UFAL - Campus Santana do Ipanema",
+};
+
+export const ACTION_STATUS_LABELS: Record<ActivityStatus, string> = {
+  OPEN: "Inscrições Abertas",
+  IN_PROGRESS: "Em Andamento",
+  COMPLETED: "Finalizada",
+  CANCELLED: "Cancelada",
 };
 
 export const ACTION_TYPE_OPTIONS = (
