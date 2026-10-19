@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, waitFor } from "@/test";
 import { http, HttpResponse } from "msw";
-import { API, server } from "@/test";
+import { API, server, signIn } from "@/test";
 import { Dashboard } from "../Dashboard";
 
 const SEARCH_FIELD = "Buscar ações pelo título";
@@ -202,6 +202,7 @@ describe("Dashboard", () => {
   });
 
   it("opens the action creation form from the header", async () => {
+    signIn();
     server.use(
       http.get("*/activities", () => HttpResponse.json(mockApiActivities)),
     );

@@ -8,7 +8,14 @@ import {
 } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { useLocation } from "react-router";
-import { render, futureDateInput, http, HttpResponse, server } from "@/test";
+import {
+  render,
+  futureDateInput,
+  http,
+  HttpResponse,
+  server,
+  signIn,
+} from "@/test";
 import { useActionRegisterStore } from "@/stores/actionRegisterStore";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
@@ -107,6 +114,8 @@ async function fillStep2(user: UserEvent) {
 
 describe("DashboardShell", () => {
   beforeEach(() => {
+    // A visitor's "Criar uma ação" goes to the login instead of the modal.
+    signIn();
     server.use(
       http.get("*/activities", () => {
         return HttpResponse.json({ activities: [], total: 0 });
