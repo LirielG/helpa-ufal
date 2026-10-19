@@ -32,11 +32,10 @@ export function ActionCard({ action }: ActionCardProps) {
     OTHER: "Outros",
   };
 
-  const showSlotsBadge =
-    action.status !== "COMPLETED" && action.status !== "CANCELLED";
-
+  // Enrollment is only accepted while the action is OPEN, so any other status
+  // hides the slots badge instead of advertising spots nobody can take.
   const getSlotsBadge = () => {
-    if (!showSlotsBadge) return null;
+    if (action.status !== "OPEN") return null;
 
     if (action.availableSlots <= 0) {
       return {
@@ -45,15 +44,11 @@ export function ActionCard({ action }: ActionCardProps) {
       };
     }
 
-    if (action.availableSlots === 1) {
-      return {
-        label: "1 vaga disponível",
-        className: "bg-emerald-50 text-emerald-800 border-emerald-200",
-      };
-    }
-
     return {
-      label: `${action.availableSlots} vagas disponíveis`,
+      label:
+        action.availableSlots === 1
+          ? "1 vaga disponível"
+          : `${action.availableSlots} vagas disponíveis`,
       className: "bg-emerald-50 text-emerald-800 border-emerald-200",
     };
   };

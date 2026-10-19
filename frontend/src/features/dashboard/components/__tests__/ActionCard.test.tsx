@@ -64,27 +64,21 @@ describe("ActionCard", () => {
     expect(screen.getByText("120 vagas disponíveis")).toBeInTheDocument();
   });
 
-  it("hides the slots badge for COMPLETED actions", () => {
-    render(
-      <ActionCard
-        action={makeAction({ status: "COMPLETED", availableSlots: 10 })}
-      />,
-    );
+  it.each([
+    ["IN_PROGRESS", "Em Andamento"],
+    ["COMPLETED", "Finalizada"],
+    ["CANCELLED", "Cancelada"],
+  ] as const)(
+    "hides the slots badge for %s actions that still have spots",
+    (status, statusLabel) => {
+      render(
+        <ActionCard action={makeAction({ status, availableSlots: 10 })} />,
+      );
 
-    expect(screen.getByText("Finalizada")).toBeInTheDocument();
-    expect(screen.queryByText(/vaga/i)).not.toBeInTheDocument();
-  });
-
-  it("hides the slots badge for CANCELLED actions", () => {
-    render(
-      <ActionCard
-        action={makeAction({ status: "CANCELLED", availableSlots: 10 })}
-      />,
-    );
-
-    expect(screen.getByText("Cancelada")).toBeInTheDocument();
-    expect(screen.queryByText(/vaga/i)).not.toBeInTheDocument();
-  });
+      expect(screen.getByText(statusLabel)).toBeInTheDocument();
+      expect(screen.queryByText(/vaga/i)).not.toBeInTheDocument();
+    },
+  );
 
   it.each([
     ["OPEN", "Inscrições Abertas"],
