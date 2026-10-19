@@ -19,6 +19,8 @@ export async function expectHttpError(
       status,
     );
     if (message) expect((error as CustomError).message).toBe(message);
+    if (code) expect((error as CustomError).code).toBe(code);
+    if (details) expect((error as CustomError).details).toEqual(details);
     return;
   }
   throw new Error(
@@ -46,6 +48,9 @@ export async function expectValidationError(
   expect((error as ValidationError).statusCode).toBe(400);
   expect((error as ValidationError).message).toBe("Validation error.");
   expect((error as ValidationError).errors).toEqual(expectedErrors);
+  if (expected?.details) {
+    expect((error as ValidationError).details).toEqual(expected.details);
+  }
 }
 
 /** Asserts a CustomError with the given status that is not a ValidationError. */
