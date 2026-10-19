@@ -142,6 +142,8 @@ type FormValues = z.input<typeof formSchema>;
 
 const STEP1_FIELDS = new Set<string>(["title", "description", "area", "type"]);
 
+const STEP_NAMES = { 1: "Identificação", 2: "Logística" } as const;
+
 interface CreateActivityPayload {
   title: string;
   description: string;
@@ -206,7 +208,7 @@ export function ActionRegister({
   onClose,
   onSuccess,
 }: ActionRegisterProps) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<keyof typeof STEP_NAMES>(1);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -346,9 +348,9 @@ export function ActionRegister({
         role="dialog"
         aria-modal="true"
         aria-label="Criar uma ação"
-        className="bg-[#E8EDF2] rounded-2xl w-full max-w-2xl flex shadow-2xl overflow-hidden"
+        className="bg-[#E8EDF2] rounded-2xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex shadow-2xl overflow-hidden"
       >
-        <div className="w-[220px] shrink-0 bg-[#0A2540] text-white flex flex-col justify-between py-8 px-7 relative overflow-hidden">
+        <div className="w-[220px] shrink-0 bg-[#0A2540] text-white hidden md:flex flex-col justify-between py-8 px-7 relative overflow-hidden">
           <div className="flex flex-col gap-8 z-10 relative">
             <p className="text-sm font-semibold tracking-wide">
               Vamos criar uma ação?
@@ -366,7 +368,7 @@ export function ActionRegister({
                 </div>
                 <div>
                   <p className="font-semibold text-sm leading-tight">
-                    Identificação
+                    {STEP_NAMES[1]}
                   </p>
                   <p className="text-xs text-white/60 leading-tight mt-0.5">
                     Dê um nome para a sua ação
@@ -389,7 +391,7 @@ export function ActionRegister({
                       step === 2 ? "text-white" : "text-white/30"
                     }`}
                   >
-                    Logística
+                    {STEP_NAMES[2]}
                   </p>
                   <p className="text-xs text-white/40 leading-tight mt-0.5">
                     Conte-nos onde e quando será
@@ -403,9 +405,16 @@ export function ActionRegister({
           </div>
         </div>
 
-        <div className="flex-1 bg-white rounded-r-2xl flex flex-col">
-          <form onSubmit={onSubmit} className="flex flex-col h-full" noValidate>
-            <div className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
+        <div className="flex-1 min-w-0 min-h-0 bg-white rounded-r-2xl flex flex-col">
+          <form
+            onSubmit={onSubmit}
+            className="flex flex-col flex-1 min-h-0"
+            noValidate
+          >
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-6 pb-4 md:px-8 md:pt-8">
+              <p className="md:hidden mb-3 text-xs font-semibold text-[#1B75BB]">
+                Etapa {step} de 2 · {STEP_NAMES[step]}
+              </p>
               {generalError && (
                 <div
                   className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3"
@@ -455,7 +464,7 @@ export function ActionRegister({
                     <FieldError message={errors.description?.message} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label
                         htmlFor="area"
@@ -538,7 +547,7 @@ export function ActionRegister({
                     <FieldError message={errors.campus?.message} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label
                         htmlFor="workloadHours"
@@ -578,12 +587,12 @@ export function ActionRegister({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <fieldset>
                       <legend className="block text-sm font-medium text-gray-700 mb-1">
                         Horário
                       </legend>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label
                             htmlFor="startTime"
@@ -621,7 +630,7 @@ export function ActionRegister({
                       <legend className="block text-sm font-medium text-gray-700 mb-1">
                         Data
                       </legend>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label
                             htmlFor="startDate"
@@ -663,7 +672,7 @@ export function ActionRegister({
                     </fieldset>
                   </div>
 
-                  <div className="w-1/2">
+                  <div className="w-full sm:w-1/2">
                     <label
                       htmlFor="format"
                       className="block text-sm font-medium text-gray-700 mb-1"
@@ -712,7 +721,7 @@ export function ActionRegister({
                         Endereço
                       </legend>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label
                             htmlFor="address.addressLine"
@@ -752,8 +761,8 @@ export function ActionRegister({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-12 gap-3">
-                        <div className="col-span-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="sm:col-span-4">
                           <label
                             htmlFor="address.zipCode"
                             className="block text-sm font-medium text-gray-700 mb-1"
@@ -773,7 +782,7 @@ export function ActionRegister({
                           />
                         </div>
 
-                        <div className="col-span-5">
+                        <div className="sm:col-span-5">
                           <label
                             htmlFor="address.city"
                             className="block text-sm font-medium text-gray-700 mb-1"
@@ -790,7 +799,7 @@ export function ActionRegister({
                           <FieldError message={errors.address?.city?.message} />
                         </div>
 
-                        <div className="col-span-3">
+                        <div className="sm:col-span-3">
                           <label
                             htmlFor="address.state"
                             className="block text-sm font-medium text-gray-700 mb-1"
@@ -816,12 +825,12 @@ export function ActionRegister({
               )}
             </div>
 
-            <div className="flex justify-between items-center px-8 py-5 border-t border-gray-100">
+            <div className="flex flex-col-reverse gap-3 px-5 py-4 border-t border-gray-100 sm:flex-row sm:justify-between sm:items-center md:px-8 md:py-5">
               <button
                 type="button"
                 onClick={handleCancelClick}
                 disabled={isSubmitting}
-                className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-red-900 transition-colors disabled:opacity-50"
+                className="px-5 py-2 bg-[#4A0E0E] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-red-900 transition-colors disabled:opacity-50"
               >
                 <X className="size-3.5" /> Cancelar
               </button>
@@ -832,7 +841,7 @@ export function ActionRegister({
                     type="button"
                     onClick={() => setStep(1)}
                     disabled={isSubmitting}
-                    className="px-5 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1B75BB] transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none px-5 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#1B75BB] transition-colors disabled:opacity-50"
                   >
                     <ArrowLeft className="size-3.5" /> Voltar
                   </button>
@@ -842,7 +851,7 @@ export function ActionRegister({
                   <button
                     type="button"
                     onClick={handleStep1Next}
-                    className="px-6 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-[#1B75BB] transition-colors"
+                    className="flex-1 sm:flex-none px-6 py-2 bg-[#0A2540] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-[#1B75BB] transition-colors"
                   >
                     Próximo <ArrowRight className="size-3.5" />
                   </button>
@@ -850,7 +859,7 @@ export function ActionRegister({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center gap-1.5 hover:bg-green-800 transition-colors disabled:opacity-50"
+                    className="flex-1 sm:flex-none px-6 py-2 bg-[#05442A] text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-green-800 transition-colors disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>

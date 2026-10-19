@@ -459,6 +459,20 @@ describe("ActionRegister", () => {
     });
   });
 
+  it("names the current step for screens without the side bar", async () => {
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    expect(
+      screen.getByText("Etapa 1 de 2 · Identificação"),
+    ).toBeInTheDocument();
+
+    await fillStep1(user);
+
+    expect(screen.getByText("Etapa 2 de 2 · Logística")).toBeInTheDocument();
+  });
+
   it("labels the fields the same way as the edit form", async () => {
     const { user } = render(
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
