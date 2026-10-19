@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { getLoginErrorMessage } from "../features/auth/errors";
 import { ApiError, authService, notifySessionExpired } from "../services";
 import type { LoginRequest, RegisterRequest, User } from "../types";
 
@@ -14,7 +15,8 @@ type AuthStore = {
   isLoading: boolean;
   error: string | null;
   login: (data: LoginRequest) => Promise<boolean>;
-  register: (data: RegisterRequest) => Promise<boolean>;
+  /** Rejects with the API error, which the sign-up screen translates. */
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   verifySession: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -40,9 +42,7 @@ export const useAuthStore = create<AuthStore>()(
           set({ user: response.user, isSessionVerified: true });
           return true;
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Erro ao fazer login";
-          set({ error: message });
+          set({ error: getLoginErrorMessage(error) });
           return false;
         } finally {
           set({ isLoading: false });
@@ -51,16 +51,12 @@ export const useAuthStore = create<AuthStore>()(
       register: async (data) => {
         set({ isLoading: true, error: null });
 
+        // Sign-up does not authenticate: the screen sends the visitor to the
+        // login page. A failure is left to the screen, since only it can put
+        // a duplicated value on its form field; storing it here would also
+        // carry it over to the login screen.
         try {
-          // Sign-up does not authenticate: the screen sends the visitor to the
-          // login page and this only reports whether the account was created.
           await authService.register(data);
-          return true;
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Erro ao criar conta";
-          set({ error: message });
-          return false;
         } finally {
           set({ isLoading: false });
         }

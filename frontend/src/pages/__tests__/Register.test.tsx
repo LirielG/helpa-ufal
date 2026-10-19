@@ -92,6 +92,18 @@ async function fillCommonFields(
   );
 }
 
+/** Answers the sign-up with the backend's unique-constraint conflict. */
+function respondWithConflict(message: string, details?: { field: string }) {
+  server.use(
+    http.post(REGISTER_URL, () =>
+      HttpResponse.json(
+        { status: 409, code: "ALREADY_IN_USE", message, details },
+        { status: 409 },
+      ),
+    ),
+  );
+}
+
 describe("Register page", () => {
   describe("profile selection step", () => {
     it("shows the profile choice before any form field", () => {
@@ -330,12 +342,90 @@ describe("Register page", () => {
       });
     });
 
-    it("shows the server error message and does not navigate away on failure", async () => {
+    it.each([
+      [
+        "email",
+        goToStudentForm,
+        "Email already in use.",
+        "Este e-mail já está cadastrado.",
+      ],
+      [
+        "registrationCode",
+        goToStudentForm,
+        "Registration code already in use.",
+        "Esta matrícula já está cadastrada.",
+      ],
+      [
+        "cndb",
+        goToTeacherForm,
+        "CNDB already in use.",
+        "Esta CNDB já está cadastrada.",
+      ],
+    ])(
+      "shows a 409 on %s under its field and keeps what was typed",
+      async (field, goToForm, apiMessage, fieldMessage) => {
+        respondWithConflict(apiMessage, { field });
+
+        const { user } = renderRegisterPage();
+        await goToForm(user);
+        await fillCommonFields(user);
+        if (field === "cndb") {
+          await user.type(
+            screen.getByPlaceholderText("Ex.: Número da carteira docente"),
+            "CNDB-998877",
+          );
+        }
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+        expect(await screen.findByText(fieldMessage)).toBeInTheDocument();
+        expect(screen.queryByText(apiMessage)).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.queryByText(REGISTER_SUCCESS_MESSAGE)).toBeNull();
+        expect(
+          screen.getByPlaceholderText("Digite seu nome completo"),
+        ).toHaveValue("Jéssica Pereira da Silva");
+        expect(
+          screen.getByPlaceholderText("seu.email@exemplo.com"),
+        ).toHaveValue("jessica@ufal.br");
+        expect(screen.getByPlaceholderText("Número de matrícula")).toHaveValue(
+          "2023001122",
+        );
+      },
+    );
+
+    it("shows the generic conflict message when the 409 names no field", async () => {
+      respondWithConflict("This value is already in use.");
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText(
+          "Algum dos dados informados já está cadastrado.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("This value is already in use.")).toBeNull();
+    });
+
+    it("asks to check the data when the API rejects it (400)", async () => {
       server.use(
         http.post(REGISTER_URL, () =>
           HttpResponse.json(
-            { message: "E-mail já cadastrado" },
-            { status: 409 },
+            {
+              status: 400,
+              code: "VALIDATION_ERROR",
+              message: "Validation error.",
+              errors: [
+                {
+                  field: "email",
+                  code: "INVALID_FORMAT",
+                  message: "Invalid email.",
+                },
+              ],
+            },
+            { status: 400 },
           ),
         ),
       );
@@ -346,11 +436,26 @@ describe("Register page", () => {
       await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
       expect(
-        await screen.findByText("E-mail já cadastrado"),
+        await screen.findByText(
+          "Verifique os dados informados e tente novamente.",
+        ),
       ).toBeInTheDocument();
+      expect(screen.queryByText("Validation error.")).toBeNull();
+    });
+
+    it("shows the connection error when the request gets no response", async () => {
+      server.use(http.post(REGISTER_URL, () => HttpResponse.error()));
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
       expect(
-        screen.queryByText(REGISTER_SUCCESS_MESSAGE),
-      ).not.toBeInTheDocument();
+        await screen.findByText(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("disables the submit button while the request is in flight", async () => {
