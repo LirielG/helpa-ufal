@@ -99,7 +99,9 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // Lock BEFORE any read, and `slots` read UNDER the lock.
       const activity = await lockActivityForCapacity(tx, activityId);
       if (!activity) {
-        throw new CustomError(404, "Activity not found.");
+        throw new CustomError(404, "Activity not found.", {
+          code: "ACTIVITY_NOT_FOUND",
+        });
       }
 
       // Re-check under the lock: the value read here is the only one
@@ -203,7 +205,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // checks stay as a fast path; these are the authoritative ones.
       const activity = await lockActivityForAttendance(tx, activityId);
       if (!activity) {
-        throw new CustomError(404, "Activity not found.", { code: "ACTIVITY_NOT_FOUND" });
+        throw new CustomError(404, "Activity not found.");
       }
 
       if (activity.status !== "COMPLETED") {
