@@ -5,6 +5,7 @@ import type {
   EnrollmentUser,
 } from "@/services/contracts/enrollment";
 import type { UserActivityItem } from "@/services/contracts/user";
+import type { CertificateValidation } from "@/services/contracts/certificate";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 
@@ -242,6 +243,22 @@ export function makeEnrollment(
       registrationCode: unique("mat"),
       ...user,
     },
+  };
+}
+
+/** Response of GET /certificate-validations/:validationCode, as in the Bruno example. */
+export function makeCertificateValidation(
+  overrides: Partial<CertificateValidation> = {},
+): CertificateValidation {
+  return {
+    validationCode: "7KQ4MX9T2R",
+    holderName: "Maria Silva Souza",
+    activityTitle: "Semana da Computação — Oficina de Git",
+    activityStartDate: "2026-06-10T13:00:00.000Z",
+    activityEndDate: "2026-06-12T15:00:00.000Z",
+    workloadHours: 8,
+    issuedAt: "2026-06-15T12:00:00.000Z",
+    ...overrides,
   };
 }
 

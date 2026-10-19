@@ -5,6 +5,7 @@ import { prisma } from "@/database/prisma.js";
 import { anAddress, createTeacher, createStudent } from "../../helpers/factories.js";
 import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 
 function validPayload(overrides: Record<string, unknown> = {}) {
@@ -369,6 +370,33 @@ describe("POST /activities", () => {
         { field: "endDate", code: "VALIDATION_ERROR", message: "Activity duration cannot exceed 365 days." },
       ]),
     );
+  });
+
+  it("creates an activity whose title is at the length limit", async () => {
+    const author = await createTeacher();
+    const title = "a".repeat(ACTIVITY_TITLE_MAX_LENGTH);
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ title }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.title).toBe(title);
+  });
+
+  it("returns 400 when the title is one character over the length limit", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authHeader(author.token))
+      .send(validPayload({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "title" }),
+    ]);
   });
 
   it("returns 400 when slots exceeds the maximum of 10000", async () => {

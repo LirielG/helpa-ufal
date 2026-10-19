@@ -19,6 +19,7 @@ import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import { EditAction } from "../EditAction";
 import { signIn } from "@/test/auth";
 import { makeUser } from "@/test/factories";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/validators/limits";
 
 const ACTION_ID = "action-1";
 
@@ -440,6 +441,23 @@ describe("EditAction", () => {
 
     expect(
       await screen.findByText("O CEP deve ter 8 dígitos"),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("blocks a title over the length limit before any request goes out", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.click(title);
+    await user.paste("a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1));
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText("O título deve ter no máximo 150 caracteres."),
     ).toBeInTheDocument();
     expect(onUpdate).not.toHaveBeenCalled();
   });

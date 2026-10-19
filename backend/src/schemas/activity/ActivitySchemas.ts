@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 import { ActivityType, ActivityFormat, CampusLocation } from "@prisma/client";
 import { ActivityStatus } from "@/types/activity.js";
 
@@ -49,7 +50,7 @@ const AddressSchema = z.object({
 const UtcDateTimeSchema = z.iso.datetime().transform((value) => new Date(value));
 
 const BaseActivitySchema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(1).max(ACTIVITY_TITLE_MAX_LENGTH),
   type: z.enum(ActivityType),
   campus: z.enum(CampusLocation),
   startDate: UtcDateTimeSchema,
@@ -86,7 +87,7 @@ export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
 
 const UpdateActivityBaseSchema = z
   .object({
-    title: z.string().min(1),
+    title: z.string().min(1).max(ACTIVITY_TITLE_MAX_LENGTH),
     type: z.enum(ActivityType),
     campus: z.enum(CampusLocation),
     startDate: UtcDateTimeSchema,

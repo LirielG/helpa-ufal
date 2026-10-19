@@ -9,6 +9,7 @@ import {
   server,
   signIn,
   userEvent,
+  waitFor,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
@@ -111,6 +112,36 @@ describe("AppRoutes", () => {
         await screen.findByText("Oficina de Programação"),
       ).toBeInTheDocument();
     });
+
+    it("lets a guest validate a certificate without being sent to login", async () => {
+      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+
+      expect(
+        await screen.findByText("Certificado autêntico"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /perfil/i })).toBeNull();
+    });
+
+    it("lets a signed-in user validate a certificate without being sent away", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+
+      expect(
+        await screen.findByText("Certificado autêntico"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /perfil/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /sair/i })).toBeNull();
+    });
+
+    it("opens the empty validation form at /validar", async () => {
+      render(<AppRoutes />, { route: "/validar" });
+
+      expect(await screen.findByLabelText("Código de validação")).toHaveValue(
+        "",
+      );
+    });
   });
 
   describe("expired session", () => {
@@ -132,6 +163,49 @@ describe("AppRoutes", () => {
         await screen.findByRole("button", { name: "Entrar" }),
       ).toBeInTheDocument();
       expect(useAuthStore.getState().user).toBeNull();
+    });
+  });
+
+  describe("certificate validation", () => {
+    // The route is public: a 401 there says nothing about the visitor's
+    // session, so it must not log a signed-in user out.
+    it("keeps the session when the validation route answers 401", async () => {
+      server.use(
+        http.get(
+          `${API}/certificate-validations/:validationCode`,
+          () => new HttpResponse(null, { status: 401 }),
+        ),
+      );
+      signIn();
+
+      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+
+      expect(
+        await screen.findByText(/não foi possível consultar o certificado/i),
+      ).toBeInTheDocument();
+      expect(useAuthStore.getState().user).not.toBeNull();
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
+    });
+
+    // Someone who once signed in on this browser scans a certificate's QR code
+    // after the cookie expired: the session check fails, but they came to see
+    // the result, not the login screen.
+    it("shows the result when the restored session turns out to be expired", async () => {
+      server.use(
+        http.get(
+          `${API}/users/me`,
+          () => new HttpResponse(null, { status: 401 }),
+        ),
+      );
+      signIn();
+
+      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+
+      expect(
+        await screen.findByText("Certificado autêntico"),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(useAuthStore.getState().user).toBeNull());
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
     });
   });
 

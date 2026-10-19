@@ -3,6 +3,7 @@ import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
 import { Prisma } from "@prisma/client";
 import registrationPolicyMessage from "@/../tests/helpers/password-policy.js"
 import { UserType } from "@/types/auth.js";
+import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 const IMMUTABLE = "This field cannot be updated.";
 const EMPTY_BODY = "At least one updatable field must be provided.";
@@ -65,10 +66,20 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
       ]);
     });
 
-    it("has no maximum length for fullName (same as registration)", () => {
-      const result = parse(userType, { fullName: "A".repeat(500) });
+    it("accepts a fullName at the length limit", () => {
+      const fullName = "a".repeat(FULL_NAME_MAX_LENGTH);
 
-      expect(result.success).toBe(true);
+      expect(parse(userType, { fullName }).success).toBe(true);
+    });
+
+    it("rejects a fullName one character over the length limit", () => {
+      const errors = toErrors(
+        parse(userType, { fullName: "a".repeat(FULL_NAME_MAX_LENGTH + 1) }),
+      );
+
+      expect(errors).toEqual([
+        expect.objectContaining({ field: "fullName" }),
+      ]);
     });
 
     it("accepts a password change with the current password", () => {

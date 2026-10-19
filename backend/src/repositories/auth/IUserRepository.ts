@@ -14,11 +14,22 @@ export type UserWithProfile = Prisma.UserGetPayload<{
   };
 }>;
 
+export type UserWithProfileAndHash = UserWithProfile & {
+  passwordHash: string;
+};
+
+export type UpdateProfileData = {
+  fullName?: string;
+  course?: string | null;
+  passwordHash?: string;
+};
+
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
-  findById(id: string): Promise<{ isManager: boolean } | null>;
+  findById(id: string): Promise<UserWithProfileAndHash | null>;
   findTokenVersionById(id: string): Promise<{ tokenVersion: number } | null>;
   findProfileById(id: string): Promise<UserWithProfile | null>;
+  updateProfile(id: string, data: UpdateProfileData): Promise<UserWithProfile>;
 
   createWithSubtype(
     data: RegisterInput & { passwordHash: string },

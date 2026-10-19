@@ -4,6 +4,7 @@ import type { IAuthService } from "@/services/auth/IAuthService.js";
 import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { signJwt } from "@/utils/jwt.js";
+import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 import type { Login, RegisterInput } from "@/schemas/auth/AuthSchemas.js";
 import type { AuthenticatedUser, UserResponse } from "@/types/auth.js";
 
@@ -67,7 +68,11 @@ class AuthService implements IAuthService {
         details: { field: "email" },
       });
     }
-    const passwordHash = await bcryptjs.hash(data.password, 12);
+
+    const passwordHash = await bcryptjs.hash(
+      data.password,
+      BCRYPT_SALT_ROUNDS,
+    );
 
     const newUser = await this._userRepository.createWithSubtype({
       ...data,

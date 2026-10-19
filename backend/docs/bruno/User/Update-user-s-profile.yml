@@ -138,6 +138,20 @@ examples:
               { "field": "course", "message": "This field cannot be updated." }
             ]
           }
+  - name: 400 Name too long
+    description: fullName is limited to 120 characters, the same limit as registration.
+    response:
+      status: 400
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              { "field": "fullName", "message": "Too big: expected string to have <=120 characters" }
+            ]
+          }
   - name: 400 Weak password
     description: newPassword fails the registration password policy.
     response:

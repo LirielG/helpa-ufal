@@ -13,6 +13,7 @@ import {
 } from "../../helpers/factories.js";
 import { authHeader } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 describe("PATCH /activities/:activityId", () => {
   describe.each(["startDate", "endDate"])("%s", (field) => {
@@ -53,6 +54,35 @@ describe("PATCH /activities/:activityId", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.startDate).toBe(startDate);
+  });
+
+  it("updates the title to one at the length limit", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+    const title = "a".repeat(ACTIVITY_TITLE_MAX_LENGTH);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ title });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe(title);
+  });
+
+  it("returns 400 when the title is one character over the length limit", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authHeader(author.token))
+      .send({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "title" }),
+    ]);
   });
 
   it("returns 400 for an empty body", async () => {
