@@ -872,7 +872,9 @@ describe("EditAction", () => {
     await user.type(title, "Título com sessão expirada");
     await user.click(getSaveButton());
 
-    expect(await screen.findByText("Entrar")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps what was typed when the update fails with a server error", async () => {
@@ -1047,7 +1049,9 @@ describe("EditAction deletion", () => {
     await user.click(screen.getByRole("button", { name: "Excluir ação" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
-    expect(await screen.findByText("Entrar")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
   });
 
   it("does not send multiple DELETE requests on double clicking confirm", async () => {

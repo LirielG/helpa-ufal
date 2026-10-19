@@ -3,7 +3,11 @@ import { Navigate, useLocation, type Location } from "react-router";
 import { useAuthStore } from "../stores/authStore";
 import { SessionLoader } from "./SessionLoader";
 
-type GuestRouteState = {
+/**
+ * What a screen hands to /login (and the login to /register and back) so
+ * GuestRoute can return the visitor to where they started.
+ */
+export type ReturnToState = {
   from?: Location;
 };
 
@@ -26,9 +30,11 @@ export function GuestRoute({ children }: GuestRouteProps) {
   }
 
   if (isAuthenticated) {
-    const state = location.state as GuestRouteState | null;
+    const state = location.state as ReturnToState | null;
 
-    return <Navigate to={state?.from?.pathname ?? "/dashboard"} replace />;
+    // The whole location, not just the pathname, so ?feed=sigaa and the
+    // like survive the round trip.
+    return <Navigate to={state?.from ?? "/dashboard"} replace />;
   }
 
   return children;

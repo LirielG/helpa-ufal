@@ -11,6 +11,7 @@ import { ActionInfoCard } from "../features/action-detail/components/ActionInfoC
 import { EnrollmentModal } from "../features/action-detail/components/EnrollmentModal";
 import { CancelEnrollmentModal } from "../features/action-detail/components/CancelEnrollmentModal";
 import { EnrollmentActions } from "../features/action-detail/components/EnrollmentActions";
+import { GuestEnrollmentActions } from "../features/action-detail/components/GuestEnrollmentActions";
 import { getActionById } from "../features/action-detail/services";
 import { ReportActionButton } from "../features/report/components/ReportActionButton";
 import { ReportActionModal } from "../features/report/ReportActionModal";
@@ -128,12 +129,14 @@ export function ActionDetail() {
                 <div className="lg:col-span-1 flex flex-col gap-4">
                   <ActionInfoCard action={action} />
 
-                  {isAuthenticated && (
+                  {isAuthenticated ? (
                     <EnrollmentActions
                       action={action}
                       onEnroll={() => setShowModal(true)}
                       onCancel={() => setShowCancelModal(true)}
                     />
+                  ) : (
+                    <GuestEnrollmentActions action={action} />
                   )}
 
                   {/* The API answers 401 to visitors and 403 to the author. */}

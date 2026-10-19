@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { z } from "zod";
 import { Button, Alert, Tooltip } from "../components";
 import { useAuth } from "../hooks";
@@ -16,6 +16,7 @@ import { ProfileSelector } from "../features/auth/components/ProfileSelector";
 import { REGISTER_SUCCESS_MESSAGE } from "../features/auth/constants/messages";
 import { PROFILE_OPTIONS } from "../features/auth/constants/profileOptions";
 import type { ProfileType } from "../features/auth/types";
+import type { ReturnToState } from "../routes/GuestRoute";
 
 const defaultFields = {
   fullName: "",
@@ -32,6 +33,12 @@ type RegisterFields = z.infer<typeof RegisterSchema>;
 export function Register() {
   const { register: registerUser, isLoading, error: authError } = useAuth();
   const navigate = useNavigate();
+  const { state } = useLocation();
+  // Handed back to the login so signing in after the sign-up still returns
+  // the visitor to the page they started from.
+  const returnTo: ReturnToState = {
+    from: (state as ReturnToState | null)?.from,
+  };
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,7 +77,7 @@ export function Register() {
     if (created) {
       navigate("/login", {
         replace: true,
-        state: { successMessage: REGISTER_SUCCESS_MESSAGE },
+        state: { ...returnTo, successMessage: REGISTER_SUCCESS_MESSAGE },
       });
     }
   };
@@ -127,6 +134,7 @@ export function Register() {
           prefix="Já possui uma conta no helpa?"
           linkText="Entrar"
           to="/login"
+          state={returnTo}
         />
       }
     >

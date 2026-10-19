@@ -11,13 +11,14 @@ import { AuthField } from "../features/auth/components/AuthField";
 import { AuthFooterLink } from "../features/auth/components/AuthFooterLink";
 import { AuthShell } from "../features/auth/components/AuthShell";
 import { PasswordField } from "../features/auth/components/PasswordField";
+import type { ReturnToState } from "../routes/GuestRoute";
 
 type LoginFields = {
   email: string;
   password: string;
 };
 
-type LoginRouteState = {
+type LoginRouteState = ReturnToState & {
   successMessage?: string;
 };
 
@@ -26,8 +27,10 @@ export function Login() {
   const { state } = useLocation();
   const [showPassword, setShowPassword] = useState(false);
 
-  const successMessage =
-    (state as LoginRouteState | null)?.successMessage ?? null;
+  const routeState = state as LoginRouteState | null;
+  const successMessage = routeState?.successMessage ?? null;
+  // Carried to the sign-up so a new account still returns to the origin.
+  const returnTo: ReturnToState = { from: routeState?.from };
 
   const {
     register,
@@ -61,6 +64,7 @@ export function Login() {
           prefix="Não tem uma conta?"
           linkText="Criar conta"
           to="/register"
+          state={returnTo}
         />
       }
     >
