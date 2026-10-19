@@ -34,7 +34,10 @@ export function PersonalDataForm({
   onSave,
   onLogout,
 }: PersonalDataFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
+  // The current password has its own toggle: checking what was typed in the
+  // new one must not put the current one on screen too.
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const {
@@ -145,8 +148,8 @@ export function PersonalDataForm({
               placeholder="********"
               error={errors.currentPassword?.message}
               registration={register("currentPassword")}
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword((value) => !value)}
+              showPassword={showCurrentPassword}
+              onTogglePassword={() => setShowCurrentPassword((value) => !value)}
             />
 
             <PasswordField
@@ -154,8 +157,8 @@ export function PersonalDataForm({
               placeholder="********"
               error={errors.newPassword?.message}
               registration={register("newPassword")}
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword((value) => !value)}
+              showPassword={showNewPassword}
+              onTogglePassword={() => setShowNewPassword((value) => !value)}
             />
 
             <PasswordGuidelines password={newPasswordValue} />
@@ -165,8 +168,8 @@ export function PersonalDataForm({
               placeholder="********"
               error={errors.confirmNewPassword?.message}
               registration={register("confirmNewPassword")}
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword((value) => !value)}
+              showPassword={showNewPassword}
+              onTogglePassword={() => setShowNewPassword((value) => !value)}
             />
           </div>
         </div>

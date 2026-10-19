@@ -335,6 +335,36 @@ describe("Profile — personal data", () => {
       });
     });
 
+    it("reveals the current password apart from the new one and its confirmation", async () => {
+      signIn();
+      const { user } = renderProfile();
+
+      await findNameField();
+      const current = screen.getByLabelText("Senha atual");
+      const next = screen.getByLabelText("Nova senha");
+      const confirmation = screen.getByLabelText("Confirmar nova senha");
+      const [currentToggle, nextToggle] = screen.getAllByRole("button", {
+        name: "Mostrar senha",
+      });
+
+      await user.click(currentToggle);
+
+      expect(current).toHaveAttribute("type", "text");
+      expect(next).toHaveAttribute("type", "password");
+      expect(confirmation).toHaveAttribute("type", "password");
+
+      await user.click(nextToggle);
+
+      expect(next).toHaveAttribute("type", "text");
+      expect(confirmation).toHaveAttribute("type", "text");
+      expect(current).toHaveAttribute("type", "text");
+
+      await user.click(currentToggle);
+
+      expect(current).toHaveAttribute("type", "password");
+      expect(next).toHaveAttribute("type", "text");
+    });
+
     it("shows a wrong current password on its field and keeps the form filled", async () => {
       signIn();
       failUpdate(403, {
