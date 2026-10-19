@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ApiError } from "@/services/apiError";
 import { API, http, HttpResponse, makeEnrollment, server } from "@/test";
-import { fetchEnrollments } from "../services";
+import { confirmAttendance, fetchEnrollments } from "../services";
 
 
 describe("fetchEnrollments", () => {
@@ -40,5 +40,52 @@ describe("fetchEnrollments", () => {
       status: 403,
     });
     await expect(fetchEnrollments("act-1")).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("confirmAttendance", () => {
+  it("puts the presence with its hours on the enrollment's own route", async () => {
+    const requests: Request[] = [];
+    const updated = makeEnrollment({
+      id: "enr-1",
+      attendanceConfirmed: true,
+      confirmedWorkloadHours: 4,
+    });
+
+    server.use(
+      http.put(`${API}/enrollments/enr-1/attendance`, ({ request }) => {
+        requests.push(request.clone());
+        return HttpResponse.json(updated);
+      }),
+    );
+
+    const result = await confirmAttendance("enr-1", {
+      attended: true,
+      workloadHours: 4,
+    });
+
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({
+      attended: true,
+      workloadHours: 4,
+    });
+    expect(result.confirmedWorkloadHours).toBe(4);
+  });
+
+  it("sends an absence without workloadHours", async () => {
+    const requests: Request[] = [];
+
+    server.use(
+      http.put(`${API}/enrollments/enr-1/attendance`, ({ request }) => {
+        requests.push(request.clone());
+        return HttpResponse.json(
+          makeEnrollment({ id: "enr-1", attendanceConfirmed: false }),
+        );
+      }),
+    );
+
+    await confirmAttendance("enr-1", { attended: false });
+
+    await expect(requests[0].json()).resolves.toEqual({ attended: false });
   });
 });

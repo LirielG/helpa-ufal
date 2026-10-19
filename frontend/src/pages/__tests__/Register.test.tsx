@@ -8,6 +8,7 @@ import { config } from "@/config";
 import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
 import { GuestRoute } from "@/routes/GuestRoute";
 import { useAuthStore } from "@/stores/authStore";
+import { FULL_NAME_MAX_LENGTH } from "@/validators/limits";
 import { Login } from "../Login";
 import { Register } from "../Register";
 
@@ -238,6 +239,33 @@ describe("Register page", () => {
         await screen.findByText("Senha deve ter no mínimo 8 caracteres"),
       ).toBeInTheDocument();
     });
+    it.each([
+      ["student", goToStudentForm],
+      ["teacher", goToTeacherForm],
+    ])(
+      "blocks a %s name over the length limit without calling the API",
+      async (_profile, goToForm) => {
+        let requested = false;
+        server.use(
+          http.post(REGISTER_URL, () => {
+            requested = true;
+            return HttpResponse.json(makeUser(), { status: 201 });
+          }),
+        );
+        const { user } = renderRegisterPage();
+        await goToForm(user);
+
+        await fillCommonFields(user, {
+          name: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
+        });
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+        expect(
+          await screen.findByText("O nome deve ter no máximo 120 caracteres."),
+        ).toBeInTheDocument();
+        expect(requested).toBe(false);
+      },
+    );
   });
 
   describe("submission", () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import CertificateService from "../CertificateService.js";
 import type {
   CertificateForDownload,
+  CertificateForValidation,
   ICertificateRepository,
 } from "@/repositories/certificate/ICertificateRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
@@ -149,5 +150,105 @@ describe("CertificateService.getFile", () => {
 
     await expectCustomError(service.getFile(HOLDER_ID, CERTIFICATE_ID), 401);
     expect(renderer.render).not.toHaveBeenCalled();
+  });
+});
+
+// Shaped exactly like the repository's select, so a field the query does not
+// load cannot leak into the validation through the fixture.
+function aValidatedCertificate(): CertificateForValidation {
+  return {
+    validationCode: "7KQ4MX9T2R",
+    issuedAt: new Date("2026-06-11T10:30:00.000Z"),
+    enrollment: {
+      status: "APPROVED",
+      attendanceConfirmed: true,
+      confirmedWorkloadHours: 6,
+      user: { fullName: "Maria da Silva" },
+      activity: {
+        title: "Academic Writing Lecture",
+        startDate: new Date("2026-06-10T13:00:00.000Z"),
+        endDate: new Date("2026-06-10T17:00:00.000Z"),
+      },
+    },
+  };
+}
+
+function setupValidation(
+  certificate: CertificateForValidation | null = aValidatedCertificate(),
+) {
+  const certificateRepository = {
+    findByValidationCode: vi.fn().mockResolvedValue(certificate),
+  } as unknown as ICertificateRepository;
+  const service = new CertificateService({
+    certificateRepository,
+    userRepository: {} as IUserRepository,
+    renderer: {} as ICertificatePdfRenderer,
+  });
+
+  return { service, certificateRepository };
+}
+
+describe("CertificateService.validate", () => {
+  it("answers exactly what the PDF attests", async () => {
+    const { service } = setupValidation();
+
+    const validation = await service.validate("7KQ4MX9T2R");
+
+    expect(validation).toStrictEqual({
+      validationCode: "7KQ4MX9T2R",
+      holderName: "Maria da Silva",
+      activityTitle: "Academic Writing Lecture",
+      activityStartDate: new Date("2026-06-10T13:00:00.000Z"),
+      activityEndDate: new Date("2026-06-10T17:00:00.000Z"),
+      workloadHours: 6,
+      issuedAt: new Date("2026-06-11T10:30:00.000Z"),
+    });
+  });
+
+  it.each([
+    ["7kq4mx9t2r", "7KQ4MX9T2R"],
+    ["7KQ4M-X9T2R", "7KQ4MX9T2R"],
+    [" 7KQ4M X9T2R ", "7KQ4MX9T2R"],
+    ["AOBICDEFGH", "A0B1CDEFGH"],
+    ["AOBLCDEFGH", "A0B1CDEFGH"],
+  ])("looks %j up as %s", async (input, stored) => {
+    const { service, certificateRepository } = setupValidation();
+
+    await service.validate(input);
+
+    expect(
+      certificateRepository.findByValidationCode,
+    ).toHaveBeenCalledExactlyOnceWith(stored);
+  });
+
+  it.each(["abc", "7KQ4MX9T2RA", "7KQ4MX9T2U"])(
+    "answers %j with the 404 of an unknown code, without querying",
+    async (input) => {
+      const malformed = setupValidation();
+      const unknown = setupValidation(null);
+
+      const messages = await Promise.all([
+        notFoundMessage(malformed.service.validate(input)),
+        notFoundMessage(unknown.service.validate("7KQ4MX9T2R")),
+      ]);
+
+      expect(new Set(messages)).toEqual(new Set(["Certificate not found."]));
+      expect(
+        malformed.certificateRepository.findByValidationCode,
+      ).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["the attendance is no longer confirmed", { attendanceConfirmed: false }],
+    ["the enrollment is no longer APPROVED", { status: "CANCELLED" }],
+  ] as const)("answers 404 when %s", async (_label, enrollmentOverrides) => {
+    const certificate = aValidatedCertificate();
+    Object.assign(certificate.enrollment, enrollmentOverrides);
+    const { service } = setupValidation(certificate);
+
+    const message = await notFoundMessage(service.validate("7KQ4MX9T2R"));
+
+    expect(message).toBe("Certificate not found.");
   });
 });

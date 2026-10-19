@@ -7,9 +7,9 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/activities/:id"
+  url: "{{baseUrl}}/activities/:activityId"
   params:
-    - name: id
+    - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
       type: path
 
@@ -24,10 +24,10 @@ examples:
   - name: 200 Response (anonymous)
     description: No session recognized, so enrollmentStatus is absent.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -70,10 +70,10 @@ examples:
   - name: 200 Response (authenticated, not enrolled)
     description: Valid token and the user never enrolled, so enrollmentStatus is null.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -117,10 +117,10 @@ examples:
   - name: 200 Response (authenticated, enrolled)
     description: Valid token with an active enrollment.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -164,10 +164,10 @@ examples:
   - name: 200 Response (authenticated, cancelled)
     description: Valid token and a cancelled enrollment; the status is still reported.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -209,12 +209,12 @@ examples:
             "enrollmentStatus": "CANCELLED"
           }
   - name: 400 Response
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -232,18 +232,18 @@ examples:
             "message": "Validation error.",
             "errors": [
               {
-                "field": "id",
-                "message": "id must be a valid UUID."
+                "field": "activityId",
+                "message": "activityId must be a valid UUID."
               }
             ]
           }
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID
@@ -263,10 +263,10 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id"
+      url: "{{baseUrl}}/activities/:activityId"
       method: GET
       params:
-        - name: id
+        - name: activityId
           value: ""
           type: path
           description: Activity UUID

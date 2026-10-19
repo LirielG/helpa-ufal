@@ -12,7 +12,7 @@ const URL = `${API}${ENDPOINT}`;
  * the headers and the body the client actually sent.
  */
 function captureRequest(
-  method: "get" | "post" | "patch" | "delete",
+  method: "get" | "post" | "put" | "patch" | "delete",
   response: () => Response,
 ) {
   const requests: Request[] = [];
@@ -41,7 +41,7 @@ async function catchApiError(call: Promise<unknown>): Promise<ApiError> {
 
 describe("api client", () => {
   describe("verbs", () => {
-    it.each(["post", "patch"] as const)(
+    it.each(["post", "put", "patch"] as const)(
       "%s sends the JSON body, the content type and the session cookie",
       async (method) => {
         const requests = captureRequest(method, () =>

@@ -104,3 +104,59 @@ describe("useEnrollments", () => {
     expect(result.current.data?.items[0]?.user.fullName).toBe("Inscrito da B");
   });
 });
+
+describe("useEnrollments.applyAttendance", () => {
+  function listWith(
+    items: ReturnType<typeof makeEnrollment>[],
+    totalPresent: number,
+  ) {
+    server.use(
+      http.get(`${API}/activities/:id/enrollments`, () =>
+        HttpResponse.json({
+          items,
+          total: items.length,
+          page: 1,
+          limit: 20,
+          totalPresent,
+        }),
+      ),
+    );
+  }
+
+  it.each([
+    { from: null, to: true, expected: 3 },
+    { from: false, to: true, expected: 3 },
+    { from: true, to: true, expected: 2 },
+    { from: null, to: false, expected: 2 },
+    { from: true, to: false, expected: 1 },
+  ] as const)(
+    "moving from $from to $to leaves totalPresent at $expected",
+    async ({ from, to, expected }) => {
+      const enrollment = makeEnrollment({
+        id: "enr-1",
+        attendanceConfirmed: from,
+        confirmedWorkloadHours: from ? 2 : 0,
+      });
+      listWith([enrollment, makeEnrollment()], 2);
+
+      const { result } = renderHook(() => useEnrollments("act-1"));
+      await waitFor(() => expect(result.current.data).not.toBeNull());
+
+      const { user, ...canonical } = enrollment;
+      act(() =>
+        result.current.applyAttendance({
+          ...canonical,
+          attendanceConfirmed: to,
+          confirmedWorkloadHours: to ? 5 : 0,
+        }),
+      );
+
+      expect(result.current.data?.totalPresent).toBe(expected);
+      expect(result.current.data?.items[0]).toMatchObject({
+        attendanceConfirmed: to,
+        confirmedWorkloadHours: to ? 5 : 0,
+        user,
+      });
+    },
+  );
+});

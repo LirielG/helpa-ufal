@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FULL_NAME_MAX_LENGTH, FULL_NAME_TOO_LONG_MESSAGE } from "./limits";
 
 export interface ValidationError {
   field: string;
@@ -18,7 +19,10 @@ export const RegisterSchema = z
   .discriminatedUnion("userType", [
     z.object({
       userType: z.literal("student"),
-      fullName: z.string().min(1, "Nome é obrigatório"),
+      fullName: z
+        .string()
+        .min(1, "Nome é obrigatório")
+        .max(FULL_NAME_MAX_LENGTH, FULL_NAME_TOO_LONG_MESSAGE),
       email: z.string().min(1, "E-mail é obrigatório").email("E-mail inválido"),
       password: z
         .string()
@@ -37,7 +41,10 @@ export const RegisterSchema = z
 
     z.object({
       userType: z.literal("teacher"),
-      fullName: z.string().min(1, "Nome é obrigatório"),
+      fullName: z
+        .string()
+        .min(1, "Nome é obrigatório")
+        .max(FULL_NAME_MAX_LENGTH, FULL_NAME_TOO_LONG_MESSAGE),
       email: z.string().min(1, "E-mail é obrigatório").email("E-mail inválido"),
       password: z
         .string()

@@ -7,9 +7,9 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/activities/:id/reports"
+  url: "{{baseUrl}}/activities/:activityId/reports"
   params:
-    - name: id
+    - name: activityId
       value: 22ac40bd-e160-4c6e-8505-b63913d2482f
       type: path
       description: Activity UUID
@@ -32,10 +32,10 @@ examples:
   - name: 201 Response
     description: Report registered successfully.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -66,10 +66,10 @@ examples:
   - name: 400 - Invalid body
     description: category is not one of the accepted values.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -99,12 +99,12 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The id in the path is not a UUID.
+    description: The activityId in the path is not a UUID.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "not-a-uuid"
           type: path
           description: Activity UUID
@@ -129,18 +129,18 @@ examples:
             "message": "Validation error.",
             "errors": [
               {
-                "field": "id",
-                "message": "id must be a valid UUID."
+                "field": "activityId",
+                "message": "activityId must be a valid UUID."
               }
             ]
           }
   - name: 401 - Missing token
     description: No session cookie was sent.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -167,10 +167,10 @@ examples:
   - name: 401 - Invalid token
     description: The session cookie is invalid or expired.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -197,10 +197,10 @@ examples:
   - name: 403 Response
     description: The author tried to report their own activity.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -227,10 +227,10 @@ examples:
   - name: 404 Response
     description: Activity not found or deleted.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
@@ -257,10 +257,10 @@ examples:
   - name: 409 Response
     description: The user already reported this activity.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID
@@ -287,10 +287,10 @@ examples:
   - name: 500 Response
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:id/reports"
+      url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
       params:
-        - name: id
+        - name: activityId
           value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
           type: path
           description: Activity UUID

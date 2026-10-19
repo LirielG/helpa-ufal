@@ -123,6 +123,42 @@ examples:
             ]
           }
 
+  - name: 400 - Name too long
+    description: fullName is limited to 120 characters, the length the certificate's name line is sized for.
+    request:
+      url: "{{baseUrl}}/auth/register"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "userType": "STUDENT",
+            "fullName": "Maria Aparecida da Conceição dos Santos Albuquerque Cavalcanti de Vasconcelos Wanderley Lins Bezerra de Menezes Lima Neto",
+            "email": "maria@email.com",
+            "password": "Senha@123",
+            "course": "CC",
+            "registrationCode": "20260010"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "fullName",
+                "message": "Too big: expected string to have <=120 characters"
+              }
+            ]
+          }
+
   - name: 409 - Email already in use
     description: Email already in use. Triggered when `email` duplicates an existing user, regardless of userType.
     request:

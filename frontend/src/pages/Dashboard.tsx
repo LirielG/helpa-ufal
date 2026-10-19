@@ -20,7 +20,7 @@ import { useActionRegister } from "../hooks/useActionRegister";
 const INITIAL_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  availability: "all",
+  status: "all",
   search: "",
 };
 
@@ -56,12 +56,12 @@ export function Dashboard({ debounceMs = 400 }: DashboardProps) {
   // The field stays controlled by what was typed while the request trails it.
   // Debouncing `filters` as a whole would delay the selects too, which filter
   // on the spot.
-  const { area, actionType, availability } = filters;
+  const { area, actionType, status } = filters;
   const search = useDebouncedValue(filters.search ?? "", debounceMs);
 
   const requestFilters = useMemo<FilterOptions>(
-    () => ({ area, actionType, availability, search }),
-    [area, actionType, availability, search],
+    () => ({ area, actionType, status, search }),
+    [area, actionType, status, search],
   );
 
   const changeFeed = useCallback(

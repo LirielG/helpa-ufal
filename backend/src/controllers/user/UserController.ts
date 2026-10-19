@@ -4,6 +4,8 @@ import type { IUserService } from "@/services/user/IUserService.js";
 import type { IUserController } from "@/controllers/user/IUserController.js";
 import type { ListUserActivitiesQuery } from "@/schemas/user/UserActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
+import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
+import { authCookieOptions } from "@/config/auth-cookie.js";
 
 type Props = {
   userService?: IUserService;
@@ -21,6 +23,21 @@ class UserController implements IUserController {
 
     // The id comes from the token and from nowhere else, so the route cannot be pointed at someone else's profile.
     const profile = await this._userService.getProfile(req.user.id);
+
+    res.status(200).json(profile);
+  }
+
+  public async updateMe(req: Request, res: Response): Promise<void> {
+    if (!req.user) throw new CustomError(401, "No token provided.");
+
+    const schema = updateProfileSchemaFor(req.user.userType);
+    const data = schema.parse(req.body);
+
+    const profile = await this._userService.updateProfile(req.user.id, data);
+
+    if (data.newPassword !== undefined) {
+      res.clearCookie("token", authCookieOptions);
+    }
 
     res.status(200).json(profile);
   }

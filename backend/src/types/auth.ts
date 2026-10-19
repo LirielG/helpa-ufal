@@ -4,6 +4,7 @@ export type AuthenticatedUser = {
   id: string;
   userType: UserType;
   isManager: boolean;
+  tokenVersion: number;
 };
 
 export type UserResponse = {

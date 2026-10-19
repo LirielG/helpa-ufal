@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   makeAction,
   makeActionDetail,
+  makeCertificateValidation,
   makeEnrollment,
   makeSigaaActivity,
   makeUser,
@@ -102,6 +103,10 @@ export const handlers = [
       limit: 20,
       totalPresent: 0,
     }),
+  ),
+
+  http.get(`${API}/certificate-validations/:validationCode`, () =>
+    HttpResponse.json(makeCertificateValidation()),
   ),
 ];
 

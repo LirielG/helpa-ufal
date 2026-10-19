@@ -141,6 +141,14 @@ export const api = {
     return request<T>("POST", endpoint, body, options);
   },
 
+  put<T>(
+    endpoint: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<T> {
+    return request<T>("PUT", endpoint, body, options);
+  },
+
   patch<T>(
     endpoint: string,
     body?: unknown,

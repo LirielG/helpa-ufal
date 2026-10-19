@@ -256,7 +256,7 @@ examples:
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:id/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -324,7 +324,7 @@ docs: |-
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
   - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
-  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:id/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
+  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
   - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
@@ -332,7 +332,7 @@ docs: |-
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
   - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
-  - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:id.
+  - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:activityId.
   - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
   - A nonexistent, soft-deleted or non-UUID activity id returns 404.

@@ -8,6 +8,7 @@ import {
   EditAction,
   NotFound,
   EnrollmentsPage,
+  CertificateValidation,
 } from "../pages";
 
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
@@ -81,6 +82,23 @@ export function AppRoutes() {
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
+        }
+      />
+      {/* Both paths are printed on issued certificates: never rename them. */}
+      <Route
+        path="/validar"
+        element={
+          <PublicRoute>
+            <CertificateValidation />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/validar/:validationCode"
+        element={
+          <PublicRoute>
+            <CertificateValidation />
+          </PublicRoute>
         }
       />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

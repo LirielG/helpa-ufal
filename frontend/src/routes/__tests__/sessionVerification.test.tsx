@@ -62,9 +62,7 @@ function holdSessionCheck() {
     release = resolve;
   });
 
-  server.use(
-    http.get(`${API}/users/me`, async () => (await gate)()),
-  );
+  server.use(http.get(`${API}/users/me`, async () => (await gate)()));
 
   return { respond: (makeResponse: () => Response) => release(makeResponse) };
 }
@@ -244,20 +242,18 @@ describe("session verification on load", () => {
 
     expect(querySessionLoader()).toBeInTheDocument();
     expect(queryLoginForm()).toBeNull();
-    expect(screen.queryByRole("combobox", { name: "Disponibilidade" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
 
     check.respond(unauthorized);
 
     expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
-    expect(screen.queryByRole("combobox", { name: "Disponibilidade" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
   });
 
   // Criterion 8
   it("checks once per load, not on every navigation", async () => {
     const user = await reloadWithStoredUser();
-    const calls = countSessionChecks(() =>
-      HttpResponse.json(meResponse(user)),
-    );
+    const calls = countSessionChecks(() => HttpResponse.json(meResponse(user)));
 
     function Navigator() {
       const navigate = useNavigate();
@@ -285,7 +281,7 @@ describe("session verification on load", () => {
     await ui.click(screen.getByRole("button", { name: "detalhe" }));
     await screen.findByText("Oficina de Programação");
     await ui.click(screen.getByRole("button", { name: "painel" }));
-    await screen.findByRole("combobox", { name: "Disponibilidade" });
+    await screen.findByRole("combobox", { name: "Status" });
 
     expect(calls.count).toBe(1);
   });
@@ -296,7 +292,7 @@ describe("session verification on load", () => {
     render(<AppRoutes />, { route: "/dashboard" });
 
     expect(
-      await screen.findByRole("combobox", { name: "Disponibilidade" }),
+      await screen.findByRole("combobox", { name: "Status" }),
     ).toBeInTheDocument();
     expect(calls.count).toBe(0);
     expect(useAuthStore.getState().isSessionVerified).toBe(true);

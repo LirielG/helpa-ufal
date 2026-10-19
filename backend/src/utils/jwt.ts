@@ -14,7 +14,10 @@ export function signJwt(
 
 export function verifyJwt(token: string): AuthenticatedUser | null {
   try {
-    return jwt.verify(token, env.JWT_SECRET) as AuthenticatedUser;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as AuthenticatedUser;
+
+    // Tokens signed before the claim existed belong to version 0.
+    return { ...decoded, tokenVersion: decoded.tokenVersion ?? 0 };
   } catch {
     return null;
   }

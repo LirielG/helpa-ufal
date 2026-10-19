@@ -6,11 +6,13 @@ import { CertificatePdfRenderer } from "@/services/certificate/CertificatePdfRen
 import type { ICertificatePdfRenderer } from "@/services/certificate/ICertificatePdfRenderer.js";
 import type {
   CertificateFile,
+  CertificateValidation,
   ICertificateService,
 } from "@/services/certificate/ICertificateService.js";
 import CustomError from "@/models/error/CustomError.js";
 import { isValidUUID } from "@/utils/uuid.js";
 import { ACTIVE_ENROLLMENT_STATUS } from "@/types/enrollment.js";
+import { normalizeValidationCode } from "@/utils/validationCode.js";
 
 type Props = {
   certificateRepository?: ICertificateRepository;
@@ -80,6 +82,38 @@ class CertificateService implements ICertificateService {
     return {
       fileName: `certificado-${certificate.validationCode}.pdf`,
       content,
+    };
+  }
+
+  public async validate(input: string): Promise<CertificateValidation> {
+    // A malformed code gets the same body as an unknown one, so the response
+    // never confirms which inputs are well-formed codes.
+    const notFound = new CustomError(404, "Certificate not found.");
+
+    const validationCode = normalizeValidationCode(input);
+    if (!validationCode) throw notFound;
+
+    const certificate =
+      await this._certificateRepository.findByValidationCode(validationCode);
+    if (!certificate) throw notFound;
+
+    // Same guard as the download: a row left behind never attests presence.
+    const { enrollment } = certificate;
+    if (
+      enrollment.status !== ACTIVE_ENROLLMENT_STATUS ||
+      enrollment.attendanceConfirmed !== true
+    ) {
+      throw notFound;
+    }
+
+    return {
+      validationCode: certificate.validationCode,
+      holderName: enrollment.user.fullName,
+      activityTitle: enrollment.activity.title,
+      activityStartDate: enrollment.activity.startDate,
+      activityEndDate: enrollment.activity.endDate,
+      workloadHours: enrollment.confirmedWorkloadHours,
+      issuedAt: certificate.issuedAt,
     };
   }
 }
