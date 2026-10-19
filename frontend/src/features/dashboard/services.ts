@@ -16,8 +16,8 @@ export async function fetchActions(
     apiParams.search = filters.search;
   }
 
-  if (filters.availability === "available") {
-    apiParams.status = "OPEN";
+  if (filters.status !== "all") {
+    apiParams.status = filters.status;
   }
 
   if (filters.actionType !== "all") {

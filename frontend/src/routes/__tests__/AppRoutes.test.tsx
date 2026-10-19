@@ -17,7 +17,7 @@ import { AppRoutes } from "../AppRoutes";
 type TestUser = ReturnType<typeof userEvent.setup>;
 
 function findDashboard() {
-  return screen.findByRole("combobox", { name: "Disponibilidade" });
+  return screen.findByRole("combobox", { name: "Status" });
 }
 
 async function submitLogin(user: TestUser) {
