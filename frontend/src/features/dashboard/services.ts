@@ -16,7 +16,7 @@ export async function fetchActions(
     apiParams.search = filters.search;
   }
 
-  if (filters.status && filters.status !== "all") {
+  if (filters.status !== "all") {
     apiParams.status = filters.status;
   }
 
