@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { UserProfile } from "../types";
 import { getInitials } from "../../../utils/helpers";
 
@@ -8,6 +9,7 @@ type ProfileCardProps = {
 export function ProfileCard({ user }: ProfileCardProps) {
   const initials = getInitials(user.fullName) || "P";
   const hours = user.totalWorkloadHours;
+  const counterCaptionId = useId();
 
   return (
     <section className="bg-white rounded-2xl shadow-sm p-6 flex items-center justify-between gap-4">
@@ -32,7 +34,11 @@ export function ProfileCard({ user }: ProfileCardProps) {
         </div>
       </div>
 
-      <div className="shrink-0 text-center">
+      <div
+        role="group"
+        aria-labelledby={counterCaptionId}
+        className="shrink-0 text-center"
+      >
         <div className="bg-[#ADF7F9] rounded-2xl px-6 py-4 min-w-22">
           <span className="block text-3xl font-bold leading-none text-[#002147]">
             {String(hours).padStart(2, "0")}
@@ -41,7 +47,9 @@ export function ProfileCard({ user }: ProfileCardProps) {
             {hours === 1 ? "hora" : "horas"}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mt-2">Total contribuído</p>
+        <p id={counterCaptionId} className="text-xs text-gray-500 mt-2">
+          Total contribuído
+        </p>
       </div>
     </section>
   );

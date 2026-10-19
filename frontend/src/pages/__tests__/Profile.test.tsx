@@ -113,10 +113,8 @@ function serveTotalWorkloadHours(totalWorkloadHours: number) {
   );
 }
 
-/** The box with the total, found by the caption under it. */
-async function findContributionCounter() {
-  const caption = await screen.findByText("Total contribuído");
-  return caption.parentElement!;
+function findContributionCounter() {
+  return screen.findByRole("group", { name: "Total contribuído" });
 }
 
 function findNameField() {
