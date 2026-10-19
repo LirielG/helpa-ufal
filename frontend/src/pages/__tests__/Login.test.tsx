@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes } from "react-router";
 import {
   API,
   HttpResponse,
@@ -146,6 +146,36 @@ describe("Login", () => {
       await screen.findByText("E-mail ou senha incorretos."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Any other wording.")).toBeNull();
+  });
+
+  it("drops a failed login's message once the visitor leaves the screen", async () => {
+    server.use(
+      http.post(`${API}/auth/login`, () =>
+        HttpResponse.json(
+          {
+            status: 401,
+            code: "UNAUTHENTICATED",
+            message: "Invalid credentials.",
+          },
+          { status: 401 },
+        ),
+      ),
+    );
+    const { user } = render(
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Link to="/login">Voltar</Link>} />
+      </Routes>,
+      { route: "/login" },
+    );
+
+    await submitLoginForm(user, makeLoginRequest());
+    await screen.findByText("E-mail ou senha incorretos.");
+    await user.click(screen.getByRole("link", { name: "Criar conta" }));
+    await user.click(screen.getByRole("link", { name: "Voltar" }));
+
+    expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
+    expect(screen.queryByText("E-mail ou senha incorretos.")).toBeNull();
   });
 
   it.each([

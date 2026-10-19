@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { Mail } from "lucide-react";
 import { Button, Alert } from "../components";
@@ -23,9 +23,14 @@ type LoginRouteState = ReturnToState & {
 };
 
 export function Login() {
-  const { login, isLoading, error: authError } = useAuth();
+  const { login, isLoading, error: authError, clearError } = useAuth();
   const { state } = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+
+  // A failed login's message lives in the global store, so leaving the screen
+  // must drop it; otherwise it greets the visitor on the next visit and hides
+  // the notice a sign-up hands over.
+  useEffect(() => clearError, [clearError]);
 
   const routeState = state as LoginRouteState | null;
   const successMessage = routeState?.successMessage ?? null;
