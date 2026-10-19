@@ -87,14 +87,14 @@ class UserService implements IUserService {
       newHash = await bcryptjs.hash(input.newPassword, BCRYPT_SALT_ROUNDS);
     }
 
-    const updatedUser = await this._userRepository.updateProfile(userId, {
-      ...(input.fullName !== undefined && { fullName: input.fullName }),
-      ...(input.course !== undefined && { course: input.course }),
-      ...(newHash !== undefined && { passwordHash: newHash }),
-    });
-
-    const totalWorkloadHours =
-      await this._enrollmentRepository.sumConfirmedHoursByUserId(userId);
+    const [updatedUser, totalWorkloadHours] = await Promise.all([
+      this._userRepository.updateProfile(userId, {
+        ...(input.fullName !== undefined && { fullName: input.fullName }),
+        ...(input.course !== undefined && { course: input.course }),
+        ...(newHash !== undefined && { passwordHash: newHash }),
+      }),
+      this._enrollmentRepository.sumConfirmedHoursByUserId(userId),
+    ]);
 
     return this.toProfileResponse(updatedUser, totalWorkloadHours);
   }

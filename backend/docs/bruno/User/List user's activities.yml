@@ -41,7 +41,6 @@ examples:
               "slots": 50,
               "availableSlots": 12,
               "status": "OPEN",
-              "deletedAt": null,
               "details": {
                 "description": "Volunteer action to collect waste around the lagoon.",
                 "area": "Meio Ambiente",
@@ -57,6 +56,7 @@ examples:
                   "state": "AL"
                 }
               },
+              "deletedAt": null,
               "enrollment": {
                 "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
                 "activityId": "a1b2c3d4-0000-4000-8000-000000000030",
@@ -79,55 +79,6 @@ examples:
   - name: 200 filter=completed
     description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear. A homologated presence (true) carries its certificate; a not homologated one (null) has certificate null.
 
-  - name: 200 filter=completed with a deleted activity
-    description: The author deleted the activity after the user's presence was homologated. It stays in completed because the certificate is still valid and downloadable, and deletedAt carries the deletion instant. Without a certificate, a deleted activity does not appear.
-    response:
-      status: 200
-      body: |-
-        {
-          "items": [
-            {
-              "id": "a1b2c3d4-0000-4000-8000-000000000034",
-              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
-              "title": "Introduction to Git Workshop",
-              "type": "COURSE",
-              "campus": "ARAPIRACA",
-              "startDate": "2026-05-04T13:00:00.000Z",
-              "endDate": "2026-05-04T17:00:00.000Z",
-              "slots": 30,
-              "availableSlots": 22,
-              "status": "COMPLETED",
-              "deletedAt": "2026-06-20T15:00:00.000Z",
-              "details": {
-                "description": "Hands-on workshop on version control.",
-                "area": "Tecnologia",
-                "format": "ONLINE",
-                "url": "https://meet.example.com/git-workshop",
-                "workloadHours": 4,
-                "address": null
-              },
-              "enrollment": {
-                "id": "6fa459ea-ee8a-4ca4-894e-db77e160355e",
-                "activityId": "a1b2c3d4-0000-4000-8000-000000000034",
-                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-                "status": "APPROVED",
-                "attendanceConfirmed": true,
-                "confirmedWorkloadHours": 4,
-                "createdAt": "2026-04-20T09:00:00.000Z",
-                "updatedAt": "2026-05-05T11:00:00.000Z"
-              },
-              "certificate": {
-                "id": "3d6f4e2a-8b1c-4f7e-9a2d-5c8b7e6f1a90",
-                "validationCode": "Q2W8E4R6T9",
-                "issuedAt": "2026-05-05T11:00:00.000Z"
-              }
-            }
-          ],
-          "total": 1,
-          "page": 1,
-          "limit": 20,
-          "totalPages": 1
-        }
     response:
       status: 200
       body: |-
@@ -144,7 +95,6 @@ examples:
               "slots": 80,
               "availableSlots": 3,
               "status": "COMPLETED",
-              "deletedAt": null,
               "details": {
                 "description": "Lecture on scientific writing.",
                 "area": "Educação",
@@ -160,6 +110,7 @@ examples:
                   "state": "AL"
                 }
               },
+              "deletedAt": null,
               "enrollment": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "activityId": "a1b2c3d4-0000-4000-8000-000000000032",
@@ -183,6 +134,55 @@ examples:
           "totalPages": 1
         }
 
+  - name: 200 filter=completed with a deleted activity
+    description: The author deleted the activity after the user's presence was homologated. It stays in completed because the certificate is still valid and downloadable, and deletedAt carries the deletion instant. Without a certificate, a deleted activity does not appear.
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000034",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+              "title": "Introduction to Git Workshop",
+              "type": "COURSE",
+              "campus": "ARAPIRACA",
+              "startDate": "2026-05-04T13:00:00.000Z",
+              "endDate": "2026-05-04T17:00:00.000Z",
+              "slots": 30,
+              "availableSlots": 22,
+              "status": "COMPLETED",
+              "details": {
+                "description": "Hands-on workshop on version control.",
+                "area": "Tecnologia",
+                "format": "ONLINE",
+                "url": "https://meet.example.com/git-workshop",
+                "workloadHours": 4,
+                "address": null
+              },
+              "deletedAt": "2026-06-20T15:00:00.000Z",
+              "enrollment": {
+                "id": "6fa459ea-ee8a-4ca4-894e-db77e160355e",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000034",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-04-20T09:00:00.000Z",
+                "updatedAt": "2026-05-05T11:00:00.000Z"
+              },
+              "certificate": {
+                "id": "3d6f4e2a-8b1c-4f7e-9a2d-5c8b7e6f1a90",
+                "validationCode": "Q2W8E4R6T9",
+                "issuedAt": "2026-05-05T11:00:00.000Z"
+              }
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
   - name: 200 filter=managed
     description: Activities created by the user (Activity.authorId = userId), in any status. enrollment is null when the author is not enrolled in their own activity, as here; details is null when the activity has no ActivityDetails.
     response:
@@ -201,8 +201,8 @@ examples:
               "slots": 15,
               "availableSlots": 15,
               "status": "OPEN",
-              "deletedAt": null,
               "details": null,
+              "deletedAt": null,
               "enrollment": null,
               "certificate": null
             }

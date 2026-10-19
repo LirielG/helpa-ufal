@@ -349,7 +349,11 @@ class EnrollmentRepository implements IEnrollmentRepository {
     // hours it homologated, and their certificate stays valid.
     const { _sum } = await this._prisma.enrollment.aggregate({
       _sum: { confirmedWorkloadHours: true },
-      where: { userId, status: "APPROVED", attendanceConfirmed: true },
+      where: {
+        userId,
+        status: ACTIVE_ENROLLMENT_STATUS,
+        attendanceConfirmed: true,
+      },
     });
 
     return _sum.confirmedWorkloadHours ?? 0;
