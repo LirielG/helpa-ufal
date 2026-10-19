@@ -23,18 +23,10 @@ export async function getProfile(): Promise<UserProfile> {
   return authService.me();
 }
 
-//Changes made here were done solely to avoid errors in Profile.tsx
 export async function updateProfile(
-  currentUser: UserProfile,
   data: UpdateProfileRequest,
 ): Promise<UserProfile> {
-  //Delay removed to meet requirement 3.
-  return {
-    ...currentUser,
-    fullName: data.fullName,
-    email: data.email,
-    //updatedAt: new Date().toISOString(),
-  };
+  return api.patch<UserProfile>("/users/me", data);
 }
 
 const LIST_LIMIT = 100;

@@ -7,7 +7,11 @@ import {
 } from "@/test/factories";
 import { ApiError } from "@/services/apiError";
 import type { UserActivityItem } from "@/services/contracts/user";
-import { fetchUserActivities, updateActivityStatus } from "../services";
+import {
+  fetchUserActivities,
+  updateActivityStatus,
+  updateProfile,
+} from "../services";
 
 const ACTION_ID = "act-status";
 
@@ -153,4 +157,41 @@ describe("updateActivityStatus", () => {
       expect(error).toMatchObject({ status, message });
     },
   );
+});
+
+describe("updateProfile", () => {
+  it("sends the body as a PATCH to /users/me and returns the saved profile", async () => {
+    let request: { method: string; body: unknown } | undefined;
+    server.use(
+      http.patch(`${API}/users/me`, async ({ request: req }) => {
+        request = { method: req.method, body: await req.json() };
+        return HttpResponse.json({ fullName: "Nome Salvo" });
+      }),
+    );
+
+    const profile = await updateProfile({ fullName: "Nome Salvo" });
+
+    expect(request).toEqual({
+      method: "PATCH",
+      body: { fullName: "Nome Salvo" },
+    });
+    expect(profile).toMatchObject({ fullName: "Nome Salvo" });
+  });
+
+  it("rejects with the API's field errors so the form can place them", async () => {
+    const errors = [{ field: "fullName", message: "Too big" }];
+    server.use(
+      http.patch(`${API}/users/me`, () =>
+        HttpResponse.json(
+          { status: 400, message: "Validation error.", errors },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    const error = await updateProfile({ fullName: "x" }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 400, errors });
+  });
 });
