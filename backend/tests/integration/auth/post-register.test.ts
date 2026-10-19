@@ -5,6 +5,7 @@ import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import { authHeader } from "../../helpers/auth.js";
+import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 const REGISTER_URL = "/auth/register";
 const LOGIN_URL = "/auth/login";
@@ -146,6 +147,40 @@ describe("POST /auth/register", () => {
       expect.arrayContaining([expect.objectContaining({ field: "fullName" })]),
     );
   });
+
+  it.each([
+    ["STUDENT", aStudentPayload],
+    ["TEACHER", aTeacherPayload],
+  ])(
+    "accepts a %s fullName at the length limit",
+    async (_userType, aPayload) => {
+      const fullName = "a".repeat(FULL_NAME_MAX_LENGTH);
+
+      const response = await request(app)
+        .post(REGISTER_URL)
+        .send(aPayload({ fullName }));
+
+      expect(response.status).toBe(201);
+      expect(response.body.fullName).toBe(fullName);
+    },
+  );
+
+  it.each([
+    ["STUDENT", aStudentPayload],
+    ["TEACHER", aTeacherPayload],
+  ])(
+    "rejects a %s fullName one character over the length limit",
+    async (_userType, aPayload) => {
+      const response = await request(app)
+        .post(REGISTER_URL)
+        .send(aPayload({ fullName: "a".repeat(FULL_NAME_MAX_LENGTH + 1) }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual([
+        expect.objectContaining({ field: "fullName" }),
+      ]);
+    },
+  );
 
   it("rejects a userType outside the STUDENT | TEACHER domain", async () => {
     const response = await request(app)

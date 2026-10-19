@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 import { EnvSchema } from "@/config/env.js";
+import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 const minimalEnv = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/helpa",
@@ -184,4 +185,24 @@ describe("EnvSchema — SIGAA_CACHE_TTL_HOURS", () => {
       expect(result.error?.issues[0]?.path).toEqual(["SIGAA_CACHE_TTL_HOURS"]);
     },
   );
+});
+
+describe("EnvSchema — ADMIN_FULL_NAME", () => {
+  it("accepts a name at the length limit", () => {
+    const name = "a".repeat(FULL_NAME_MAX_LENGTH);
+
+    const parsed = EnvSchema.parse({ ...minimalEnv, ADMIN_FULL_NAME: name });
+
+    expect(parsed.ADMIN_FULL_NAME).toBe(name);
+  });
+
+  it("rejects a name one character over the limit, naming the variable", () => {
+    const result = EnvSchema.safeParse({
+      ...minimalEnv,
+      ADMIN_FULL_NAME: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["ADMIN_FULL_NAME"]);
+  });
 });

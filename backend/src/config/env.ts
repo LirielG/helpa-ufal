@@ -1,5 +1,6 @@
 import { z } from "zod";
 import dotenv from "dotenv";
+import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 if (process.env["NODE_ENV"]) {
   dotenv.config({ path: `.env.${process.env["NODE_ENV"]}`, quiet: true });
@@ -73,7 +74,7 @@ export const EnvSchema = z.object({
   SIGAA_CACHE_TTL_HOURS: z.coerce.number().int().positive().default(12),
   ADMIN_EMAIL: z.email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
-  ADMIN_FULL_NAME: z.string().min(1).optional(),
+  ADMIN_FULL_NAME: z.string().min(1).max(FULL_NAME_MAX_LENGTH).optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

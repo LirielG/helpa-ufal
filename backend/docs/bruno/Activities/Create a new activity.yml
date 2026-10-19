@@ -147,6 +147,46 @@ examples:
               }
             ]
           }
+  - name: 400 - Title too long
+    description: title is limited to 150 characters, the length the certificate's two title lines are sized for.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Programa de Formação Continuada em Tecnologias Educacionais, Robótica Livre e Pensamento Computacional para Professores da Rede Pública do Agreste Alag",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "ONLINE",
+            "url": "https://meet.example.com/oficina"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "title",
+                "message": "Too big: expected string to have <=150 characters"
+              }
+            ]
+          }
   - name: 400 - Business rule
     description: startDate is not before endDate.
     request:
