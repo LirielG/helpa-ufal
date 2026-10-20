@@ -5,7 +5,9 @@ import { getEnrollmentErrorMessage, resolveCancellationError } from "../errors";
 describe("getEnrollmentErrorMessage", () => {
   describe("401 Unauthorized", () => {
     it("returns null for 401 to let session middleware handle redirect", () => {
-      const error = new ApiError(401, "No token provided.");
+      const error = new ApiError(401, "No token provided.", [], {
+        code: "UNAUTHENTICATED",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBeNull();
     });
@@ -14,13 +16,20 @@ describe("getEnrollmentErrorMessage", () => {
       const error = new ApiError(
         401,
         "Token malformatted, expired or invalid.",
+        [],
+        { code: "SESSION_INVALID" },
       );
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBeNull();
     });
 
     it("returns null for 401 with user not found", () => {
-      const error = new ApiError(401, "User account not found or inactive.");
+      const error = new ApiError(
+        401,
+        "User account not found or inactive.",
+        [],
+        { code: "UNAUTHENTICATED" },
+      );
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBeNull();
     });
@@ -28,7 +37,9 @@ describe("getEnrollmentErrorMessage", () => {
 
   describe("404 Not Found", () => {
     it("returns pt-BR message for activity not found", () => {
-      const error = new ApiError(404, "Activity not found.");
+      const error = new ApiError(404, "Activity not found.", [], {
+        code: "ACTIVITY_NOT_FOUND",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe(
         "A ação não foi encontrada. Ela pode ter sido removida.",
@@ -38,12 +49,17 @@ describe("getEnrollmentErrorMessage", () => {
 
   describe("400 Validation Error", () => {
     it("returns pt-BR message for validation error", () => {
-      const error = new ApiError(400, "Validation error.", [
-        {
-          field: "activityId",
-          message: "activityId must be a valid UUID.",
-        },
-      ]);
+      const error = new ApiError(
+        400,
+        "Validation error.",
+        [
+          {
+            field: "activityId",
+            message: "activityId must be a valid UUID.",
+          },
+        ],
+        { code: "VALIDATION_ERROR" },
+      );
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe(
         "Dados inválidos. Tente recarregar a página e tente novamente.",
@@ -53,28 +69,33 @@ describe("getEnrollmentErrorMessage", () => {
 
   describe("409 Conflict", () => {
     it("returns pt-BR message for activity not open for enrollment", () => {
-      const error = new ApiError(409, "Activity is not open for enrollment.");
+      const error = new ApiError(409, "Arbitrary backend text", [], {
+        code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("As inscrições para esta ação não estão abertas.");
     });
 
-    it("returns pt-BR message for user already enrolled", () => {
-      const error = new ApiError(
-        409,
-        "User is already enrolled in this activity.",
-      );
+    it("returns pt-BR message for user already enrolled using code", () => {
+      const error = new ApiError(409, "Arbitrary backend text", [], {
+        code: "ALREADY_ENROLLED",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("Você já está inscrito nesta ação.");
     });
 
     it("returns pt-BR message for no available slots", () => {
-      const error = new ApiError(409, "No available slots for this activity.");
+      const error = new ApiError(409, "Arbitrary backend text", [], {
+        code: "NO_AVAILABLE_SLOTS",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("Esta ação não tem mais vagas disponíveis.");
     });
 
     it("returns generic pt-BR message for unknown 409", () => {
-      const error = new ApiError(409, "Unknown conflict.");
+      const error = new ApiError(409, "Unknown conflict.", [], {
+        code: "UNKNOWN_CONFLICT_CODE",
+      });
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe(
         "Não foi possível concluir a inscrição. Tente novamente.",
@@ -106,14 +127,18 @@ describe("getEnrollmentErrorMessage", () => {
 
 describe("resolveCancellationError", () => {
   it("treats a missing enrollment as already cancelled", () => {
-    const error = new ApiError(404, "Enrollment not found.");
+    const error = new ApiError(404, "Arbitrary message text", [], {
+      code: "ENROLLMENT_NOT_FOUND",
+    });
     expect(resolveCancellationError(error)).toEqual({
       kind: "alreadyCancelled",
     });
   });
 
   it("reports a missing activity as removed", () => {
-    const error = new ApiError(404, "Activity not found.");
+    const error = new ApiError(404, "Arbitrary message text", [], {
+      code: "ACTIVITY_NOT_FOUND",
+    });
     expect(resolveCancellationError(error)).toEqual({
       kind: "activityRemoved",
     });
@@ -157,7 +182,9 @@ describe("resolveCancellationError", () => {
   });
 
   it("falls back to a generic message on an unknown 404", () => {
-    const error = new ApiError(404, "Route not found.");
+    const error = new ApiError(404, "Route not found.", [], {
+      code: "ROUTE_NOT_FOUND",
+    });
     expect(resolveCancellationError(error)).toEqual({
       kind: "message",
       text: "Não foi possível cancelar a inscrição. Tente novamente.",

@@ -15,8 +15,7 @@ export function getEnrollmentsErrorMessage(error: ApiError): string | null {
   if (error.status === 403)
     return "Você não tem permissão para ver os inscritos desta ação.";
 
-  if (error.status === 404)
-    return "A ação não foi encontrada ou foi removida.";
+  if (error.status === 404) return "A ação não foi encontrada ou foi removida.";
 
   return "Erro ao carregar os inscritos. Tente novamente.";
 }
@@ -67,7 +66,7 @@ export function resolveAttendanceError(
   }
 
   if (error.status === 409) {
-    if (error.message.includes("approved enrollments")) {
+    if (error.code === "ENROLLMENT_NOT_APPROVED") {
       return {
         kind: "stale",
         text: "Esta inscrição não está mais aprovada, então a presença não pode ser homologada.",

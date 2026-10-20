@@ -83,10 +83,10 @@ function serveAttendance(enrollment: EnrollmentListItem) {
   return bodies;
 }
 
-function serveAttendanceError(status: number, message: string) {
+function serveAttendanceError(status: number, message: string, code?: string) {
   server.use(
     http.put(`${API}/enrollments/:enrollmentId/attendance`, () =>
-      HttpResponse.json({ message }, { status }),
+      HttpResponse.json({ message, code }, { status }),
     ),
   );
 }
@@ -451,7 +451,11 @@ describe("EnrollmentsPage — attendance", () => {
       }),
     );
     serveActivity();
-    serveAttendanceError(404, "Enrollment not found.");
+    serveAttendanceError(
+      404,
+      "Inscrição não encontrada.",
+      "ENROLLMENT_NOT_FOUND",
+    );
 
     const { user } = renderPage();
 

@@ -813,11 +813,14 @@ describe("EditAction", () => {
     failUpdate(400, {
       status: 400,
       message: "Validation error.",
+      code: "VALIDATION_ERROR",
       errors: [
         {
           field: "slots",
           message:
             "slots cannot be reduced below the current number of approved enrollments (15).",
+          code: "BELOW_APPROVED_ENROLLMENTS",
+          details: { approvedEnrollments: 15 },
         },
       ],
     });

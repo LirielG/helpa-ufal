@@ -44,8 +44,9 @@ export interface ApiErrorBody {
 
 export interface ApiErrorItem {
   field: string;
-  code: OpenUnion<ApiErrorItemCode>;
+  code?: OpenUnion<ApiErrorItemCode>;
   message: string;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -64,8 +65,18 @@ export type ApiErrorCode =
   | "CONFLICT"
   | "UNPROCESSABLE"
   | "INTERNAL_ERROR"
-  | "SESSION_INVALID";
+  | "SESSION_INVALID"
+  | "ALREADY_ENROLLED"
+  | "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT"
+  | "NO_AVAILABLE_SLOTS"
+  | "ENROLLMENT_NOT_FOUND"
+  | "ACTIVITY_NOT_FOUND"
+  | "ENROLLMENT_NOT_APPROVED"
+  | "ACTIVITY_NOT_COMPLETED";
 
 /** §4 "codes de item de `errors[]` já definidos". */
 export type ApiErrorItemCode =
-  "INVALID_UUID" | "UNKNOWN_PARAMETER" | "INVALID_DATETIME";
+  | "INVALID_UUID"
+  | "UNKNOWN_PARAMETER"
+  | "INVALID_DATETIME"
+  | "BELOW_APPROVED_ENROLLMENTS";

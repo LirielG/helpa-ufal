@@ -91,7 +91,10 @@ describe("EnrollmentModal", () => {
       server.use(
         http.post(`${API}/activities/act-409-1/enroll`, () =>
           HttpResponse.json(
-            { message: "Activity is not open for enrollment." },
+            {
+              message: "Activity is not open for enrollment.",
+              code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+            },
             { status: 409 },
           ),
         ),
@@ -119,7 +122,10 @@ describe("EnrollmentModal", () => {
       server.use(
         http.post(`${API}/activities/act-409-2/enroll`, () =>
           HttpResponse.json(
-            { message: "User is already enrolled in this activity." },
+            {
+              message: "User is already enrolled in this activity.",
+              code: "ALREADY_ENROLLED",
+            },
             { status: 409 },
           ),
         ),
@@ -143,7 +149,10 @@ describe("EnrollmentModal", () => {
       server.use(
         http.post(`${API}/activities/act-409-3/enroll`, () =>
           HttpResponse.json(
-            { message: "No available slots for this activity." },
+            {
+              message: "No available slots for this activity.",
+              code: "NO_AVAILABLE_SLOTS",
+            },
             { status: 409 },
           ),
         ),

@@ -304,12 +304,13 @@ describe("ActionsList cancellation from the enrolled card", () => {
     actionId: string,
     status: number,
     message?: string,
+    code?: string,
   ) {
     server.use(
       http.delete(`${API}/activities/${actionId}/enroll`, () => {
         if (status === 0) return HttpResponse.error();
         if (status === 204) return new HttpResponse(null, { status });
-        return HttpResponse.json({ status, message }, { status });
+        return HttpResponse.json({ status, message, code }, { status });
       }),
     );
   }
@@ -354,7 +355,12 @@ describe("ActionsList cancellation from the enrolled card", () => {
   it("removes the card when the enrollment was already cancelled elsewhere", async () => {
     signIn();
     const cancelled = mockEnrolledActions();
-    answerCancellation(cancelled.id, 404, "Enrollment not found.");
+    answerCancellation(
+      cancelled.id,
+      404,
+      "Inscrição não encontrada.",
+      "ENROLLMENT_NOT_FOUND",
+    );
 
     await confirmCancellation();
 
@@ -367,7 +373,12 @@ describe("ActionsList cancellation from the enrolled card", () => {
   it("removes the card when the action no longer exists", async () => {
     signIn();
     const cancelled = mockEnrolledActions();
-    answerCancellation(cancelled.id, 404, "Activity not found.");
+    answerCancellation(
+      cancelled.id,
+      404,
+      "Ação não encontrada.",
+      "ACTIVITY_NOT_FOUND",
+    );
 
     await confirmCancellation();
 

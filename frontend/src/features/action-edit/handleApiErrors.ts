@@ -25,24 +25,38 @@ const FIELD_ALIASES: Record<string, string> = {
   address: "address.addressLine",
 };
 
-const APPROVED_ENROLLMENTS_PATTERN = /approved enrollments \((\d+)\)/i;
-
-function translateSlotsMessage(apiMessage: string): string {
-  const match = apiMessage.match(APPROVED_ENROLLMENTS_PATTERN);
-  return match
-    ? `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${match[1]}).`
-    : FIELD_MESSAGES.slots;
+function translateSlotsMessage(
+  code?: string,
+  details?: Record<string, unknown>,
+  errorDetails?: Record<string, unknown>,
+): string {
+  if (code === "BELOW_APPROVED_ENROLLMENTS") {
+    const approved =
+      details?.approvedEnrollments ?? errorDetails?.approvedEnrollments;
+    if (typeof approved === "number" || typeof approved === "string") {
+      return `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${approved}).`;
+    }
+  }
+  return FIELD_MESSAGES.slots;
 }
 
 function applyValidationErrors<T extends FieldValues>(
-  errors: Array<{ field: string; message: string }>,
-  setError: UseFormSetError<T>
+  errors: Array<{
+    field: string;
+    message: string;
+    code?: string;
+    details?: Record<string, unknown>;
+  }>,
+  setError: UseFormSetError<T>,
+  errorDetails?: Record<string, unknown>,
 ): boolean {
   let assigned = false;
-  errors.forEach(({ field, message }) => {
+  errors.forEach(({ field, code, details }) => {
     const target = FIELD_ALIASES[field] ?? field;
     const translated =
-      target === "slots" ? translateSlotsMessage(message) : FIELD_MESSAGES[target];
+      target === "slots"
+        ? translateSlotsMessage(code, details, errorDetails)
+        : FIELD_MESSAGES[target];
 
     if (translated) {
       setError(target as Path<T>, { type: "server", message: translated });
@@ -116,7 +130,9 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError("Você não tem permissão para criar esta ação.");
       break;
     case 409:
-      setGeneralError("Já existe uma ação com estes dados. Verifique e tente novamente.");
+      setGeneralError(
+        "Já existe uma ação com estes dados. Verifique e tente novamente.",
+      );
       break;
     case NETWORK_ERROR_STATUS:
       setGeneralError("Falha de comunicação com o servidor. Tente novamente.");

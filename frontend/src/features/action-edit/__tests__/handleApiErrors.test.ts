@@ -22,9 +22,15 @@ function callWith(error: unknown) {
 
 /** Shape the API answers a failed validation with. */
 function validationError(
-  errors: Array<{ field: string; message: string }>,
+  errors: Array<{
+    field: string;
+    message: string;
+    code?: string;
+    details?: Record<string, unknown>;
+  }>,
+  errorOptions?: { code?: string; details?: Record<string, unknown> },
 ): ApiError {
-  return new ApiError(400, "Validation error.", errors);
+  return new ApiError(400, "Validation error.", errors, errorOptions);
 }
 
 describe("handleActionApiErrors", () => {
@@ -35,6 +41,7 @@ describe("handleActionApiErrors", () => {
           {
             field: "address.zipCode",
             message: "zipCode must contain exactly 8 digits.",
+            code: "INVALID_ZIP_CODE",
           },
         ]),
       );
@@ -49,7 +56,11 @@ describe("handleActionApiErrors", () => {
     it("never repeats the English text the API sent", () => {
       const { setError } = callWith(
         validationError([
-          { field: "startDate", message: "startDate must be in the future." },
+          {
+            field: "startDate",
+            message: "startDate must be in the future.",
+            code: "INVALID_DATETIME",
+          },
         ]),
       );
 
@@ -62,13 +73,18 @@ describe("handleActionApiErrors", () => {
 
     it("keeps the enrollment count when translating the slots error", () => {
       const { setError } = callWith(
-        validationError([
-          {
-            field: "slots",
-            message:
-              "slots cannot be reduced below the current number of approved enrollments (13).",
-          },
-        ]),
+        validationError(
+          [
+            {
+              field: "slots",
+              message:
+                "slots cannot be reduced below the current number of approved enrollments (13).",
+              code: "BELOW_APPROVED_ENROLLMENTS",
+              details: { approvedEnrollments: 13 },
+            },
+          ],
+          { code: "VALIDATION_ERROR" },
+        ),
       );
 
       expect(setError).toHaveBeenCalledWith("slots", {
@@ -80,7 +96,13 @@ describe("handleActionApiErrors", () => {
 
     it("falls back to the generic slots message when there is no count", () => {
       const { setError } = callWith(
-        validationError([{ field: "slots", message: "slots is invalid." }]),
+        validationError([
+          {
+            field: "slots",
+            message: "slots is invalid.",
+            code: "INVALID_NUMBER",
+          },
+        ]),
       );
 
       expect(setError).toHaveBeenCalledWith("slots", {
