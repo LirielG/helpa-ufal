@@ -220,6 +220,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
         throw new CustomError(
           409,
           "Attendance can only be confirmed for completed activities.",
+          { code: "ACTIVITY_NOT_COMPLETED" },
         );
       }
 
@@ -260,6 +261,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
         throw new CustomError(
           409,
           "Only approved enrollments can have attendance confirmed.",
+          { code: "ENROLLMENT_NOT_APPROVED" },
         );
       }
 
