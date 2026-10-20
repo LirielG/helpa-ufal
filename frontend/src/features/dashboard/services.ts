@@ -16,23 +16,16 @@ export async function fetchActions(
     apiParams.search = filters.search;
   }
 
+  if (filters.area !== "all") {
+    apiParams.area = filters.area;
+  }
+
   if (filters.status !== "all") {
     apiParams.status = filters.status;
   }
 
   if (filters.actionType !== "all") {
-    const typeMap: Record<string, string> = {
-      oficina: "COURSE",
-      minicurso: "COURSE",
-      palestra: "LECTURE",
-      evento: "EVENT",
-      servico: "EXTENSION",
-    };
-    const mappedType = typeMap[filters.actionType];
-
-    if (mappedType) {
-      apiParams.type = mappedType;
-    }
+    apiParams.type = filters.actionType;
   }
 
   const response = await api.get<ListActivitiesResponse>("/activities", {

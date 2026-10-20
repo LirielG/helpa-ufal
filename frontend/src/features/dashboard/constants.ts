@@ -60,20 +60,9 @@ export const ACTION_STATUS_OPTIONS = [
 ];
 
 export const FILTER_OPTIONS = {
-  areas: [
-    { value: "all", label: "Todas as áreas" },
-    { value: "educacao", label: "Educação" },
-    { value: "saude", label: "Saúde" },
-    { value: "meio-ambiente", label: "Meio Ambiente" },
-    { value: "arquitetura", label: "Arquitetura" },
-  ],
   actionTypes: [
     { value: "all", label: "Todos os tipos" },
-    { value: "oficina", label: "Oficina" },
-    { value: "palestra", label: "Palestra" },
-    { value: "evento", label: "Evento" },
-    { value: "servico", label: "Serviço" },
-    { value: "minicurso", label: "Minicurso" },
+    ...ACTION_TYPE_OPTIONS,
   ],
   status: ACTION_STATUS_OPTIONS,
 };

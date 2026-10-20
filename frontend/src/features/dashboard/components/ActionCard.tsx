@@ -5,7 +5,11 @@ import type {
   ActivityListItem,
   ActivityStatus,
 } from "@/services/contracts/activity";
-import { ACTION_STATUS_LABELS } from "../constants";
+import {
+  ACTION_CAMPUS_LABELS,
+  ACTION_STATUS_LABELS,
+  ACTION_TYPE_LABELS,
+} from "../constants";
 
 interface ActionCardProps {
   action: ActivityListItem;
@@ -23,14 +27,6 @@ export function ActionCard({ action }: ActionCardProps) {
     ACTION_STATUS_LABELS[action.status] || action.status || "Indisponível";
   const statusStyle =
     STATUS_STYLES[action.status] || "bg-gray-100 text-gray-800 border-gray-200";
-
-  const typeMap: Record<string, string> = {
-    EXTENSION: "Extensão",
-    COURSE: "Curso/Oficina",
-    EVENT: "Evento",
-    LECTURE: "Palestra",
-    OTHER: "Outros",
-  };
 
   // Enrollment is only accepted while the action is OPEN, so any other status
   // hides the slots badge instead of advertising spots nobody can take.
@@ -76,7 +72,7 @@ export function ActionCard({ action }: ActionCardProps) {
         <div className="flex items-start gap-2 text-sm text-gray-600">
           <MapPin className="size-4 shrink-0 mt-0.5 text-gray-400" />
           <span className="line-clamp-1">
-            {action.campus || "Campus não informado"}
+            {ACTION_CAMPUS_LABELS[action.campus] ?? "Não informado"}
           </span>
         </div>
 
@@ -97,8 +93,8 @@ export function ActionCard({ action }: ActionCardProps) {
         )}
 
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <span className="text-sm font-medium text-gray-700 capitalize">
-            {typeMap[action.type] || action.type}
+          <span className="text-sm font-medium text-gray-700">
+            {ACTION_TYPE_LABELS[action.type] ?? action.type}
           </span>
           <span
             className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${statusStyle}`}

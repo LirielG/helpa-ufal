@@ -1,11 +1,12 @@
 import type {
   ListActivitiesResponse,
   ActivityStatus,
+  ActivityType,
 } from "../../services/contracts/activity";
 
 export interface FilterOptions {
   area: string;
-  actionType: string;
+  actionType: ActivityType | "all";
   status: ActivityStatus | "all";
   search?: string;
 }

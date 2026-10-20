@@ -12,7 +12,7 @@ function makeAction(
   return {
     id: "action-42",
     title: "Oficina de Robótica",
-    campus: "UFAL, Arapiraca - AL",
+    campus: "SANTANA_IPANEMA",
     startDate: "2026-05-09T12:00:00Z",
     endDate: "2026-05-10T12:00:00Z",
     availableSlots: 25,
@@ -30,11 +30,34 @@ describe("ActionCard", () => {
     expect(
       screen.getByRole("heading", { name: "Oficina de Robótica" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("UFAL, Arapiraca - AL")).toBeInTheDocument();
+    expect(
+      screen.getByText("UFAL - Campus Santana do Ipanema"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/25 vagas disponíveis/i)).toBeInTheDocument();
     expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
-    expect(screen.getByText("Curso/Oficina")).toBeInTheDocument();
+    expect(screen.getByText("Curso ou minicurso")).toBeInTheDocument();
   });
+
+  it("falls back to 'Não informado' when the action has no campus", () => {
+    render(<ActionCard action={makeAction({ campus: undefined })} />);
+
+    expect(screen.getByText("Não informado")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["EXTENSION", "Ação de extensão"],
+    ["COURSE", "Curso ou minicurso"],
+    ["EVENT", "Evento"],
+    ["LECTURE", "Palestra"],
+    ["OTHER", "Outro"],
+  ] as const)(
+    "labels the %s type as the filter and the action form do",
+    (type, label) => {
+      render(<ActionCard action={makeAction({ type })} />);
+
+      expect(screen.getByText(label)).toBeInTheDocument();
+    },
+  );
 
   it("links to the detail page of its own action", () => {
     render(<ActionCard action={makeAction()} />);
