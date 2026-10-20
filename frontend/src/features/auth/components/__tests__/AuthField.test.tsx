@@ -29,25 +29,19 @@ function Harness({ error, labelIcon, type }: HarnessProps) {
 }
 
 describe("AuthField", () => {
-  // NOTE: the underlying <Input> renders <label> and <input> as siblings
-  // with no `htmlFor`/`id` pairing, so they aren't programmatically
-  // associated. `getByLabelText` can't find the field because of this — the
-  // tests below query by placeholder instead. This is a real accessibility
-  // gap in <Input>, worth fixing independently of this test suite (a screen
-  // reader user tabbing to the field won't hear "Nome completo" announced).
-  it("renders the label and placeholder", () => {
+  it("renders the field with its label and placeholder", () => {
     render(<Harness />);
 
-    expect(screen.getByText("Nome completo")).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Digite seu nome completo"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome completo")).toHaveAttribute(
+      "placeholder",
+      "Digite seu nome completo",
+    );
   });
 
   it("lets the user type into the field", async () => {
     const { user } = render(<Harness />);
 
-    const input = screen.getByPlaceholderText("Digite seu nome completo");
+    const input = screen.getByLabelText("Nome completo");
     await user.type(input, "Jéssica Silva");
 
     expect(input).toHaveValue("Jéssica Silva");
@@ -65,7 +59,7 @@ describe("AuthField", () => {
 
   it("defaults to a text input but forwards a custom type", () => {
     const { rerender } = render(<Harness />);
-    const input = screen.getByPlaceholderText("Digite seu nome completo");
+    const input = screen.getByLabelText("Nome completo");
     expect(input).toHaveAttribute("type", "text");
 
     rerender(<Harness type="email" />);
