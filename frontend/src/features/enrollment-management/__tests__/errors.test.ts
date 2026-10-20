@@ -4,9 +4,7 @@ import { getEnrollmentsErrorMessage, resolveAttendanceError } from "../errors";
 
 describe("getEnrollmentsErrorMessage", () => {
   it("returns null for 401 so the session middleware handles the redirect", () => {
-    expect(
-      getEnrollmentsErrorMessage(new ApiError(401, "No token.")),
-    ).toBeNull();
+    expect(getEnrollmentsErrorMessage(new ApiError(401, "No token."))).toBeNull();
   });
 
   it("returns the permission message for 403", () => {
@@ -36,9 +34,9 @@ describe("getEnrollmentsErrorMessage", () => {
 
 describe("resolveAttendanceError", () => {
   it("stays silent on 401, which the HTTP client already handed to the session", () => {
-    expect(
-      resolveAttendanceError(new ApiError(401, "No token provided.")),
-    ).toEqual({ kind: "sessionExpired" });
+    expect(resolveAttendanceError(new ApiError(401, "No token provided."))).toEqual(
+      { kind: "sessionExpired" },
+    );
   });
 
   it("explains a 403 as a missing permission", () => {
@@ -79,7 +77,7 @@ describe("resolveAttendanceError", () => {
       resolveAttendanceError(
         new ApiError(
           409,
-          "Only approved enrollments can have attendance confirmed.",
+          "Arbitrary backend error message",
           [],
           { code: "ENROLLMENT_NOT_APPROVED" },
         ),

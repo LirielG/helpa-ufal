@@ -1,6 +1,10 @@
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 import type { NavigateFunction } from "react-router";
-import { ApiError, NETWORK_ERROR_STATUS } from "../../services/apiError";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  type ApiValidationError,
+} from "../../services/apiError";
 
 const FIELD_MESSAGES: Record<string, string> = {
   title: "Informe um título válido.",
@@ -25,37 +29,28 @@ const FIELD_ALIASES: Record<string, string> = {
   address: "address.addressLine",
 };
 
+// The API sends the count in the body's `details`, not in the `errors[]` item.
 function translateSlotsMessage(
-  code?: string,
-  details?: Record<string, unknown>,
-  errorDetails?: Record<string, unknown>,
+  code: string | undefined,
+  details: Record<string, unknown> | undefined,
 ): string {
-  if (code === "BELOW_APPROVED_ENROLLMENTS") {
-    const approved =
-      details?.approvedEnrollments ?? errorDetails?.approvedEnrollments;
-    if (typeof approved === "number" || typeof approved === "string") {
-      return `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${approved}).`;
-    }
+  const approved = details?.approvedEnrollments;
+  if (code === "BELOW_APPROVED_ENROLLMENTS" && typeof approved === "number") {
+    return `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${approved}).`;
   }
   return FIELD_MESSAGES.slots;
 }
 
 function applyValidationErrors<T extends FieldValues>(
-  errors: Array<{
-    field: string;
-    message: string;
-    code?: string;
-    details?: Record<string, unknown>;
-  }>,
+  { errors, details }: ApiError,
   setError: UseFormSetError<T>,
-  errorDetails?: Record<string, unknown>,
 ): boolean {
   let assigned = false;
-  errors.forEach(({ field, code, details }) => {
+  errors.forEach(({ field, code }: ApiValidationError) => {
     const target = FIELD_ALIASES[field] ?? field;
     const translated =
       target === "slots"
-        ? translateSlotsMessage(code, details, errorDetails)
+        ? translateSlotsMessage(code, details)
         : FIELD_MESSAGES[target];
 
     if (translated) {
@@ -81,7 +76,7 @@ export function handleActionApiErrors<T extends FieldValues>(
 
   switch (error.status) {
     case 400:
-      if (!applyValidationErrors(error.errors, setError)) {
+      if (!applyValidationErrors(error, setError)) {
         setGeneralError(GENERIC_ERROR);
       }
       break;
@@ -120,7 +115,7 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
 
   switch (error.status) {
     case 400:
-      if (!applyValidationErrors(error.errors, setError)) {
+      if (!applyValidationErrors(error, setError)) {
         setGeneralError(GENERIC_ERROR);
       }
       break;
@@ -130,9 +125,7 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError("Você não tem permissão para criar esta ação.");
       break;
     case 409:
-      setGeneralError(
-        "Já existe uma ação com estes dados. Verifique e tente novamente.",
-      );
+      setGeneralError("Já existe uma ação com estes dados. Verifique e tente novamente.");
       break;
     case NETWORK_ERROR_STATUS:
       setGeneralError("Falha de comunicação com o servidor. Tente novamente.");

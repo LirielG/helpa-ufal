@@ -1,6 +1,9 @@
 import { config } from "../config";
-import type { ValidationError } from "../validators";
-import { ApiError, NETWORK_ERROR_STATUS } from "./apiError";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  type ApiValidationError,
+} from "./apiError";
 import { notifySessionExpired } from "./session";
 
 const API_BASE_URL = config.apiUrl;
@@ -10,7 +13,7 @@ const COMMUNICATION_ERROR_MESSAGE = "Erro na comunicação com o servidor";
 type ErrorPayload = {
   message?: string | string[];
   error?: string;
-  errors?: ValidationError[];
+  errors?: ApiValidationError[];
   code?: unknown;
   details?: unknown;
 };

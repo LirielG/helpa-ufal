@@ -17,7 +17,7 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
     return "Falha de comunicação com o servidor. Tente novamente.";
   }
 
-  // 404: Activity not found (code: ACTIVITY_NOT_FOUND)
+  // 404: Activity not found
   if (error.status === 404) {
     return "A ação não foi encontrada. Ela pode ter sido removida.";
   }
@@ -27,7 +27,7 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
     return "Dados inválidos. Tente recarregar a página e tente novamente.";
   }
 
-  // 409: Enrollment conflict — differentiate by message
+  // 409: Enrollment conflict — differentiate by code
   if (error.status === 409) {
     if (error.code === "ALREADY_ENROLLED") {
       return "Você já está inscrito nesta ação.";

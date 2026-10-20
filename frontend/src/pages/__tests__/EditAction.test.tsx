@@ -817,12 +817,11 @@ describe("EditAction", () => {
       errors: [
         {
           field: "slots",
-          message:
-            "slots cannot be reduced below the current number of approved enrollments (15).",
+          message: "Arbitrary backend text.",
           code: "BELOW_APPROVED_ENROLLMENTS",
-          details: { approvedEnrollments: 15 },
         },
       ],
+      details: { approvedEnrollments: 15 },
     });
     const { user } = renderEditAction();
 

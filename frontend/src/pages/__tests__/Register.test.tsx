@@ -461,7 +461,7 @@ describe("Register page", () => {
     it("disables the submit button while the request is in flight", async () => {
       server.use(
         http.post(REGISTER_URL, async () => {
-          await delay(200);
+          await delay(50);
           return HttpResponse.json(makeUser(), { status: 201 });
         }),
       );

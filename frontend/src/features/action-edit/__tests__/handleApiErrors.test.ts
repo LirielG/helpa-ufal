@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  type ApiValidationError,
+} from "@/services/apiError";
 import type { ActionEditSchemaType } from "../validators";
 import { handleActionApiErrors } from "../handleApiErrors";
 
@@ -22,15 +26,13 @@ function callWith(error: unknown) {
 
 /** Shape the API answers a failed validation with. */
 function validationError(
-  errors: Array<{
-    field: string;
-    message: string;
-    code?: string;
-    details?: Record<string, unknown>;
-  }>,
-  errorOptions?: { code?: string; details?: Record<string, unknown> },
+  errors: ApiValidationError[],
+  details?: Record<string, unknown>,
 ): ApiError {
-  return new ApiError(400, "Validation error.", errors, errorOptions);
+  return new ApiError(400, "Validation error.", errors, {
+    code: "VALIDATION_ERROR",
+    details,
+  });
 }
 
 describe("handleActionApiErrors", () => {
@@ -41,7 +43,6 @@ describe("handleActionApiErrors", () => {
           {
             field: "address.zipCode",
             message: "zipCode must contain exactly 8 digits.",
-            code: "INVALID_ZIP_CODE",
           },
         ]),
       );
@@ -59,7 +60,6 @@ describe("handleActionApiErrors", () => {
           {
             field: "startDate",
             message: "startDate must be in the future.",
-            code: "INVALID_DATETIME",
           },
         ]),
       );
@@ -77,13 +77,11 @@ describe("handleActionApiErrors", () => {
           [
             {
               field: "slots",
-              message:
-                "slots cannot be reduced below the current number of approved enrollments (13).",
+              message: "Arbitrary backend text.",
               code: "BELOW_APPROVED_ENROLLMENTS",
-              details: { approvedEnrollments: 13 },
             },
           ],
-          { code: "VALIDATION_ERROR" },
+          { approvedEnrollments: 13 },
         ),
       );
 
@@ -99,8 +97,8 @@ describe("handleActionApiErrors", () => {
         validationError([
           {
             field: "slots",
-            message: "slots is invalid.",
-            code: "INVALID_NUMBER",
+            message: "slots cannot exceed 1000.",
+            code: "VALIDATION_ERROR",
           },
         ]),
       );

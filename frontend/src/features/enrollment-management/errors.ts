@@ -15,7 +15,8 @@ export function getEnrollmentsErrorMessage(error: ApiError): string | null {
   if (error.status === 403)
     return "Você não tem permissão para ver os inscritos desta ação.";
 
-  if (error.status === 404) return "A ação não foi encontrada ou foi removida.";
+  if (error.status === 404)
+    return "A ação não foi encontrada ou foi removida.";
 
   return "Erro ao carregar os inscritos. Tente novamente.";
 }

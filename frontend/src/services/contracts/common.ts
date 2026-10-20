@@ -28,10 +28,6 @@ export interface Paginated<T> {
  *
  * `message` is English text meant for debugging only; the frontend decides from
  * `code`/`field`. `stack` is only present with `NODE_ENV=development`.
- *
- * NOTE: the backend does not emit `code` yet (`CustomError`/`ValidationError`
- * carry only `status` + `message`, and `ErrorHandler` returns no `code`). The
- * vocabulary below comes from §4/§5 of the conventions, not from the backend.
  */
 export interface ApiErrorBody {
   status: number;
@@ -44,9 +40,8 @@ export interface ApiErrorBody {
 
 export interface ApiErrorItem {
   field: string;
-  code?: OpenUnion<ApiErrorItemCode>;
+  code: OpenUnion<ApiErrorItemCode>;
   message: string;
-  details?: Record<string, unknown>;
 }
 
 /**
@@ -56,7 +51,7 @@ export interface ApiErrorItem {
  */
 type OpenUnion<T extends string> = T | (string & {});
 
-/** §4 "codes genéricos" + §5 `SESSION_INVALID`. */
+/** §4 "codes genéricos", §5 `SESSION_INVALID` and the route codes from Bruno. */
 export type ApiErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHENTICATED"
