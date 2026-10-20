@@ -21,18 +21,7 @@ export async function fetchActions(
   }
 
   if (filters.actionType !== "all") {
-    const typeMap: Record<string, string> = {
-      oficina: "COURSE",
-      minicurso: "COURSE",
-      palestra: "LECTURE",
-      evento: "EVENT",
-      servico: "EXTENSION",
-    };
-    const mappedType = typeMap[filters.actionType];
-
-    if (mappedType) {
-      apiParams.type = mappedType;
-    }
+    apiParams.type = filters.actionType;
   }
 
   const response = await api.get<ListActivitiesResponse>("/activities", {

@@ -183,7 +183,7 @@ describe("Dashboard", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Tipos de ação" }),
-      "palestra",
+      "LECTURE",
     );
 
     expect(
@@ -360,7 +360,7 @@ describe("Dashboard", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Tipos de ação" }),
-      "palestra",
+      "LECTURE",
     );
 
     await waitFor(() => {
@@ -572,6 +572,54 @@ describe("Dashboard", () => {
     ).not.toBeInTheDocument();
   });
 
+  describe("action type filter", () => {
+    it("offers each type of the API once, so no two options repeat a query", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+
+      const typeSelect = screen.getByRole("combobox", {
+        name: "Tipos de ação",
+      });
+      const types: Array<string | null> = [];
+
+      for (const option of Array.from(typeSelect.querySelectorAll("option"))) {
+        if (option.value === "all") continue;
+
+        await user.selectOptions(typeSelect, option.value);
+        await waitFor(() => {
+          expect(requests.at(-1)?.get("type")).toBe(option.value);
+        });
+        types.push(requests.at(-1)?.get("type") ?? null);
+      }
+
+      expect(types).toEqual([
+        "EXTENSION",
+        "COURSE",
+        "EVENT",
+        "LECTURE",
+        "OTHER",
+      ]);
+    });
+
+    it("reaches the actions typed as OTHER through 'Outro'", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Tipos de ação" }),
+        "Outro",
+      );
+
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("type")).toBe("OTHER");
+      });
+    });
+  });
+
   describe("status filter", () => {
     /** One action per status, so every cut the API makes is told apart. */
     const actionsByStatus = (
@@ -635,7 +683,7 @@ describe("Dashboard", () => {
       await user.selectOptions(statusSelect(), "IN_PROGRESS");
       await user.selectOptions(
         screen.getByRole("combobox", { name: "Tipos de ação" }),
-        "palestra",
+        "LECTURE",
       );
 
       await waitFor(() => {

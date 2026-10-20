@@ -60,7 +60,7 @@ describe("HelpaFeed", () => {
 
   it("offers to clear the filters when a select filter matches nothing", async () => {
     const { user, onResetFilters } = renderHelpaFeed({
-      filters: { actionType: "palestra" },
+      filters: { actionType: "LECTURE" },
     });
 
     expect(

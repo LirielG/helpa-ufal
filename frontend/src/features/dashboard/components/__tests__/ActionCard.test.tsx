@@ -35,7 +35,7 @@ describe("ActionCard", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/25 vagas disponíveis/i)).toBeInTheDocument();
     expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
-    expect(screen.getByText("Curso/Oficina")).toBeInTheDocument();
+    expect(screen.getByText("Curso ou minicurso")).toBeInTheDocument();
   });
 
   it("falls back to 'Não informado' when the action has no campus", () => {
@@ -43,6 +43,21 @@ describe("ActionCard", () => {
 
     expect(screen.getByText("Não informado")).toBeInTheDocument();
   });
+
+  it.each([
+    ["EXTENSION", "Ação de extensão"],
+    ["COURSE", "Curso ou minicurso"],
+    ["EVENT", "Evento"],
+    ["LECTURE", "Palestra"],
+    ["OTHER", "Outro"],
+  ] as const)(
+    "labels the %s type as the filter and the action form do",
+    (type, label) => {
+      render(<ActionCard action={makeAction({ type })} />);
+
+      expect(screen.getByText(label)).toBeInTheDocument();
+    },
+  );
 
   it("links to the detail page of its own action", () => {
     render(<ActionCard action={makeAction()} />);

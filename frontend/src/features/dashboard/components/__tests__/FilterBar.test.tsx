@@ -37,10 +37,10 @@ describe("FilterBar", () => {
   });
 
   it("shows the filters it is given as the selected options", () => {
-    renderFilterBar({ actionType: "palestra", status: "OPEN" });
+    renderFilterBar({ actionType: "LECTURE", status: "OPEN" });
 
     expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
-      "palestra",
+      "LECTURE",
     );
     expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue(
       "OPEN",
@@ -63,12 +63,12 @@ describe("FilterBar", () => {
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Tipos de ação" }),
-      "palestra",
+      "LECTURE",
     );
 
     expect(onFilterChange).toHaveBeenCalledExactlyOnceWith(
       "actionType",
-      "palestra",
+      "LECTURE",
     );
   });
 

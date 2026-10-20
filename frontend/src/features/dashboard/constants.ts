@@ -69,11 +69,7 @@ export const FILTER_OPTIONS = {
   ],
   actionTypes: [
     { value: "all", label: "Todos os tipos" },
-    { value: "oficina", label: "Oficina" },
-    { value: "palestra", label: "Palestra" },
-    { value: "evento", label: "Evento" },
-    { value: "servico", label: "Serviço" },
-    { value: "minicurso", label: "Minicurso" },
+    ...ACTION_TYPE_OPTIONS,
   ],
   status: ACTION_STATUS_OPTIONS,
 };

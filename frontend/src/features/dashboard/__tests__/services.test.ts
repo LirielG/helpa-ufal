@@ -21,7 +21,37 @@ function serveTotal(total: number): void {
   );
 }
 
+/** Records the query string of every GET /activities. */
+function captureParams(): URLSearchParams[] {
+  const requests: URLSearchParams[] = [];
+
+  server.use(
+    http.get(`${API}/activities`, ({ request }) => {
+      requests.push(new URL(request.url).searchParams);
+      return HttpResponse.json({ activities: [], total: 0 });
+    }),
+  );
+
+  return requests;
+}
+
 describe("fetchActions", () => {
+  it("sends the chosen action type as the API enum", async () => {
+    const requests = captureParams();
+
+    await fetchActions({ ...NO_FILTERS, actionType: "LECTURE" });
+
+    expect(requests[0].get("type")).toBe("LECTURE");
+  });
+
+  it("sends no `type` when every type is chosen", async () => {
+    const requests = captureParams();
+
+    await fetchActions(NO_FILTERS);
+
+    expect(requests[0].has("type")).toBe(false);
+  });
+
   it("derives totalPages from the total and the limit it sent", async () => {
     serveTotal(25);
 
