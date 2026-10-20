@@ -5,7 +5,7 @@ import type {
   ActivityListItem,
   ActivityStatus,
 } from "@/services/contracts/activity";
-import { ACTION_STATUS_LABELS } from "../constants";
+import { ACTION_CAMPUS_LABELS, ACTION_STATUS_LABELS } from "../constants";
 
 interface ActionCardProps {
   action: ActivityListItem;
@@ -76,7 +76,7 @@ export function ActionCard({ action }: ActionCardProps) {
         <div className="flex items-start gap-2 text-sm text-gray-600">
           <MapPin className="size-4 shrink-0 mt-0.5 text-gray-400" />
           <span className="line-clamp-1">
-            {action.campus || "Campus não informado"}
+            {ACTION_CAMPUS_LABELS[action.campus] ?? "Não informado"}
           </span>
         </div>
 
