@@ -572,6 +572,107 @@ describe("Dashboard", () => {
     ).not.toBeInTheDocument();
   });
 
+  describe("area filter", () => {
+    function areaSelect() {
+      return screen.getByRole("combobox", { name: "Área de atuação" });
+    }
+
+    it("sends the chosen area and drops it when every area is chosen again", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+
+      await user.selectOptions(areaSelect(), "Saúde");
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("area")).toBe("Saúde");
+      });
+
+      await user.selectOptions(areaSelect(), "Todas as áreas");
+      await waitFor(() => {
+        expect(requests.at(-1)?.has("area")).toBe(false);
+      });
+    });
+
+    it("sends the area, the action type and the status in the same request", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+
+      await user.selectOptions(areaSelect(), "Educação");
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Tipos de ação" }),
+        "LECTURE",
+      );
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Status" }),
+        "OPEN",
+      );
+
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("status")).toBe("OPEN");
+      });
+      expect(requests.at(-1)?.get("area")).toBe("Educação");
+      expect(requests.at(-1)?.get("type")).toBe("LECTURE");
+    });
+
+    it("restarts the pagination at page 1 when the area changes", async () => {
+      const requests = serveActivities(() => catalogue);
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+
+      await user.click(screen.getByRole("button", { name: "Próxima página" }));
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("page")).toBe("2");
+      });
+
+      await user.selectOptions(areaSelect(), "Saúde");
+
+      await waitFor(() => {
+        expect(requests.at(-1)?.get("area")).toBe("Saúde");
+      });
+      expect(requests.at(-1)?.get("page")).toBe("1");
+    });
+
+    it("shows the filtered empty state when no action has the area", async () => {
+      serveActivities((params) => (params.has("area") ? [] : catalogue));
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+
+      await user.selectOptions(areaSelect(), "Robótica");
+
+      expect(
+        await screen.findByText("Nenhuma ação corresponde a esses filtros."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Limpar filtros" }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the feed working when the areas fail to load", async () => {
+      server.use(
+        http.get(
+          "*/activities/filters",
+          () => new HttpResponse(null, { status: 500 }),
+        ),
+      );
+      serveActivities(() => catalogue);
+      renderDashboard();
+
+      expect(
+        await screen.findByRole("heading", { level: 3, name: "Ação 1" }),
+      ).toBeInTheDocument();
+      expect(areaSelect()).toBeDisabled();
+    });
+  });
+
   describe("action type filter", () => {
     it("offers each type of the API once, so no two options repeat a query", async () => {
       const requests = serveActivities(() => catalogue);

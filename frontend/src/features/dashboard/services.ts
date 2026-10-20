@@ -16,6 +16,10 @@ export async function fetchActions(
     apiParams.search = filters.search;
   }
 
+  if (filters.area !== "all") {
+    apiParams.area = filters.area;
+  }
+
   if (filters.status !== "all") {
     apiParams.status = filters.status;
   }

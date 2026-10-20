@@ -60,13 +60,6 @@ export const ACTION_STATUS_OPTIONS = [
 ];
 
 export const FILTER_OPTIONS = {
-  areas: [
-    { value: "all", label: "Todas as áreas" },
-    { value: "educacao", label: "Educação" },
-    { value: "saude", label: "Saúde" },
-    { value: "meio-ambiente", label: "Meio Ambiente" },
-    { value: "arquitetura", label: "Arquitetura" },
-  ],
   actionTypes: [
     { value: "all", label: "Todos os tipos" },
     ...ACTION_TYPE_OPTIONS,

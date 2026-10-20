@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@/test";
+import {
+  API,
+  http,
+  HttpResponse,
+  render,
+  screen,
+  server,
+  waitFor,
+} from "@/test";
 import { FILTER_OPTIONS } from "../../constants";
 import type { FilterOptions } from "../../types";
 import { FilterBar } from "../FilterBar";
@@ -94,6 +102,73 @@ describe("FilterBar", () => {
     expect(onFilterChange).toHaveBeenNthCalledWith(2, "search", "b");
   });
 
+  describe("area filter", () => {
+    const areaSelect = () =>
+      screen.getByRole("combobox", { name: "Área de atuação" });
+
+    const areaLabels = () =>
+      Array.from(
+        areaSelect().querySelectorAll("option"),
+        (option) => option.textContent,
+      );
+
+    it("offers the areas the API returns, in the order it returns them", async () => {
+      server.use(
+        http.get(`${API}/activities/filters`, () =>
+          HttpResponse.json({ areas: ["Saúde", "Educação", "Robótica"] }),
+        ),
+      );
+      renderFilterBar();
+
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+      expect(areaLabels()).toEqual([
+        "Todas as áreas",
+        "Saúde",
+        "Educação",
+        "Robótica",
+      ]);
+    });
+
+    it("reports the text of the chosen area to the parent", async () => {
+      const { user, onFilterChange } = renderFilterBar();
+
+      await waitFor(() => expect(areaSelect()).toBeEnabled());
+      await user.selectOptions(areaSelect(), "Saúde");
+
+      expect(onFilterChange).toHaveBeenCalledExactlyOnceWith("area", "Saúde");
+    });
+
+    it("disables the area filter when the API has no areas", async () => {
+      let served = false;
+      server.use(
+        http.get(`${API}/activities/filters`, () => {
+          served = true;
+          return HttpResponse.json({ areas: [] });
+        }),
+      );
+      renderFilterBar();
+
+      await waitFor(() => expect(served).toBe(true));
+      expect(areaSelect()).toBeDisabled();
+      expect(areaLabels()).toEqual(["Todas as áreas"]);
+    });
+
+    it("disables the area filter when the areas fail to load", async () => {
+      let served = false;
+      server.use(
+        http.get(`${API}/activities/filters`, () => {
+          served = true;
+          return new HttpResponse(null, { status: 500 });
+        }),
+      );
+      renderFilterBar();
+
+      await waitFor(() => expect(served).toBe(true));
+      expect(areaSelect()).toBeDisabled();
+      expect(areaLabels()).toEqual(["Todas as áreas"]);
+    });
+  });
+
   it("offers every configured option in each filter", () => {
     renderFilterBar();
 
@@ -103,9 +178,6 @@ describe("FilterBar", () => {
         (option) => option.textContent,
       );
 
-    expect(optionLabels("Área de atuação")).toEqual(
-      FILTER_OPTIONS.areas.map((option) => option.label),
-    );
     expect(optionLabels("Tipos de ação")).toEqual(
       FILTER_OPTIONS.actionTypes.map((option) => option.label),
     );

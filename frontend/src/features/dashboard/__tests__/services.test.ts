@@ -44,6 +44,22 @@ describe("fetchActions", () => {
     expect(requests[0].get("type")).toBe("LECTURE");
   });
 
+  it("sends the chosen area as its own text", async () => {
+    const requests = captureParams();
+
+    await fetchActions({ ...NO_FILTERS, area: "Saúde" });
+
+    expect(requests[0].get("area")).toBe("Saúde");
+  });
+
+  it("sends no `area` when every area is chosen", async () => {
+    const requests = captureParams();
+
+    await fetchActions(NO_FILTERS);
+
+    expect(requests[0].has("area")).toBe(false);
+  });
+
   it("sends no `type` when every type is chosen", async () => {
     const requests = captureParams();
 
