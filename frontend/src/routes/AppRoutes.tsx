@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate } from "react-router";
+import { Routes, Route } from "react-router";
 import {
   Login,
   Register,
   Dashboard,
+  Home,
   ActionDetail,
   Profile,
   EditAction,
@@ -101,7 +102,14 @@ export function AppRoutes() {
           </PublicRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <Home />
+          </PublicRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
