@@ -341,7 +341,7 @@ examples:
         type: json
         data: |-
           {
-            "code": "CONFLICT",
+            "code": "ACTIVITY_NOT_COMPLETED",
             "status": 409,
             "message": "Attendance can only be confirmed for completed activities."
           }
@@ -372,7 +372,7 @@ examples:
         type: json
         data: |-
           {
-            "code": "CONFLICT",
+            "code": "ENROLLMENT_NOT_APPROVED",
             "status": 409,
             "message": "Only approved enrollments can have attendance confirmed."
           }

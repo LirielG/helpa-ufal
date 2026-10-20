@@ -584,7 +584,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
-        code: "CONFLICT",
+        code: "ACTIVITY_NOT_COMPLETED",
         message: "Attendance can only be confirmed for completed activities.",
       });
       await expect(attendanceOf(enrollment.id)).resolves.toEqual({
@@ -610,7 +610,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
         status: 409,
-        code: "CONFLICT",
+        code: "ENROLLMENT_NOT_APPROVED",
         message: "Only approved enrollments can have attendance confirmed.",
       });
       await expect(attendanceOf(enrollment.id)).resolves.toEqual({

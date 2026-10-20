@@ -28,10 +28,6 @@ export interface Paginated<T> {
  *
  * `message` is English text meant for debugging only; the frontend decides from
  * `code`/`field`. `stack` is only present with `NODE_ENV=development`.
- *
- * NOTE: the backend does not emit `code` yet (`CustomError`/`ValidationError`
- * carry only `status` + `message`, and `ErrorHandler` returns no `code`). The
- * vocabulary below comes from §4/§5 of the conventions, not from the backend.
  */
 export interface ApiErrorBody {
   status: number;
@@ -55,7 +51,7 @@ export interface ApiErrorItem {
  */
 type OpenUnion<T extends string> = T | (string & {});
 
-/** §4 "codes genéricos" + §5 `SESSION_INVALID`. */
+/** §4 "codes genéricos", §5 `SESSION_INVALID` and the route codes from Bruno. */
 export type ApiErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHENTICATED"
@@ -64,8 +60,18 @@ export type ApiErrorCode =
   | "CONFLICT"
   | "UNPROCESSABLE"
   | "INTERNAL_ERROR"
-  | "SESSION_INVALID";
+  | "SESSION_INVALID"
+  | "ALREADY_ENROLLED"
+  | "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT"
+  | "NO_AVAILABLE_SLOTS"
+  | "ENROLLMENT_NOT_FOUND"
+  | "ACTIVITY_NOT_FOUND"
+  | "ENROLLMENT_NOT_APPROVED"
+  | "ACTIVITY_NOT_COMPLETED";
 
 /** §4 "codes de item de `errors[]` já definidos". */
 export type ApiErrorItemCode =
-  "INVALID_UUID" | "UNKNOWN_PARAMETER" | "INVALID_DATETIME";
+  | "INVALID_UUID"
+  | "UNKNOWN_PARAMETER"
+  | "INVALID_DATETIME"
+  | "BELOW_APPROVED_ENROLLMENTS";

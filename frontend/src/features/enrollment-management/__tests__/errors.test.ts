@@ -62,10 +62,9 @@ describe("resolveAttendanceError", () => {
   it("asks for a reload when the activity is no longer completed", () => {
     expect(
       resolveAttendanceError(
-        new ApiError(
-          409,
-          "Attendance can only be confirmed for completed activities.",
-        ),
+        new ApiError(409, "Arbitrary backend error message", [], {
+          code: "ACTIVITY_NOT_COMPLETED",
+        }),
       ),
     ).toEqual({
       kind: "stale",
@@ -78,7 +77,9 @@ describe("resolveAttendanceError", () => {
       resolveAttendanceError(
         new ApiError(
           409,
-          "Only approved enrollments can have attendance confirmed.",
+          "Arbitrary backend error message",
+          [],
+          { code: "ENROLLMENT_NOT_APPROVED" },
         ),
       ),
     ).toEqual({

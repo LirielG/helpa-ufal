@@ -67,7 +67,7 @@ export function resolveAttendanceError(
   }
 
   if (error.status === 409) {
-    if (error.message.includes("approved enrollments")) {
+    if (error.code === "ENROLLMENT_NOT_APPROVED") {
       return {
         kind: "stale",
         text: "Esta inscrição não está mais aprovada, então a presença não pode ser homologada.",

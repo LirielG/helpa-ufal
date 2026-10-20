@@ -70,12 +70,12 @@ function serveSnapshots(...snapshots: Activity[]) {
   return () => calls;
 }
 
-function failCancellation(status: number, message?: string) {
+function failCancellation(status: number, message?: string, code?: string) {
   server.use(
     http.delete(`${API}/activities/${ACTION_ID}/enroll`, () =>
       status === 0
         ? HttpResponse.error()
-        : HttpResponse.json({ message }, { status }),
+        : HttpResponse.json({ message, code }, { status }),
     ),
   );
 }
@@ -345,7 +345,7 @@ describe("ActionDetail enrollment cancellation", () => {
       enrolledAction(),
       enrolledAction({ enrollmentStatus: "CANCELLED", availableSlots: 5 }),
     );
-    failCancellation(404, "Enrollment not found.");
+    failCancellation(404, "Inscrição não encontrada.", "ENROLLMENT_NOT_FOUND");
     const { user } = renderPage();
 
     await openCancellationModal(user);
@@ -361,7 +361,7 @@ describe("ActionDetail enrollment cancellation", () => {
   it("moves the page to the error state when the action no longer exists", async () => {
     signIn();
     serveSnapshots(enrolledAction());
-    failCancellation(404, "Activity not found.");
+    failCancellation(404, "Ação não encontrada.", "ACTIVITY_NOT_FOUND");
     const { user } = renderPage();
 
     await openCancellationModal(user);
@@ -477,7 +477,10 @@ describe("ActionDetail enrollment cancellation", () => {
     server.use(
       http.post(`${API}/activities/${ACTION_ID}/enroll`, () =>
         HttpResponse.json(
-          { message: "No available slots for this activity." },
+          {
+            message: "No available slots for this activity.",
+            code: "NO_AVAILABLE_SLOTS",
+          },
           { status: 409 },
         ),
       ),

@@ -1,6 +1,10 @@
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 import type { NavigateFunction } from "react-router";
-import { ApiError, NETWORK_ERROR_STATUS } from "../../services/apiError";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  type ApiValidationError,
+} from "../../services/apiError";
 
 const FIELD_MESSAGES: Record<string, string> = {
   title: "Informe um título válido.",
@@ -25,24 +29,29 @@ const FIELD_ALIASES: Record<string, string> = {
   address: "address.addressLine",
 };
 
-const APPROVED_ENROLLMENTS_PATTERN = /approved enrollments \((\d+)\)/i;
-
-function translateSlotsMessage(apiMessage: string): string {
-  const match = apiMessage.match(APPROVED_ENROLLMENTS_PATTERN);
-  return match
-    ? `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${match[1]}).`
-    : FIELD_MESSAGES.slots;
+// The API sends the count in the body's `details`, not in the `errors[]` item.
+function translateSlotsMessage(
+  code: string | undefined,
+  details: Record<string, unknown> | undefined,
+): string {
+  const approved = details?.approvedEnrollments;
+  if (code === "BELOW_APPROVED_ENROLLMENTS" && typeof approved === "number") {
+    return `A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (${approved}).`;
+  }
+  return FIELD_MESSAGES.slots;
 }
 
 function applyValidationErrors<T extends FieldValues>(
-  errors: Array<{ field: string; message: string }>,
-  setError: UseFormSetError<T>
+  { errors, details }: ApiError,
+  setError: UseFormSetError<T>,
 ): boolean {
   let assigned = false;
-  errors.forEach(({ field, message }) => {
+  errors.forEach(({ field, code }: ApiValidationError) => {
     const target = FIELD_ALIASES[field] ?? field;
     const translated =
-      target === "slots" ? translateSlotsMessage(message) : FIELD_MESSAGES[target];
+      target === "slots"
+        ? translateSlotsMessage(code, details)
+        : FIELD_MESSAGES[target];
 
     if (translated) {
       setError(target as Path<T>, { type: "server", message: translated });
@@ -67,7 +76,7 @@ export function handleActionApiErrors<T extends FieldValues>(
 
   switch (error.status) {
     case 400:
-      if (!applyValidationErrors(error.errors, setError)) {
+      if (!applyValidationErrors(error, setError)) {
         setGeneralError(GENERIC_ERROR);
       }
       break;
@@ -106,7 +115,7 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
 
   switch (error.status) {
     case 400:
-      if (!applyValidationErrors(error.errors, setError)) {
+      if (!applyValidationErrors(error, setError)) {
         setGeneralError(GENERIC_ERROR);
       }
       break;

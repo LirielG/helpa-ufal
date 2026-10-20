@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  type ApiValidationError,
+} from "@/services/apiError";
 import type { ActionEditSchemaType } from "../validators";
 import { handleActionApiErrors } from "../handleApiErrors";
 
@@ -22,9 +26,13 @@ function callWith(error: unknown) {
 
 /** Shape the API answers a failed validation with. */
 function validationError(
-  errors: Array<{ field: string; message: string }>,
+  errors: ApiValidationError[],
+  details?: Record<string, unknown>,
 ): ApiError {
-  return new ApiError(400, "Validation error.", errors);
+  return new ApiError(400, "Validation error.", errors, {
+    code: "VALIDATION_ERROR",
+    details,
+  });
 }
 
 describe("handleActionApiErrors", () => {
@@ -49,7 +57,10 @@ describe("handleActionApiErrors", () => {
     it("never repeats the English text the API sent", () => {
       const { setError } = callWith(
         validationError([
-          { field: "startDate", message: "startDate must be in the future." },
+          {
+            field: "startDate",
+            message: "startDate must be in the future.",
+          },
         ]),
       );
 
@@ -62,13 +73,16 @@ describe("handleActionApiErrors", () => {
 
     it("keeps the enrollment count when translating the slots error", () => {
       const { setError } = callWith(
-        validationError([
-          {
-            field: "slots",
-            message:
-              "slots cannot be reduced below the current number of approved enrollments (13).",
-          },
-        ]),
+        validationError(
+          [
+            {
+              field: "slots",
+              message: "Arbitrary backend text.",
+              code: "BELOW_APPROVED_ENROLLMENTS",
+            },
+          ],
+          { approvedEnrollments: 13 },
+        ),
       );
 
       expect(setError).toHaveBeenCalledWith("slots", {
@@ -80,7 +94,13 @@ describe("handleActionApiErrors", () => {
 
     it("falls back to the generic slots message when there is no count", () => {
       const { setError } = callWith(
-        validationError([{ field: "slots", message: "slots is invalid." }]),
+        validationError([
+          {
+            field: "slots",
+            message: "slots cannot exceed 1000.",
+            code: "VALIDATION_ERROR",
+          },
+        ]),
       );
 
       expect(setError).toHaveBeenCalledWith("slots", {

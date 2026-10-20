@@ -130,7 +130,10 @@ describe("CancelEnrollmentModal", () => {
 
   it("reports an already cancelled enrollment without a toast or an error", async () => {
     recordCancellations(() =>
-      HttpResponse.json({ message: "Enrollment not found." }, { status: 404 }),
+      HttpResponse.json(
+        { message: "Inscrição não encontrada", code: "ENROLLMENT_NOT_FOUND" },
+        { status: 404 },
+      ),
     );
     const { user, onCancelled } = renderModal();
 
@@ -143,7 +146,10 @@ describe("CancelEnrollmentModal", () => {
 
   it("reports a removed activity", async () => {
     recordCancellations(() =>
-      HttpResponse.json({ message: "Activity not found." }, { status: 404 }),
+      HttpResponse.json(
+        { message: "Ação não encontrada", code: "ACTIVITY_NOT_FOUND" },
+        { status: 404 },
+      ),
     );
     const { user, onActivityRemoved, onCancelled } = renderModal();
 

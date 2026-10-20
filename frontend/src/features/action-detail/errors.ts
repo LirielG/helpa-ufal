@@ -27,19 +27,17 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
     return "Dados inválidos. Tente recarregar a página e tente novamente.";
   }
 
-  // 409: Enrollment conflict — differentiate by message
+  // 409: Enrollment conflict — differentiate by code
   if (error.status === 409) {
-    const message = error.message || "";
-
-    if (message.includes("already enrolled")) {
+    if (error.code === "ALREADY_ENROLLED") {
       return "Você já está inscrito nesta ação.";
     }
 
-    if (message.includes("not open for enrollment")) {
+    if (error.code === "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT") {
       return "As inscrições para esta ação não estão abertas.";
     }
 
-    if (message.includes("No available slots")) {
+    if (error.code === "NO_AVAILABLE_SLOTS") {
       return "Esta ação não tem mais vagas disponíveis.";
     }
 
@@ -89,11 +87,11 @@ export function resolveCancellationError(
 
   if (error.status === 404) {
     // A concurrent cancellation already won: the goal state was reached.
-    if (error.message === "Enrollment not found.") {
+    if (error.code === "ENROLLMENT_NOT_FOUND") {
       return { kind: "alreadyCancelled" };
     }
 
-    if (error.message === "Activity not found.") {
+    if (error.code === "ACTIVITY_NOT_FOUND") {
       return { kind: "activityRemoved" };
     }
   }
