@@ -28,22 +28,22 @@ function Harness({ error, onTogglePassword }: HarnessProps) {
 describe("PasswordField", () => {
   it("masks the value by default", () => {
     render(<Harness />);
-    expect(screen.getByPlaceholderText("Digite sua senha")).toHaveAttribute(
-      "type",
-      "password",
-    );
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
   });
 
   it("uses the default placeholder unless one is provided", () => {
     render(<Harness />);
-    expect(screen.getByPlaceholderText("Digite sua senha")).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha")).toHaveAttribute(
+      "placeholder",
+      "Digite sua senha",
+    );
   });
 
   it("reveals the password when the toggle button is clicked", async () => {
     const { user } = render(<Harness />);
 
     const toggle = screen.getByRole("button", { name: "Mostrar senha" });
-    const input = screen.getByPlaceholderText("Digite sua senha");
+    const input = screen.getByLabelText("Senha");
     expect(input).toHaveAttribute("type", "password");
 
     await user.click(toggle);
@@ -63,10 +63,7 @@ describe("PasswordField", () => {
     expect(onTogglePassword).toHaveBeenCalledTimes(1);
     // The harness's own state didn't move because the callback was
     // overridden, proving visibility is fully controlled by the prop.
-    expect(screen.getByPlaceholderText("Digite sua senha")).toHaveAttribute(
-      "type",
-      "password",
-    );
+    expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
   });
 
   it("shows the validation error message when provided", () => {
@@ -79,7 +76,7 @@ describe("PasswordField", () => {
   it("lets the user type a password", async () => {
     const { user } = render(<Harness />);
 
-    const input = screen.getByPlaceholderText("Digite sua senha");
+    const input = screen.getByLabelText("Senha");
     await user.type(input, "Senha@123");
 
     expect(input).toHaveValue("Senha@123");
