@@ -10,7 +10,7 @@ import { useNavigate } from "react-router";
 
 const NARRATIVE_ITEMS = [
   {
-    id: "contexto",
+    id: "context",
     eyebrow: "Contexto Real da Universidade",
     eyebrowColor: "text-[#00579A]",
     iconBg: "bg-[#D6E3FF]",
@@ -21,7 +21,7 @@ const NARRATIVE_ITEMS = [
       "O Helpa nasceu do nosso cotidiano na UFAL Arapiraca para descomplicar a extensão universitária. Ele atua como uma ponte ágil e moderna entre os estudantes e as ações da universidade, oferecendo uma experiência de busca muito mais simples e intuitiva para substituir a lentidão e a complexidade de sistemas tradicionais, como o SIGAA.",
   },
   {
-    id: "desafio",
+    id: "challenge",
     eyebrow: "O Desafio",
     eyebrowColor: "text-[#BA1A1A]",
     iconBg: "bg-[#FFDAD6]",
@@ -32,7 +32,7 @@ const NARRATIVE_ITEMS = [
       "Projetos consolidados e essenciais do campus — a exemplo do Projeto Katie (voltado ao estímulo e inclusão de meninas na tecnologia) — enfrentava sérias barreiras de divulgação. Vagas de voluntariado e oficinas ficavam restritas a grupos fechados de WhatsApp, stories temporários de redes sociais e formulários avulsos do Google, gerando retrabalho, perda de dados e exclusão de potenciais voluntários.",
   },
   {
-    id: "solucao",
+    id: "solution",
     eyebrow: "A Resposta Institucional",
     eyebrowColor: "text-[#1D4ED8]",
     iconBg: "bg-[#DCE1FF]",
@@ -46,7 +46,7 @@ const NARRATIVE_ITEMS = [
 
 const AUDIENCE_BLOCKS = [
   {
-    id: "estudantes",
+    id: "students",
     title: "Para Estudantes de Graduação (Todos os Cursos)",
     description:
       "Encontre projetos alinhados aos seus interesses pessoais e acadêmicos, acumule horas formativas auditáveis e transforme teoria acadêmica em impacto social direto. Visualize seu progresso curricular, candidate-se com um clique e receba certificações validadas pelos coordenadores responsáveis.",
@@ -55,7 +55,7 @@ const AUDIENCE_BLOCKS = [
     Icon: GraduationCap,
   },
   {
-    id: "coordenadores",
+    id: "coordinators",
     title: "Para Coordenadores e Docentes",
     description:
       "Acabe com triagens manuais em planilhas dispersas e formulários frágeis. Cadastre minicursos, palestras, workshops e eventos com controle unificado de inscritos, presença e emissão facilitada de dados.",
@@ -65,19 +65,16 @@ const AUDIENCE_BLOCKS = [
   },
 ] as const;
 
-export function SobreSection() {
+export function AboutSection() {
   const navigate = useNavigate();
 
   const scrollToOrigin = () => {
-    const element = document.getElementById("como-nasceu");
+    const element = document.getElementById("origin");
     element?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
-    <div
-      id="sobre"
-      className="w-full scroll-mt-16 sm:scroll-mt-20 md:scroll-mt-[102px]"
-    >
+    <div className="w-full">
       <section className="relative overflow-hidden bg-[linear-gradient(92.99deg,#00579A_62.85%,#001D34_107.12%)] py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-16">
         <div
           aria-hidden="true"
@@ -118,7 +115,7 @@ export function SobreSection() {
       </section>
 
       <section
-        id="como-nasceu"
+        id="origin"
         className="relative overflow-hidden bg-[#F2F4F6] py-12 sm:py-16 md:pt-10 md:pb-20 px-4 sm:px-6 md:px-10 scroll-mt-16 sm:scroll-mt-20 md:scroll-mt-[102px]"
       >
         <div

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { Menu, X } from "lucide-react";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 
-export type HomeTabId = "sobre" | "como-funciona" | "acoes";
+export type HomeTabId = "about" | "how-it-works" | "actions";
 
 interface HomeHeaderProps {
   activeTab: HomeTabId;
@@ -11,9 +11,9 @@ interface HomeHeaderProps {
 }
 
 const NAV_TABS: Array<{ id: HomeTabId; label: string }> = [
-  { id: "sobre", label: "Sobre o Projeto" },
-  { id: "como-funciona", label: "Como Funciona" },
-  { id: "acoes", label: "Ações" },
+  { id: "about", label: "Sobre o Projeto" },
+  { id: "how-it-works", label: "Como Funciona" },
+  { id: "actions", label: "Ações" },
 ];
 
 export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
@@ -54,7 +54,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
         
         <button
           type="button"
-          onClick={() => handleTabClick("sobre")}
+          onClick={() => handleTabClick("about")}
           className="shrink-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
           aria-label="Ir para o início"
         >

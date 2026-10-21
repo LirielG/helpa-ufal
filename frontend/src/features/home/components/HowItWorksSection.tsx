@@ -2,18 +2,15 @@ import { CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import mockupHelpa from "../../../assets/mockup-helpa.png";
 import mockupSigaa from "../../../assets/mockup-sigaa.png";
 
-interface ComoFuncionaSectionProps {
+interface HowItWorksSectionProps {
   onExploreActions?: () => void;
 }
 
-export function ComoFuncionaSection({
+export function HowItWorksSection({
   onExploreActions,
-}: ComoFuncionaSectionProps) {
+}: HowItWorksSectionProps) {
   return (
-    <div
-      id="como-funciona"
-      className="w-full scroll-mt-16 sm:scroll-mt-20 md:scroll-mt-[102px]"
-    >
+    <div className="w-full">
       <section className="relative overflow-hidden bg-[linear-gradient(92.87deg,#00579A_18.7%,#001D34_85.37%)] py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-16 text-white">
         <div className="max-w-[1200px] mx-auto relative z-10 flex flex-col gap-8 md:gap-14">
           <div className="max-w-[768px] flex flex-col gap-3">
