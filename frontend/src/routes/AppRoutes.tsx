@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate } from "react-router";
+import { Routes, Route } from "react-router";
 import {
   Login,
   Register,
   Dashboard,
+  Home,
   ActionDetail,
   Profile,
   EditAction,
@@ -101,7 +102,16 @@ export function AppRoutes() {
           </PublicRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* The home page explains the project to visitors; a signed-in user
+          already knows it and goes straight to the feed. */}
+      <Route
+        path="/"
+        element={
+          <GuestRoute>
+            <Home />
+          </GuestRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

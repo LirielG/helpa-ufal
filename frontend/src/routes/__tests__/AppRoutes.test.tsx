@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { useLocation } from "react-router";
 import {
   API,
   HttpResponse,
@@ -15,6 +16,15 @@ import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
 
 type TestUser = ReturnType<typeof userEvent.setup>;
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="pathname">{location.pathname}</div>;
+}
+
+function findHome() {
+  return screen.findByRole("heading", { name: /como nasceu o helpa/i });
+}
 
 function findDashboard() {
   return screen.findByRole("combobox", { name: "Status" });
@@ -99,10 +109,46 @@ describe("AppRoutes", () => {
   });
 
   describe("public routes", () => {
+    it("shows the home page to a guest at / without changing the URL", async () => {
+      render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/" },
+      );
+
+      expect(await findHome()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
+    });
+
+    it("lets a guest open the feed from the home page tabs", async () => {
+      const { user } = render(<AppRoutes />, { route: "/" });
+
+      await user.click(
+        await screen.findByRole("button", { name: "Como Funciona" }),
+      );
+      expect(
+        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Ações" }));
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
     it("lets a guest reach the dashboard", async () => {
       render(<AppRoutes />, { route: "/dashboard" });
 
       expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("selects the SIGAA tab when the dashboard opens with ?feed=sigaa", async () => {
+      render(<AppRoutes />, { route: "/dashboard?feed=sigaa" });
+
+      expect(
+        await screen.findByRole("tab", { name: /sigaa/i }),
+      ).toHaveAttribute("aria-selected", "true");
     });
 
     it("lets a guest reach an action detail", async () => {
@@ -210,12 +256,6 @@ describe("AppRoutes", () => {
   });
 
   describe("fallback routes", () => {
-    it("takes a guest from / to the dashboard", async () => {
-      render(<AppRoutes />, { route: "/" });
-
-      expect(await findDashboard()).toBeInTheDocument();
-    });
-
     it("takes a signed-in user from / to the dashboard", async () => {
       signIn();
 

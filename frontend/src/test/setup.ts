@@ -7,6 +7,22 @@ import { resetFactoryCounter } from "./factories";
 import { server } from "./http";
 
 beforeAll(() => {
+  // jsdom has no matchMedia, and the home header listens to it to close the
+  // mobile menu when the viewport widens.
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+
   // "error" rather than "warn": a request with no handler fails the test
   // loudly instead of hanging until timeout against a real host.
   server.listen({ onUnhandledRequest: "error" });
