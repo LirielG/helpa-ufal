@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeAll } from "vitest";
+import { describe, expect, it } from "vitest";
+import { useLocation } from "react-router";
 import {
   API,
   HttpResponse,
@@ -14,28 +15,19 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
 
-// JSDOM doesn't implement window.matchMedia, so we must mock it to prevent 
-// crashes when HomeHeader tries to listen for screen size changes.
-beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation(query => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(), // Deprecated
-      removeListener: vi.fn(), // Deprecated
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-});
-
 type TestUser = ReturnType<typeof userEvent.setup>;
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="pathname">{location.pathname}</div>;
+}
+
+function findHome() {
+  return screen.findByRole("heading", { name: /como nasceu o helpa/i });
+}
+
 function findDashboard() {
-  return screen.findByRole("tablist", { name: /origem das ações/i });
+  return screen.findByRole("combobox", { name: "Status" });
 }
 
 async function submitLogin(user: TestUser) {
@@ -54,6 +46,8 @@ describe("AppRoutes", () => {
       expect(
         await screen.findByRole("button", { name: "Entrar" }),
       ).toBeInTheDocument();
+      // Profile paints "Carregando..." on mount, so its absence proves the
+      // screen never mounted, rather than merely not having finished loading.
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
@@ -64,14 +58,6 @@ describe("AppRoutes", () => {
         await screen.findByRole("button", { name: "Entrar" }),
       ).toBeInTheDocument();
       expect(screen.queryByText("Carregando...")).toBeNull();
-    });
-
-    it("sends a guest from the dashboard to the login screen", async () => {
-      render(<AppRoutes />, { route: "/dashboard" });
-
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
     });
 
     it("returns the user to the route they tried to reach after logging in", async () => {
@@ -89,14 +75,6 @@ describe("AppRoutes", () => {
       render(<AppRoutes />, { route: "/profile" });
 
       expect(await screen.findByText("Dados Pessoais")).toBeInTheDocument();
-    });
-
-    it("lets a signed-in user reach /dashboard", async () => {
-      signIn();
-
-      render(<AppRoutes />, { route: "/dashboard" });
-
-      expect(await findDashboard()).toBeInTheDocument();
     });
 
     it("drops the user on the login screen when they log out of /profile", async () => {
@@ -131,28 +109,46 @@ describe("AppRoutes", () => {
   });
 
   describe("public routes", () => {
-    it("renders the Home page at root '/' without redirecting", async () => {
-      render(<AppRoutes />, { route: "/" });
+    it("shows the home page to a guest at / without changing the URL", async () => {
+      render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/" },
+      );
 
-      expect(
-        await screen.findByRole("heading", { name: /Como Nasceu o Helpa/i }),
-      ).toBeInTheDocument();
+      expect(await findHome()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
     });
 
-    it("renders the Como Funciona page and the public feed via tabs", async () => {
+    it("lets a guest open the feed from the home page tabs", async () => {
       const { user } = render(<AppRoutes />, { route: "/" });
 
-      const howItWorksTab = await screen.findByRole("button", { name: "Como Funciona" });
-      await user.click(howItWorksTab);
+      await user.click(
+        await screen.findByRole("button", { name: "Como Funciona" }),
+      );
+      expect(
+        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Ações" }));
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("lets a guest reach the dashboard", async () => {
+      render(<AppRoutes />, { route: "/dashboard" });
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("selects the SIGAA tab when the dashboard opens with ?feed=sigaa", async () => {
+      render(<AppRoutes />, { route: "/dashboard?feed=sigaa" });
 
       expect(
-        await screen.findByRole("heading", { name: /Como o Helpa Funciona/i }),
-      ).toBeInTheDocument();
-      
-      const actionsTab = await screen.findByRole("button", { name: "Ações" });
-      await user.click(actionsTab);
-      
-      expect(await findDashboard()).toBeInTheDocument();
+        await screen.findByRole("tab", { name: /sigaa/i }),
+      ).toHaveAttribute("aria-selected", "true");
     });
 
     it("lets a guest reach an action detail", async () => {
@@ -169,6 +165,7 @@ describe("AppRoutes", () => {
       expect(
         await screen.findByText("Certificado autêntico"),
       ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
       expect(screen.queryByRole("button", { name: /perfil/i })).toBeNull();
     });
 
@@ -194,6 +191,8 @@ describe("AppRoutes", () => {
   });
 
   describe("expired session", () => {
+    // The screen itself does nothing about the 401: it just asks for its data
+    // and the HTTP client takes the user back to the login page.
     it("sends the user to login when a request reports an expired session", async () => {
       server.use(
         http.get(
@@ -214,6 +213,8 @@ describe("AppRoutes", () => {
   });
 
   describe("certificate validation", () => {
+    // The route is public: a 401 there says nothing about the visitor's
+    // session, so it must not log a signed-in user out.
     it("keeps the session when the validation route answers 401", async () => {
       server.use(
         http.get(
@@ -229,8 +230,12 @@ describe("AppRoutes", () => {
         await screen.findByText(/não foi possível consultar o certificado/i),
       ).toBeInTheDocument();
       expect(useAuthStore.getState().user).not.toBeNull();
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
     });
 
+    // Someone who once signed in on this browser scans a certificate's QR code
+    // after the cookie expired: the session check fails, but they came to see
+    // the result, not the login screen.
     it("shows the result when the restored session turns out to be expired", async () => {
       server.use(
         http.get(
@@ -246,10 +251,19 @@ describe("AppRoutes", () => {
         await screen.findByText("Certificado autêntico"),
       ).toBeInTheDocument();
       await waitFor(() => expect(useAuthStore.getState().user).toBeNull());
+      expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
     });
   });
 
   describe("fallback routes", () => {
+    it("takes a signed-in user from / to the dashboard", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/" });
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
     it("renders 404 page for unknown route", async () => {
       render(<AppRoutes />, { route: "/rota-inexistente" });
 

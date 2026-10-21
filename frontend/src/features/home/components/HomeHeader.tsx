@@ -142,7 +142,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
                   type="button"
                   onClick={() => handleTabClick(tab.id)}
                   aria-current={isActive ? "page" : undefined}
-                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                     isActive
                       ? "bg-[#D6E3FF]/40 text-[#00579A] font-semibold"
                       : "text-[#44474E] hover:bg-gray-50 hover:text-[#00579A]"
@@ -163,7 +163,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
                 setIsMobileMenuOpen(false);
                 navigate("/login");
               }}
-              className="w-full py-2.5 text-sm font-semibold text-[#000A1E] border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              className="w-full py-2.5 text-sm font-semibold text-[#000A1E] border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
             >
               Entrar
             </button>
@@ -174,7 +174,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
                 setIsMobileMenuOpen(false);
                 navigate("/register");
               }}
-              className="w-full py-2.5 text-sm font-semibold text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] transition-colors cursor-pointer"
+              className="w-full py-2.5 text-sm font-semibold text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
             >
               Cadastrar-se
             </button>

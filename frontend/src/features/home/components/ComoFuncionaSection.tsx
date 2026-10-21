@@ -75,7 +75,7 @@ export function ComoFuncionaSection({
                   <span className="size-2.5 sm:size-3 rounded-full bg-[#002147] inline-block shrink-0" />
                   <span className="size-2.5 sm:size-3 rounded-full bg-gray-300 inline-block shrink-0" />
                   <span className="ml-1 sm:ml-2 text-white/90 truncate max-w-[150px] sm:max-w-none">
-                    helpa.ufal.br/feed?origem=helpa
+                    helpa.ufal.br/dashboard
                   </span>
                 </div>
                 <span className="bg-[#DCE1FF] text-[#001551] px-2 py-0.5 rounded font-sans font-bold tracking-wider uppercase shrink-0">
@@ -158,7 +158,7 @@ export function ComoFuncionaSection({
                   <span className="size-2.5 sm:size-3 rounded-full bg-[#002147] inline-block shrink-0" />
                   <span className="size-2.5 sm:size-3 rounded-full bg-gray-300 inline-block shrink-0" />
                   <span className="ml-1 sm:ml-2 text-white/90 truncate max-w-[150px] sm:max-w-none">
-                    helpa.ufal.br/feed?origem=sigaa
+                    helpa.ufal.br/dashboard?feed=sigaa
                   </span>
                 </div>
                 <span className="bg-[#D6E3FF] text-[#001B3D] px-2 py-0.5 rounded font-sans font-bold tracking-wider uppercase shrink-0">
@@ -195,8 +195,8 @@ export function ComoFuncionaSection({
                     <li className="flex items-start gap-2.5">
                       <CheckCircle2 className="size-5 text-[#1D4ED8] shrink-0 mt-0.5" />
                       <span>
-                        Busca e filtros rápidos por palavras-chave, departamento
-                        e campus.
+                        Busca e filtros rápidos por palavras-chave, tipo e
+                        departamento.
                       </span>
                     </li>
                     <li className="flex items-start gap-2.5">
@@ -267,9 +267,8 @@ export function ComoFuncionaSection({
               </div>
               <h3 className="text-xl font-semibold">Explore o Feed Unificado</h3>
               <p className="text-sm text-gray-200 leading-relaxed">
-                Navegue entre as abas Helpa e SIGAA. Utilize os filtros
-                inteligentes por área de interesse, curso, carga horária e
-                campus.
+                Navegue entre as abas Helpa e SIGAA. Utilize os filtros por
+                área de atuação, tipo de ação e status.
               </p>
             </div>
 

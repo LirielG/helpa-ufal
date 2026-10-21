@@ -4,6 +4,7 @@ import { FeedSection } from "../features/dashboard/components/FeedSection";
 import { Footer } from "../components/Footer";
 
 interface DashboardProps {
+  /** Tests pass 0 to skip fake timers; the UI keeps the typing debounce. */
   debounceMs?: number;
 }
 

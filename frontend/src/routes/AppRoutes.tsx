@@ -102,12 +102,14 @@ export function AppRoutes() {
           </PublicRoute>
         }
       />
+      {/* The home page explains the project to visitors; a signed-in user
+          already knows it and goes straight to the feed. */}
       <Route
         path="/"
         element={
-          <PublicRoute>
+          <GuestRoute>
             <Home />
-          </PublicRoute>
+          </GuestRoute>
         }
       />
       <Route path="*" element={<NotFound />} />

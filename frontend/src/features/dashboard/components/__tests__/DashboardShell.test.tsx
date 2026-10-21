@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import {
   screen,
   act,
@@ -20,10 +20,6 @@ import { useActionRegisterStore } from "@/stores/actionRegisterStore";
 import { DashboardShell } from "../DashboardShell";
 import { DashboardHeader } from "../DashboardHeader";
 import { Dashboard } from "@/pages/Dashboard";
-
-vi.mock("@/features/dashboard/components/HeroBanner", () => ({
-  HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>,
-}));
 
 function LocationTracker() {
   const location = useLocation();
