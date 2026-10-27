@@ -64,8 +64,11 @@ export function EditAction() {
   const [savedDescription, setSavedDescription] = useState("");
 
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
-  const [loadFailed, setLoadFailed] = useState(false);
-  const notFound = !id || loadFailed;
+  const [loadError, setLoadError] = useState<"notFound" | "connection" | null>(
+    null,
+  );
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const notFound = !id || loadError === "notFound";
 
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
 
@@ -111,57 +114,66 @@ export function EditAction() {
 
     let isMounted = true;
 
-    (async () => {
-      const action = await getActionById(id);
+    getActionById(id)
+      .then((action) => {
+        if (!isMounted) return;
 
-      if (!isMounted) return;
+        setActionAuthorId(action.authorId);
+        setSavedDescription(action.details?.description ?? "");
 
-      if (!action) {
-        setLoadFailed(true);
-        setIsLoadingAction(false);
-        return;
-      }
-
-      setActionAuthorId(action.authorId);
-      setSavedDescription(action.details?.description ?? "");
-
-      reset({
-        title: action.title,
-        description: action.details?.description ?? "",
-        startDate: toInputDate(action.startDate),
-        endDate: toInputDate(action.endDate),
-        startTime: toInputTime(action.startDate),
-        endTime: toInputTime(action.endDate),
-        type: action.type,
-        slots: action.slots,
-        format: action.details?.format,
-        workloadHours: action.details?.workloadHours,
-        area: action.details?.area ?? "",
-        url: action.details?.url ?? "",
-        campus: action.campus,
-        address: action.details?.address
-          ? {
-              addressLine: action.details.address.addressLine ?? "",
-              district: action.details.address.district ?? "",
-              city: action.details.address.city ?? "",
-              state: action.details.address.state ?? "",
-              zipCode: action.details.address.zipCode
-                ? action.details.address.zipCode.replace(
-                    /^(\d{5})(\d)/,
-                    "$1-$2",
-                  )
-                : "",
-            }
-          : EMPTY_ADDRESS,
-      } as ActionEditSchemaType);
-
-      setIsLoadingAction(false);
-    })();
+        reset({
+          title: action.title,
+          description: action.details?.description ?? "",
+          startDate: toInputDate(action.startDate),
+          endDate: toInputDate(action.endDate),
+          startTime: toInputTime(action.startDate),
+          endTime: toInputTime(action.endDate),
+          type: action.type,
+          slots: action.slots,
+          format: action.details?.format,
+          workloadHours: action.details?.workloadHours,
+          area: action.details?.area ?? "",
+          url: action.details?.url ?? "",
+          campus: action.campus,
+          address: action.details?.address
+            ? {
+                addressLine: action.details.address.addressLine ?? "",
+                district: action.details.address.district ?? "",
+                city: action.details.address.city ?? "",
+                state: action.details.address.state ?? "",
+                zipCode: action.details.address.zipCode
+                  ? action.details.address.zipCode.replace(
+                      /^(\d{5})(\d)/,
+                      "$1-$2",
+                    )
+                  : "",
+              }
+            : EMPTY_ADDRESS,
+        } as ActionEditSchemaType);
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+        if (error instanceof ApiError && error.status === 401) return;
+        setLoadError(
+          error instanceof ApiError && error.status === 404
+            ? "notFound"
+            : "connection",
+        );
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingAction(false);
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [id, reset]);
+  }, [id, reset, loadAttempt]);
+
+  const retryLoad = () => {
+    setLoadError(null);
+    setIsLoadingAction(true);
+    setLoadAttempt((attempt) => attempt + 1);
+  };
 
   const canDelete = Boolean(
     user && (user.id === actionAuthorId || user.isManager),
@@ -289,6 +301,20 @@ export function EditAction() {
       <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
         <div className="flex-1 flex items-center justify-center py-20">
           <p className="text-gray-500">Carregando...</p>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (loadError === "connection") {
+    return (
+      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-4">
+          <p role="alert" className="text-gray-500">
+            Não foi possível carregar a ação. Verifique sua conexão e tente
+            novamente.
+          </p>
+          <Button onClick={retryLoad}>Tentar novamente</Button>
         </div>
       </DashboardShell>
     );

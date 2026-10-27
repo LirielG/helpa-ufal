@@ -12,6 +12,7 @@ import {
   signIn,
   submitLoginForm,
   submitStudentSignUpForm,
+  waitFor,
 } from "@/test";
 import type { Activity } from "@/services/contracts/activity";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
@@ -338,6 +339,45 @@ describe("ActionDetail enrollment cancellation", () => {
     ).not.toBeInTheDocument();
     expect(calls()).toBe(2);
   });
+
+  it.each([0, 500, 404])(
+    "keeps the action after cancellation when refresh fails with %s",
+    async (status) => {
+      signIn();
+      let calls = 0;
+      server.use(
+        http.get(`${API}/activities/${ACTION_ID}`, () => {
+          calls += 1;
+          if (calls === 1) return HttpResponse.json(enrolledAction());
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
+      );
+      succeedCancellation();
+      const { user } = renderPage();
+
+      await openCancellationModal(user);
+      await confirmCancellation(user);
+
+      expect(
+        await screen.findByText("Inscrição cancelada."),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(calls).toBe(2));
+      expect(
+        screen.getByText("4 disponíveis / 20 no total"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Cancelar inscrição" }),
+      ).toBeEnabled();
+      expect(
+        screen.queryByText("Ação não encontrada."),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Cancelar inscrição" }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("settles on the not-enrolled state without an error when the enrollment was already cancelled", async () => {
     signIn();

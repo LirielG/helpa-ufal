@@ -166,6 +166,86 @@ function serveAreas(areas: string[]) {
 }
 
 describe("EditAction", () => {
+  it.each([0, 500])(
+    "retries a loading failure (%s) and fills the form with the loaded action",
+    async (status) => {
+      const action = editableAction();
+      let calls = 0;
+      server.use(
+        http.get(`${API}/activities/${ACTION_ID}`, () => {
+          calls += 1;
+          if (calls > 1) return HttpResponse.json(action);
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
+      );
+      const { user } = renderEditAction();
+      const message =
+        "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.";
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(
+        screen.queryByText("Ação não encontrada."),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "Tentar novamente" }),
+      );
+
+      expect(await findTitleField()).toHaveValue(action.title);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(calls).toBe(2);
+    },
+  );
+
+  it("lets the session handler redirect to login when loading answers 401", async () => {
+    server.use(
+      http.get(
+        `${API}/activities/${ACTION_ID}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    );
+    renderEditAction();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows loading during a retry and not found if the action was removed", async () => {
+    let calls = 0;
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, async () => {
+        calls += 1;
+        if (calls === 1) return HttpResponse.error();
+        await responseReady;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    const { user } = renderEditAction();
+    await user.click(
+      await screen.findByRole("button", { name: "Tentar novamente" }),
+    );
+    expect(screen.getByText("Carregando...")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByText("Ação não encontrada.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
+
   it("loads the action from the API into the form", async () => {
     const action = mockAction();
 

@@ -89,32 +89,37 @@ describe("useEnrollmentActivity", () => {
     expect(result.current.activity?.availableSlots).toBe(1);
   });
 
-  it("keeps the loaded activity when a reload fails", async () => {
-    let fail = false;
+  it.each([0, 404, 500])(
+    "keeps the loaded activity when a reload fails with %s",
+    async (status) => {
+      let fail = false;
 
-    server.use(
-      http.get(`${API}/activities/:id`, () =>
-        fail
-          ? HttpResponse.error()
-          : HttpResponse.json(
-              makeActionDetail({ id: "act-1", status: "COMPLETED" }),
-            ),
-      ),
-    );
+      server.use(
+        http.get(`${API}/activities/:id`, () =>
+          fail
+            ? status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status })
+            : HttpResponse.json(
+                makeActionDetail({ id: "act-1", status: "COMPLETED" }),
+              ),
+        ),
+      );
 
-    const { result } = renderHook(() => useEnrollmentActivity("act-1"));
-    await waitFor(() =>
-      expect(result.current.activity?.status).toBe("COMPLETED"),
-    );
+      const { result } = renderHook(() => useEnrollmentActivity("act-1"));
+      await waitFor(() =>
+        expect(result.current.activity?.status).toBe("COMPLETED"),
+      );
 
-    fail = true;
-    await act(async () => {
-      result.current.reload();
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+      fail = true;
+      await act(async () => {
+        result.current.reload();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
 
-    expect(result.current.activity?.status).toBe("COMPLETED");
-  });
+      expect(result.current.activity?.status).toBe("COMPLETED");
+    },
+  );
 
   it("does not expose the previous activity while the next one loads", async () => {
     server.use(

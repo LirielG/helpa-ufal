@@ -13,6 +13,56 @@ describe("ActionDetail Integration", () => {
     signIn(); // Ensure user is authenticated
   });
 
+  it.each([0, 500, 404])(
+    "keeps the action and enrollment success when refresh fails with %s",
+    async (status) => {
+      const actionId = "act-refresh-failure";
+      const action = makeActionDetail({
+        id: actionId,
+        slots: 20,
+        availableSlots: 5,
+      });
+      let calls = 0;
+      server.use(
+        http.get(`${API}/activities/${actionId}`, () => {
+          calls += 1;
+          if (calls === 1) return HttpResponse.json(action);
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
+        http.post(
+          `${API}/activities/${actionId}/enroll`,
+          () => new HttpResponse(null, { status: 201 }),
+        ),
+      );
+      const { user } = render(<ActionDetail />, {
+        route: `/activity/${actionId}`,
+        path: "/activity/:id",
+      });
+
+      await user.click(
+        await screen.findByRole("button", { name: /Inscrever-se/ }),
+      );
+      await user.click(screen.getByRole("button", { name: /Confirmar/ }));
+      expect(
+        await screen.findByText("Oba! Você está dentro!"),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(calls).toBe(2));
+      await user.click(screen.getByRole("button", { name: "Fechar modal" }));
+
+      expect(
+        screen.getByRole("heading", { name: action.title }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("5 disponíveis / 20 no total"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Ação não encontrada."),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it("updates available slots after successful enrollment", async () => {
     const actionId = "act-integration-test";
     let getCallCount = 0;
