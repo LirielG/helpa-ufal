@@ -10,7 +10,7 @@ import type { UserEvent } from "@testing-library/user-event";
 import { useLocation } from "react-router";
 import {
   render,
-  futureDateInput,
+  futureDateDisplay,
   http,
   HttpResponse,
   server,
@@ -105,10 +105,10 @@ async function fillStep2(user: UserEvent) {
   );
 
   fireEvent.change(registerDialog().getByLabelText("Data de início"), {
-    target: { value: futureDateInput() },
+    target: { value: futureDateDisplay() },
   });
   fireEvent.change(registerDialog().getByLabelText("Data de encerramento"), {
-    target: { value: futureDateInput() },
+    target: { value: futureDateDisplay() },
   });
 }
 
