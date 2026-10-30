@@ -3,6 +3,7 @@ import { MapPin, Calendar, CircleCheck, Download } from "lucide-react";
 import { ApiError } from "@/services/apiError";
 import { downloadCertificate } from "../../services";
 import type { UserActivity } from "../../types";
+import { formatWorkloadHours, formatHomologatedWorkloadHours } from "@/utils";
 
 const DOWNLOAD_ERROR_MESSAGE =
   "Não foi possível baixar o certificado. Tente novamente.";
@@ -38,9 +39,9 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
   // Once homologated, the hours that count are the confirmed ones, which can
   // be lower than what the action planned.
   const workloadLabel = certificate
-    ? `${activity.confirmedWorkloadHours} horas homologadas`
+    ? formatHomologatedWorkloadHours(activity.confirmedWorkloadHours)
     : activity.action.details?.workloadHours != null
-      ? `${activity.action.details.workloadHours} horas`
+      ? formatWorkloadHours(activity.action.details.workloadHours)
       : null;
 
   const handleDownload = async () => {
