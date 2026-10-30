@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -1054,6 +1054,43 @@ describe("EditAction", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it("goes back to the screen that opened the edit after saving", async () => {
+    mockAction();
+    spyOnUpdate();
+
+    function BackButton() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(-1)}>
+          Voltar
+        </button>
+      );
+    }
+
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/profile"
+          element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+        />
+        <Route path="/activity/:id/edit" element={<EditAction />} />
+        <Route path="/activity/:id" element={<BackButton />} />
+      </Routes>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+    await user.click(await screen.findByRole("button", { name: "Voltar" }));
+
+    expect(
+      await screen.findByRole("link", { name: "Editar" }),
+    ).toBeInTheDocument();
   });
 });
 
