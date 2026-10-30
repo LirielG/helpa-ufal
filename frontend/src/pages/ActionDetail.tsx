@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
+import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -75,6 +76,12 @@ export function ActionDetail() {
     setError("Esta ação não existe mais.");
   };
 
+  // Convenience only: GET /activities/:id/enrollments still enforces this on
+  // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
+  const canViewEnrollments = Boolean(
+    action && user && (user.id === action.authorId || user.isManager),
+  );
+
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       {isLoading && (
@@ -137,6 +144,21 @@ export function ActionDetail() {
                     />
                   ) : (
                     <GuestEnrollmentActions action={action} />
+                  )}
+
+                  {canViewEnrollments && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="lg"
+                      onClick={() =>
+                        navigate(`/activity/${action.id}/enrollments`)
+                      }
+                      className="flex items-center justify-center gap-3 rounded-xl"
+                    >
+                      <Users className="size-6" />
+                      Ver inscritos
+                    </Button>
                   )}
 
                   {/* The API answers 401 to visitors and 403 to the author. */}
