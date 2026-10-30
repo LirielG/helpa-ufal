@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -9,6 +9,10 @@ import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { ProfileTabs } from "../features/profile/components/ProfileTabs";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
 import { ActionsList } from "../features/profile/components/ActionsList";
+import {
+  DEFAULT_PROFILE_TAB,
+  isProfileTab,
+} from "../features/profile/constants";
 import { getProfile, updateProfile } from "../features/profile/services";
 import type { ProfileTab, UserProfile } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
@@ -28,7 +32,20 @@ export function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>("personal");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: ProfileTab = isProfileTab(tabParam)
+    ? tabParam
+    : DEFAULT_PROFILE_TAB;
+
+  // `replace` keeps the browser's Back from walking through every tab click;
+  // the fresh params also drop `filter`, which belongs to the actions tab.
+  const handleTabChange = (tab: ProfileTab) => {
+    if (tab === activeTab) return;
+    setSearchParams(tab === DEFAULT_PROFILE_TAB ? {} : { tab }, {
+      replace: true,
+    });
+  };
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -114,7 +131,7 @@ export function Profile() {
 
           {!isLoading && !loadError && profile && (
             <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 items-start">
-              <ProfileTabs activeTab={activeTab} onChange={setActiveTab} />
+              <ProfileTabs activeTab={activeTab} onChange={handleTabChange} />
 
               <div className="space-y-6 min-w-0">
                 <ProfileCard user={profile} />
