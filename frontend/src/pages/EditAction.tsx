@@ -256,7 +256,7 @@ export function EditAction() {
 
     try {
       await updateAction(id, payload);
-      navigate(`/activity/${id}`);
+      navigate(`/activity/${id}`, { replace: true });
     } catch (error) {
       handleActionApiErrors(error, setError, setGeneralError, navigate);
     }

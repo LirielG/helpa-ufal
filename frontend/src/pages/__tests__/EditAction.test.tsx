@@ -20,6 +20,7 @@ import { EditAction } from "../EditAction";
 import { signIn } from "@/test/auth";
 import { makeUser } from "@/test/factories";
 import { ACTIVITY_TITLE_MAX_LENGTH } from "@/validators/limits";
+import * as reactRouter from "react-router";
 
 const ACTION_ID = "action-1";
 
@@ -974,6 +975,30 @@ describe("EditAction", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it("navigates to action detail using replace: true after saving", async () => {
+    mockAction();
+    spyOnUpdate();
+    const navigateSpy = vi.fn();
+    const spy = vi
+      .spyOn(reactRouter, "useNavigate")
+      .mockReturnValue(navigateSpy);
+
+    const { user } = renderEditAction();
+
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(navigateSpy).toHaveBeenCalledWith(`/activity/${ACTION_ID}`, {
+        replace: true,
+      }),
+    );
+
+    spy.mockRestore();
   });
 });
 
