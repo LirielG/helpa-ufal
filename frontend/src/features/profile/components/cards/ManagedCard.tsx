@@ -218,6 +218,11 @@ export function ManagedCard({
               value={currentStatus}
               onChange={handleSelectChange}
               disabled={isLoading || isTerminal || isLocked}
+              aria-describedby={
+                currentStatus === "OPEN"
+                  ? `status-hint-${activity.action.id}`
+                  : undefined
+              }
               className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {STATUS_OPTIONS[currentStatus].map((opt) => (
@@ -230,6 +235,14 @@ export function ManagedCard({
                 </option>
               ))}
             </select>
+            {currentStatus === "OPEN" && (
+              <p
+                id={`status-hint-${activity.action.id}`}
+                className="text-[11px] text-gray-400 leading-tight text-right max-w-[150px] mt-0.5"
+              >
+                Para concluir, primeiro marque a ação como Em andamento.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-3">
