@@ -11,7 +11,6 @@ const DEFAULT_LIMIT = 20;
  * Fetches the paginated list of enrollments for an activity.
  *
  * Throws ApiError on failure — callers are responsible for error mapping.
- * This intentionally does NOT swallow errors (contrast with getActionById).
  */
 export async function fetchEnrollments(
   activityId: string,
