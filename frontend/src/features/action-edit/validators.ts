@@ -4,6 +4,7 @@ import {
   ACTIVITY_TITLE_TOO_LONG_MESSAGE,
 } from "../../validators/limits";
 import { activityDescriptionSchema } from "../../validators/activity";
+import { timeSchema } from "../../validators/time";
 
 /** Same list the API validates `address.state` against. */
 const BRAZILIAN_STATES = [
@@ -57,8 +58,8 @@ const actionEditBaseSchema = z
     description: z.string().trim(),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
-    startTime: z.string().min(1, "O horário de início é obrigatório"),
-    endTime: z.string().min(1, "O horário de encerramento é obrigatório"),
+    startTime: timeSchema("O horário de início é obrigatório"),
+    endTime: timeSchema("O horário de encerramento é obrigatório"),
     type: z.enum(["EXTENSION", "COURSE", "EVENT", "LECTURE", "OTHER"], {
       message: "Selecione um tipo de ação",
     }),
