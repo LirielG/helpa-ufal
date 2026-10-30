@@ -58,7 +58,7 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
       url: data.url ?? null,
       workloadHours: data.workloadHours,
       address:
-        "address" in data
+        data.address
           ? {
               id: "addr-123",
               addressLine: data.address.addressLine,

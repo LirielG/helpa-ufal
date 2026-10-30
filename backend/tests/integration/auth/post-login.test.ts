@@ -52,7 +52,7 @@ describe("POST /auth/login", () => {
     const setCookie = response.headers["set-cookie"];
     expect(setCookie).toBeDefined();
     const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
-    const expectedMaxAge = Math.floor(ms(env.JWT_EXPIRES_IN) / 1000);
+    const expectedMaxAge = Math.floor(ms(env.JWT_EXPIRES_IN as ms.StringValue) / 1000);
     expect(sessionCookie).toContain(`Max-Age=${expectedMaxAge}`);
     expect(sessionCookie).toMatch(/SameSite=Strict/);
   });
