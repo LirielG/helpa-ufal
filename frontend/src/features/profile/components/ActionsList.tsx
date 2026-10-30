@@ -1,18 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { ActivityStatus, UserActivity } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
-import { PROFILE_SUB_TABS } from "../constants";
+import {
+  DEFAULT_ACTIVITY_STATUS,
+  PROFILE_SUB_TABS,
+  isActivityStatus,
+} from "../constants";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 
 export function ActionsList() {
   const navigate = useNavigate();
   const { openRegisterModal, setOnSuccessCallback } = useActionRegister();
-  const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
+  const activeSubTab: ActivityStatus = isActivityStatus(filterParam)
+    ? filterParam
+    : DEFAULT_ACTIVITY_STATUS;
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +83,15 @@ export function ActionsList() {
     setActivities([]);
     setError(null);
     setIsLoading(true);
-    setActiveSubTab(tab);
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (tab === DEFAULT_ACTIVITY_STATUS) next.delete("filter");
+        else next.set("filter", tab);
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const removeActivity = (id: string) =>

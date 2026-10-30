@@ -1,4 +1,4 @@
-import type { ActivityStatus } from "./types";
+import type { ActivityStatus, ProfileTab } from "./types";
 
 export interface EmptyStateConfig {
   text: string;
@@ -32,3 +32,16 @@ export const PROFILE_SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
   { id: "completed", label: "Atividades Concluídas" },
   { id: "managed", label: "Atividades Gerenciadas" },
 ];
+
+export const PROFILE_TABS: ProfileTab[] = ["personal", "actions"];
+
+export const DEFAULT_PROFILE_TAB: ProfileTab = "personal";
+
+export const DEFAULT_ACTIVITY_STATUS: ActivityStatus = "enrolled";
+
+export const isProfileTab = (value: string | null): value is ProfileTab =>
+  PROFILE_TABS.includes(value as ProfileTab);
+
+export const isActivityStatus = (
+  value: string | null,
+): value is ActivityStatus => PROFILE_SUB_TABS.some((tab) => tab.id === value);
