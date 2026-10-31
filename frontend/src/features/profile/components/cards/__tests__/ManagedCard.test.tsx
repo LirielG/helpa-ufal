@@ -267,7 +267,7 @@ describe("ManagedCard status control", () => {
       await user.selectOptions(statusSelect(), "Concluída");
 
       const dialog = screen.getByRole("dialog", { name: "Concluir ação" });
-      expect(within(dialog).getByText(/1 hora/)).toBeInTheDocument();
+      expect(within(dialog).getByText("1 hora")).toBeInTheDocument();
     });
   });
 
