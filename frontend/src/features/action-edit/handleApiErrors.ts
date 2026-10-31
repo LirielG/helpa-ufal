@@ -1,5 +1,4 @@
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
-import type { NavigateFunction } from "react-router";
 import {
   ApiError,
   NETWORK_ERROR_STATUS,
@@ -65,7 +64,6 @@ export function handleActionApiErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   setGeneralError: (message: string | null) => void,
-  navigate: NavigateFunction,
 ): void {
   const GENERIC_ERROR = "Ocorreu um erro ao atualizar a ação. Tente novamente.";
 
@@ -81,7 +79,6 @@ export function handleActionApiErrors<T extends FieldValues>(
       }
       break;
     case 401:
-      navigate("/login");
       break;
     case 403:
       setGeneralError("Apenas o autor ou gestor pode editar esta ação.");
@@ -125,7 +122,9 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError("Você não tem permissão para criar esta ação.");
       break;
     case 409:
-      setGeneralError("Já existe uma ação com estes dados. Verifique e tente novamente.");
+      setGeneralError(
+        "Já existe uma ação com estes dados. Verifique e tente novamente.",
+      );
       break;
     case NETWORK_ERROR_STATUS:
       setGeneralError("Falha de comunicação com o servidor. Tente novamente.");

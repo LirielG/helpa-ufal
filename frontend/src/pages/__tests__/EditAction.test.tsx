@@ -992,11 +992,38 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
-  it("goes to the login screen on 401", async () => {
+  it("replaces the edit screen with login on 401 without adding another login entry", async () => {
     mockAction();
     failUpdate(401);
-    const { user } = renderEditAction();
 
+    function LoginScreen() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <h1>Entrar</h1>
+          <button type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </>
+      );
+    }
+
+    const { user } = render(
+      <>
+        <SessionExpiry />
+        <Routes>
+          <Route
+            path="/profile"
+            element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+          />
+          <Route path="/activity/:id/edit" element={<EditAction />} />
+          <Route path="/login" element={<LoginScreen />} />
+        </Routes>
+      </>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
     const title = await findTitleField();
     await user.clear(title);
     await user.type(title, "Título com sessão expirada");
@@ -1004,6 +1031,11 @@ describe("EditAction", () => {
 
     expect(
       await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(
+      await screen.findByRole("link", { name: "Editar" }),
     ).toBeInTheDocument();
   });
 
