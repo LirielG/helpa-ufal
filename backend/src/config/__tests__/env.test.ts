@@ -206,3 +206,39 @@ describe("EnvSchema — ADMIN_FULL_NAME", () => {
     expect(result.error?.issues[0]?.path).toEqual(["ADMIN_FULL_NAME"]);
   });
 });
+
+describe("EnvSchema — ADMIN teacher fields", () => {
+  it("leaves ADMIN_REGISTRATION_CODE, ADMIN_CNDB, and ADMIN_COURSE undefined when unset", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.ADMIN_REGISTRATION_CODE).toBeUndefined();
+    expect(parsed.ADMIN_CNDB).toBeUndefined();
+    expect(parsed.ADMIN_COURSE).toBeUndefined();
+  });
+
+  it("accepts non-empty strings for ADMIN_REGISTRATION_CODE, ADMIN_CNDB, and ADMIN_COURSE", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      ADMIN_REGISTRATION_CODE: "SIAPE123456",
+      ADMIN_CNDB: "CNDB123456",
+      ADMIN_COURSE: "Ciência da Computação",
+    });
+
+    expect(parsed.ADMIN_REGISTRATION_CODE).toBe("SIAPE123456");
+    expect(parsed.ADMIN_CNDB).toBe("CNDB123456");
+    expect(parsed.ADMIN_COURSE).toBe("Ciência da Computação");
+  });
+
+  it.each(["ADMIN_REGISTRATION_CODE", "ADMIN_CNDB", "ADMIN_COURSE"] as const)(
+    "rejects an empty string for %s, naming the variable in the error",
+    (variable) => {
+      const result = EnvSchema.safeParse({
+        ...minimalEnv,
+        [variable]: "",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual([variable]);
+    },
+  );
+});

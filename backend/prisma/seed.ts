@@ -7,7 +7,13 @@ import { prisma } from "../src/database/prisma.js";
 
 export async function seedAdmin() {
   const missingVars = (
-    ["ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_FULL_NAME"] as const
+    [
+      "ADMIN_EMAIL",
+      "ADMIN_PASSWORD",
+      "ADMIN_FULL_NAME",
+      "ADMIN_REGISTRATION_CODE",
+      "ADMIN_CNDB",
+    ] as const
   ).filter((key) => !env[key]);
 
   if (missingVars.length > 0) {
@@ -17,6 +23,9 @@ export async function seedAdmin() {
   const adminEmail = env.ADMIN_EMAIL!;
   const adminPassword = env.ADMIN_PASSWORD!;
   const adminFullName = env.ADMIN_FULL_NAME!;
+  const adminRegistrationCode = env.ADMIN_REGISTRATION_CODE!;
+  const adminCndb = env.ADMIN_CNDB!;
+  const adminCourse = env.ADMIN_COURSE ?? null;
 
   const passwordHash = await bcryptjs.hash(adminPassword, 12);
 
@@ -38,12 +47,16 @@ export async function seedAdmin() {
 
   await prisma.teacher.upsert({
     where: { userId: user.id },
-    update: {},
+    update: {
+      registrationCode: adminRegistrationCode,
+      cndb: adminCndb,
+      course: adminCourse,
+    },
     create: {
       userId: user.id,
-      registrationCode: "SIAPE123456",
-      cndb: "CNDB123456",
-      course: "Ciência da Computação",
+      registrationCode: adminRegistrationCode,
+      cndb: adminCndb,
+      course: adminCourse,
     },
   });
 
