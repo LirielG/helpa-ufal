@@ -13,8 +13,8 @@ const meUrl = "/users/me";
 const loginUrl = "/auth/login";
 const REVOKED_TOKEN_BODY = {
   status: 401,
-  code: "UNAUTHENTICATED",
-  message: "Token malformatted, expired or invalid.",
+  code: "SESSION_INVALID",
+  message: "Session is no longer valid.",
 };
 
 function getMe(token: string) {
@@ -88,10 +88,10 @@ describe("token version", () => {
     expect((await getMe(other.token)).status).toBe(200);
   });
 
-  it("keeps answering 404 for a token whose user no longer exists", async () => {
+  it("returns 401 for a token whose user no longer exists", async () => {
     const student = await createStudent();
     await prisma.user.delete({ where: { id: student.user.id } });
 
-    expect((await getMe(student.token)).status).toBe(404);
+    expect((await getMe(student.token)).status).toBe(401);
   });
 });

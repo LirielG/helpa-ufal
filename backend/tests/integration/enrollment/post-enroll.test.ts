@@ -139,8 +139,6 @@ describe("POST /activities/:activityId/enroll", () => {
   });
 
   it("rejects a valid token whose user no longer exists", async () => {
-    // Ghost user: the JWT is valid, but the account is gone. The service
-    // checks the database (light hybrid authentication, per contract).
     const { activity } = await anOpenActivity();
     const ghost = await createStudent();
     await prisma.user.delete({ where: { id: ghost.user.id } });
@@ -152,8 +150,8 @@ describe("POST /activities/:activityId/enroll", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
-      code: "UNAUTHENTICATED",
-      message: "User account not found or inactive.",
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 

@@ -2,9 +2,8 @@ import { signJwt } from "@/utils/jwt.js";
 import type { AuthenticatedUser } from "@/types/auth.js";
 
 /**
- * The `id` must match an existing User when the route looks it up
- * (e.g. PATCH /activities/:activityId/status). Prefer the factories, which return
- * `{ user, token }` paired.
+ * The middleware requires an existing user. Prefer the factories, which
+ * return paired `{ user, token }` fixtures.
  *
  * Without `tokenVersion` the token carries no claim, which the middleware reads
  * as version 0 — the stored default, so fixtures need not set it.

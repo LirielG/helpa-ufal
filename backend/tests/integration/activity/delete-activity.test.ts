@@ -85,7 +85,7 @@ describe("DELETE /activities/:activityId", () => {
     expect(row!.deletedAt).toBeNull(); // nothing was touched
   });
 
-  it("returns 403 when the token belongs to a user that no longer exists", async () => {
+  it("returns 401 when the token belongs to a user that no longer exists", async () => {
     // End-to-end ghost user: the token is still cryptographically valid,
     // but the account was removed — it must not authorize anything.
     const author = await createTeacher();
@@ -97,7 +97,7 @@ describe("DELETE /activities/:activityId", () => {
     await request(app)
       .delete(`/activities/${activity.id}`)
       .set(...authCookie(ghost.token))
-      .expect(403);
+      .expect(401);
 
     const row = await prisma.activity.findUnique({
       where: { id: activity.id },

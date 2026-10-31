@@ -17,21 +17,6 @@ import { Prisma } from "@prisma/client";
 import registrationPolicyMessage from "../../helpers/password-policy.js";
 import { randomUUID } from "node:crypto";
 
-/**
- * Route contract: docs/bruno/User/Update user's profile.yml.
- *
- * Red until #59 (route) and the tokenVersion issue (session revocation) land.
- * Error bodies are asserted with toEqual so the red never false-passes on the
- * Express default 404.
- *
- * CHECK BEFORE RUNNING: the auth routes are assumed to be mounted under /auth
- * (AuthRouter only shows "/login", "/register", "/logout"). Fix the three
- * constants below if the prefix is different.
- *
- * Deliberately NOT covered (registered debt): malformed JSON answers 500 until
- * the guard planned in #146 lands.
- */
-
 const meUrl = "/users/me";
 const loginUrl = "/auth/login";
 const logoutUrl = "/auth/logout";
@@ -44,8 +29,8 @@ const CURRENT_REQUIRED = "Current password is required to set a new password.";
 const POLICY_MESSAGE = registrationPolicyMessage();
 const REVOKED_TOKEN_BODY = {
   status: 401,
-  code: "UNAUTHENTICATED",
-  message: "Token malformatted, expired or invalid.",
+  code: "SESSION_INVALID",
+  message: "Session is no longer valid.",
 };
 
 // Every persisted column that is not editable here. Derived from the Prisma
@@ -804,17 +789,17 @@ describe("PATCH /users/me", () => {
       expect((await readUser(owner.user.id)).fullName).toBe("Maria Silva");
     });
 
-    it("returns 404 when the user from the token no longer exists", async () => {
+    it("returns 401 when the user from the token no longer exists", async () => {
       const student = await createStudent();
       await prisma.user.delete({ where: { id: student.user.id } });
 
       const response = await patchMe(student.token, { fullName: "Maria" });
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(401);
       expect(response.body).toEqual({
-        status: 404,
-        code: "NOT_FOUND",
-        message: "User not found.",
+        status: 401,
+        code: "SESSION_INVALID",
+        message: "Session is no longer valid.",
       });
     });
   });

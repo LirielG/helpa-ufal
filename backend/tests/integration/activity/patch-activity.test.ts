@@ -136,11 +136,6 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(401);
   });
 
-  // TODO(#148): current behavior (403 with the same message used for
-  // "no permission") established as the baseline. ActivityService.update uses
-  // the same error path for "ghost user" and "unauthorized third party" —
-  // revisit in #148 whether a deleted user should have a distinct status
-  // or message (e.g., 401) instead of falling back to the generic 403.
   it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
@@ -155,11 +150,11 @@ describe("PATCH /activities/:activityId", () => {
       .set(...authCookie(manager.token))
       .send({ title: "Título Atualizado de Usuário Fantasma" });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You do not have permission to update this activity.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 

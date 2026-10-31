@@ -1,8 +1,6 @@
-// src/services/enrollment/EnrollmentService.ts
+import type { AuthenticatedUser } from "@/types/auth.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
-import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type {
   EnrollmentWithActivity,
@@ -57,28 +55,23 @@ function toSkip(page: number, limit: number): number {
 type Props = {
   enrollmentRepository?: IEnrollmentRepository;
   activityRepository?: IActivityRepository;
-  userRepository?: IUserRepository;
 };
 
 class EnrollmentService implements IEnrollmentService {
   private _enrollmentRepository: IEnrollmentRepository;
   private _activityRepository: IActivityRepository;
-  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
-    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async enroll(
     userId: string,
     activityId: string,
   ): Promise<EnrollResponse> {
-    await this.requireUser(userId);
-
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
         { field: "activityId", message: "activityId must be a valid UUID." },
@@ -107,8 +100,6 @@ class EnrollmentService implements IEnrollmentService {
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    await this.requireUser(userId);
-
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
         { field: "activityId", message: "activityId must be a valid UUID." },
@@ -147,12 +138,12 @@ class EnrollmentService implements IEnrollmentService {
   }
 
   public async listParticipants(
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     activityId: string,
     page = 1,
     limit = 10,
   ): Promise<ParticipantsListResponse> {
-    const user = await this.requireUser(userId);
+    const userId = user.id;
 
     if (!isValidUUID(activityId)) {
       throw new CustomError(404, "Activity not found.");
@@ -190,11 +181,11 @@ class EnrollmentService implements IEnrollmentService {
   }
 
   public async confirmAttendance(
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     enrollmentId: string,
     input: ConfirmAttendanceInput,
   ): Promise<EnrollmentResponse> {
-    const user = await this.requireUser(userId);
+    const userId = user.id;
 
     // A malformed id is a lookup that finds nothing, never operator input: it
     // answers the same 404 as a nonexistent or soft-deleted row, so the route
@@ -284,15 +275,6 @@ class EnrollmentService implements IEnrollmentService {
     }
 
     return input.workloadHours;
-  }
-
-  // Token valid and user still exists
-  private async requireUser(userId: string): Promise<{ isManager: boolean }> {
-    const user = await this._userRepository.findById(userId);
-    if (!user) {
-      throw new CustomError(401, "User account not found or inactive.");
-    }
-    return user;
   }
 
   private toEnrollResponse(enrollment: Enrollment): EnrollResponse {

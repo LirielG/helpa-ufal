@@ -146,11 +146,11 @@ describe("POST /activities", () => {
       .set(...authCookie(teacher.token))
       .send(validPayload());
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You do not have permission to create an activity.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
 
     const count = await prisma.activity.count({

@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 const AUTHOR_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -42,7 +41,7 @@ function anEnrollment(overrides: Record<string, unknown> = {}) {
 function mockRepositories(
   overrides: {
     activity?: Record<string, unknown>;
-    user?: Record<string, unknown>;
+
     enrollment?: Record<string, unknown>;
   } = {},
 ) {
@@ -50,11 +49,6 @@ function mockRepositories(
     findById: vi.fn().mockResolvedValue(anActivity()),
     ...overrides.activity,
   } as unknown as IActivityRepository;
-
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue({ isManager: false }),
-    ...overrides.user,
-  } as unknown as IUserRepository;
 
   const enrollmentRepository = {
     findById: vi.fn().mockResolvedValue(anEnrollment()),
@@ -78,26 +72,26 @@ function mockRepositories(
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 
-  return { activityRepository, userRepository, enrollmentRepository };
+  return { activityRepository, enrollmentRepository };
 }
 
 function aService(overrides: Parameters<typeof mockRepositories>[0] = {}): {
   service: EnrollmentService;
   activityRepository: IActivityRepository;
-  userRepository: IUserRepository;
+
   enrollmentRepository: IEnrollmentRepository;
 } {
-  const { activityRepository, userRepository, enrollmentRepository } =
+  const { activityRepository, enrollmentRepository } =
     mockRepositories(overrides);
 
   return {
     service: new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     }),
     activityRepository,
-    userRepository,
+
     enrollmentRepository,
   };
 }
@@ -108,10 +102,14 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("writes the pair (true, hours) for the activity author and returns the canonical enrollment DTO", async () => {
     const { service, enrollmentRepository } = aService();
 
-    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-      attended: true,
-      workloadHours: 4,
-    });
+    const result = await service.confirmAttendance(
+      { id: AUTHOR_ID, isManager: false },
+      ENROLLMENT_ID,
+      {
+        attended: true,
+        workloadHours: 4,
+      },
+    );
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -134,10 +132,14 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("looks the enrollment up by id and resolves the activity from enrollment.activityId", async () => {
     const { service, enrollmentRepository, activityRepository } = aService();
 
-    await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-      attended: true,
-      workloadHours: 4,
-    });
+    await service.confirmAttendance(
+      { id: AUTHOR_ID, isManager: false },
+      ENROLLMENT_ID,
+      {
+        attended: true,
+        workloadHours: 4,
+      },
+    );
 
     expect(enrollmentRepository.findById).toHaveBeenCalledWith(ENROLLMENT_ID);
     expect(activityRepository.findById).toHaveBeenCalledWith(ACTIVITY_ID);
@@ -148,9 +150,13 @@ describe("EnrollmentService.confirmAttendance", () => {
   it("attended=false writes (false, 0), ignoring nothing and inventing nothing", async () => {
     const { service, enrollmentRepository } = aService();
 
-    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-      attended: false,
-    });
+    const result = await service.confirmAttendance(
+      { id: AUTHOR_ID, isManager: false },
+      ENROLLMENT_ID,
+      {
+        attended: false,
+      },
+    );
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -169,10 +175,14 @@ describe("EnrollmentService.confirmAttendance", () => {
       const { service, enrollmentRepository } = aService();
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-          attended: true,
-          workloadHours,
-        }),
+        service.confirmAttendance(
+          { id: AUTHOR_ID, isManager: false },
+          ENROLLMENT_ID,
+          {
+            attended: true,
+            workloadHours,
+          },
+        ),
         422,
         "workloadHours must be an integer between 1 and the activity's workload hours.",
       );
@@ -185,10 +195,14 @@ describe("EnrollmentService.confirmAttendance", () => {
     async (workloadHours) => {
       const { service, enrollmentRepository } = aService();
 
-      const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours,
-      });
+      const result = await service.confirmAttendance(
+        { id: AUTHOR_ID, isManager: false },
+        ENROLLMENT_ID,
+        {
+          attended: true,
+          workloadHours,
+        },
+      );
 
       expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
         ACTIVITY_ID,
@@ -210,10 +224,14 @@ describe("EnrollmentService.confirmAttendance", () => {
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
+      service.confirmAttendance(
+        { id: AUTHOR_ID, isManager: false },
+        ENROLLMENT_ID,
+        {
+          attended: true,
+          workloadHours: 4,
+        },
+      ),
       422,
     );
     expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
@@ -231,10 +249,14 @@ describe("EnrollmentService.confirmAttendance", () => {
       });
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-          attended: true,
-          workloadHours: 4,
-        }),
+        service.confirmAttendance(
+          { id: AUTHOR_ID, isManager: false },
+          ENROLLMENT_ID,
+          {
+            attended: true,
+            workloadHours: 4,
+          },
+        ),
         409,
         "Attendance can only be confirmed for completed activities.",
       );
@@ -254,10 +276,14 @@ describe("EnrollmentService.confirmAttendance", () => {
       });
 
       await expectCustomError(
-        service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-          attended: true,
-          workloadHours: 4,
-        }),
+        service.confirmAttendance(
+          { id: AUTHOR_ID, isManager: false },
+          ENROLLMENT_ID,
+          {
+            attended: true,
+            workloadHours: 4,
+          },
+        ),
         409,
         "Only approved enrollments can have attendance confirmed.",
       );
@@ -268,16 +294,16 @@ describe("EnrollmentService.confirmAttendance", () => {
   // ---------- Authorization ----------
 
   it("allows a manager who is not the author", async () => {
-    const { service, enrollmentRepository } = aService({
-      user: {
-        findById: vi.fn().mockResolvedValue({ isManager: true }),
-      },
-    });
+    const { service, enrollmentRepository } = aService({});
 
-    await service.confirmAttendance(MANAGER_ID, ENROLLMENT_ID, {
-      attended: true,
-      workloadHours: 4,
-    });
+    await service.confirmAttendance(
+      { id: MANAGER_ID, isManager: true },
+      ENROLLMENT_ID,
+      {
+        attended: true,
+        workloadHours: 4,
+      },
+    );
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalled();
   });
@@ -287,7 +313,7 @@ describe("EnrollmentService.confirmAttendance", () => {
 
     await expectCustomError(
       service.confirmAttendance(
-        "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
+        { id: "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01", isManager: false },
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -301,29 +327,16 @@ describe("EnrollmentService.confirmAttendance", () => {
     const { service, enrollmentRepository } = aService();
 
     await expectCustomError(
-      service.confirmAttendance(VOLUNTEER_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
+      service.confirmAttendance(
+        { id: VOLUNTEER_ID, isManager: false },
+        ENROLLMENT_ID,
+        {
+          attended: true,
+          workloadHours: 4,
+        },
+      ),
       403,
     );
-    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
-  });
-
-  it("rejects a token whose user no longer exists, before anything else", async () => {
-    const { service, activityRepository, enrollmentRepository } = aService({
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
-
-    await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
-      401,
-      "User account not found or inactive.",
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
     expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
   });
 
@@ -341,10 +354,14 @@ describe("EnrollmentService.confirmAttendance", () => {
       },
     });
 
-    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-      attended: true,
-      workloadHours: 6,
-    });
+    const result = await service.confirmAttendance(
+      { id: AUTHOR_ID, isManager: false },
+      ENROLLMENT_ID,
+      {
+        attended: true,
+        workloadHours: 6,
+      },
+    );
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -367,9 +384,13 @@ describe("EnrollmentService.confirmAttendance", () => {
       },
     });
 
-    const result = await service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-      attended: false,
-    });
+    const result = await service.confirmAttendance(
+      { id: AUTHOR_ID, isManager: false },
+      ENROLLMENT_ID,
+      {
+        attended: false,
+      },
+    );
 
     expect(enrollmentRepository.confirmAttendance).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -397,10 +418,14 @@ describe("EnrollmentService.confirmAttendance", () => {
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
+      service.confirmAttendance(
+        { id: AUTHOR_ID, isManager: false },
+        ENROLLMENT_ID,
+        {
+          attended: true,
+          workloadHours: 4,
+        },
+      ),
       404,
       "Enrollment not found.",
     );
@@ -413,10 +438,14 @@ describe("EnrollmentService.confirmAttendance", () => {
     });
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, ENROLLMENT_ID, {
-        attended: true,
-        workloadHours: 4,
-      }),
+      service.confirmAttendance(
+        { id: AUTHOR_ID, isManager: false },
+        ENROLLMENT_ID,
+        {
+          attended: true,
+          workloadHours: 4,
+        },
+      ),
       404,
       "Enrollment not found.",
     );
@@ -430,7 +459,7 @@ describe("EnrollmentService.confirmAttendance", () => {
 
     await expectCustomError(
       service.confirmAttendance(
-        "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
+        { id: "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01", isManager: false },
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -445,7 +474,7 @@ describe("EnrollmentService.confirmAttendance", () => {
 
     await expectCustomError(
       service.confirmAttendance(
-        "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
+        { id: "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01", isManager: false },
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),
@@ -458,10 +487,14 @@ describe("EnrollmentService.confirmAttendance", () => {
     const { service, enrollmentRepository } = aService();
 
     await expectCustomError(
-      service.confirmAttendance(AUTHOR_ID, "not-a-uuid", {
-        attended: true,
-        workloadHours: 4,
-      }),
+      service.confirmAttendance(
+        { id: AUTHOR_ID, isManager: false },
+        "not-a-uuid",
+        {
+          attended: true,
+          workloadHours: 4,
+        },
+      ),
       404,
       "Enrollment not found.",
     );
@@ -478,7 +511,7 @@ describe("EnrollmentService.confirmAttendance", () => {
 
     await expectCustomError(
       service.confirmAttendance(
-        "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01",
+        { id: "6e8bc430-9c3a-41d5-a0e6-9b1c0b2b6a01", isManager: false },
         ENROLLMENT_ID,
         { attended: true, workloadHours: 4 },
       ),

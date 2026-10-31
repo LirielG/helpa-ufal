@@ -460,8 +460,8 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
-      code: "UNAUTHENTICATED",
-      message: "User account not found or inactive.",
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 

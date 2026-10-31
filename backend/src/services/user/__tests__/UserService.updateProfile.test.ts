@@ -5,26 +5,6 @@ import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
-/**
- * Contract: docs/bruno/User/Update user's profile.yml.
- *
- * Names this suite pins down for #59:
- *   IUserService.updateProfile(userId, input): Promise<UserProfileResponse>
- *     input = { fullName?, course?: string | null, currentPassword?, newPassword? }
- *     (already validated by Zod; who may send `course` is decided by the schema)
- *   IUserRepository.findById(id)
- *     -> the same row as findProfileById PLUS passwordHash, or null. Internal
- *        use only: findProfileById keeps not loading the hash.
- *   IUserRepository.updateProfile(id, data)
- *     data = { fullName?, course?, passwordHash? }, written in ONE call
- *     (one transaction; bumping tokenVersion when passwordHash is present is
- *     the repository's business and is covered by the integration suite).
- *     Returns the same row shape as findProfileById.
- *
- * Real bcrypt (cost 4) is used on purpose: the tests check what the hash IS,
- * not which bcrypt function the service happened to call.
- */
-
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const CREATED_AT = new Date("2026-01-15T10:30:00.000Z");
 const CURRENT_PASSWORD = "Senha@123";
@@ -93,23 +73,12 @@ function setup(
 
 describe("UserService.updateProfile", () => {
   describe("user lookup", () => {
-    it("loads the user by the id it was given, and no other", async () => {
+    it("does not load the password when updating only personal data", async () => {
       const { service, findById } = setup(aStudentRow());
 
       await service.updateProfile(USER_ID, { fullName: "Maria" });
 
-      expect(findById).toHaveBeenCalledExactlyOnceWith(USER_ID);
-    });
-
-    it("fails with 404 when the user does not exist, without writing", async () => {
-      const { service, update } = setup(null);
-
-      await expectCustomError(
-        service.updateProfile(USER_ID, { fullName: "Maria" }),
-        404,
-        "User not found.",
-      );
-      expect(update).not.toHaveBeenCalled();
+      expect(findById).not.toHaveBeenCalled();
     });
   });
 
@@ -127,7 +96,9 @@ describe("UserService.updateProfile", () => {
     it("passes a teacher's course to the repository", async () => {
       const { service, update } = setup(aTeacherRow());
 
-      await service.updateProfile(USER_ID, { course: "Engenharia de Computação" });
+      await service.updateProfile(USER_ID, {
+        course: "Engenharia de Computação",
+      });
 
       expect(update).toHaveBeenCalledExactlyOnceWith(USER_ID, {
         course: "Engenharia de Computação",
@@ -216,8 +187,12 @@ describe("UserService.updateProfile", () => {
       const [id, data] = update.mock.calls[0];
       expect(id).toBe(USER_ID);
       expect(data.passwordHash).not.toBe(NEW_PASSWORD);
-      expect(await bcryptjs.compare(NEW_PASSWORD, data.passwordHash)).toBe(true);
-      expect(await bcryptjs.compare(CURRENT_PASSWORD, data.passwordHash)).toBe(false);
+      expect(await bcryptjs.compare(NEW_PASSWORD, data.passwordHash)).toBe(
+        true,
+      );
+      expect(await bcryptjs.compare(CURRENT_PASSWORD, data.passwordHash)).toBe(
+        false,
+      );
     });
 
     it("never hands either plain password to the repository", async () => {

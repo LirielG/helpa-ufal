@@ -82,7 +82,7 @@ class ActivityController implements IActivityController {
 
     const updatedActivity = await this._activityService.update(
       activityId,
-      req.user.id,
+      req.user,
       data,
     );
 
@@ -107,7 +107,7 @@ class ActivityController implements IActivityController {
     const updatedActivity = await this._activityService.updateStatus(
       activityId,
       data.status,
-      req.user.id,
+      req.user,
     );
 
     res.status(200).json(updatedActivity);
@@ -126,7 +126,7 @@ class ActivityController implements IActivityController {
       throw new CustomError(400, "Invalid UUID format.");
     }
 
-    await this._activityService.delete(activityId, req.user.id);
+    await this._activityService.delete(activityId, req.user);
 
     res.status(204).send();
   }

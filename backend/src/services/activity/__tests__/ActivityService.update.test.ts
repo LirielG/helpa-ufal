@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import { expectHttpError } from "@/utils/tests.js";
 
@@ -59,7 +58,6 @@ function makeActivity(overrides: Partial<StoredActivity> = {}): StoredActivity {
 function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
-    user?: Partial<IUserRepository>;
   } = {},
 ) {
   const activityRepository = {
@@ -73,16 +71,7 @@ function mockRepositories(
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
-  const userRepository = {
-    findById: vi.fn().mockImplementation(async (id: string) => {
-      if (id === MANAGER) return { isManager: true };
-      if (id === AUTHOR || id === THIRD_PARTY) return { isManager: false };
-      return null;
-    }),
-    ...overrides.user,
-  } as unknown as IUserRepository;
-
-  return { activityRepository, userRepository };
+  return { activityRepository };
 }
 
 async function captureError(promise: Promise<unknown>): Promise<unknown> {
@@ -98,11 +87,11 @@ describe("ActivityService.update", () => {
   // ---------- Activity lookup ----------
 
   it("throws 404 when the activity does not exist or was deleted", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { title: "x" }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { title: "x" }),
       404,
       "Activity not found.",
     );
@@ -112,13 +101,17 @@ describe("ActivityService.update", () => {
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", THIRD_PARTY, { title: "x" }),
+      service.update(
+        "act-1",
+        { id: THIRD_PARTY, isManager: false },
+        { title: "x" },
+      ),
       403,
       "You do not have permission to update this activity.",
     );
@@ -126,31 +119,21 @@ describe("ActivityService.update", () => {
   });
 
   it("throws 403 (not 409) when a third party targets a completed activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", THIRD_PARTY, { title: "x" }),
-      403,
-    );
-    expect(activityRepository.update).not.toHaveBeenCalled();
-  });
-
-  it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
-    const service = new ActivityService({ activityRepository, userRepository });
-
-    await expectHttpError(
-      service.update("act-1", AUTHOR, { title: "Novo título" }),
+      service.update(
+        "act-1",
+        { id: THIRD_PARTY, isManager: false },
+        { title: "x" },
+      ),
       403,
     );
     expect(activityRepository.update).not.toHaveBeenCalled();
@@ -159,17 +142,17 @@ describe("ActivityService.update", () => {
   // ---------- Status guard ----------
 
   it("throws 409 when the activity is COMPLETED", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ status: "COMPLETED" })),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { title: "x" }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { title: "x" }),
       409,
       "Activity cannot be updated because it is already COMPLETED.",
     );
@@ -177,17 +160,17 @@ describe("ActivityService.update", () => {
   });
 
   it("throws 409 when the activity is CANCELLED", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ status: "CANCELLED" })),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { title: "x" }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { title: "x" }),
       409,
       "Activity cannot be updated because it is already CANCELLED.",
     );
@@ -198,18 +181,22 @@ describe("ActivityService.update", () => {
 
   it("the author can update their own activity", async () => {
     const stored = makeActivity();
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(stored),
         update: vi.fn().mockResolvedValue(stored),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    const result = await service.update("act-1", AUTHOR, {
-      title: "Oficina de Introdução à Programação — Turma 2",
-      slots: 50,
-    });
+    const result = await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      {
+        title: "Oficina de Introdução à Programação — Turma 2",
+        slots: 50,
+      },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -220,27 +207,35 @@ describe("ActivityService.update", () => {
   });
 
   it("a manager can update another author's activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", MANAGER, { title: "Editado pelo gestor" });
+    await service.update(
+      "act-1",
+      { id: MANAGER, isManager: true },
+      { title: "Editado pelo gestor" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledTimes(1);
   });
 
   it("a manager can update their own activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue(makeActivity({ authorId: "manager-9" })),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", MANAGER, { title: "Minha própria ação" });
+    await service.update(
+      "act-1",
+      { id: MANAGER, isManager: true },
+      { title: "Minha própria ação" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledTimes(1);
   });
@@ -248,12 +243,16 @@ describe("ActivityService.update", () => {
   // ---------- Partial updates ----------
 
   it("forwards only the sent fields to the repository", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { title: "Só título" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { title: "Só título" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -263,7 +262,7 @@ describe("ActivityService.update", () => {
   });
 
   it("skips date validation when no date is sent, even with a past startDate", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -273,9 +272,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { title: "Ação antiga" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { title: "Ação antiga" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledTimes(1);
   });
@@ -283,13 +286,17 @@ describe("ActivityService.update", () => {
   // ---------- Date validation ----------
 
   it("rejects a past startDate with ValidationError on startDate", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { startDate: daysFromNow(-1) }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { startDate: daysFromNow(-1) },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -300,13 +307,17 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects an endDate earlier than the merged startDate", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { endDate: daysFromNow(5) }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { endDate: daysFromNow(5) },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -319,12 +330,16 @@ describe("ActivityService.update", () => {
   it("accepts valid dates and forwards them to the repository", async () => {
     const startDate = daysFromNow(20);
     const endDate = daysFromNow(22);
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { startDate, endDate });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { startDate, endDate },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -334,16 +349,20 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects a duration above the maximum", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, {
-        startDate: daysFromNow(20),
-        endDate: daysFromNow(386),
-      }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        {
+          startDate: daysFromNow(20),
+          endDate: daysFromNow(386),
+        },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -357,16 +376,20 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects a startDate too far in the future", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, {
-        startDate: daysFromNow(400),
-        endDate: daysFromNow(402),
-      }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        {
+          startDate: daysFromNow(400),
+          endDate: daysFromNow(402),
+        },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -382,7 +405,7 @@ describe("ActivityService.update", () => {
   // ---------- Slots and workload ----------
 
   it("rejects slots below the number of approved enrollments", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
@@ -390,10 +413,10 @@ describe("ActivityService.update", () => {
         countApprovedEnrollments: vi.fn().mockResolvedValue(13),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { slots: 10 }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { slots: 10 }),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -412,7 +435,7 @@ describe("ActivityService.update", () => {
   });
 
   it("reads the approved enrollments from the repository when slots change", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
@@ -420,9 +443,13 @@ describe("ActivityService.update", () => {
         countApprovedEnrollments: vi.fn().mockResolvedValue(0),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { slots: 50 });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { slots: 50 },
+    );
 
     expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledWith(
       "act-1",
@@ -430,7 +457,7 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects slots below the approved enrollments even when approved exceed the current slots", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
@@ -438,10 +465,10 @@ describe("ActivityService.update", () => {
         countApprovedEnrollments: vi.fn().mockResolvedValue(7),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { slots: 6 }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { slots: 6 }),
     );
 
     expect((error as ValidationError).errors).toEqual([
@@ -459,13 +486,17 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects slots above the maximum", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { slots: 10_001 }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { slots: 10_001 },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -475,13 +506,17 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects workloadHours above the activity duration", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     const error = await captureError(
-      service.update("act-1", AUTHOR, { workloadHours: 100 }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { workloadHours: 100 },
+      ),
     );
 
     expect(error).toBeInstanceOf(ValidationError);
@@ -498,13 +533,15 @@ describe("ActivityService.update", () => {
   // ---------- Format, url and address ----------
 
   it("accepts a frozen DTO when changing to ONLINE and preserves its address", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
     const data = Object.freeze({ format: "ONLINE" as const, address: ADDRESS });
 
-    await expect(service.update("act-1", AUTHOR, data)).resolves.toMatchObject({
+    await expect(
+      service.update("act-1", { id: AUTHOR, isManager: false }, data),
+    ).resolves.toMatchObject({
       id: "act-1",
       format: "ONLINE",
       address: null,
@@ -519,12 +556,16 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts ONLINE when no url is sent and none is stored", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { format: "ONLINE" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { format: "ONLINE" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -534,7 +575,7 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts editing an ONLINE activity that has no url stored", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -543,9 +584,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { title: "Novo título" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { title: "Novo título" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -555,7 +600,7 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts clearing the url of an ONLINE activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -569,9 +614,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { url: null });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { url: null },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -581,13 +630,17 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects HYBRID when no url is sent and none is stored", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { format: "HYBRID" }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { format: "HYBRID" },
+      ),
       400,
       "HYBRID activities require a url.",
     );
@@ -595,7 +648,7 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects clearing the url of a HYBRID activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -609,10 +662,10 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { url: null }),
+      service.update("act-1", { id: AUTHOR, isManager: false }, { url: null }),
       400,
       "HYBRID activities require a url.",
     );
@@ -620,7 +673,7 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts ONLINE using the stored url and schedules address deletion", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -634,9 +687,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { format: "ONLINE" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { format: "ONLINE" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -646,7 +703,7 @@ describe("ActivityService.update", () => {
   });
 
   it("accepts IN_PERSON using the stored address (no address in payload)", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -660,9 +717,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { format: "IN_PERSON" });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { format: "IN_PERSON" },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -672,7 +733,7 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects IN_PERSON when no address exists and none is sent", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -686,10 +747,14 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { format: "IN_PERSON" }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { format: "IN_PERSON" },
+      ),
       400,
       "IN_PERSON activities require an address.",
     );
@@ -697,7 +762,7 @@ describe("ActivityService.update", () => {
   });
 
   it("rejects HYBRID when no address exists and none is sent", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -711,10 +776,14 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.update("act-1", AUTHOR, { format: "HYBRID" }),
+      service.update(
+        "act-1",
+        { id: AUTHOR, isManager: false },
+        { format: "HYBRID" },
+      ),
       400,
       "HYBRID activities require an address.",
     );
@@ -722,14 +791,18 @@ describe("ActivityService.update", () => {
   });
 
   it("schedules address update when only a new address is sent", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, {
-      address: { ...ADDRESS, district: "Centro" },
-    });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      {
+        address: { ...ADDRESS, district: "Centro" },
+      },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -739,7 +812,7 @@ describe("ActivityService.update", () => {
   });
 
   it("schedules address creation when the new format requires one", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -753,12 +826,16 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, {
-      format: "IN_PERSON",
-      address: ADDRESS,
-    });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      {
+        format: "IN_PERSON",
+        address: ADDRESS,
+      },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",
@@ -768,7 +845,7 @@ describe("ActivityService.update", () => {
   });
 
   it("drops a sent address when the activity is ONLINE", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(
           makeActivity({
@@ -782,9 +859,13 @@ describe("ActivityService.update", () => {
         ),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.update("act-1", AUTHOR, { address: ADDRESS });
+    await service.update(
+      "act-1",
+      { id: AUTHOR, isManager: false },
+      { address: ADDRESS },
+    );
 
     expect(activityRepository.update).toHaveBeenCalledWith(
       "act-1",

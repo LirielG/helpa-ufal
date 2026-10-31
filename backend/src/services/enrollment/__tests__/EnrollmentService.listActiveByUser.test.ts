@@ -2,13 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { expectValidationError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 
-// listActiveByUser only talks to the enrollment repository, so the other two
-// are empty stand-ins. Empty `items` keeps the response mapping out of the way:
+// listActiveByUser only talks to the enrollment repository, so the activity repository
+// is an empty stand-in. Empty `items` keeps the response mapping out of the way:
 // these tests are about the pagination boundary only.
 function setup() {
   const enrollmentRepository = {
@@ -18,7 +17,6 @@ function setup() {
   const service = new EnrollmentService({
     enrollmentRepository,
     activityRepository: {} as unknown as IActivityRepository,
-    userRepository: {} as unknown as IUserRepository,
   });
 
   return { service, enrollmentRepository };

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { allowedTransitions } from "@/schemas/activity/ActivitySchemas.js";
 import type { ActivityStatus } from "@/types/activity.js";
 import { expectHttpError } from "@/utils/tests.js";
@@ -60,7 +59,6 @@ function makeActivityRecord(
 function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
-    user?: Partial<IUserRepository>;
   } = {},
 ) {
   const activityRepository = {
@@ -70,12 +68,7 @@ function mockRepositories(
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue({ isManager: false }),
-    ...overrides.user,
-  } as unknown as IUserRepository;
-
-  return { activityRepository, userRepository };
+  return { activityRepository };
 }
 
 describe("ActivityService.updateStatus", () => {
@@ -83,64 +76,55 @@ describe("ActivityService.updateStatus", () => {
 
   // Existence is verified before any user query.
   it("throws 404 when the activity does not exist or was deleted", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.updateStatus("act-1", "IN_PROGRESS", "user-1"),
+      service.updateStatus("act-1", "IN_PROGRESS", {
+        id: "user-1",
+        isManager: false,
+      }),
       404,
       "Activity not found.",
     );
-    expect(userRepository.findById).not.toHaveBeenCalled();
+
     expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await expectHttpError(
-      service.updateStatus("act-1", "IN_PROGRESS", "user-2"),
+      service.updateStatus("act-1", "IN_PROGRESS", {
+        id: "user-2",
+        isManager: false,
+      }),
       403,
       "Forbidden. Requester is not the author or a manager.",
     );
     expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
-  it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
-    // Ghost user: a autoria exige usuário vivo no banco. É essa consulta que
-    // a #148 levará ao update — ver o espelho deste caso em
-    // ActivityService.update.test.ts.
-    const { activityRepository, userRepository } = mockRepositories({
-      activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
-    const service = new ActivityService({ activityRepository, userRepository });
-
-    await expectHttpError(
-      service.updateStatus("act-1", "IN_PROGRESS", "author-1"),
-      403,
-    );
-    expect(activityRepository.updateStatus).not.toHaveBeenCalled();
-  });
-
-  it("a manager (checked in the database) can transition another author's activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+  it("an authenticated manager can transition another author's activity", async () => {
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(makeActivityRecord()),
         updateStatus: vi
           .fn()
           .mockResolvedValue(makeActivityRecord({ status: "IN_PROGRESS" })),
       },
-      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.updateStatus("act-1", "IN_PROGRESS", "manager-9");
+    await service.updateStatus("act-1", "IN_PROGRESS", {
+      id: "manager-9",
+      isManager: true,
+    });
 
     expect(activityRepository.updateStatus).toHaveBeenCalledWith(
       "act-1",
@@ -153,7 +137,7 @@ describe("ActivityService.updateStatus", () => {
   it.each(transitionCases.filter((c) => c.allowed))(
     "accepts transition $from ->$to",
     async ({ from, to }) => {
-      const { activityRepository, userRepository } = mockRepositories({
+      const { activityRepository } = mockRepositories({
         activity: {
           findById: vi
             .fn()
@@ -165,10 +149,12 @@ describe("ActivityService.updateStatus", () => {
       });
       const service = new ActivityService({
         activityRepository,
-        userRepository,
       });
 
-      const result = await service.updateStatus("act-1", to, "author-1");
+      const result = await service.updateStatus("act-1", to, {
+        id: "author-1",
+        isManager: false,
+      });
 
       expect(activityRepository.updateStatus).toHaveBeenCalledWith("act-1", to);
       expect(activityRepository.countApprovedEnrollments).toHaveBeenCalledTimes(
@@ -187,7 +173,7 @@ describe("ActivityService.updateStatus", () => {
   it.each(transitionCases.filter((c) => !c.allowed))(
     "rejects transition $from ->$to with 409",
     async ({ from, to }) => {
-      const { activityRepository, userRepository } = mockRepositories({
+      const { activityRepository } = mockRepositories({
         activity: {
           findById: vi
             .fn()
@@ -196,14 +182,13 @@ describe("ActivityService.updateStatus", () => {
       });
       const service = new ActivityService({
         activityRepository,
-        userRepository,
       });
       const expectedMessage = TERMINAL.includes(from)
         ? `Activity is already ${from} and cannot be transitioned.`
         : `Cannot transition from ${from} to ${to}.`;
 
       await expectHttpError(
-        service.updateStatus("act-1", to, "author-1"),
+        service.updateStatus("act-1", to, { id: "author-1", isManager: false }),
         409,
         expectedMessage,
       );
@@ -219,20 +204,19 @@ describe("ActivityService.updateStatus", () => {
   // Mirrors the Bruno contract example: 40 slots, 13 approved registrations.
   it("returns availableSlots recalculated from approved enrollments", async () => {
     const updated = makeActivityRecord({ status: "IN_PROGRESS" });
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(makeActivityRecord()),
         updateStatus: vi.fn().mockResolvedValue(updated),
         countApprovedEnrollments: vi.fn().mockResolvedValue(13),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    const result = await service.updateStatus(
-      "act-1",
-      "IN_PROGRESS",
-      "author-1",
-    );
+    const result = await service.updateStatus("act-1", "IN_PROGRESS", {
+      id: "author-1",
+      isManager: false,
+    });
 
     expect(result).toEqual({
       id: updated.id,
@@ -254,7 +238,7 @@ describe("ActivityService.updateStatus", () => {
   // Inconsistent state possible while availableSlots lacks a single
   // source of truth (separate issue); Math.max(0, ...) safeguards the result.
   it("clamps availableSlots at zero when approved enrollments exceed slots", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi.fn().mockResolvedValue(makeActivityRecord()),
         updateStatus: vi
@@ -265,13 +249,12 @@ describe("ActivityService.updateStatus", () => {
         countApprovedEnrollments: vi.fn().mockResolvedValue(12),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    const result = await service.updateStatus(
-      "act-1",
-      "IN_PROGRESS",
-      "author-1",
-    );
+    const result = await service.updateStatus("act-1", "IN_PROGRESS", {
+      id: "author-1",
+      isManager: false,
+    });
 
     expect(result.availableSlots).toBe(0);
   });

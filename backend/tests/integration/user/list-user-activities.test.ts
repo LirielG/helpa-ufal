@@ -758,30 +758,30 @@ describe("GET /users/me/activities", () => {
       ]);
     });
 
-    it("answers 400 before checking whether the user exists", async () => {
+    it("rejects a removed user before validating the query", async () => {
       const student = await createStudent();
       await prisma.user.delete({ where: { id: student.user.id } });
 
       const response = await listActivities(student.token, "?filter=nope");
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
     });
   });
 
-  // ---------- 404 - User gone ----------
+  // ---------- Invalid session ----------
 
   describe("user from the token no longer exists", () => {
-    it("returns 404 with the contract body", async () => {
+    it("returns 401 with the session error", async () => {
       const student = await createStudent();
       await prisma.user.delete({ where: { id: student.user.id } });
 
       const response = await listActivities(student.token, "?filter=enrolled");
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(401);
       expect(response.body).toEqual({
-        status: 404,
-        code: "NOT_FOUND",
-        message: "User not found.",
+        status: 401,
+        code: "SESSION_INVALID",
+        message: "Session is no longer valid.",
       });
     });
   });

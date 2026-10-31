@@ -292,11 +292,9 @@ describe("GET /users/me", () => {
     expect(response.status).toBe(401);
   });
 
-  // ---------- 404 - User gone ----------
+  // ---------- Invalid session ----------
 
-  // Deliberately 404 and not the 401 the enrollment routes return for the same
-  // situation: here the resource is the token owner, so nothing is concealed.
-  it("returns 404 when the user from the token no longer exists", async () => {
+  it("returns 401 when the user from the token no longer exists", async () => {
     const student = await createStudent();
     await prisma.user.delete({ where: { id: student.user.id } });
 
@@ -304,11 +302,11 @@ describe("GET /users/me", () => {
       .get(meUrl)
       .set(...authCookie(student.token));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "User not found.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 });

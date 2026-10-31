@@ -29,13 +29,15 @@ function aTokenWithoutVersion(): string {
   return jwt.sign(claims, process.env.JWT_SECRET!);
 }
 
-function mockRepository(
-  stored: { tokenVersion: number } | null = { tokenVersion: 0 },
-) {
+function mockRepository(stored: Partial<AuthenticatedUser> | null = {}) {
   return {
-    findTokenVersionById: vi.fn().mockResolvedValue(stored),
+    findSessionById: vi
+      .fn()
+      .mockResolvedValue(
+        stored === null ? null : { ...anAuthenticatedUser(), ...stored },
+      ),
   } as unknown as IUserRepository & {
-    findTokenVersionById: ReturnType<typeof vi.fn>;
+    findSessionById: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -233,6 +235,23 @@ describe("AuthMiddleware", () => {
     );
   });
 
+  it("uses current roles from the database instead of token claims", async () => {
+    const stored = anAuthenticatedUser({
+      userType: "TEACHER",
+      isManager: true,
+    });
+    const handler = new AuthMiddleware({
+      userRepository: mockRepository(stored),
+    }).auth({ manager: true, userTypes: ["TEACHER"] });
+    const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
+    const next = mockNext();
+
+    await handler(req, RES, next);
+
+    expect(next).toHaveBeenCalledExactlyOnceWith();
+    expect(req.user).toEqual(stored);
+  });
+
   describe("authorization", () => {
     it.each(["STUDENT", "TEACHER"] as const)(
       'userTypes "all" allows %s',
@@ -250,7 +269,9 @@ describe("AuthMiddleware", () => {
     );
 
     it("calls next when the userType is explicitly allowed", async () => {
-      const handler = middleware.auth({ userTypes: ["TEACHER"] });
+      const handler = new AuthMiddleware({
+        userRepository: mockRepository({ userType: "TEACHER" }),
+      }).auth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
         cookieToken: signJwt(anAuthenticatedUser({ userType: "TEACHER" })),
       });
@@ -273,7 +294,9 @@ describe("AuthMiddleware", () => {
     });
 
     it("calls next for a manager when manager: true", async () => {
-      const handler = middleware.auth({ manager: true });
+      const handler = new AuthMiddleware({
+        userRepository: mockRepository({ isManager: true }),
+      }).auth({ manager: true });
       const req = mockRequest({
         cookieToken: signJwt(anAuthenticatedUser({ isManager: true })),
       });
@@ -324,7 +347,7 @@ describe("AuthMiddleware", () => {
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user).toMatchObject({ id: USER_ID, tokenVersion: 3 });
-      expect(userRepository.findTokenVersionById).toHaveBeenCalledWith(USER_ID);
+      expect(userRepository.findSessionById).toHaveBeenCalledWith(USER_ID);
     });
 
     it("throws 401 when the stored version moved past the token's", async () => {
@@ -342,20 +365,25 @@ describe("AuthMiddleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("proceeds anonymously on optional auth when the version is stale", async () => {
-      const userRepository = mockRepository({ tokenVersion: 1 });
-      const handler = new AuthMiddleware({ userRepository }).auth();
-      const req = mockRequest({
-        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
-      });
-      const next = mockNext();
+    it.each([{ userTypes: "all" as const }, {}])(
+      "rejects a revoked session with SESSION_INVALID for %j",
+      async (options) => {
+        const handler = new AuthMiddleware({
+          userRepository: mockRepository({ tokenVersion: 1 }),
+        }).auth(options);
+        const req = mockRequest({
+          cookieToken: signJwt(anAuthenticatedUser()),
+        });
+        const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith();
-      expect(req.user).toBeUndefined();
-    });
+        await expect(handler(req, RES, next)).rejects.toMatchObject({
+          statusCode: 401,
+          code: "SESSION_INVALID",
+        });
+        expect(next).not.toHaveBeenCalled();
+        expect(req.user).toBeUndefined();
+      },
+    );
 
     it("treats a token without the claim as version 0", async () => {
       const handler = new AuthMiddleware({
@@ -381,17 +409,19 @@ describe("AuthMiddleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("lets the request through when the user no longer exists", async () => {
+    it("rejects a removed user with SESSION_INVALID", async () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository(null),
       }).auth({ userTypes: "all" });
       const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(req.user).toMatchObject({ id: USER_ID });
+      await expect(handler(req, RES, next)).rejects.toMatchObject({
+        statusCode: 401,
+        code: "SESSION_INVALID",
+      });
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
     });
 
     it.each([
@@ -406,13 +436,13 @@ describe("AuthMiddleware", () => {
 
         await handler(req, RES, mockNext());
 
-        expect(userRepository.findTokenVersionById).not.toHaveBeenCalled();
+        expect(userRepository.findSessionById).not.toHaveBeenCalled();
       },
     );
 
     it("proceeds anonymously on optional auth when the version lookup fails", async () => {
       const userRepository = mockRepository();
-      userRepository.findTokenVersionById.mockRejectedValue(
+      userRepository.findSessionById.mockRejectedValue(
         new Error("connection lost"),
       );
       const handler = new AuthMiddleware({ userRepository }).auth();
@@ -429,7 +459,7 @@ describe("AuthMiddleware", () => {
     it("propagates a failed version lookup on required auth instead of answering 401", async () => {
       const failure = new Error("connection lost");
       const userRepository = mockRepository();
-      userRepository.findTokenVersionById.mockRejectedValue(failure);
+      userRepository.findSessionById.mockRejectedValue(failure);
       const handler = new AuthMiddleware({ userRepository }).auth({
         userTypes: "all",
       });

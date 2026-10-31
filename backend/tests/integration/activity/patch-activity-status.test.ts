@@ -163,7 +163,7 @@ describe("PATCH /activities/:activityId/status", () => {
     });
   });
 
-  it("returns 403 for a valid token of a deleted user (ghost user)", async () => {
+  it("returns 401 for a valid token of a deleted user (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
     const ghost = await createManager();
@@ -177,11 +177,11 @@ describe("PATCH /activities/:activityId/status", () => {
       .set(...authCookie(ghost.token))
       .send({ status: "IN_PROGRESS" });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 403,
-      code: "FORBIDDEN",
-      message: "Forbidden. Requester is not the author or a manager.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 });
