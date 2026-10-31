@@ -1,8 +1,8 @@
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
-import type { NavigateFunction } from "react-router";
 import {
   ApiError,
-  NETWORK_ERROR_STATUS,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
   type ApiValidationError,
 } from "../../services/apiError";
 
@@ -65,12 +65,16 @@ export function handleActionApiErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   setGeneralError: (message: string | null) => void,
-  navigate: NavigateFunction,
 ): void {
   const GENERIC_ERROR = "Ocorreu um erro ao atualizar a ação. Tente novamente.";
 
   if (!(error instanceof ApiError)) {
     setGeneralError(GENERIC_ERROR);
+    return;
+  }
+
+  if (isConnectionFailure(error)) {
+    setGeneralError(CONNECTION_ERROR_MESSAGE);
     return;
   }
 
@@ -81,7 +85,6 @@ export function handleActionApiErrors<T extends FieldValues>(
       }
       break;
     case 401:
-      navigate("/login");
       break;
     case 403:
       setGeneralError("Apenas o autor ou gestor pode editar esta ação.");
@@ -91,9 +94,6 @@ export function handleActionApiErrors<T extends FieldValues>(
       break;
     case 409:
       setGeneralError("Ações concluídas ou canceladas não podem ser editadas.");
-      break;
-    case NETWORK_ERROR_STATUS:
-      setGeneralError("Falha de comunicação com o servidor. Tente novamente.");
       break;
     default:
       setGeneralError(GENERIC_ERROR);
@@ -113,6 +113,11 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
     return;
   }
 
+  if (isConnectionFailure(error)) {
+    setGeneralError(CONNECTION_ERROR_MESSAGE);
+    return;
+  }
+
   switch (error.status) {
     case 400:
       if (!applyValidationErrors(error, setError)) {
@@ -125,10 +130,9 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError("Você não tem permissão para criar esta ação.");
       break;
     case 409:
-      setGeneralError("Já existe uma ação com estes dados. Verifique e tente novamente.");
-      break;
-    case NETWORK_ERROR_STATUS:
-      setGeneralError("Falha de comunicação com o servidor. Tente novamente.");
+      setGeneralError(
+        "Já existe uma ação com estes dados. Verifique e tente novamente.",
+      );
       break;
     default:
       setGeneralError(GENERIC_ERROR);

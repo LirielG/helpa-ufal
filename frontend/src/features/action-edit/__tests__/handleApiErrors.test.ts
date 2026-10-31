@@ -12,16 +12,10 @@ const GENERIC_ERROR = "Ocorreu um erro ao atualizar a ação. Tente novamente.";
 function callWith(error: unknown) {
   const setError = vi.fn();
   const setGeneralError = vi.fn();
-  const navigate = vi.fn();
 
-  handleActionApiErrors<ActionEditSchemaType>(
-    error,
-    setError,
-    setGeneralError,
-    navigate,
-  );
+  handleActionApiErrors<ActionEditSchemaType>(error, setError, setGeneralError);
 
-  return { setError, setGeneralError, navigate };
+  return { setError, setGeneralError };
 }
 
 /** Shape the API answers a failed validation with. */
@@ -160,12 +154,12 @@ describe("handleActionApiErrors", () => {
     });
   });
 
-  it("sends an expired session to the login screen", () => {
-    const { navigate, setGeneralError } = callWith(
+  it("leaves an expired session to the global session handler", () => {
+    const { setError, setGeneralError } = callWith(
       new ApiError(401, "Token malformatted, expired or invalid."),
     );
 
-    expect(navigate).toHaveBeenCalledWith("/login");
+    expect(setError).not.toHaveBeenCalled();
     expect(setGeneralError).not.toHaveBeenCalled();
   });
 
@@ -175,9 +169,9 @@ describe("handleActionApiErrors", () => {
     [409, "Ações concluídas ou canceladas não podem ser editadas."],
     [
       NETWORK_ERROR_STATUS,
-      "Falha de comunicação com o servidor. Tente novamente.",
+      "Não foi possível conectar ao servidor. Tente novamente.",
     ],
-    [500, GENERIC_ERROR],
+    [500, "Não foi possível conectar ao servidor. Tente novamente."],
   ])("answers %i with its own pt-BR message", (status, message) => {
     const { setGeneralError } = callWith(new ApiError(status, "whatever"));
 
@@ -185,12 +179,11 @@ describe("handleActionApiErrors", () => {
   });
 
   it("falls back to the generic message for a plain exception", () => {
-    const { setGeneralError, setError, navigate } = callWith(
+    const { setGeneralError, setError } = callWith(
       new TypeError("Cannot read properties of undefined"),
     );
 
     expect(setGeneralError).toHaveBeenCalledWith(GENERIC_ERROR);
     expect(setError).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
   });
 });

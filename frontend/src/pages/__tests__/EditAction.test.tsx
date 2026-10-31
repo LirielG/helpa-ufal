@@ -992,11 +992,38 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
-  it("goes to the login screen on 401", async () => {
+  it("replaces the edit screen with login on 401 without adding another login entry", async () => {
     mockAction();
     failUpdate(401);
-    const { user } = renderEditAction();
 
+    function LoginScreen() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <h1>Entrar</h1>
+          <button type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </>
+      );
+    }
+
+    const { user } = render(
+      <>
+        <SessionExpiry />
+        <Routes>
+          <Route
+            path="/profile"
+            element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+          />
+          <Route path="/activity/:id/edit" element={<EditAction />} />
+          <Route path="/login" element={<LoginScreen />} />
+        </Routes>
+      </>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
     const title = await findTitleField();
     await user.clear(title);
     await user.type(title, "Título com sessão expirada");
@@ -1005,27 +1032,41 @@ describe("EditAction", () => {
     expect(
       await screen.findByRole("heading", { name: "Entrar" }),
     ).toBeInTheDocument();
-  });
-
-  it("keeps what was typed when the update fails with a server error", async () => {
-    mockAction();
-    failUpdate(500, { message: "Internal server error." });
-    const { user } = renderEditAction();
-
-    const title = await findTitleField();
-    await user.clear(title);
-    await user.type(title, "Título preservado após o erro");
-    await user.click(getSaveButton());
-
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
     expect(
-      await screen.findByText(
-        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
-      ),
+      await screen.findByRole("link", { name: "Editar" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Título")).toHaveValue(
-      "Título preservado após o erro",
-    );
   });
+
+  it.each([0, 500])(
+    "shows a connection failure (%i) and keeps what was typed",
+    async (status) => {
+      mockAction();
+      server.use(
+        http.patch(`${API}/activities/:id`, () =>
+          status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status }),
+        ),
+      );
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Título preservado após o erro");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Título")).toHaveValue(
+        "Título preservado após o erro",
+      );
+    },
+  );
 
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(

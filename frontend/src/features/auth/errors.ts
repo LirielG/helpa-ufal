@@ -1,8 +1,11 @@
 import type { UseFormSetError } from "react-hook-form";
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "@/services/apiError";
 import type { RegisterFields } from "@/validators/auth";
 import {
-  CONNECTION_ERROR_MESSAGE,
   INVALID_CREDENTIALS_MESSAGE,
   LOGIN_GENERIC_ERROR_MESSAGE,
   REGISTER_ALREADY_IN_USE_MESSAGE,
@@ -15,10 +18,6 @@ import {
 // text from the status and the `code`, never from it.
 
 type RegisterConflictField = keyof typeof REGISTER_FIELD_IN_USE_MESSAGES;
-
-function isConnectionFailure(error: ApiError): boolean {
-  return error.status === NETWORK_ERROR_STATUS || error.status >= 500;
-}
 
 function isConflictField(field: unknown): field is RegisterConflictField {
   return (

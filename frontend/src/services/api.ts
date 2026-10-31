@@ -1,14 +1,13 @@
 import { config } from "../config";
 import {
   ApiError,
+  CONNECTION_ERROR_MESSAGE,
   NETWORK_ERROR_STATUS,
   type ApiValidationError,
 } from "./apiError";
 import { notifySessionExpired } from "./session";
 
 const API_BASE_URL = config.apiUrl;
-
-const COMMUNICATION_ERROR_MESSAGE = "Erro na comunicação com o servidor";
 
 type ErrorPayload = {
   message?: string | string[];
@@ -78,12 +77,12 @@ function readErrorMessage(payload: ErrorPayload): string {
     return payload.error;
   }
 
-  return COMMUNICATION_ERROR_MESSAGE;
+  return CONNECTION_ERROR_MESSAGE;
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
   if (response.status >= 500) {
-    return new ApiError(response.status, COMMUNICATION_ERROR_MESSAGE);
+    return new ApiError(response.status, CONNECTION_ERROR_MESSAGE);
   }
 
   const payload = await readErrorPayload(response);
@@ -115,14 +114,16 @@ async function request<T>(
   try {
     response = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-      },
       credentials: "include",
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined
+        ? {}
+        : {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
     });
   } catch {
-    throw new ApiError(NETWORK_ERROR_STATUS, COMMUNICATION_ERROR_MESSAGE);
+    throw new ApiError(NETWORK_ERROR_STATUS, CONNECTION_ERROR_MESSAGE);
   }
 
   if (response.status === 401 && handleUnauthorized) {
@@ -136,7 +137,7 @@ async function request<T>(
   try {
     return (await readSuccess(response)) as T;
   } catch {
-    throw new ApiError(response.status, COMMUNICATION_ERROR_MESSAGE);
+    throw new ApiError(response.status, CONNECTION_ERROR_MESSAGE);
   }
 }
 

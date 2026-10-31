@@ -270,7 +270,7 @@ export function EditAction() {
       await updateAction(id, payload);
       navigate(`/activity/${id}`, { replace: true });
     } catch (error) {
-      handleActionApiErrors(error, setError, setGeneralError, navigate);
+      handleActionApiErrors(error, setError, setGeneralError);
     }
   };
 

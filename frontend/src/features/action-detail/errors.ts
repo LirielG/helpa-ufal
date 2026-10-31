@@ -1,4 +1,8 @@
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "@/services/apiError";
 
 /**
  * Maps enrollment API errors to user-friendly messages in Portuguese.
@@ -12,9 +16,8 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
     return null;
   }
 
-  // Network error (fetch failed)
-  if (error.status === NETWORK_ERROR_STATUS) {
-    return "Falha de comunicação com o servidor. Tente novamente.";
+  if (isConnectionFailure(error)) {
+    return CONNECTION_ERROR_MESSAGE;
   }
 
   // 404: Activity not found
@@ -78,10 +81,10 @@ export function resolveCancellationError(
     return { kind: "sessionExpired" };
   }
 
-  if (error.status === NETWORK_ERROR_STATUS) {
+  if (isConnectionFailure(error)) {
     return {
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: CONNECTION_ERROR_MESSAGE,
     };
   }
 

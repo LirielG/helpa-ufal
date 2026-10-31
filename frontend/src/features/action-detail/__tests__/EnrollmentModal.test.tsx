@@ -217,34 +217,41 @@ describe("EnrollmentModal", () => {
     });
   });
 
-  describe("Network errors (status 0)", () => {
-    it("displays communication error and provides retry option", async () => {
-      const action = makeActionDetail({ id: "act-net" });
-      server.use(
-        http.post(`${API}/activities/act-net/enroll`, () =>
-          HttpResponse.error(),
-        ),
-      );
+  describe("Connection failures", () => {
+    it.each([0, 500])(
+      "displays connection error (%i) and provides retry option",
+      async (status) => {
+        const action = makeActionDetail({ id: "act-net" });
+        server.use(
+          http.post(`${API}/activities/act-net/enroll`, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
 
-      const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
-      );
+        const { user } = render(
+          <EnrollmentModal action={action} onClose={vi.fn()} />,
+        );
 
-      await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+        await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
-      await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
-      });
+        await waitFor(() => {
+          expect(
+            screen.getByText(/Não foi possível conectar ao servidor/),
+          ).toBeInTheDocument();
+        });
 
-      const retryButton = screen.getByRole("button", {
-        name: /Tentar novamente/i,
-      });
-      expect(retryButton).toBeInTheDocument();
+        const retryButton = screen.getByRole("button", {
+          name: /Tentar novamente/i,
+        });
+        expect(retryButton).toBeInTheDocument();
 
-      // Clicking retry should return to confirm step
-      await user.click(retryButton);
-      expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
-    });
+        // Clicking retry should return to confirm step
+        await user.click(retryButton);
+        expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+      },
+    );
 
     it("enables retry after network error without locking button", async () => {
       const action = makeActionDetail({ id: "act-net2" });
@@ -261,7 +268,9 @@ describe("EnrollmentModal", () => {
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Não foi possível conectar ao servidor/),
+        ).toBeInTheDocument();
       });
 
       const retryButton = screen.getByRole("button", {
@@ -297,12 +306,15 @@ describe("EnrollmentModal", () => {
     });
   });
 
-  describe("Generic non-ApiErrors", () => {
-    it("displays generic pt-BR error message for non-ApiError exceptions", async () => {
+  describe("Server errors", () => {
+    it("does not expose internal server error details", async () => {
       const action = makeActionDetail({ id: "act-generic-err" });
       server.use(
         http.post(`${API}/activities/act-generic-err/enroll`, () => {
-          throw new Error("Raw JavaScript Error Message");
+          return HttpResponse.json(
+            { message: "Raw JavaScript Error Message" },
+            { status: 500 },
+          );
         }),
       );
 
@@ -314,9 +326,14 @@ describe("EnrollmentModal", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("Erro ao realizar inscrição. Tente novamente."),
+          screen.getByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
         ).toBeInTheDocument();
       });
+      expect(
+        screen.queryByText("Raw JavaScript Error Message"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -472,7 +489,7 @@ describe("EnrollmentModal", () => {
         release();
       }
 
-      await screen.findByText(/Falha de comunicação/);
+      await screen.findByText(/Não foi possível conectar ao servidor/);
       expect(
         screen.getByRole("dialog", { name: "Erro ao realizar inscrição" }),
       ).toHaveAttribute("aria-modal", "true");
