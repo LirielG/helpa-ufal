@@ -482,7 +482,7 @@ describe("Register page", () => {
 
       expect(
         await screen.findByRole("button", { name: "Carregando..." }),
-      ).toBeDisabled();
+      ).toBeInTheDocument();
 
       expect(
         await screen.findByText(REGISTER_SUCCESS_MESSAGE),

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { FeedTabs, type FeedKey } from "./FeedTabs";
 import { HelpaFeed } from "./HelpaFeed";
 import { SigaaFeed } from "../../sigaa/components/SigaaFeed";
+import { HeroBanner } from "./HeroBanner";
 import bgFeed from "../../../assets/bg.svg";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { fetchActions } from "../services";
@@ -129,33 +130,37 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   }, [loadActions]);
 
   return (
-    <div className="w-full min-h-[50vh] bg-white" style={FEED_BACKGROUND_STYLE}>
-      <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        <FeedTabs
-          active={feed}
-          onChange={changeFeed}
-          sigaaHasError={sigaaHasError}
-        />
+    <div className="w-full flex flex-col">
+      <HeroBanner actions={actions} />
 
-        {feed === "helpa" ? (
-          <HelpaFeed
-            actions={actions}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onResetFilters={handleResetFilters}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            isLoading={isLoading}
-            hasError={helpaHasError}
-            onRetry={loadActions}
+      <div className="w-full min-h-[50vh] bg-white" style={FEED_BACKGROUND_STYLE}>
+        <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+          <FeedTabs
+            active={feed}
+            onChange={changeFeed}
+            sigaaHasError={sigaaHasError}
           />
-        ) : (
-          <SigaaFeed
-            onExploreHelpa={showHelpaFeed}
-            onErrorChange={setSigaaHasError}
-          />
-        )}
+
+          {feed === "helpa" ? (
+            <HelpaFeed
+              actions={actions}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              isLoading={isLoading}
+              hasError={helpaHasError}
+              onRetry={loadActions}
+            />
+          ) : (
+            <SigaaFeed
+              onExploreHelpa={showHelpaFeed}
+              onErrorChange={setSigaaHasError}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

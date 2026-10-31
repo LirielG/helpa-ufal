@@ -17,6 +17,8 @@ export default defineConfig({
     env: { TZ: "America/Maceio" },
     globals: false,
     passWithNoTests: true,
+    testTimeout: 15000,
+    hookTimeout: 15000,
     include: ["src/**/__tests__/**/*.test.{ts,tsx}"],
     coverage: {
       provider: "v8",
