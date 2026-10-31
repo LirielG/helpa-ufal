@@ -1,10 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useState } from "react";
 import { render, screen, waitFor } from "@/test/render";
 import { http, HttpResponse, server } from "@/test/http";
 import { makeActionDetail } from "@/test/factories";
 import { EnrollmentModal } from "../components/EnrollmentModal";
 
 const API = process.env.VITE_API_URL || "http://localhost:3333/api";
+
+function EnrollmentDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Inscrever-se</button>
+      {open && (
+        <EnrollmentModal
+          action={makeActionDetail()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
 
 describe("EnrollmentModal", () => {
   beforeEach(() => {
@@ -45,6 +61,9 @@ describe("EnrollmentModal", () => {
       await waitFor(() => {
         expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
       });
+      expect(
+        screen.getByRole("dialog", { name: "Oba! Você está dentro!" }),
+      ).toHaveAttribute("aria-modal", "true");
     });
 
     it("shows loading state during request", async () => {
@@ -363,6 +382,115 @@ describe("EnrollmentModal", () => {
   });
 
   describe("Modal interactions", () => {
+    it("uses the latest close callback without moving focus on a parent render", async () => {
+      const action = makeActionDetail();
+      const previousClose = vi.fn();
+      const currentClose = vi.fn();
+      const { user, rerender } = render(
+        <EnrollmentModal action={action} onClose={previousClose} />,
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /✕ Cancelar/ }),
+        ).toHaveFocus(),
+      );
+      await user.tab();
+      const confirm = screen.getByRole("button", { name: /Confirmar/i });
+      expect(confirm).toHaveFocus();
+
+      rerender(<EnrollmentModal action={action} onClose={currentClose} />);
+      await new Promise(requestAnimationFrame);
+
+      expect(confirm).toHaveFocus();
+      expect(document.body.style.overflow).toBe("hidden");
+      await user.keyboard("{Escape}");
+      expect(previousClose).not.toHaveBeenCalled();
+      expect(currentClose).toHaveBeenCalledOnce();
+    });
+
+    it.each(["", "scroll"])(
+      "moves focus inside on open and restores the opener and overflow %j on close",
+      async (overflow) => {
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = overflow;
+        const view = render(<EnrollmentDialogExample />);
+
+        try {
+          const opener = screen.getByRole("button", { name: "Inscrever-se" });
+          await view.user.click(opener);
+
+          expect(document.body.style.overflow).toBe("hidden");
+          await waitFor(() =>
+            expect(
+              screen.getByRole("button", { name: /✕ Cancelar/ }),
+            ).toHaveFocus(),
+          );
+          await view.user.keyboard("{Escape}");
+
+          expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+          expect(opener).toHaveFocus();
+          expect(document.body.style.overflow).toBe(overflow);
+        } finally {
+          view.unmount();
+          document.body.style.overflow = previousOverflow;
+        }
+      },
+    );
+
+    it("exposes a modal dialog named by its confirmation title", () => {
+      render(<EnrollmentModal action={makeActionDetail()} onClose={vi.fn()} />);
+
+      expect(
+        screen.getByRole("dialog", { name: "Confirmar inscrição" }),
+      ).toHaveAttribute("aria-modal", "true");
+    });
+
+    it("ignores Escape during enrollment and allows it again after a failure", async () => {
+      let release = () => {};
+      const responseReady = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.post(`${API}/activities/act-pending/enroll`, async () => {
+          await responseReady;
+          return HttpResponse.error();
+        }),
+      );
+      const onClose = vi.fn();
+      const { user } = render(
+        <EnrollmentModal
+          action={makeActionDetail({ id: "act-pending" })}
+          onClose={onClose}
+        />,
+      );
+
+      try {
+        await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+        await user.keyboard("{Escape}");
+        expect(onClose).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+
+      await screen.findByText(/Falha de comunicação/);
+      expect(
+        screen.getByRole("dialog", { name: "Erro ao realizar inscrição" }),
+      ).toHaveAttribute("aria-modal", "true");
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("closes when Escape is pressed", async () => {
+      const onClose = vi.fn();
+      const { user } = render(
+        <EnrollmentModal action={makeActionDetail()} onClose={onClose} />,
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
     it("calls onClose when cancel button is clicked", async () => {
       const action = makeActionDetail();
       const onClose = vi.fn();

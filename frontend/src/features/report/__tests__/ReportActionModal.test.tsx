@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import { Route, Routes } from "react-router";
 import { render, screen, waitFor, within } from "@/test/render";
 import { API, delay, http, HttpResponse, server } from "@/test/http";
@@ -78,7 +79,53 @@ const descriptionField = () =>
 
 const submitButton = () => screen.getByRole("button", { name: /Denunciar/ });
 
+function ReportDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Denunciar ação</button>
+      <ReportActionModal
+        open={open}
+        actionId={ACTION_ID}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 describe("ReportActionModal", () => {
+  it.each(["", "scroll"])(
+    "keeps dialog focus, Escape dismissal and previous overflow %j",
+    async (overflow) => {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = overflow;
+      const view = render(<ReportDialogExample />);
+
+      try {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(document.body.style.overflow).toBe(overflow);
+        const opener = screen.getByRole("button", { name: "Denunciar ação" });
+        await view.user.click(opener);
+
+        expect(
+          screen.getByRole("dialog", { name: "Denúncia de Ação" }),
+        ).toHaveAttribute("aria-modal", "true");
+        expect(document.body.style.overflow).toBe("hidden");
+        await waitFor(() =>
+          expect(screen.getByRole("button", { name: "Fechar" })).toHaveFocus(),
+        );
+        await view.user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(opener).toHaveFocus();
+        expect(document.body.style.overflow).toBe(overflow);
+      } finally {
+        view.unmount();
+        document.body.style.overflow = previousOverflow;
+      }
+    },
+  );
+
   describe("reasons", () => {
     it("offers exactly the five ReportReason categories, with no placeholder labels", async () => {
       await renderModal();
