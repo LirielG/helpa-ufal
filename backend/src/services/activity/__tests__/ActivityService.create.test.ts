@@ -56,17 +56,16 @@ function createdActivityFrom(authorId: string, data: CreateActivityInput) {
       format: data.format,
       url: data.url ?? null,
       workloadHours: data.workloadHours,
-      address:
-        "address" in data
-          ? {
-              id: "addr-123",
-              addressLine: data.address.addressLine,
-              district: data.address.district,
-              zipCode: data.address.zipCode,
-              city: data.address.city,
-              state: data.address.state,
-            }
-          : null,
+      address: data.address
+        ? {
+            id: "addr-123",
+            addressLine: data.address.addressLine,
+            district: data.address.district,
+            zipCode: data.address.zipCode,
+            city: data.address.city,
+            state: data.address.state,
+          }
+        : null,
     },
   };
 }
