@@ -115,11 +115,13 @@ async function request<T>(
   try {
     response = await fetch(url, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-      },
       credentials: "include",
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined
+        ? {}
+        : {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
     });
   } catch {
     throw new ApiError(NETWORK_ERROR_STATUS, COMMUNICATION_ERROR_MESSAGE);
