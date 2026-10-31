@@ -75,20 +75,14 @@ examples:
             "startDate": "2026-11-03T12:00:00.000Z",
             "endDate": "2026-11-14T20:00:00.000Z",
             "slots": 50,
+            "availableSlots": 50,
             "status": "OPEN",
-            "createdAt": "2026-10-17T15:06:52.422Z",
-            "updatedAt": "2026-10-17T15:07:52.930Z",
-            "deletedAt": null,
             "details": {
-              "activityId": "2448a310-6c92-4db2-8389-2fbee52e81e9",
               "description": "Introdução à lógica de programação para iniciantes.",
               "area": "Tecnologia",
               "format": "HYBRID",
               "url": "https://meet.example.com/turma2",
               "workloadHours": 20,
-              "addressId": "a990da3f-91b3-4ce6-a51e-0a3fcb95d4a2",
-              "createdAt": "2026-10-17T15:06:52.426Z",
-              "updatedAt": "2026-10-17T15:07:52.930Z",
               "address": {
                 "id": "a990da3f-91b3-4ce6-a51e-0a3fcb95d4a2",
                 "addressLine": "Av. Manoel Severino Barbosa, s/n",
@@ -96,8 +90,6 @@ examples:
                 "zipCode": "57309005",
                 "city": "Arapiraca",
                 "state": "AL",
-                "createdAt": "2026-10-17T15:06:52.424Z",
-                "updatedAt": "2026-10-17T15:06:52.424Z"
               }
             }
           }
@@ -437,6 +429,5 @@ docs: |-
   **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can update.
 
   - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
-  - The 200 body is the stored row, not the shape of `GET /activities/:activityId`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
-
+  - The 200 body has the same shape as `GET /activities/:activityId`, including `availableSlots` (slots minus the approved enrollments, never below zero). It carries no internal columns such as `createdAt`, `updatedAt` or `deletedAt`.
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).
