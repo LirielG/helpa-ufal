@@ -393,7 +393,9 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ type: ["COURSE", "EVENT"] } as unknown as IListActivitiesFilters),
+      service.list({
+        type: ["COURSE", "EVENT"],
+      } as unknown as IListActivitiesFilters),
     );
 
     expect(error.errors).toHaveLength(1);
@@ -520,7 +522,14 @@ describe("ActivityService.list", () => {
     },
   );
 
-  it.each(["INVALIDO", "maceio", "MACEIÓ", "Arapiraca", " ARAPIRACA", "NAO_E_UM_CAMPUS"])(
+  it.each([
+    "INVALIDO",
+    "maceio",
+    "MACEIÓ",
+    "Arapiraca",
+    " ARAPIRACA",
+    "NAO_E_UM_CAMPUS",
+  ])(
     "rejects the campus %j with an error in the 'campus' field (never reaches the repository)",
     async (campus) => {
       const repository = mockRepository();
@@ -626,24 +635,5 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
     await expect(service.list({})).resolves.toBe(repoResult);
-  });
-
-  it("ignores the userId parameter (currently unused)", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({}, "user-1");
-
-    expect(repository.list).toHaveBeenCalledWith({
-      type: undefined,
-      format: undefined,
-      status: undefined,
-      search: undefined,
-      campus: undefined,
-      page: 1,
-      limit: 20,
-      orderBy: "createdAt",
-      order: "desc",
-    });
   });
 });

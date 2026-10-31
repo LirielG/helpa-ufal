@@ -177,7 +177,6 @@ class ActivityService implements IActivityService {
 
   public async list(
     filters: IListActivitiesFilters,
-    userId?: string,
   ): Promise<IListActivitiesResponse> {
     // Absent -> default. Present (even empty) -> must be a plain integer.
     const pageRaw: unknown = filters.page ?? "1";

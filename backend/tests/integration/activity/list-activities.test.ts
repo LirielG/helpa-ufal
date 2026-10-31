@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"; // globals are disabled: explicit
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
+import { authCookie, authHeader } from "../../helpers/auth.js";
 
 describe("GET /activities — area filter", () => {
   // ---------- 200 - OK ----------
@@ -222,6 +223,32 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
   });
+
+  it.each([
+    { credentials: "a bearer token", authenticate: authHeader },
+    { credentials: "a session cookie", authenticate: authCookie },
+  ])(
+    "returns the same listing with $credentials and anonymously",
+    async ({ authenticate }) => {
+      const { user: author, token } = await createTeacher();
+      const activity = await createActivity(author.id, { area: "Saúde" });
+      await createActivity(author.id, { area: "Educação" });
+      const filters = { area: "Saúde", page: 1, limit: 1 };
+
+      const anonymous = await request(app).get("/activities").query(filters);
+      const authenticated = await request(app)
+        .get("/activities")
+        .query(filters)
+        .set(...authenticate(token));
+
+      expect(anonymous.status).toBe(200);
+      expect(anonymous.body.total).toBe(1);
+      expect(anonymous.body.activities).toHaveLength(1);
+      expect(anonymous.body.activities[0].id).toBe(activity.id);
+      expect(authenticated.status).toBe(anonymous.status);
+      expect(authenticated.body).toEqual(anonymous.body);
+    },
+  );
 
   // ---------- 404: intentionally absent ----------
   // An unknown area answers 200 with an empty page (see CA3 above); the

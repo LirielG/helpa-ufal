@@ -34,11 +34,9 @@ class ActivityController implements IActivityController {
   }
 
   public async list(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
-
     const filters = req.query as unknown as IListActivitiesFilters;
 
-    const result = await this._activityService.list(filters, userId);
+    const result = await this._activityService.list(filters);
 
     res.status(200).json(result);
   }
