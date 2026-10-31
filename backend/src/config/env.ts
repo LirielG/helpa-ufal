@@ -75,6 +75,9 @@ export const EnvSchema = z.object({
   ADMIN_EMAIL: z.email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   ADMIN_FULL_NAME: z.string().min(1).max(FULL_NAME_MAX_LENGTH).optional(),
+  ADMIN_REGISTRATION_CODE: z.string().min(1).optional(),
+  ADMIN_CNDB: z.string().min(1).optional(),
+  ADMIN_COURSE: z.string().min(1).optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
