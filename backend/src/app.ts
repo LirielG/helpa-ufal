@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import Router from "@/routers/index.js";
 import errorHandler from "@/controllers/error/ErrorHandler.js";
+import { requestLogger } from "@/middlewares/logging/requestLogger.js";
 import { env } from "@/config/env.js";
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(requestLogger);
 
 app.use(Router);
 

@@ -10,6 +10,7 @@ const envMock = vi.hoisted(() => ({ NODE_ENV: "test" as string }));
 vi.mock("@/config/env.js", () => ({ env: envMock }));
 
 const req = {} as Request;
+const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 function aResponse() {
   const res = { status: vi.fn(), json: vi.fn() };
@@ -43,6 +44,7 @@ function p2002(meta: Record<string, unknown>) {
 
 afterEach(() => {
   envMock.NODE_ENV = "test";
+  consoleErrorSpy.mockClear();
 });
 
 describe("ErrorHandler.zodErrorHandler", () => {
@@ -314,5 +316,98 @@ describe("ErrorHandler.defaultHandler", () => {
       message: "Internal server error.",
       stack: expect.any(String),
     });
+  });
+
+  it("logs the method, query-stripped path, 500 status, and stack on an unexpected Error while keeping the 500 response", () => {
+    const res = aResponse();
+    const error = new Error("unexpected failure");
+    const requestWithQuery = {
+      method: "GET",
+      originalUrl: "/activities?search=nome",
+    } as Request;
+
+    errorHandler.defaultHandler(
+      error,
+      requestWithQuery,
+      asResponse(res),
+      vi.fn(),
+    );
+
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[ErrorHandler] GET /activities 500:",
+      error.stack,
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(sent(res)).toEqual({
+      status: 500,
+      code: "INTERNAL_ERROR",
+      message: "Internal server error.",
+    });
+  });
+
+  it("logs CustomError with statusCode >= 500 with console.error and preserves its response body", () => {
+    const res = aResponse();
+    const error = new CustomError(500, "Profile data is inconsistent.");
+    const getMeReq = { method: "GET", originalUrl: "/users/me" } as Request;
+
+    errorHandler.defaultHandler(error, getMeReq, asResponse(res), vi.fn());
+
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[ErrorHandler] GET /users/me 500:",
+      error.stack,
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(sent(res)).toEqual({
+      status: 500,
+      code: "INTERNAL_ERROR",
+      message: "Profile data is inconsistent.",
+    });
+  });
+
+  it.each([400, 401, 403, 404, 409, 422] as const)(
+    "does not call console.error for CustomError(%i)",
+    (status) => {
+      const res = aResponse();
+
+      errorHandler.defaultHandler(
+        new CustomError(status, "Client error."),
+        req,
+        asResponse(res),
+        vi.fn(),
+      );
+
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it("falls back to error message or raw value when stack is absent or err is not an Error", () => {
+    const res = aResponse();
+    const noStackError = new Error("no stack");
+    delete noStackError.stack;
+
+    errorHandler.defaultHandler(
+      noStackError,
+      { method: "POST", originalUrl: "/auth/login" } as Request,
+      asResponse(res),
+      vi.fn(),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[ErrorHandler] POST /auth/login 500:",
+      "no stack",
+    );
+
+    consoleErrorSpy.mockClear();
+    errorHandler.defaultHandler(
+      "raw string error",
+      { method: "POST", originalUrl: "/auth/login" } as Request,
+      asResponse(res),
+      vi.fn(),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "[ErrorHandler] POST /auth/login 500:",
+      "raw string error",
+    );
   });
 });
