@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import UserService from "../UserService.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import { expectCustomError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 
@@ -69,24 +68,5 @@ describe("UserService.listActivities", () => {
       limit: 20,
       totalPages: 1,
     });
-  });
-
-  it("fails with 404 without querying activities when the user does not exist", async () => {
-    const activityRepository = mockActivityRepository();
-    const service = new UserService({
-      userRepository: mockUserRepository(null),
-      activityRepository,
-    });
-
-    await expectCustomError(
-      service.listActivities(USER_ID, {
-        filter: "enrolled",
-        page: 1,
-        limit: 20,
-      }),
-      404,
-      "User not found.",
-    );
-    expect(activityRepository.listByUser).not.toHaveBeenCalled();
   });
 });

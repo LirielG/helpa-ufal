@@ -11,31 +11,11 @@ import {
   createTeacher,
   DEFAULT_PASSWORD,
 } from "../../helpers/factories.js";
-import {
-  authCookie,
-  authHeader,
-  invalidToken,
-  signToken,
-} from "../../helpers/auth.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 
 import { Prisma } from "@prisma/client";
 import registrationPolicyMessage from "../../helpers/password-policy.js";
 import { randomUUID } from "node:crypto";
-
-/**
- * Route contract: docs/bruno/User/Update user's profile.yml.
- *
- * Red until #59 (route) and the tokenVersion issue (session revocation) land.
- * Error bodies are asserted with toEqual so the red never false-passes on the
- * Express default 404.
- *
- * CHECK BEFORE RUNNING: the auth routes are assumed to be mounted under /auth
- * (AuthRouter only shows "/login", "/register", "/logout"). Fix the three
- * constants below if the prefix is different.
- *
- * Deliberately NOT covered (registered debt): malformed JSON answers 500 until
- * the guard planned in #146 lands.
- */
 
 const meUrl = "/users/me";
 const loginUrl = "/auth/login";
@@ -49,8 +29,8 @@ const CURRENT_REQUIRED = "Current password is required to set a new password.";
 const POLICY_MESSAGE = registrationPolicyMessage();
 const REVOKED_TOKEN_BODY = {
   status: 401,
-  code: "UNAUTHENTICATED",
-  message: "Token malformatted, expired or invalid.",
+  code: "SESSION_INVALID",
+  message: "Session is no longer valid.",
 };
 
 // Every persisted column that is not editable here. Derived from the Prisma
@@ -80,7 +60,7 @@ function validationError(errors: Array<{ field: string; message: string }>) {
 function patchMe(token: string, body?: unknown) {
   const req = request(app)
     .patch(meUrl)
-    .set(...authHeader(token));
+    .set(...authCookie(token));
   return body === undefined ? req : req.send(body as object);
 }
 
@@ -96,7 +76,7 @@ function changePassword(
 function getMe(token: string) {
   return request(app)
     .get(meUrl)
-    .set(...authHeader(token));
+    .set(...authCookie(token));
 }
 
 function login(email: string, password: string) {
@@ -106,7 +86,8 @@ function login(email: string, password: string) {
 async function loginToken(email: string, password = DEFAULT_PASSWORD) {
   const response = await login(email, password);
   expect(response.status).toBe(200);
-  return response.body.token as string;
+  const cookie = response.headers["set-cookie"][0];
+  return cookie.split(";")[0].slice("token=".length);
 }
 
 function readUser(id: string) {
@@ -152,7 +133,9 @@ describe("PATCH /users/me", () => {
     it("accepts a fullName equal to the current one", async () => {
       const student = await createStudent({ fullName: "Maria Silva" });
 
-      const response = await patchMe(student.token, { fullName: "Maria Silva" });
+      const response = await patchMe(student.token, {
+        fullName: "Maria Silva",
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.fullName).toBe("Maria Silva");
@@ -162,17 +145,20 @@ describe("PATCH /users/me", () => {
       ["empty", ""],
       ["only spaces", "   "],
       ["not a string", 123],
-    ])("rejects a fullName that is %s and keeps the stored one", async (_l, fullName) => {
-      const student = await createStudent({ fullName: "Maria Silva" });
+    ])(
+      "rejects a fullName that is %s and keeps the stored one",
+      async (_l, fullName) => {
+        const student = await createStudent({ fullName: "Maria Silva" });
 
-      const response = await patchMe(student.token, { fullName });
+        const response = await patchMe(student.token, { fullName });
 
-      expect(response.status).toBe(400);
-      expect(response.body.errors).toEqual([
-        expect.objectContaining({ field: "fullName" }),
-      ]);
-      expect((await readUser(student.user.id)).fullName).toBe("Maria Silva");
-    });
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual([
+          expect.objectContaining({ field: "fullName" }),
+        ]);
+        expect((await readUser(student.user.id)).fullName).toBe("Maria Silva");
+      },
+    );
   });
 
   // ---------- course ----------
@@ -183,25 +169,28 @@ describe("PATCH /users/me", () => {
       ["null", null],
       ["the current value", "Ciência da Computação"],
       ["an empty string", ""],
-    ])("rejects course sent by a STUDENT as %s and persists nothing", async (_l, course) => {
-      const student = await createStudent({
-        fullName: "Maria Silva",
-        course: "Ciência da Computação",
-      });
+    ])(
+      "rejects course sent by a STUDENT as %s and persists nothing",
+      async (_l, course) => {
+        const student = await createStudent({
+          fullName: "Maria Silva",
+          course: "Ciência da Computação",
+        });
 
-      const response = await patchMe(student.token, {
-        fullName: "Should Not Apply",
-        course,
-      });
+        const response = await patchMe(student.token, {
+          fullName: "Should Not Apply",
+          course,
+        });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(
-        validationError([{ field: "course", message: IMMUTABLE }]),
-      );
-      const stored = await readUser(student.user.id);
-      expect(stored.fullName).toBe("Maria Silva");
-      expect(stored.student?.course).toBe("Ciência da Computação");
-    });
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual(
+          validationError([{ field: "course", message: IMMUTABLE }]),
+        );
+        const stored = await readUser(student.user.id);
+        expect(stored.fullName).toBe("Maria Silva");
+        expect(stored.student?.course).toBe("Ciência da Computação");
+      },
+    );
 
     it("lets a TEACHER change the course, and it persists", async () => {
       const teacher = await createTeacher({ course: "Engenharia de Software" });
@@ -240,19 +229,24 @@ describe("PATCH /users/me", () => {
     it.each([
       ["an empty string", ""],
       ["only spaces", "   "],
-    ])("rejects a TEACHER's course that is %s and keeps the stored one", async (_l, course) => {
-      const teacher = await createTeacher({ course: "Engenharia de Software" });
+    ])(
+      "rejects a TEACHER's course that is %s and keeps the stored one",
+      async (_l, course) => {
+        const teacher = await createTeacher({
+          course: "Engenharia de Software",
+        });
 
-      const response = await patchMe(teacher.token, { course });
+        const response = await patchMe(teacher.token, { course });
 
-      expect(response.status).toBe(400);
-      expect(response.body.errors).toEqual([
-        expect.objectContaining({ field: "course" }),
-      ]);
-      expect((await readUser(teacher.user.id)).teacher?.course).toBe(
-        "Engenharia de Software",
-      );
-    });
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual([
+          expect.objectContaining({ field: "course" }),
+        ]);
+        expect((await readUser(teacher.user.id)).teacher?.course).toBe(
+          "Engenharia de Software",
+        );
+      },
+    );
   });
 
   // ---------- Immutable fields ----------
@@ -363,7 +357,9 @@ describe("PATCH /users/me", () => {
       );
 
       expect(response.status).toBe(400);
-      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(200);
+      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(
+        200,
+      );
       expect((await login(student.user.email, NEW_PASSWORD)).status).toBe(401);
     });
   });
@@ -452,14 +448,16 @@ describe("PATCH /users/me", () => {
     it("hashes with the same cost as registration", async () => {
       const unique = randomUUID().slice(0, 8);
       const email = `cost-${unique}@ufal.br`;
-      const registered = await request(app).post(registerUrl).send({
-        userType: "STUDENT",
-        fullName: "Custo Bcrypt",
-        email,
-        password: DEFAULT_PASSWORD,
-        course: "Ciência da Computação",
-        registrationCode: `cost-${unique}`,
-      });
+      const registered = await request(app)
+        .post(registerUrl)
+        .send({
+          userType: "STUDENT",
+          fullName: "Custo Bcrypt",
+          email,
+          password: DEFAULT_PASSWORD,
+          course: "Ciência da Computação",
+          registrationCode: `cost-${unique}`,
+        });
       expect(registered.status).toBe(201);
       const before = await prisma.user.findUniqueOrThrow({ where: { email } });
       const token = await loginToken(email);
@@ -510,7 +508,9 @@ describe("PATCH /users/me", () => {
         message: "Current password is incorrect.",
       });
       expect((await readUser(student.user.id)).passwordHash).toBe(before);
-      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(200);
+      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(
+        200,
+      );
       expect((await login(student.user.email, NEW_PASSWORD)).status).toBe(401);
     });
 
@@ -571,21 +571,26 @@ describe("PATCH /users/me", () => {
       ["without a number", "Senha@abcd"],
       ["without a special character", "Senha12345"],
       ["with a non-ASCII character", "Senha@12é4"],
-    ])("rejects a newPassword %s with 400 and leaves the password unchanged", async (_l, newPassword) => {
-      const student = await createStudent();
+    ])(
+      "rejects a newPassword %s with 400 and leaves the password unchanged",
+      async (_l, newPassword) => {
+        const student = await createStudent();
 
-      const response = await changePassword(
-        student.token,
-        DEFAULT_PASSWORD,
-        newPassword,
-      );
+        const response = await changePassword(
+          student.token,
+          DEFAULT_PASSWORD,
+          newPassword,
+        );
 
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual(
-        validationError([{ field: "newPassword", message: POLICY_MESSAGE }]),
-      );
-      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(200);
-    });
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual(
+          validationError([{ field: "newPassword", message: POLICY_MESSAGE }]),
+        );
+        expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(
+          200,
+        );
+      },
+    );
 
     it("rejects a newPassword sent without currentPassword", async () => {
       const student = await createStudent();
@@ -600,7 +605,9 @@ describe("PATCH /users/me", () => {
           { field: "currentPassword", message: CURRENT_REQUIRED },
         ]),
       );
-      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(200);
+      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(
+        200,
+      );
     });
 
     it("rejects an empty currentPassword sent with a newPassword", async () => {
@@ -636,7 +643,7 @@ describe("PATCH /users/me", () => {
       expect((await getMe(student.token)).status).toBe(401);
     });
 
-    it("revokes the session cookie too, not only the Bearer token", async () => {
+    it("revokes the session cookie after a password change", async () => {
       const student = await createStudent();
 
       await changePassword(student.token, DEFAULT_PASSWORD);
@@ -741,7 +748,7 @@ describe("PATCH /users/me", () => {
       expect((await readUser(student.user.id)).fullName).not.toBe("Maria");
     });
 
-    it("accepts the session cookie as well as the Bearer token", async () => {
+    it("accepts the session cookie on protected routes", async () => {
       const student = await createStudent();
 
       const response = await request(app)
@@ -759,7 +766,7 @@ describe("PATCH /users/me", () => {
 
       const response = await request(app)
         .patch(`${meUrl}?userId=${other.user.id}&id=${other.user.id}`)
-        .set(...authHeader(owner.token))
+        .set(...authCookie(owner.token))
         .send({ fullName: "Maria Editada" });
 
       expect(response.status).toBe(200);
@@ -782,17 +789,17 @@ describe("PATCH /users/me", () => {
       expect((await readUser(owner.user.id)).fullName).toBe("Maria Silva");
     });
 
-    it("returns 404 when the user from the token no longer exists", async () => {
+    it("returns 401 when the user from the token no longer exists", async () => {
       const student = await createStudent();
       await prisma.user.delete({ where: { id: student.user.id } });
 
       const response = await patchMe(student.token, { fullName: "Maria" });
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(401);
       expect(response.body).toEqual({
-        status: 404,
-        code: "NOT_FOUND",
-        message: "User not found.",
+        status: 401,
+        code: "SESSION_INVALID",
+        message: "Session is no longer valid.",
       });
     });
   });
@@ -875,16 +882,19 @@ describe("PATCH /users/me", () => {
     it.each([
       ["STUDENT", createStudent],
       ["TEACHER", createTeacher],
-    ])("never serializes passwordHash for a %s, with or without a password change", async (_type, createUser) => {
-      const { token } = await createUser();
+    ])(
+      "never serializes passwordHash for a %s, with or without a password change",
+      async (_type, createUser) => {
+        const { token } = await createUser();
 
-      const plain = await patchMe(token, { fullName: "Nome Novo" });
-      expect(plain.status).toBe(200);
-      expect(Object.keys(plain.body)).not.toContain("passwordHash");
+        const plain = await patchMe(token, { fullName: "Nome Novo" });
+        expect(plain.status).toBe(200);
+        expect(Object.keys(plain.body)).not.toContain("passwordHash");
 
-      const changed = await changePassword(token, DEFAULT_PASSWORD);
-      expect(changed.status).toBe(200);
-      expect(Object.keys(changed.body)).not.toContain("passwordHash");
-    });
+        const changed = await changePassword(token, DEFAULT_PASSWORD);
+        expect(changed.status).toBe(200);
+        expect(Object.keys(changed.body)).not.toContain("passwordHash");
+      },
+    );
   });
 });

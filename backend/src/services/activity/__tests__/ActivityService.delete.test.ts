@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { expectHttpError } from "@/utils/tests.js";
 
 function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
-    user?: Partial<IUserRepository>;
   } = {},
 ) {
   const activityRepository = {
@@ -16,131 +14,112 @@ function mockRepositories(
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue({ isManager: false }),
-    ...overrides.user,
-  } as unknown as IUserRepository;
-
-  return { activityRepository, userRepository };
+  return { activityRepository };
 }
 
 describe("ActivityService.delete", () => {
   // ---------- Missing/deleted activity ----------
 
   it("throws 404 when the activity does not exist or was already deleted", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
-    await expectHttpError(service.delete("act-1", "user-1"), 404);
+    await expectHttpError(
+      service.delete("act-1", { id: "user-1", isManager: false }),
+      404,
+    );
     expect(activityRepository.softDelete).not.toHaveBeenCalled();
   });
 
   // Existence is checked before permission, keeping the behavior symmetric
   // with GET (a deleted activity is invisible to everyone).
   it("throws 404 (not 403) when the activity does not exist, even for a non-author", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
-    await expectHttpError(service.delete("act-1", "anyone"), 404);
-    expect(userRepository.findById).not.toHaveBeenCalled();
+    await expectHttpError(
+      service.delete("act-1", { id: "anyone", isManager: false }),
+      404,
+    );
   });
 
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await expectHttpError(service.delete("act-1", "user-2"), 403);
+    await expectHttpError(
+      service.delete("act-1", { id: "user-2", isManager: false }),
+      403,
+    );
     expect(activityRepository.softDelete).not.toHaveBeenCalled();
   });
 
-  // Ghost user: account removed/deactivated, token still valid.
-  // This is the main reason for using the fresh database value
-  // instead of the JWT claim.
-  it("throws 403 when the token's user no longer exists in the database and is not the author", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
-      activity: {
-        findById: vi
-          .fn()
-          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
-      },
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
-    const service = new ActivityService({ activityRepository, userRepository });
+  it("lets the authenticated manager delete another author's activity", async () => {
+    const activityRepository = {
+      findById: vi
+        .fn()
+        .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
+      softDelete: vi.fn().mockResolvedValue(true),
+    } as unknown as IActivityRepository;
+    const service = new ActivityService({ activityRepository });
 
-    await expectHttpError(service.delete("act-1", "ghost-user"), 403);
-    expect(activityRepository.softDelete).not.toHaveBeenCalled();
-  });
-
-  // The authorship check requires a live user record: a deleted account
-  // must not operate on the system, regardless of what the token says.
-  it("throws 403 when the token's user no longer exists, even if they were the author", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
-      activity: {
-        findById: vi
-          .fn()
-          .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
-      },
-      user: { findById: vi.fn().mockResolvedValue(null) },
-    });
-    const service = new ActivityService({ activityRepository, userRepository });
-
-    await expectHttpError(service.delete("act-1", "author-1"), 403);
-    expect(activityRepository.softDelete).not.toHaveBeenCalled();
+    await expect(
+      service.delete("act-1", { id: "manager-9", isManager: true }),
+    ).resolves.toBeUndefined();
+    expect(activityRepository.softDelete).toHaveBeenCalledWith("act-1");
   });
 
   // ---------- Happy path ----------
 
   it("the author can delete their own activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.delete("act-1", "author-1");
+    await service.delete("act-1", { id: "author-1", isManager: false });
     expect(activityRepository.softDelete).toHaveBeenCalledTimes(1);
     expect(activityRepository.softDelete).toHaveBeenCalledWith("act-1");
   });
 
   it("a manager can delete another author's activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       },
-      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.delete("act-1", "manager-9");
+    await service.delete("act-1", { id: "manager-9", isManager: true });
     expect(activityRepository.softDelete).toHaveBeenCalledWith("act-1");
   });
 
   // Intersection of both permissions: the rule must not be ambiguous here.
   it("a manager can delete their own activity", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue({ id: "act-1", authorId: "manager-9" }),
       },
-      user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await service.delete("act-1", "manager-9");
+    await service.delete("act-1", { id: "manager-9", isManager: true });
     expect(activityRepository.softDelete).toHaveBeenCalledTimes(1);
   });
 
@@ -152,27 +131,29 @@ describe("ActivityService.delete", () => {
   // Treated as success: the desired final state already holds.
 
   it("does not throw when softDelete returns false (another request deleted first)", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         findById: vi
           .fn()
           .mockResolvedValue({ id: "act-1", authorId: "author-1" }),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
-    await expect(service.delete("act-1", "author-1")).resolves.toBeUndefined();
+    await expect(
+      service.delete("act-1", { id: "author-1", isManager: false }),
+    ).resolves.toBeUndefined();
   });
 });
 
 describe("ActivityService.list", () => {
   it("maps start_date to startDate and passes it to repository.list", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await service.list({ orderBy: "start_date" });
 
@@ -184,12 +165,12 @@ describe("ActivityService.list", () => {
   });
 
   it("maps created_at to createdAt and passes it to repository.list", async () => {
-    const { activityRepository, userRepository } = mockRepositories({
+    const { activityRepository } = mockRepositories({
       activity: {
         list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
       },
     });
-    const service = new ActivityService({ activityRepository, userRepository });
+    const service = new ActivityService({ activityRepository });
 
     await service.list({ orderBy: "created_at" });
 
@@ -201,8 +182,8 @@ describe("ActivityService.list", () => {
   });
 
   it("throws a ValidationError with field 'type' when filter.type is invalid", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
     try {
       await service.list({ type: "INVALID_TYPE" as any });
@@ -213,8 +194,8 @@ describe("ActivityService.list", () => {
   });
 
   it("throws a ValidationError with field 'format' when filter.format is invalid", async () => {
-    const { activityRepository, userRepository } = mockRepositories();
-    const service = new ActivityService({ activityRepository, userRepository });
+    const { activityRepository } = mockRepositories();
+    const service = new ActivityService({ activityRepository });
 
     try {
       await service.list({ format: "INVALID_FORMAT" as any });

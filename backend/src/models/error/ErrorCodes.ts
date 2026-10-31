@@ -12,6 +12,7 @@ export type ErrorStatus = keyof typeof GENERIC_ERROR_CODES;
 export type GenericErrorCode = (typeof GENERIC_ERROR_CODES)[ErrorStatus];
 
 export type SpecificErrorCode =
+  | "SESSION_INVALID"
   | "ACTIVITY_NOT_FOUND"
   | "ENROLLMENT_NOT_FOUND"
   | "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT"

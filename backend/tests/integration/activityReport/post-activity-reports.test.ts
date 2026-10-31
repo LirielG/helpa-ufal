@@ -2,8 +2,12 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { randomUUID } from "crypto";
 import { app } from "@/app.js";
-import { createTeacher, createStudent, createActivity } from "../../helpers/factories.js";
-import { authHeader } from "../../helpers/auth.js";
+import {
+  createTeacher,
+  createStudent,
+  createActivity,
+} from "../../helpers/factories.js";
+import { authCookie } from "../../helpers/auth.js";
 
 describe("POST /activities/:activityId/reports", () => {
   it("returns 401 without a token", async () => {
@@ -24,8 +28,11 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(reporter.token))
-      .send({ category: "MISINFORMATION", description: "The address provided is incorrect." });
+      .set(...authCookie(reporter.token))
+      .send({
+        category: "MISINFORMATION",
+        description: "The address provided is incorrect.",
+      });
 
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({
@@ -43,14 +50,17 @@ describe("POST /activities/:activityId/reports", () => {
 
     const first = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(reporter.token))
+      .set(...authCookie(reporter.token))
       .send({ category: "SPAM", description: "First report." });
     expect(first.status).toBe(201);
 
     const second = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(reporter.token))
-      .send({ category: "SPAM", description: "Second report, same user/activity." });
+      .set(...authCookie(reporter.token))
+      .send({
+        category: "SPAM",
+        description: "Second report, same user/activity.",
+      });
 
     expect(second.status).toBe(409);
     expect(second.body).toEqual({
@@ -67,7 +77,7 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(reporter.token))
+      .set(...authCookie(reporter.token))
       .send({ category: "NOT_A_CATEGORY", description: "Invalid category." });
 
     expect(response.status).toBe(400);
@@ -79,7 +89,7 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post("/activities/not-a-uuid/reports")
-      .set(...authHeader(reporter.token))
+      .set(...authCookie(reporter.token))
       .send({ category: "SPAM", description: "Invalid id." });
 
     expect(response.status).toBe(400);
@@ -87,7 +97,13 @@ describe("POST /activities/:activityId/reports", () => {
       status: 400,
       code: "VALIDATION_ERROR",
       message: "Validation error.",
-      errors: [{ field: "activityId", code: "VALIDATION_ERROR", message: "activityId must be a valid UUID." }],
+      errors: [
+        {
+          field: "activityId",
+          code: "VALIDATION_ERROR",
+          message: "activityId must be a valid UUID.",
+        },
+      ],
     });
   });
 
@@ -96,14 +112,18 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post(`/activities/${randomUUID()}/reports`)
-      .set(...authHeader(reporter.token))
+      .set(...authCookie(reporter.token))
       .send({ category: "SPAM", description: "Activity does not exist." });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
 
-    it("returns 404 for a soft-deleted activity", async () => {
+  it("returns 404 for a soft-deleted activity", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, {
       status: "OPEN",
@@ -113,11 +133,15 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(reporter.token))
+      .set(...authCookie(reporter.token))
       .send({ category: "SPAM", description: "Activity was soft-deleted." });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
 
   it("returns 403 when the activity author tries to report their own activity", async () => {
@@ -126,7 +150,7 @@ describe("POST /activities/:activityId/reports", () => {
 
     const response = await request(app)
       .post(`/activities/${activity.id}/reports`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ category: "SPAM", description: "Self report attempt." });
 
     expect(response.status).toBe(403);

@@ -10,12 +10,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import {
-  authCookie,
-  authHeader,
-  invalidToken,
-  signToken,
-} from "../../helpers/auth.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 
 // Route contract: docs/bruno/Enrollments/Confirm Attendance.yml.
 const attendanceUrl = (enrollmentId: string) =>
@@ -77,7 +72,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(200);
@@ -103,7 +98,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(manager.token))
+      .set(...authCookie(manager.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(200);
@@ -137,7 +132,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: false });
 
     expect(response.status).toBe(200);
@@ -165,7 +160,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 6 });
 
     expect(response.status).toBe(200);
@@ -187,7 +182,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: false });
 
     expect(response.status).toBe(200);
@@ -204,7 +199,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
       const response = await request(app)
         .put(attendanceUrl(enrollment.id))
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send({ attended: true, workloadHours });
 
       expect(response.status).toBe(200);
@@ -217,7 +212,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(200);
@@ -231,7 +226,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(200);
@@ -252,7 +247,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .patch(oldAttendanceUrl(activity.id, enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);
@@ -263,7 +258,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(oldAttendanceUrl(activity.id, enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);
@@ -276,7 +271,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: "yes", workloadHours: 4 });
 
     expect(response.status).toBe(400);
@@ -296,7 +291,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ workloadHours: 4 });
 
     expect(response.status).toBe(400);
@@ -310,7 +305,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: "4" });
 
     expect(response.status).toBe(400);
@@ -324,7 +319,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: false, workloadHours: 4 });
 
     expect(response.status).toBe(400);
@@ -348,7 +343,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true });
 
     expect(response.status).toBe(400);
@@ -372,7 +367,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4, userId: volunteer.user.id });
 
     expect(response.status).toBe(400);
@@ -406,12 +401,12 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     });
   });
 
-  it("rejects an invalid Bearer token", async () => {
+  it("rejects an invalid session cookie", async () => {
     const { enrollment } = await aHomologableEnrollment();
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(invalidToken()))
+      .set(...authCookie(invalidToken()))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(401);
@@ -442,7 +437,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(expired))
+      .set(...authCookie(expired))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(401);
@@ -459,14 +454,14 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(ghost.token))
+      .set(...authCookie(ghost.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
-      code: "UNAUTHENTICATED",
-      message: "User account not found or inactive.",
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 
@@ -478,7 +473,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(outsider.token))
+      .set(...authCookie(outsider.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(403);
@@ -498,7 +493,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(volunteer.token))
+      .set(...authCookie(volunteer.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(403);
@@ -515,7 +510,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(randomUUID()))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);
@@ -535,7 +530,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);
@@ -556,7 +551,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl("not-a-uuid"))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);
@@ -578,7 +573,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
       const response = await request(app)
         .put(attendanceUrl(enrollment.id))
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send({ attended: true, workloadHours: 4 });
 
       expect(response.status).toBe(409);
@@ -604,7 +599,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
       const response = await request(app)
         .put(attendanceUrl(enrollment.id))
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send({ attended: true, workloadHours: 4 });
 
       expect(response.status).toBe(409);
@@ -629,7 +624,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
       const response = await request(app)
         .put(attendanceUrl(enrollment.id))
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send({ attended: true, workloadHours });
 
       expect(response.status).toBe(422);
@@ -654,7 +649,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(enrollment.id))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: WORKLOAD_HOURS + 1 });
 
     expect(response.status).toBe(422);
@@ -687,7 +682,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(randomUUID()))
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ attended: false, workloadHours: 4 });
 
     expect(response.status).toBe(400);
@@ -701,7 +696,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
 
     const response = await request(app)
       .put(attendanceUrl(randomUUID()))
-      .set(...authHeader(outsider.token))
+      .set(...authCookie(outsider.token))
       .send({ attended: true, workloadHours: 4 });
 
     expect(response.status).toBe(404);

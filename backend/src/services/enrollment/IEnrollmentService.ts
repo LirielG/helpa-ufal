@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import type {
   ConfirmAttendanceInput,
   EnrollResponse,
@@ -15,13 +16,13 @@ export interface IEnrollmentService {
     limit?: number,
   ): Promise<EnrollmentListResponse>;
   listParticipants(
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     activityId: string,
     page?: number,
     limit?: number,
   ): Promise<ParticipantsListResponse>;
   confirmAttendance(
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     enrollmentId: string,
     input: ConfirmAttendanceInput,
   ): Promise<EnrollmentResponse>;

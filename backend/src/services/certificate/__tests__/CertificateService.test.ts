@@ -5,7 +5,6 @@ import type {
   CertificateForValidation,
   ICertificateRepository,
 } from "@/repositories/certificate/ICertificateRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { ICertificatePdfRenderer } from "../ICertificatePdfRenderer.js";
 import CustomError from "@/models/error/CustomError.js";
 import { expectCustomError } from "@/utils/tests.js";
@@ -37,20 +36,15 @@ function aCertificate(): CertificateForDownload {
 
 function setup({
   certificate = aCertificate() as CertificateForDownload | null,
-  user = { isManager: false } as { isManager: boolean } | null,
 } = {}) {
   const certificateRepository = {
     findByIdForDownload: vi.fn().mockResolvedValue(certificate),
   } as unknown as ICertificateRepository;
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue(user),
-  } as unknown as IUserRepository;
   const renderer: ICertificatePdfRenderer = {
     render: vi.fn().mockResolvedValue(PDF_BYTES),
   };
   const service = new CertificateService({
     certificateRepository,
-    userRepository,
     renderer,
   });
 
@@ -72,7 +66,10 @@ describe("CertificateService.getFile", () => {
   it("hands the holder the rendered PDF, named after the validation code", async () => {
     const { service } = setup();
 
-    const file = await service.getFile(HOLDER_ID, CERTIFICATE_ID);
+    const file = await service.getFile(
+      { id: HOLDER_ID, isManager: false },
+      CERTIFICATE_ID,
+    );
 
     expect(file).toEqual({
       fileName: "certificado-7KQ4MX9T2R.pdf",
@@ -83,7 +80,7 @@ describe("CertificateService.getFile", () => {
   it("renders with the confirmed hours and the current holder name", async () => {
     const { service, renderer } = setup();
 
-    await service.getFile(HOLDER_ID, CERTIFICATE_ID);
+    await service.getFile({ id: HOLDER_ID, isManager: false }, CERTIFICATE_ID);
 
     expect(renderer.render).toHaveBeenCalledExactlyOnceWith({
       holderName: "Maria da Silva",
@@ -96,10 +93,24 @@ describe("CertificateService.getFile", () => {
     });
   });
 
-  it("hands a manager who is not the holder the PDF", async () => {
-    const { service } = setup({ user: { isManager: true } });
+  it("authorizes the manager supplied by authentication", async () => {
+    const { service } = setup();
 
-    const file = await service.getFile(OTHER_ID, CERTIFICATE_ID);
+    const file = await service.getFile(
+      { id: OTHER_ID, isManager: true },
+      CERTIFICATE_ID,
+    );
+
+    expect(file.content).toBe(PDF_BYTES);
+  });
+
+  it("hands a manager who is not the holder the PDF", async () => {
+    const { service } = setup();
+
+    const file = await service.getFile(
+      { id: OTHER_ID, isManager: true },
+      CERTIFICATE_ID,
+    );
 
     expect(file.content).toBe(PDF_BYTES);
   });
@@ -110,9 +121,21 @@ describe("CertificateService.getFile", () => {
     const malformed = setup();
 
     const messages = await Promise.all([
-      notFoundMessage(notOwner.service.getFile(OTHER_ID, CERTIFICATE_ID)),
-      notFoundMessage(unknown.service.getFile(HOLDER_ID, CERTIFICATE_ID)),
-      notFoundMessage(malformed.service.getFile(HOLDER_ID, "abc")),
+      notFoundMessage(
+        notOwner.service.getFile(
+          { id: OTHER_ID, isManager: false },
+          CERTIFICATE_ID,
+        ),
+      ),
+      notFoundMessage(
+        unknown.service.getFile(
+          { id: HOLDER_ID, isManager: false },
+          CERTIFICATE_ID,
+        ),
+      ),
+      notFoundMessage(
+        malformed.service.getFile({ id: HOLDER_ID, isManager: false }, "abc"),
+      ),
     ]);
 
     expect(new Set(messages)).toEqual(new Set(["Certificate not found."]));
@@ -137,20 +160,13 @@ describe("CertificateService.getFile", () => {
       const { service, renderer } = setup({ certificate });
 
       const message = await notFoundMessage(
-        service.getFile(HOLDER_ID, CERTIFICATE_ID),
+        service.getFile({ id: HOLDER_ID, isManager: false }, CERTIFICATE_ID),
       );
 
       expect(message).toBe("Certificate not found.");
       expect(renderer.render).not.toHaveBeenCalled();
     },
   );
-
-  it("answers 401 when the user from the token no longer exists", async () => {
-    const { service, renderer } = setup({ user: null });
-
-    await expectCustomError(service.getFile(HOLDER_ID, CERTIFICATE_ID), 401);
-    expect(renderer.render).not.toHaveBeenCalled();
-  });
 });
 
 // Shaped exactly like the repository's select, so a field the query does not
@@ -181,7 +197,6 @@ function setupValidation(
   } as unknown as ICertificateRepository;
   const service = new CertificateService({
     certificateRepository,
-    userRepository: {} as IUserRepository,
     renderer: {} as ICertificatePdfRenderer,
   });
 

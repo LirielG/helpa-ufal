@@ -396,10 +396,6 @@ describe("ActivityReportService.createReport", () => {
       service.createReport(ACTIVITY_ID, REPORTER_ID, validInput()),
     ).rejects.toBe(infraError);
 
-    // A race between the duplicate check and create would surface here as a
-    // Prisma P2002 (@@unique) — today it propagates as a 500 (contract debt);
-    // a reporter deleted after login would surface as a P2003 FK violation
-    // (ghost-user debt). Both keep propagating unchanged by design.
     const failingCreate = mockReportRepository({
       findByUserAndActivity: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockRejectedValue(infraError),

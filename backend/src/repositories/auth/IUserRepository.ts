@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
 import type { Prisma, User } from "@prisma/client";
 
@@ -26,9 +27,9 @@ export type UpdateProfileData = {
 
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
-  findById(id: string): Promise<UserWithProfileAndHash | null>;
-  findTokenVersionById(id: string): Promise<{ tokenVersion: number } | null>;
-  findProfileById(id: string): Promise<UserWithProfile | null>;
+  findById(id: string): Promise<UserWithProfileAndHash>;
+  findSessionById(id: string): Promise<AuthenticatedUser | null>;
+  findProfileById(id: string): Promise<UserWithProfile>;
   updateProfile(id: string, data: UpdateProfileData): Promise<UserWithProfile>;
 
   createWithSubtype(

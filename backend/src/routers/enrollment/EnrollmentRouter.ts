@@ -18,7 +18,7 @@ const authMiddleware = new AuthMiddleware();
  * (404) -> authorization (403). The last two live in the service.
  *
  * auth() has no effect without options — `userTypes: "all"` is what actually
- * requires a credential here (cookie session or Bearer token).
+ * requires a credential here (cookie session).
  */
 router.get(
   "/activities/:activityId/enrollments",

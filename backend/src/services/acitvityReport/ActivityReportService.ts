@@ -1,7 +1,6 @@
 import type { IActivityReportService } from "./IActivityReportService.js";
 import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import {
   CreateActivityReportInput,
   ListReportsQuery,
@@ -13,7 +12,6 @@ import type {
 import { type Paginated, toPaginated } from "@/types/pagination.js";
 import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
-import UserRepository from "@/repositories/auth/UserRepository.js";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
@@ -21,20 +19,17 @@ import { isValidUUID } from "@/utils/uuid.js";
 type Props = {
   activityReportRepository?: IActivityReportRepository;
   activityRepository?: IActivityRepository;
-  userRepository?: IUserRepository;
 };
 
 class ActivityReportService implements IActivityReportService {
   private _reportRepository: IActivityReportRepository;
   private _activityRepository: IActivityRepository;
-  private _userRepository: IUserRepository;
 
   constructor(props?: Props) {
     this._reportRepository =
       props?.activityReportRepository ?? new ActivityReportRepository();
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
-    this._userRepository = props?.userRepository ?? new UserRepository();
   }
 
   public async createReport(
@@ -72,11 +67,8 @@ class ActivityReportService implements IActivityReportService {
   }
 
   public async listReports(
-    requesterId: string,
     query: ListReportsQuery,
   ): Promise<Paginated<ReportResponse>> {
-    await this.requireManager(requesterId);
-
     const { items, total } = await this._reportRepository.list(query);
 
     return toPaginated(items, total, query.page, query.limit);
@@ -86,8 +78,6 @@ class ActivityReportService implements IActivityReportService {
     reportId: string,
     requesterId: string,
   ): Promise<ReportResponse> {
-    await this.requireManager(requesterId);
-
     if (!isValidUUID(reportId)) {
       throw new ValidationError([
         {
@@ -118,19 +108,6 @@ class ActivityReportService implements IActivityReportService {
     }
 
     return resolved;
-  }
-
-  // auth({ manager: true }) only trusts the token claims. A token outlives a
-  // removed account or a revoked manager role, so the database has the last
-  // word on both.
-  private async requireManager(userId: string): Promise<void> {
-    const user = await this._userRepository.findById(userId);
-    if (!user) {
-      throw new CustomError(401, "User account not found or inactive.");
-    }
-    if (!user.isManager) {
-      throw new CustomError(403, "User is not a manager.");
-    }
   }
 }
 

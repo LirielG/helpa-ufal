@@ -13,7 +13,7 @@ const activityReportController: IActivityReportController =
 const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 
 // Validation order: 401 -> 403 (manager role) -> 400 (format) -> 404. The
-// role is declared here; the service re-checks it against the database.
+// middleware checks the current role before the request reaches the service.
 router.get(
   "/reports",
   authMiddleware.auth({ manager: true }),

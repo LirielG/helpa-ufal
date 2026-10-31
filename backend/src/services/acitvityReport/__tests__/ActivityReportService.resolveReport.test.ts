@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityReportService from "../ActivityReportService.js";
 import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { ReportResponse } from "@/types/activityReport.js";
 import { expectCustomError, expectValidationError } from "@/utils/tests.js";
 
@@ -30,11 +29,9 @@ function aReport(overrides: Partial<ReportResponse> = {}): ReportResponse {
 }
 
 function setup({
-  user = { isManager: true },
   found = aReport(),
   resolved = aReport({ resolvedAt: RESOLVED_AT }),
 }: {
-  user?: { isManager: boolean } | null;
   found?: ReportResponse | null;
   resolved?: ReportResponse | null;
 } = {}) {
@@ -42,16 +39,12 @@ function setup({
     findById: vi.fn().mockResolvedValue(found),
     resolve: vi.fn().mockResolvedValue(resolved),
   } as unknown as IActivityReportRepository;
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue(user),
-  } as unknown as IUserRepository;
 
   const service = new ActivityReportService({
     activityReportRepository: reportRepository,
-    userRepository,
   });
 
-  return { service, reportRepository, userRepository };
+  return { service, reportRepository };
 }
 
 describe("ActivityReportService.resolveReport", () => {
@@ -91,34 +84,6 @@ describe("ActivityReportService.resolveReport", () => {
 
     expect(response).toBe(alreadyResolved);
     expect(reportRepository.resolve).not.toHaveBeenCalled();
-  });
-
-  // ---------- Authorization ----------
-
-  it("returns 401 when the token's user no longer exists, before anything else", async () => {
-    const { service, reportRepository } = setup({ user: null });
-
-    // A malformed id must not turn a ghost session into a 400.
-    await expectCustomError(
-      service.resolveReport("not-a-uuid", MANAGER_ID),
-      401,
-    );
-    expect(reportRepository.findById).not.toHaveBeenCalled();
-    expect(reportRepository.resolve).not.toHaveBeenCalled();
-  });
-
-  it("returns 403 when the user is no longer a manager, even for a missing report", async () => {
-    const { service, reportRepository } = setup({
-      user: { isManager: false },
-      found: null,
-    });
-
-    await expectCustomError(
-      service.resolveReport(REPORT_ID, MANAGER_ID),
-      403,
-      "User is not a manager.",
-    );
-    expect(reportRepository.findById).not.toHaveBeenCalled();
   });
 
   // ---------- Format and existence ----------
