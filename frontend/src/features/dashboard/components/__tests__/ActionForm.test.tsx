@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@/test";
 import { ActionRegister } from "../ActionForm";
-import { API, futureDateInput, http, HttpResponse, server } from "@/test";
+import { API, futureDateDisplay, http, HttpResponse, server } from "@/test";
 import type { UserEvent } from "@testing-library/user-event";
 import { ACTIVITY_TITLE_MAX_LENGTH } from "@/validators/limits";
 
@@ -74,10 +74,10 @@ async function fillStep2(user: UserEvent) {
   );
 
   fireEvent.change(screen.getByLabelText("Data de início"), {
-    target: { value: futureDateInput() },
+    target: { value: futureDateDisplay() },
   });
   fireEvent.change(screen.getByLabelText("Data de encerramento"), {
-    target: { value: futureDateInput() },
+    target: { value: futureDateDisplay() },
   });
 }
 
@@ -526,5 +526,62 @@ describe("ActionRegister", () => {
 
     await user.selectOptions(format, "HYBRID");
     expect(screen.getByLabelText("Link para o evento")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Horário de início", "8:3"],
+    ["Horário de início", "25:70"],
+    ["Horário de encerramento", "8:3"],
+    ["Horário de encerramento", "25:70"],
+  ])("blocks %s %s without sending the request", async (label, value) => {
+    const onCreate = vi.fn();
+    server.use(
+      http.post("*/activities", async ({ request }) => {
+        onCreate(await request.json());
+        return HttpResponse.json({ id: "nova-acao" }, { status: 201 });
+      }),
+    );
+
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user);
+    await fillStep2(user);
+
+    const field = screen.getByLabelText(label);
+    await user.clear(field);
+    await user.type(field, value);
+    await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+    expect(
+      await screen.findByText("Informe um horário válido (hh:mm)."),
+    ).toBeInTheDocument();
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("disables days before the start date in the end-date calendar", async () => {
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user);
+
+    fireEvent.change(screen.getByLabelText("Data de início"), {
+      target: { value: "15/03/2099" },
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Abrir calendário: Data de encerramento",
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /(^|\s)14 de março/ }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /(^|\s)15 de março/ }),
+    ).toBeEnabled();
   });
 });
