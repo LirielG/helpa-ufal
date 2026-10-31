@@ -13,6 +13,30 @@ describe("ActionDetail Integration", () => {
     signIn(); // Ensure user is authenticated
   });
 
+  it("displays workload hours in singular when workload is 1 hour", async () => {
+    const actionId = "act-singular-workload";
+    const action = makeActionDetail({
+      id: actionId,
+      details: {
+        ...makeActionDetail().details!,
+        workloadHours: 1,
+      },
+    });
+
+    server.use(
+      http.get(`${API}/activities/${actionId}`, () =>
+        HttpResponse.json(action),
+      ),
+    );
+
+    render(<ActionDetail />, {
+      route: `/activity/${actionId}`,
+      path: "/activity/:id",
+    });
+
+    expect(await screen.findByText("1 hora")).toBeInTheDocument();
+  });
+
   it("updates available slots after successful enrollment", async () => {
     const actionId = "act-integration-test";
     let getCallCount = 0;

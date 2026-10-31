@@ -26,5 +26,3 @@ export function formatPeriod(startDate: string, endDate: string): string {
 
   return start === end ? start : `${start} a ${end}`;
 }
-
-export { formatWorkloadHours } from "@/utils";

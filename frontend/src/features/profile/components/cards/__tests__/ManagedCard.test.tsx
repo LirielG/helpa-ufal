@@ -253,6 +253,22 @@ describe("ManagedCard status control", () => {
         within(screen.getByRole("dialog")).queryByText(/horas/),
       ).not.toBeInTheDocument();
     });
+    it("displays workload in singular inside the confirmation modal when action has 1 hour", async () => {
+      const activity = makeManagedActivity({
+        action: {
+          id: ACTION_ID,
+          status: "IN_PROGRESS",
+          details: { ...makeActionDetail().details!, workloadHours: 1 },
+        },
+      });
+
+      const { user } = renderCard(activity);
+
+      await user.selectOptions(statusSelect(), "Concluída");
+
+      const dialog = screen.getByRole("dialog", { name: "Concluir ação" });
+      expect(within(dialog).getByText(/1 hora/)).toBeInTheDocument();
+    });
   });
 
   describe("cancelling an action", () => {

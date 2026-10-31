@@ -10,11 +10,12 @@ import {
 import { useLocation } from "react-router";
 import { render, screen, waitFor } from "@/test/render";
 import { API, delay, http, HttpResponse, server } from "@/test/http";
-import { makeUserActivity } from "@/test/factories";
+import { makeUserActivity, makeActionDetail } from "@/test/factories";
 import { signIn } from "@/test/auth";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import type { UserActivity } from "../../../types";
 import { CompletedCard } from "../CompletedCard";
+import type { Activity } from "@/services/contracts/activity";
 
 const CERTIFICATE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const FILE_URL = `${API}/certificates/${CERTIFICATE_ID}/file`;
@@ -25,8 +26,8 @@ const DOWNLOAD_ERROR_MESSAGE =
 const UNAVAILABLE_MESSAGE =
   "Este certificado não está mais disponível. Recarregue a página para ver a situação atual.";
 
-function completed(overrides: Partial<UserActivity> = {}): UserActivity {
-  return makeUserActivity({ action: { status: "COMPLETED" }, ...overrides });
+function completed(action: Partial<Activity> = {}): UserActivity {
+  return makeUserActivity({ action: { status: "COMPLETED", ...action } });
 }
 
 function certified(overrides: Partial<UserActivity> = {}): UserActivity {
@@ -116,17 +117,11 @@ describe("CompletedCard without a certificate", () => {
   });
 
   it("shows the planned hours in the singular when the action is 1 hour long", () => {
-    const baseAction = makeUserActivity().action;
-
     renderCard(
       completed({
-        action: {
-          ...baseAction,
-          status: "COMPLETED",
-          details: {
-            ...baseAction.details!,
-            workloadHours: 1,
-          },
+        details: {
+          ...makeActionDetail().details!,
+          workloadHours: 1,
         },
       }),
     );
