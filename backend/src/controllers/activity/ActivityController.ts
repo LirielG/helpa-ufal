@@ -34,11 +34,9 @@ class ActivityController implements IActivityController {
   }
 
   public async list(req: Request, res: Response): Promise<void> {
-    const userId = req.user?.id;
-
     const filters = req.query as unknown as IListActivitiesFilters;
 
-    const result = await this._activityService.list(filters, userId);
+    const result = await this._activityService.list(filters);
 
     res.status(200).json(result);
   }
@@ -84,7 +82,7 @@ class ActivityController implements IActivityController {
 
     const updatedActivity = await this._activityService.update(
       activityId,
-      req.user.id,
+      req.user,
       data,
     );
 
@@ -109,7 +107,7 @@ class ActivityController implements IActivityController {
     const updatedActivity = await this._activityService.updateStatus(
       activityId,
       data.status,
-      req.user.id,
+      req.user,
     );
 
     res.status(200).json(updatedActivity);
@@ -128,7 +126,7 @@ class ActivityController implements IActivityController {
       throw new CustomError(400, "Invalid UUID format.");
     }
 
-    await this._activityService.delete(activityId, req.user.id);
+    await this._activityService.delete(activityId, req.user);
 
     res.status(204).send();
   }

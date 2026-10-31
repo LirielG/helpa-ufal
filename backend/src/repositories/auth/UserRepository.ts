@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import type { PrismaClient, User } from "@prisma/client";
 import type {
   IUserRepository,
@@ -35,8 +36,8 @@ class UserRepository implements IUserRepository {
     return this._prisma.user.findUnique({ where: { email } });
   }
 
-  public async findById(id: string): Promise<UserWithProfileAndHash | null> {
-    return this._prisma.user.findUnique({
+  public async findById(id: string): Promise<UserWithProfileAndHash> {
+    return this._prisma.user.findUniqueOrThrow({
       where: { id },
       select: {
         ...PROFILE_SELECT,
@@ -45,17 +46,15 @@ class UserRepository implements IUserRepository {
     });
   }
 
-  public async findTokenVersionById(
-    id: string,
-  ): Promise<{ tokenVersion: number } | null> {
+  public async findSessionById(id: string): Promise<AuthenticatedUser | null> {
     return this._prisma.user.findUnique({
       where: { id },
-      select: { tokenVersion: true },
+      select: { id: true, userType: true, isManager: true, tokenVersion: true },
     });
   }
 
-  public async findProfileById(id: string): Promise<UserWithProfile | null> {
-    return this._prisma.user.findUnique({
+  public async findProfileById(id: string): Promise<UserWithProfile> {
+    return this._prisma.user.findUniqueOrThrow({
       where: { id },
       select: PROFILE_SELECT,
     });

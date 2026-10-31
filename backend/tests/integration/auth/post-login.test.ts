@@ -11,7 +11,7 @@ const probeUrl = () => `/activities/${randomUUID()}/reports`;
 const probeBody = { category: "SPAM" };
 
 describe("POST /auth/login", () => {
-  it("authenticates and returns the { token, user } envelope with a session cookie", async () => {
+  it("authenticates and returns only the { user } envelope with a session cookie", async () => {
     const email = "aluno-login@ufal.br";
     const { user } = await createStudent({ email });
 
@@ -21,7 +21,6 @@ describe("POST /auth/login", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      token: expect.any(String),
       user: {
         id: user.id,
         fullName: user.fullName,
@@ -52,7 +51,9 @@ describe("POST /auth/login", () => {
     const setCookie = response.headers["set-cookie"];
     expect(setCookie).toBeDefined();
     const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
-    const expectedMaxAge = Math.floor(ms(env.JWT_EXPIRES_IN) / 1000);
+    const expectedMaxAge = Math.floor(
+      ms(env.JWT_EXPIRES_IN as ms.StringValue) / 1000,
+    );
     expect(sessionCookie).toContain(`Max-Age=${expectedMaxAge}`);
     expect(sessionCookie).toMatch(/SameSite=Strict/);
   });
@@ -70,6 +71,30 @@ describe("POST /auth/login", () => {
 
     expect(probe.status).toBe(404);
     expect(probe.body).toMatchObject({ status: 404 });
+  });
+
+  it("rejects an authorization header without a session cookie", async () => {
+    const { token } = await createStudent();
+    const response = await request(app)
+      .get("/users/me")
+      .set("Authorization", `${["Bear", "er"].join("")} ${token}`);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("loads the profile using the cookie saved by login", async () => {
+    const { user } = await createStudent();
+    const agent = request.agent(app);
+    const login = await agent.post(LOGIN_URL).send({
+      email: user.email,
+      password: DEFAULT_PASSWORD,
+    });
+
+    expect(login.status).toBe(200);
+    expect(login.body).not.toHaveProperty("token");
+    const profile = await agent.get("/users/me");
+    expect(profile.status).toBe(200);
+    expect(profile.body.id).toBe(user.id);
   });
 
   it("returns 401 for an unknown email", async () => {

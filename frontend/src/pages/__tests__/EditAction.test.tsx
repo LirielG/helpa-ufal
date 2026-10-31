@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -166,6 +166,86 @@ function serveAreas(areas: string[]) {
 }
 
 describe("EditAction", () => {
+  it.each([0, 500])(
+    "retries a loading failure (%s) and fills the form with the loaded action",
+    async (status) => {
+      const action = editableAction();
+      let calls = 0;
+      server.use(
+        http.get(`${API}/activities/${ACTION_ID}`, () => {
+          calls += 1;
+          if (calls > 1) return HttpResponse.json(action);
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
+      );
+      const { user } = renderEditAction();
+      const message =
+        "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.";
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(
+        screen.queryByText("Ação não encontrada."),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "Tentar novamente" }),
+      );
+
+      expect(await findTitleField()).toHaveValue(action.title);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(calls).toBe(2);
+    },
+  );
+
+  it("lets the session handler redirect to login when loading answers 401", async () => {
+    server.use(
+      http.get(
+        `${API}/activities/${ACTION_ID}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    );
+    renderEditAction();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows loading during a retry and not found if the action was removed", async () => {
+    let calls = 0;
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, async () => {
+        calls += 1;
+        if (calls === 1) return HttpResponse.error();
+        await responseReady;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    const { user } = renderEditAction();
+    await user.click(
+      await screen.findByRole("button", { name: "Tentar novamente" }),
+    );
+    expect(screen.getByText("Carregando...")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByText("Ação não encontrada.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
+
   it("loads the action from the API into the form", async () => {
     const action = mockAction();
 
@@ -912,11 +992,38 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
-  it("goes to the login screen on 401", async () => {
+  it("replaces the edit screen with login on 401 without adding another login entry", async () => {
     mockAction();
     failUpdate(401);
-    const { user } = renderEditAction();
 
+    function LoginScreen() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <h1>Entrar</h1>
+          <button type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </>
+      );
+    }
+
+    const { user } = render(
+      <>
+        <SessionExpiry />
+        <Routes>
+          <Route
+            path="/profile"
+            element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+          />
+          <Route path="/activity/:id/edit" element={<EditAction />} />
+          <Route path="/login" element={<LoginScreen />} />
+        </Routes>
+      </>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
     const title = await findTitleField();
     await user.clear(title);
     await user.type(title, "Título com sessão expirada");
@@ -925,27 +1032,41 @@ describe("EditAction", () => {
     expect(
       await screen.findByRole("heading", { name: "Entrar" }),
     ).toBeInTheDocument();
-  });
-
-  it("keeps what was typed when the update fails with a server error", async () => {
-    mockAction();
-    failUpdate(500, { message: "Internal server error." });
-    const { user } = renderEditAction();
-
-    const title = await findTitleField();
-    await user.clear(title);
-    await user.type(title, "Título preservado após o erro");
-    await user.click(getSaveButton());
-
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
     expect(
-      await screen.findByText(
-        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
-      ),
+      await screen.findByRole("link", { name: "Editar" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Título")).toHaveValue(
-      "Título preservado após o erro",
-    );
   });
+
+  it.each([0, 500])(
+    "shows a connection failure (%i) and keeps what was typed",
+    async (status) => {
+      mockAction();
+      server.use(
+        http.patch(`${API}/activities/:id`, () =>
+          status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status }),
+        ),
+      );
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Título preservado após o erro");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Título")).toHaveValue(
+        "Título preservado após o erro",
+      );
+    },
+  );
 
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(
@@ -974,6 +1095,43 @@ describe("EditAction", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it("goes back to the screen that opened the edit after saving", async () => {
+    mockAction();
+    spyOnUpdate();
+
+    function BackButton() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(-1)}>
+          Voltar
+        </button>
+      );
+    }
+
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/profile"
+          element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+        />
+        <Route path="/activity/:id/edit" element={<EditAction />} />
+        <Route path="/activity/:id" element={<BackButton />} />
+      </Routes>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+    await user.click(await screen.findByRole("button", { name: "Voltar" }));
+
+    expect(
+      await screen.findByRole("link", { name: "Editar" }),
+    ).toBeInTheDocument();
   });
 });
 

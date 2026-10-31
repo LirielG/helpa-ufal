@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router";
 import { UserPlus, CheckCircle } from "lucide-react";
 import { Button } from "../../../components/Button";
@@ -8,6 +8,7 @@ import { enrollInAction } from "../services";
 import { getEnrollmentErrorMessage } from "../errors";
 import type { Activity } from "@/services/contracts/activity";
 import { ApiError } from "../../../services/apiError";
+import { useDialog } from "../../../hooks/useDialog";
 
 type ModalStep = "confirm" | "loading" | "success" | "error";
 
@@ -23,9 +24,11 @@ export function EnrollmentModal({
   onSuccess,
 }: EnrollmentModalProps) {
   const navigate = useNavigate();
+  const titleId = useId();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dialogRef = useDialog({ onClose, closeDisabled: isSubmitting });
 
   const handleConfirm = async () => {
     if (isSubmitting) return; // Prevent double-click
@@ -76,7 +79,13 @@ export function EnrollmentModal({
         onClick={step !== "loading" ? onClose : undefined}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
         <div className="px-8 py-8 flex flex-col items-center gap-5 text-center">
           {step === "success" && (
             <>
@@ -84,7 +93,7 @@ export function EnrollmentModal({
                 <CheckCircle className="size-9 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 id={titleId} className="text-xl font-bold text-gray-900">
                   Oba! Você está dentro!
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
@@ -105,6 +114,9 @@ export function EnrollmentModal({
 
           {step === "error" && (
             <>
+              <h2 id={titleId} className="sr-only">
+                Erro ao realizar inscrição
+              </h2>
               <Alert
                 type="error"
                 message={errorMessage ?? "Erro ao realizar inscrição."}
@@ -137,7 +149,7 @@ export function EnrollmentModal({
                 <UserPlus className="size-7 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 id={titleId} className="text-xl font-bold text-gray-900">
                   Confirmar inscrição
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">

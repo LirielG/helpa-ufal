@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest";
 import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import {
   expectHttpError,
   expectCustomError,
@@ -43,7 +42,7 @@ function aParticipant(overrides: Record<string, unknown> = {}) {
 function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
-    user?: Partial<IUserRepository>;
+
     enrollment?: Partial<IEnrollmentRepository>;
   } = {},
 ) {
@@ -56,11 +55,6 @@ function mockRepositories(
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue({ isManager: false }),
-    ...overrides.user,
-  } as unknown as IUserRepository;
-
   const enrollmentRepository = {
     findByActivityId: vi.fn().mockResolvedValue({
       items: [aParticipant()],
@@ -70,27 +64,26 @@ function mockRepositories(
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 
-  return { activityRepository, userRepository, enrollmentRepository };
+  return { activityRepository, enrollmentRepository };
 }
 
 describe("EnrollmentService.listParticipants", () => {
   // ---------- Happy path ----------
 
   it("returns the mapped page to the activity author, with only the DTO fields", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const participant = aParticipant();
     enrollmentRepository.findByActivityId = vi
       .fn()
       .mockResolvedValue({ items: [participant], total: 1, totalPresent: 0 });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      AUTHOR_ID,
+      { id: AUTHOR_ID, isManager: false },
       ACTIVITY_ID,
       1,
       10,
@@ -132,18 +125,15 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("returns the identical result to a manager who is not the author", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories({
-        user: { findById: vi.fn().mockResolvedValue({ isManager: true }) },
-      });
+    const { activityRepository, enrollmentRepository } = mockRepositories({});
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      OUTSIDER_ID,
+      { id: OUTSIDER_ID, isManager: true },
       ACTIVITY_ID,
       1,
       10,
@@ -158,8 +148,7 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("maps registrationCode from Student only: a professor (student = null) gets null", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const professor = aParticipant({
       user: {
         ...aParticipant().user,
@@ -174,12 +163,12 @@ describe("EnrollmentService.listParticipants", () => {
       .mockResolvedValue({ items: [professor], total: 1, totalPresent: 0 });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      AUTHOR_ID,
+      { id: AUTHOR_ID, isManager: false },
       ACTIVITY_ID,
       1,
       10,
@@ -189,22 +178,21 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("converts page/limit into skip/take for the repository (page 3, limit 50 -> skip 100)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories({
-        enrollment: {
-          findByActivityId: vi
-            .fn()
-            .mockResolvedValue({ items: [], total: 42, totalPresent: 7 }),
-        },
-      });
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      enrollment: {
+        findByActivityId: vi
+          .fn()
+          .mockResolvedValue({ items: [], total: 42, totalPresent: 7 }),
+      },
+    });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      AUTHOR_ID,
+      { id: AUTHOR_ID, isManager: false },
       ACTIVITY_ID,
       3,
       50,
@@ -223,8 +211,7 @@ describe("EnrollmentService.listParticipants", () => {
     // Structurally impossible in production (hours are 0 unless presence is
     // confirmed), but the test pins the reading rule: the service forwards the
     // count instead of deriving it from confirmedWorkloadHours > 0.
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     enrollmentRepository.findByActivityId = vi.fn().mockResolvedValue({
       items: [
         aParticipant({ attendanceConfirmed: null, confirmedWorkloadHours: 4 }),
@@ -234,12 +221,12 @@ describe("EnrollmentService.listParticipants", () => {
     });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      AUTHOR_ID,
+      { id: AUTHOR_ID, isManager: false },
       ACTIVITY_ID,
       1,
       10,
@@ -249,22 +236,21 @@ describe("EnrollmentService.listParticipants", () => {
   });
 
   it("returns an empty page when the activity has no active enrollments (never 404)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories({
-        enrollment: {
-          findByActivityId: vi
-            .fn()
-            .mockResolvedValue({ items: [], total: 0, totalPresent: 0 }),
-        },
-      });
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      enrollment: {
+        findByActivityId: vi
+          .fn()
+          .mockResolvedValue({ items: [], total: 0, totalPresent: 0 }),
+      },
+    });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     const result = await service.listParticipants(
-      AUTHOR_ID,
+      { id: AUTHOR_ID, isManager: false },
       ACTIVITY_ID,
       1,
       10,
@@ -287,11 +273,10 @@ describe("EnrollmentService.listParticipants", () => {
   // building a negative skip (which Prisma rejects, surfacing as a 500).
 
   function aService() {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
     return { service, enrollmentRepository };
@@ -307,7 +292,7 @@ describe("EnrollmentService.listParticipants", () => {
       const { service, enrollmentRepository } = aService();
 
       const result = await service.listParticipants(
-        AUTHOR_ID,
+        { id: AUTHOR_ID, isManager: false },
         ACTIVITY_ID,
         page,
         limit,
@@ -325,7 +310,10 @@ describe("EnrollmentService.listParticipants", () => {
   it("applies the defaults (page 1, limit 10) when page and limit are omitted", async () => {
     const { service, enrollmentRepository } = aService();
 
-    const result = await service.listParticipants(AUTHOR_ID, ACTIVITY_ID);
+    const result = await service.listParticipants(
+      { id: AUTHOR_ID, isManager: false },
+      ACTIVITY_ID,
+    );
 
     expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
       ACTIVITY_ID,
@@ -348,7 +336,12 @@ describe("EnrollmentService.listParticipants", () => {
       const { service, enrollmentRepository } = aService();
 
       await expectValidationError(
-        service.listParticipants(AUTHOR_ID, ACTIVITY_ID, page, 10),
+        service.listParticipants(
+          { id: AUTHOR_ID, isManager: false },
+          ACTIVITY_ID,
+          page,
+          10,
+        ),
         [{ field: "page", message: "page must be a positive integer." }],
       );
       expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
@@ -361,7 +354,12 @@ describe("EnrollmentService.listParticipants", () => {
       const { service, enrollmentRepository } = aService();
 
       await expectValidationError(
-        service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 3, limit),
+        service.listParticipants(
+          { id: AUTHOR_ID, isManager: false },
+          ACTIVITY_ID,
+          3,
+          limit,
+        ),
         [{ field: "limit", message: "limit must be a positive integer." }],
       );
       expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
@@ -372,7 +370,12 @@ describe("EnrollmentService.listParticipants", () => {
     const { service } = aService();
 
     await expectValidationError(
-      service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 0, 0),
+      service.listParticipants(
+        { id: AUTHOR_ID, isManager: false },
+        ACTIVITY_ID,
+        0,
+        0,
+      ),
       [
         { field: "page", message: "page must be a positive integer." },
         { field: "limit", message: "limit must be a positive integer." },
@@ -384,7 +387,12 @@ describe("EnrollmentService.listParticipants", () => {
     const { service } = aService();
 
     await expectCustomError(
-      service.listParticipants(OUTSIDER_ID, ACTIVITY_ID, 0, 10),
+      service.listParticipants(
+        { id: OUTSIDER_ID, isManager: false },
+        ACTIVITY_ID,
+        0,
+        10,
+      ),
       403,
     );
   });
@@ -409,7 +417,12 @@ describe("EnrollmentService.listParticipants", () => {
     for (const page of values) {
       for (const limit of values) {
         await service
-          .listParticipants(AUTHOR_ID, ACTIVITY_ID, page, limit)
+          .listParticipants(
+            { id: AUTHOR_ID, isManager: false },
+            ACTIVITY_ID,
+            page,
+            limit,
+          )
           .catch(() => undefined);
       }
     }
@@ -425,43 +438,25 @@ describe("EnrollmentService.listParticipants", () => {
     }
   });
 
-  // ---------- Authentication (light hybrid) ----------
-
-  it("throws 401 when the credential's user no longer exists, before touching the activity", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories({
-        user: { findById: vi.fn().mockResolvedValue(null) },
-      });
-    const service = new EnrollmentService({
-      activityRepository,
-      userRepository,
-      enrollmentRepository,
-    });
-
-    await expectHttpError(
-      service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 1, 10),
-      401,
-      "User account not found or inactive.",
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
-    expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
-  });
-
   // ---------- Activity existence ----------
 
   it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories({
-        activity: { findById: vi.fn().mockResolvedValue(null) },
-      });
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(null) },
+    });
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     await expectHttpError(
-      service.listParticipants(AUTHOR_ID, ACTIVITY_ID, 1, 10),
+      service.listParticipants(
+        { id: AUTHOR_ID, isManager: false },
+        ACTIVITY_ID,
+        1,
+        10,
+      ),
       404,
       "Activity not found.",
     );
@@ -471,16 +466,20 @@ describe("EnrollmentService.listParticipants", () => {
   it("throws a plain 404 (not a ValidationError) for a malformed activityId", async () => {
     // Diverges from cancel(), which turns the same input into a 400:
     // this contract treats path identifiers as resource lookups.
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     await expectCustomError(
-      service.listParticipants(AUTHOR_ID, "not-a-uuid", 1, 10),
+      service.listParticipants(
+        { id: AUTHOR_ID, isManager: false },
+        "not-a-uuid",
+        1,
+        10,
+      ),
       404,
       "Activity not found.",
     );
@@ -491,16 +490,20 @@ describe("EnrollmentService.listParticipants", () => {
   // ---------- Authorization ----------
 
   it("throws 403 for an authenticated user who is neither author nor manager, without querying enrollments", async () => {
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     await expectHttpError(
-      service.listParticipants(OUTSIDER_ID, ACTIVITY_ID, 1, 10),
+      service.listParticipants(
+        { id: OUTSIDER_ID, isManager: false },
+        ACTIVITY_ID,
+        1,
+        10,
+      ),
       403,
       "Only the activity creator or a manager can view the enrollment list.",
     );
@@ -510,16 +513,20 @@ describe("EnrollmentService.listParticipants", () => {
   it("throws 403 for a volunteer enrolled in the activity (enrollment grants no read access)", async () => {
     // Same code path as the outsider case — the criterion exists to pin that
     // being enrolled is NOT an authorization factor on this route.
-    const { activityRepository, userRepository, enrollmentRepository } =
-      mockRepositories();
+    const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
-      userRepository,
+
       enrollmentRepository,
     });
 
     await expectHttpError(
-      service.listParticipants(OUTSIDER_ID, ACTIVITY_ID, 1, 10),
+      service.listParticipants(
+        { id: OUTSIDER_ID, isManager: false },
+        ACTIVITY_ID,
+        1,
+        10,
+      ),
       403,
       "Only the activity creator or a manager can view the enrollment list.",
     );

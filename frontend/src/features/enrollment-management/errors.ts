@@ -1,4 +1,8 @@
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "@/services/apiError";
 
 /**
  * Maps enrollment-list API errors to user-friendly messages in Portuguese.
@@ -9,14 +13,12 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
 export function getEnrollmentsErrorMessage(error: ApiError): string | null {
   if (error.status === 401) return null;
 
-  if (error.status === NETWORK_ERROR_STATUS)
-    return "Falha de comunicação com o servidor. Tente novamente.";
+  if (isConnectionFailure(error)) return CONNECTION_ERROR_MESSAGE;
 
   if (error.status === 403)
     return "Você não tem permissão para ver os inscritos desta ação.";
 
-  if (error.status === 404)
-    return "A ação não foi encontrada ou foi removida.";
+  if (error.status === 404) return "A ação não foi encontrada ou foi removida.";
 
   return "Erro ao carregar os inscritos. Tente novamente.";
 }
@@ -48,10 +50,10 @@ export function resolveAttendanceError(
   // The HTTP client already notified the session handler.
   if (error.status === 401) return { kind: "sessionExpired" };
 
-  if (error.status === NETWORK_ERROR_STATUS) {
+  if (isConnectionFailure(error)) {
     return {
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: CONNECTION_ERROR_MESSAGE,
     };
   }
 

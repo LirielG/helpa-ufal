@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import type { Activity } from "@prisma/client";
 import type {
   CreateActivityInput,
@@ -12,25 +13,25 @@ import {
 
 export interface IActivityService {
   create(
-    authorId: string, 
-    data: CreateActivityInput): 
-    Promise<ActivityFullResponse>;
-  list(
-    filters: IListActivitiesFilters,
-    userId?: string,
-  ): Promise<IListActivitiesResponse>;
+    authorId: string,
+    data: CreateActivityInput,
+  ): Promise<ActivityFullResponse>;
+  list(filters: IListActivitiesFilters): Promise<IListActivitiesResponse>;
   findById(id: string, userId?: string): Promise<ActivityFullResponse>;
   update(
     id: string,
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     data: UpdateActivityInput,
   ): Promise<ActivityFullResponse>;
   updateStatus(
     activityId: string,
     newStatus: ActivityStatus,
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
   ): Promise<ActivityResponse>;
-  delete(id: string, userId: string): Promise<void>;
+  delete(
+    id: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<void>;
   listFilterOptions(): Promise<ActivityFilterOptions>;
 }
 

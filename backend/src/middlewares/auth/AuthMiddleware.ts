@@ -24,12 +24,7 @@ class AuthMiddleware implements IAuthMiddleware {
     required: boolean,
   ): Promise<AuthenticatedUser | null> {
     try {
-      const cookieToken = req.cookies?.token as string | undefined;
-      const headerToken = req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.slice(7)
-        : undefined;
-
-      const token = cookieToken ?? headerToken;
+      const token = req.cookies?.token as string | undefined;
 
       if (!token) throw new CustomError(401, "No token provided.");
 
@@ -37,25 +32,25 @@ class AuthMiddleware implements IAuthMiddleware {
 
       if (!decoded) throw new CustomError(401, INVALID_TOKEN_MESSAGE);
 
-      // A missing user is not rejected here: each service already answers
-      // for it (e.g. 404 on GET /users/me).
-      const stored = await this._userRepository.findTokenVersionById(
-        decoded.id,
-      );
+      const stored = await this._userRepository.findSessionById(decoded.id);
 
-      if (stored && stored.tokenVersion !== decoded.tokenVersion)
-        throw new CustomError(401, INVALID_TOKEN_MESSAGE);
+      if (!stored || stored.tokenVersion !== decoded.tokenVersion)
+        throw new CustomError(401, "Session is no longer valid.", {
+          code: "SESSION_INVALID",
+        });
 
-      req.user = decoded;
-      return decoded;
+      req.user = stored;
+      return stored;
     } catch (error) {
       delete req.user;
 
-      // On optional auth any failure, including the version lookup hitting
-      // the database, degrades to an anonymous request instead of a 500.
-      // Required auth propagates a database error: answering 401 would end a
-      // valid session over a failure that is not the client's.
-      if (!required) return null;
+      // A removed or revoked session must end even on routes that also
+      // allow anonymous access. Other optional-auth behavior is unchanged.
+      if (
+        !required &&
+        !(error instanceof CustomError && error.code === "SESSION_INVALID")
+      )
+        return null;
       throw error;
     }
   }

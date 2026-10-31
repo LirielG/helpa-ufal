@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import {
   API,
   HttpResponse,
@@ -60,10 +61,90 @@ function getKeepButton() {
   return screen.getByRole("button", { name: "Manter inscrição" });
 }
 
+function CancellationDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Cancelar minha inscrição</button>
+      {open && (
+        <CancelEnrollmentModal
+          action={makeActionDetail({ id: ACTION_ID })}
+          onClose={() => setOpen(false)}
+          onCancelled={() => setOpen(false)}
+          onActivityRemoved={() => setOpen(false)}
+          onActivityClosed={vi.fn()}
+        />
+      )}
+    </>
+  );
+}
+
 describe("CancelEnrollmentModal", () => {
+  it.each(["", "scroll"])(
+    "moves focus inside on open and restores the opener and overflow %j on close",
+    async (overflow) => {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = overflow;
+      const view = render(<CancellationDialogExample />);
+
+      try {
+        const opener = screen.getByRole("button", {
+          name: "Cancelar minha inscrição",
+        });
+        await view.user.click(opener);
+
+        expect(document.body.style.overflow).toBe("hidden");
+        await waitFor(() => expect(getKeepButton()).toHaveFocus());
+        await view.user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(opener).toHaveFocus();
+        expect(document.body.style.overflow).toBe(overflow);
+      } finally {
+        view.unmount();
+        document.body.style.overflow = previousOverflow;
+      }
+    },
+  );
+
+  it("ignores Escape during cancellation and allows it again after a failure", async () => {
+    let release = () => {};
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    recordCancellations(async () => {
+      await responseReady;
+      return HttpResponse.error();
+    });
+    const { user, onClose } = renderModal();
+
+    try {
+      await user.click(getConfirmButton());
+      await user.keyboard("{Escape}");
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      release();
+    }
+
+    await screen.findByRole("alert");
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("closes when Escape is pressed", async () => {
+    const { user, onClose } = renderModal();
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("shows the title, the summary and the warning", () => {
     renderModal();
 
+    expect(
+      screen.getByRole("dialog", { name: "Cancelar inscrição" }),
+    ).toHaveAttribute("aria-modal", "true");
     expect(
       screen.getByRole("heading", { name: "Cancelar inscrição" }),
     ).toBeInTheDocument();
@@ -207,16 +288,23 @@ describe("CancelEnrollmentModal", () => {
     expect(getKeepButton()).toBeEnabled();
   });
 
-  it("shows a communication failure on network error", async () => {
-    recordCancellations(() => HttpResponse.error());
-    const { user } = renderModal();
+  it.each([0, 500])(
+    "shows the connection error for status %i",
+    async (status) => {
+      recordCancellations(() =>
+        status === 0
+          ? HttpResponse.error()
+          : new HttpResponse(null, { status }),
+      );
+      const { user } = renderModal();
 
-    await user.click(getConfirmButton());
+      await user.click(getConfirmButton());
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falha de comunicação com o servidor. Tente novamente.",
-    );
-  });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
+    },
+  );
 
   it("shows a generic message on an unexpected error", async () => {
     recordCancellations(() =>

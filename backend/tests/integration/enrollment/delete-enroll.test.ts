@@ -10,7 +10,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import { authHeader, invalidToken } from "../../helpers/auth.js";
+import { authCookie, invalidToken } from "../../helpers/auth.js";
 
 // Route contract: docs/bruno/Enrollments/Cancel Enrollment.yml.
 const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
@@ -31,7 +31,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(204);
     expect(response.text).toBe("");
@@ -52,12 +52,12 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .set(...authCookie(student.token))
       .expect(204);
 
     const detail = await request(app)
       .get(`/activities/${activity.id}`)
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(detail.status).toBe(200);
     expect(detail.body.availableSlots).toBe(1);
@@ -70,7 +70,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .set(...authCookie(student.token))
       .expect(204);
 
     const stored = await prisma.enrollment.findUniqueOrThrow({
@@ -96,7 +96,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(invalidToken()));
+      .set(...authCookie(invalidToken()));
 
     expect(response.status).toBe(401);
   });
@@ -117,13 +117,13 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(ghost.token));
+      .set(...authCookie(ghost.token));
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
-      code: "UNAUTHENTICATED",
-      message: "User account not found or inactive.",
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 
@@ -134,7 +134,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(randomUUID()))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -155,7 +155,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -171,7 +171,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -190,7 +190,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -210,7 +210,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl(activity.id))
-      .set(...authHeader(intruder.token));
+      .set(...authCookie(intruder.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -234,7 +234,7 @@ describe("DELETE /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .delete(enrollUrl("not-a-uuid"))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(400);
   });
@@ -251,10 +251,10 @@ describe("DELETE /activities/:activityId/enroll", () => {
     const [first, second] = await Promise.all([
       request(app)
         .delete(enrollUrl(activity.id))
-        .set(...authHeader(student.token)),
+        .set(...authCookie(student.token)),
       request(app)
         .delete(enrollUrl(activity.id))
-        .set(...authHeader(student.token)),
+        .set(...authCookie(student.token)),
     ]);
 
     const statuses = [first.status, second.status].sort();

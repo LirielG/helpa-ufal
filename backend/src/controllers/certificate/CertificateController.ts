@@ -20,7 +20,7 @@ class CertificateController implements ICertificateController {
     if (!req.user) throw new CustomError(401, "Unauthenticated.");
 
     const { fileName, content } = await this._certificateService.getFile(
-      req.user.id,
+      req.user,
       req.params.certificateId as string,
     );
 

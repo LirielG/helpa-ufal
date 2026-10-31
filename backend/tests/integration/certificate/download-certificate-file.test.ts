@@ -169,7 +169,7 @@ describe("GET /certificates/:certificateId/file", () => {
     };
 
     await new CertificateService({ renderer }).getFile(
-      holder.user.id,
+      { id: holder.user.id, isManager: holder.user.isManager },
       certificate.id,
     );
 

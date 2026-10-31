@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, X } from "lucide-react";
 import { Alert, Button, Textarea } from "../../components";
 import { ApiError } from "../../services/apiError";
+import { useDialog } from "../../hooks/useDialog";
 import { REPORT_REASONS } from "./constants/reportReasons";
 import {
   REPORT_DESCRIPTION_MAX_LENGTH,
@@ -49,8 +50,7 @@ function ReportActionDialog({
   // State updates land after the next render, so a fast double click would
   // still see isSubmitting as false; the ref closes that window.
   const submittingRef = useRef(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const previousActiveElement = useRef<HTMLElement | null>(null);
+  const rootRef = useDialog({ onClose });
 
   const {
     register,
@@ -67,34 +67,6 @@ function ReportActionDialog({
 
   const descriptionLength =
     useWatch({ control, name: "description" })?.length ?? 0;
-
-  useEffect(() => {
-    previousActiveElement.current =
-      document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    requestAnimationFrame(() => {
-      const firstFocusable = rootRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      firstFocusable?.focus();
-    });
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-      previousActiveElement.current?.focus?.();
-    };
-  }, [onClose]);
 
   const submitForm = async ({ category, description }: ReportFormValues) => {
     if (submittingRef.current) return;

@@ -293,23 +293,32 @@ describe("Profile — personal data", () => {
       ).toBeNull();
     });
 
-    it("shows a pt-BR message on network failure and keeps what was typed", async () => {
-      signIn();
-      server.use(http.patch(`${API}/users/me`, () => HttpResponse.error()));
-      const { user } = renderProfile();
+    it.each([0, 500])(
+      "shows the connection error (%i) and keeps what was typed",
+      async (status) => {
+        signIn();
+        server.use(
+          http.patch(`${API}/users/me`, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
+        const { user } = renderProfile();
 
-      await replaceName(user, "Nome Digitado");
-      await user.click(getSaveButton());
+        await replaceName(user, "Nome Digitado");
+        await user.click(getSaveButton());
 
-      expect(
-        await screen.findByText(
-          "Falha de comunicação com o servidor. Tente novamente.",
-        ),
-      ).toBeInTheDocument();
-      expect(screen.getByLabelText("Nome completo")).toHaveValue(
-        "Nome Digitado",
-      );
-    });
+        expect(
+          await screen.findByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText("Nome completo")).toHaveValue(
+          "Nome Digitado",
+        );
+      },
+    );
   });
 
   describe("changing the password", () => {

@@ -42,10 +42,7 @@ class ActivityReportController implements IActivityReportController {
 
     // Parsed and defaulted by validateQuery(ListReportsQuerySchema) on the route.
     const query = res.locals.validatedQuery as ListReportsQuery;
-    const result = await this._activityReportService.listReports(
-      req.user.id,
-      query,
-    );
+    const result = await this._activityReportService.listReports(query);
 
     // 200 even when there is nothing to moderate — never 404 for an empty list.
     res.status(200).json(result);

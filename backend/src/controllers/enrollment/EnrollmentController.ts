@@ -64,7 +64,7 @@ class EnrollmentController implements IEnrollmentController {
       ListParticipantsQuery | undefined;
 
     const result = await this._enrollmentService.listParticipants(
-      req.user.id,
+      req.user,
       activityId,
       query?.page,
       query?.limit,
@@ -77,7 +77,7 @@ class EnrollmentController implements IEnrollmentController {
   public async confirmAttendance(req: Request, res: Response): Promise<void> {
     // auth({ userTypes: "all" }) on the route already answered 401 for a
     // missing or invalid credential, so req.user is set by the time we get
-    // here. The user is taken from the token alone — params, query and body
+    // here. The user is supplied by authentication — params, query and body
     // never name who homologates.
     const user = req.user as AuthenticatedUser;
 
@@ -89,7 +89,7 @@ class EnrollmentController implements IEnrollmentController {
     const body = ConfirmAttendanceBodySchema.parse(req.body);
 
     const enrollment = await this._enrollmentService.confirmAttendance(
-      user.id,
+      user,
       enrollmentId,
       body,
     );

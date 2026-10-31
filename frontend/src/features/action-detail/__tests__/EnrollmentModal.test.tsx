@@ -1,10 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useState } from "react";
 import { render, screen, waitFor } from "@/test/render";
 import { http, HttpResponse, server } from "@/test/http";
 import { makeActionDetail } from "@/test/factories";
 import { EnrollmentModal } from "../components/EnrollmentModal";
 
 const API = process.env.VITE_API_URL || "http://localhost:3333/api";
+
+function EnrollmentDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Inscrever-se</button>
+      {open && (
+        <EnrollmentModal
+          action={makeActionDetail()}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
 
 describe("EnrollmentModal", () => {
   beforeEach(() => {
@@ -45,6 +61,9 @@ describe("EnrollmentModal", () => {
       await waitFor(() => {
         expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
       });
+      expect(
+        screen.getByRole("dialog", { name: "Oba! Você está dentro!" }),
+      ).toHaveAttribute("aria-modal", "true");
     });
 
     it("shows loading state during request", async () => {
@@ -198,34 +217,41 @@ describe("EnrollmentModal", () => {
     });
   });
 
-  describe("Network errors (status 0)", () => {
-    it("displays communication error and provides retry option", async () => {
-      const action = makeActionDetail({ id: "act-net" });
-      server.use(
-        http.post(`${API}/activities/act-net/enroll`, () =>
-          HttpResponse.error(),
-        ),
-      );
+  describe("Connection failures", () => {
+    it.each([0, 500])(
+      "displays connection error (%i) and provides retry option",
+      async (status) => {
+        const action = makeActionDetail({ id: "act-net" });
+        server.use(
+          http.post(`${API}/activities/act-net/enroll`, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
 
-      const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
-      );
+        const { user } = render(
+          <EnrollmentModal action={action} onClose={vi.fn()} />,
+        );
 
-      await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+        await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
-      await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
-      });
+        await waitFor(() => {
+          expect(
+            screen.getByText(/Não foi possível conectar ao servidor/),
+          ).toBeInTheDocument();
+        });
 
-      const retryButton = screen.getByRole("button", {
-        name: /Tentar novamente/i,
-      });
-      expect(retryButton).toBeInTheDocument();
+        const retryButton = screen.getByRole("button", {
+          name: /Tentar novamente/i,
+        });
+        expect(retryButton).toBeInTheDocument();
 
-      // Clicking retry should return to confirm step
-      await user.click(retryButton);
-      expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
-    });
+        // Clicking retry should return to confirm step
+        await user.click(retryButton);
+        expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+      },
+    );
 
     it("enables retry after network error without locking button", async () => {
       const action = makeActionDetail({ id: "act-net2" });
@@ -242,7 +268,9 @@ describe("EnrollmentModal", () => {
       await user.click(screen.getByRole("button", { name: /Confirmar/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Não foi possível conectar ao servidor/),
+        ).toBeInTheDocument();
       });
 
       const retryButton = screen.getByRole("button", {
@@ -278,12 +306,15 @@ describe("EnrollmentModal", () => {
     });
   });
 
-  describe("Generic non-ApiErrors", () => {
-    it("displays generic pt-BR error message for non-ApiError exceptions", async () => {
+  describe("Server errors", () => {
+    it("does not expose internal server error details", async () => {
       const action = makeActionDetail({ id: "act-generic-err" });
       server.use(
         http.post(`${API}/activities/act-generic-err/enroll`, () => {
-          throw new Error("Raw JavaScript Error Message");
+          return HttpResponse.json(
+            { message: "Raw JavaScript Error Message" },
+            { status: 500 },
+          );
         }),
       );
 
@@ -295,9 +326,14 @@ describe("EnrollmentModal", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("Erro ao realizar inscrição. Tente novamente."),
+          screen.getByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
         ).toBeInTheDocument();
       });
+      expect(
+        screen.queryByText("Raw JavaScript Error Message"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -363,6 +399,115 @@ describe("EnrollmentModal", () => {
   });
 
   describe("Modal interactions", () => {
+    it("uses the latest close callback without moving focus on a parent render", async () => {
+      const action = makeActionDetail();
+      const previousClose = vi.fn();
+      const currentClose = vi.fn();
+      const { user, rerender } = render(
+        <EnrollmentModal action={action} onClose={previousClose} />,
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /✕ Cancelar/ }),
+        ).toHaveFocus(),
+      );
+      await user.tab();
+      const confirm = screen.getByRole("button", { name: /Confirmar/i });
+      expect(confirm).toHaveFocus();
+
+      rerender(<EnrollmentModal action={action} onClose={currentClose} />);
+      await new Promise(requestAnimationFrame);
+
+      expect(confirm).toHaveFocus();
+      expect(document.body.style.overflow).toBe("hidden");
+      await user.keyboard("{Escape}");
+      expect(previousClose).not.toHaveBeenCalled();
+      expect(currentClose).toHaveBeenCalledOnce();
+    });
+
+    it.each(["", "scroll"])(
+      "moves focus inside on open and restores the opener and overflow %j on close",
+      async (overflow) => {
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = overflow;
+        const view = render(<EnrollmentDialogExample />);
+
+        try {
+          const opener = screen.getByRole("button", { name: "Inscrever-se" });
+          await view.user.click(opener);
+
+          expect(document.body.style.overflow).toBe("hidden");
+          await waitFor(() =>
+            expect(
+              screen.getByRole("button", { name: /✕ Cancelar/ }),
+            ).toHaveFocus(),
+          );
+          await view.user.keyboard("{Escape}");
+
+          expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+          expect(opener).toHaveFocus();
+          expect(document.body.style.overflow).toBe(overflow);
+        } finally {
+          view.unmount();
+          document.body.style.overflow = previousOverflow;
+        }
+      },
+    );
+
+    it("exposes a modal dialog named by its confirmation title", () => {
+      render(<EnrollmentModal action={makeActionDetail()} onClose={vi.fn()} />);
+
+      expect(
+        screen.getByRole("dialog", { name: "Confirmar inscrição" }),
+      ).toHaveAttribute("aria-modal", "true");
+    });
+
+    it("ignores Escape during enrollment and allows it again after a failure", async () => {
+      let release = () => {};
+      const responseReady = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.post(`${API}/activities/act-pending/enroll`, async () => {
+          await responseReady;
+          return HttpResponse.error();
+        }),
+      );
+      const onClose = vi.fn();
+      const { user } = render(
+        <EnrollmentModal
+          action={makeActionDetail({ id: "act-pending" })}
+          onClose={onClose}
+        />,
+      );
+
+      try {
+        await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+        await user.keyboard("{Escape}");
+        expect(onClose).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+
+      await screen.findByText(/Não foi possível conectar ao servidor/);
+      expect(
+        screen.getByRole("dialog", { name: "Erro ao realizar inscrição" }),
+      ).toHaveAttribute("aria-modal", "true");
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("closes when Escape is pressed", async () => {
+      const onClose = vi.fn();
+      const { user } = render(
+        <EnrollmentModal action={makeActionDetail()} onClose={onClose} />,
+      );
+
+      await user.keyboard("{Escape}");
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
     it("calls onClose when cancel button is clicked", async () => {
       const action = makeActionDetail();
       const onClose = vi.fn();

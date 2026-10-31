@@ -65,9 +65,11 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
                 ? ACTION_FORMAT_LABELS[format]
                 : "Não informado"}
           </span>
-          <span className="text-gray-500 text-sm">
-            {action.details?.address?.addressLine || "Endereço não informado"}
-          </span>
+          {(format !== "ONLINE" || action.details?.address) && (
+            <span className="text-gray-500 text-sm">
+              {action.details?.address?.addressLine || "Endereço não informado"}
+            </span>
+          )}
         </InfoRow>
 
         <InfoRow

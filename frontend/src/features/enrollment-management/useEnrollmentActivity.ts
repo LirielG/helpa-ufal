@@ -21,10 +21,14 @@ export function useEnrollmentActivity(activityId: string) {
     latestRequest.current += 1;
     const requestId = latestRequest.current;
 
-    void getActionById(activityId).then((result) => {
-      if (requestId !== latestRequest.current || !result) return;
-      setLoaded(result);
-    });
+    void getActionById(activityId)
+      .then((result) => {
+        if (requestId !== latestRequest.current) return;
+        setLoaded(result);
+      })
+      .catch(() => {
+        // Metadata failures must not hide the enrollment list or its loaded controls.
+      });
   }, [activityId]);
 
   useEffect(() => {
