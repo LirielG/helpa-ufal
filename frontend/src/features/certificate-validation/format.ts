@@ -26,7 +26,3 @@ export function formatPeriod(startDate: string, endDate: string): string {
 
   return start === end ? start : `${start} a ${end}`;
 }
-
-export function formatWorkloadHours(hours: number): string {
-  return `${hours} ${hours === 1 ? "hora" : "horas"}`;
-}

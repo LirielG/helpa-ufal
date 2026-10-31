@@ -160,6 +160,34 @@ describe("CancelEnrollmentModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders the workload in singular when the action has 1 hour", () => {
+    const onClose = vi.fn();
+    const onCancelled = vi.fn();
+    const onActivityRemoved = vi.fn();
+    const onActivityClosed = vi.fn();
+    const action = makeActionDetail({
+      id: ACTION_ID,
+      title: "Mutirão de Limpeza",
+      enrollmentStatus: "APPROVED",
+      details: {
+        ...makeActionDetail().details!,
+        workloadHours: 1,
+      },
+    });
+
+    render(
+      <CancelEnrollmentModal
+        action={action}
+        onClose={onClose}
+        onCancelled={onCancelled}
+        onActivityRemoved={onActivityRemoved}
+        onActivityClosed={onActivityClosed}
+      />,
+    );
+
+    expect(screen.getByText("1 hora")).toBeInTheDocument();
+  });
+
   it("closes without a request when the user keeps the enrollment", async () => {
     const requests = recordCancellations();
     const { user, onClose } = renderModal();

@@ -1,6 +1,6 @@
 import { MapPin, Calendar, Clock } from "lucide-react";
 import type { Activity } from "@/services/contracts/activity";
-import { formatDate } from "../../../utils";
+import { formatDate, formatWorkloadHours } from "../../../utils";
 import { formatActionLocation } from "../location";
 
 /** Title, date, location and workload of an action, as the enrollment modals recap it. */
@@ -18,7 +18,7 @@ export function ActionSummary({ action }: { action: Activity }) {
       </div>
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <Clock className="size-4 shrink-0 text-gray-400" />
-        <span>{action.details?.workloadHours ?? 0} horas</span>
+        <span>{formatWorkloadHours(action.details?.workloadHours ?? 0)}</span>
       </div>
     </div>
   );
