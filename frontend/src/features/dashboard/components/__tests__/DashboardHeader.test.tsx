@@ -31,6 +31,7 @@ function renderHeaderAt(route: string) {
         }
       />
       <Route path="/login" element={<LoginProbe />} />
+      <Route path="/moderacao" element={<h1>Moderação</h1>} />
     </Routes>,
     { route },
   );
@@ -55,6 +56,9 @@ describe("DashboardHeader", () => {
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Sair" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "Denúncias" }),
       ).not.toBeInTheDocument();
     });
 
@@ -117,6 +121,9 @@ describe("DashboardHeader", () => {
       expect(
         screen.queryByRole("button", { name: "Entrar" }),
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "Denúncias" }),
+      ).not.toBeInTheDocument();
     });
 
     it("opens the modal from Criar uma ação", async () => {
@@ -126,6 +133,22 @@ describe("DashboardHeader", () => {
       await user.click(screen.getByRole("button", { name: "Criar uma ação" }));
 
       expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    });
+  });
+
+  describe("for a manager", () => {
+    it("shows the Denúncias link pointing to /moderacao and navigates on click", async () => {
+      signIn({ isManager: true });
+      const { user } = renderHeaderAt("/activity/act-1");
+
+      const link = screen.getByRole("link", { name: "Denúncias" });
+      expect(link).toHaveAttribute("href", "/moderacao");
+
+      await user.click(link);
+
+      expect(
+        screen.getByRole("heading", { name: "Moderação" }),
+      ).toBeInTheDocument();
     });
   });
 });
