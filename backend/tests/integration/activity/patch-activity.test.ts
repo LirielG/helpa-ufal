@@ -189,6 +189,74 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.body.title).toBe("Título Atualizado pelo Autor");
   });
 
+  it("returns the exact ActivityFullResponse shape, with availableSlots and no internal columns", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const details = activity.details;
+    const address = details?.address;
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Título Atualizado" });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      id: activity.id,
+      authorId: author.user.id,
+      title: "Título Atualizado",
+      type: activity.type,
+      campus: activity.campus,
+      startDate: activity.startDate.toISOString(),
+      endDate: activity.endDate.toISOString(),
+      slots: 10,
+      availableSlots: 10,
+      status: "OPEN",
+      details: {
+        description: details?.description,
+        area: details?.area,
+        format: details?.format,
+        url: details?.url ?? null,
+        workloadHours: details?.workloadHours,
+        address: address
+          ? {
+              id: address.id,
+              addressLine: address.addressLine,
+              district: address.district,
+              zipCode: address.zipCode,
+              city: address.city,
+              state: address.state,
+            }
+          : null,
+      },
+    });
+  });  
+
+  it("computes availableSlots from the approved enrollments in the PATCH response", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const students = await Promise.all([
+      createStudent(),
+      createStudent(),
+      createStudent(),
+    ]);
+    for (const student of students) {
+      await createEnrollment(student.user.id, activity.id);
+    }
+    const canceled = await createStudent();
+    await createEnrollment(canceled.user.id, activity.id, {
+      status: "CANCELLED",
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Título com Inscritos" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.availableSlots).toBe(7);
+  });
+
   it("allows a manager to update a third party's activity", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
