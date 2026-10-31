@@ -99,11 +99,22 @@ class ErrorHandler {
 
   public defaultHandler(
     err: unknown,
-    _req: Request,
+    req: Request,
     res: Response,
     _next: NextFunction,
   ): void {
+    const method = req.method ?? "UNKNOWN";
+    const path = (req.originalUrl ?? req.url ?? req.path ?? "").split("?")[0];
+    const errorDetail = err instanceof Error ? (err.stack ?? err.message) : err;
+
     if (err instanceof CustomError) {
+      if (err.statusCode >= 500) {
+        console.error(
+          `[ErrorHandler] ${method} ${path} ${err.statusCode}:`,
+          errorDetail,
+        );
+      }
+
       res.status(err.statusCode).json({
         status: err.statusCode,
         code: err.code,
@@ -112,6 +123,8 @@ class ErrorHandler {
       });
       return;
     }
+
+    console.error(`[ErrorHandler] ${method} ${path} 500:`, errorDetail);
 
     const stack =
       env.NODE_ENV === "development" && err instanceof Error
