@@ -177,7 +177,6 @@ describe("ManagedCard status control", () => {
       expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
       expect(statusSelect()).not.toHaveAttribute("aria-describedby");
       expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
-      expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
     });
   });
 
