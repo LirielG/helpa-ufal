@@ -3,7 +3,6 @@ import { ApiError } from "@/services/apiError";
 import { API, http, HttpResponse, makeEnrollment, server } from "@/test";
 import { confirmAttendance, fetchEnrollments } from "../services";
 
-
 describe("fetchEnrollments", () => {
   it("requests the activity's enrollments with page and limit", async () => {
     let requestedUrl: URL | undefined;

@@ -31,7 +31,8 @@ interface FeedSectionProps {
 
 export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const feed: FeedKey = searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
+  const feed: FeedKey =
+    searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
   const [actions, setActions] = useState<ActivityListItem[]>([]);
   const [page, setPage] = useState(1);

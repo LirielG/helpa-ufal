@@ -46,7 +46,11 @@ export function useEnrollments(activityId: string) {
       setError(null);
 
       try {
-        const result = await fetchEnrollments(activityId, targetPage, PAGE_LIMIT);
+        const result = await fetchEnrollments(
+          activityId,
+          targetPage,
+          PAGE_LIMIT,
+        );
         if (!isCurrent()) return;
 
         setData(result);

@@ -31,16 +31,18 @@ export function HowItWorksSection({
                 Gratuito e Acadêmico
               </span>
             </div>
-            
+
             <div className="flex flex-col gap-0.5 mb-6 sm:mb-0">
               <p className="text-2xl sm:text-3xl font-bold">2 Modos</p>
               <span className="text-[10px] sm:text-xs uppercase tracking-wider text-[#D6E3FF]">
                 Helpa Nativo + SIGAA
               </span>
             </div>
-            
+
             <div className="flex flex-col gap-0.5">
-              <p className="text-2xl sm:text-3xl font-bold">Horas Complementares</p>
+              <p className="text-2xl sm:text-3xl font-bold">
+                Horas Complementares
+              </p>
               <span className="text-[10px] sm:text-xs uppercase tracking-wider text-[#D6E3FF]">
                 Certificados
               </span>
@@ -262,10 +264,12 @@ export function HowItWorksSection({
               <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
                 01
               </div>
-              <h3 className="text-xl font-semibold">Explore o Feed Unificado</h3>
+              <h3 className="text-xl font-semibold">
+                Explore o Feed Unificado
+              </h3>
               <p className="text-sm text-gray-200 leading-relaxed">
-                Navegue entre as abas Helpa e SIGAA. Utilize os filtros por
-                área de atuação, tipo de ação e status.
+                Navegue entre as abas Helpa e SIGAA. Utilize os filtros por área
+                de atuação, tipo de ação e status.
               </p>
             </div>
 
@@ -288,8 +292,8 @@ export function HowItWorksSection({
               <h3 className="text-xl font-semibold">Conquiste Certificados</h3>
               <p className="text-sm text-gray-200 leading-relaxed">
                 Finalize sua participação, receba o feedback do coordenador da
-                ação e emita seu comprovante digital autenticado para validação na
-                coordenação.
+                ação e emita seu comprovante digital autenticado para validação
+                na coordenação.
               </p>
             </div>
           </div>
