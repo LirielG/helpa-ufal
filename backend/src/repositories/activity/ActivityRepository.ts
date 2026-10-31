@@ -463,8 +463,12 @@ class ActivityRepository implements IActivityRepository {
         },
       });
 
-      return updated as unknown as ActivityFullResponse;
-    });
+      const approvedCount = await tx.enrollment.count({
+        where: { activityId: id, status: ACTIVE_ENROLLMENT_STATUS },
+      });
+
+      return toFullResponse(updated, approvedCount);
+      });
   }
 
   public async updateStatus(
