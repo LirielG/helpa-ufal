@@ -177,7 +177,6 @@ class ActivityService implements IActivityService {
 
   public async list(
     filters: IListActivitiesFilters,
-    userId?: string,
   ): Promise<IListActivitiesResponse> {
     // Absent -> default. Present (even empty) -> must be a plain integer.
     const pageRaw: unknown = filters.page ?? "1";
@@ -467,9 +466,10 @@ class ActivityService implements IActivityService {
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";
     const hasExistingAddress = !!activity.details?.address;
+    const updateData = { ...data };
 
     if (finalFormat === "ONLINE") {
-      data.address = null;
+      updateData.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -484,7 +484,7 @@ class ActivityService implements IActivityService {
 
     const updatedActivity = await this._activityRepository.update(
       id,
-      data,
+      updateData,
       addressAction,
     );
 
