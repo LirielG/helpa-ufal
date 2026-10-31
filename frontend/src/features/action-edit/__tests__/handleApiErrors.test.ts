@@ -169,9 +169,9 @@ describe("handleActionApiErrors", () => {
     [409, "Ações concluídas ou canceladas não podem ser editadas."],
     [
       NETWORK_ERROR_STATUS,
-      "Falha de comunicação com o servidor. Tente novamente.",
+      "Não foi possível conectar ao servidor. Tente novamente.",
     ],
-    [500, GENERIC_ERROR],
+    [500, "Não foi possível conectar ao servidor. Tente novamente."],
   ])("answers %i with its own pt-BR message", (status, message) => {
     const { setGeneralError } = callWith(new ApiError(status, "whatever"));
 

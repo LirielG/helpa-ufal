@@ -183,31 +183,33 @@ describe("ActionRegister", () => {
     });
   });
 
-  it("displays a generic error message in case of server/network failure", async () => {
-    server.use(
-      http.post("*/activities", () => {
-        return HttpResponse.json(
-          { message: "Internal Server Error" },
-          { status: 500 },
-        );
-      }),
-    );
-
-    const { user } = render(
-      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
-    );
-
-    await fillStep1(user);
-    await fillStep2(user);
-
-    await user.click(screen.getByRole("button", { name: /Criar ação/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Não foi possível criar a ação. Tente novamente.",
+  it.each([0, 500])(
+    "displays the connection error for status %i",
+    async (status) => {
+      server.use(
+        http.post("*/activities", () => {
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
       );
-    });
-  });
+
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        );
+      });
+    },
+  );
 
   it("keeps a title over the length limit on step 1 without creating the action", async () => {
     const onCreate = spyOnCreate();

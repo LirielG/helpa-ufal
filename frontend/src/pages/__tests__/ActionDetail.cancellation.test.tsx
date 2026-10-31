@@ -459,7 +459,7 @@ describe("ActionDetail enrollment cancellation", () => {
     await confirmCancellation(user);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falha de comunicação com o servidor. Tente novamente.",
+      "Não foi possível conectar ao servidor. Tente novamente.",
     );
     expect(screen.getByText("Inscrito")).toBeInTheDocument();
   });

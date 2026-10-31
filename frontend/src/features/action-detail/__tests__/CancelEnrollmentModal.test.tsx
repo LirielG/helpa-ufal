@@ -260,16 +260,23 @@ describe("CancelEnrollmentModal", () => {
     expect(getKeepButton()).toBeEnabled();
   });
 
-  it("shows a communication failure on network error", async () => {
-    recordCancellations(() => HttpResponse.error());
-    const { user } = renderModal();
+  it.each([0, 500])(
+    "shows the connection error for status %i",
+    async (status) => {
+      recordCancellations(() =>
+        status === 0
+          ? HttpResponse.error()
+          : new HttpResponse(null, { status }),
+      );
+      const { user } = renderModal();
 
-    await user.click(getConfirmButton());
+      await user.click(getConfirmButton());
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falha de comunicação com o servidor. Tente novamente.",
-    );
-  });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
+    },
+  );
 
   it("shows a generic message on an unexpected error", async () => {
     recordCancellations(() =>

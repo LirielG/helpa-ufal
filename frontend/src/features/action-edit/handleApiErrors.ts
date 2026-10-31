@@ -1,7 +1,8 @@
 import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 import {
   ApiError,
-  NETWORK_ERROR_STATUS,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
   type ApiValidationError,
 } from "../../services/apiError";
 
@@ -72,6 +73,11 @@ export function handleActionApiErrors<T extends FieldValues>(
     return;
   }
 
+  if (isConnectionFailure(error)) {
+    setGeneralError(CONNECTION_ERROR_MESSAGE);
+    return;
+  }
+
   switch (error.status) {
     case 400:
       if (!applyValidationErrors(error, setError)) {
@@ -88,9 +94,6 @@ export function handleActionApiErrors<T extends FieldValues>(
       break;
     case 409:
       setGeneralError("Ações concluídas ou canceladas não podem ser editadas.");
-      break;
-    case NETWORK_ERROR_STATUS:
-      setGeneralError("Falha de comunicação com o servidor. Tente novamente.");
       break;
     default:
       setGeneralError(GENERIC_ERROR);
@@ -110,6 +113,11 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
     return;
   }
 
+  if (isConnectionFailure(error)) {
+    setGeneralError(CONNECTION_ERROR_MESSAGE);
+    return;
+  }
+
   switch (error.status) {
     case 400:
       if (!applyValidationErrors(error, setError)) {
@@ -125,9 +133,6 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError(
         "Já existe uma ação com estes dados. Verifique e tente novamente.",
       );
-      break;
-    case NETWORK_ERROR_STATUS:
-      setGeneralError("Falha de comunicação com o servidor. Tente novamente.");
       break;
     default:
       setGeneralError(GENERIC_ERROR);

@@ -10,12 +10,13 @@ describe("getReportErrorMessage", () => {
   it.each([
     [
       NETWORK_ERROR_STATUS,
-      "Falha de comunicação com o servidor. Tente novamente.",
+      "Não foi possível conectar ao servidor. Tente novamente.",
     ],
     [403, "Você não pode denunciar uma ação que você criou."],
     [404, "A ação não foi encontrada. Ela pode ter sido removida."],
     [409, "Você já denunciou esta ação."],
-    [500, "Não foi possível registrar a denúncia. Tente novamente."],
+    [500, "Não foi possível conectar ao servidor. Tente novamente."],
+    [418, "Não foi possível registrar a denúncia. Tente novamente."],
   ])("maps status %i to a pt-BR message", (status, message) => {
     expect(getReportErrorMessage(new ApiError(status, "x"))).toBe(message);
   });

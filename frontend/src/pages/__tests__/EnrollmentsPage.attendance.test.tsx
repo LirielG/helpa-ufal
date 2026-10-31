@@ -471,32 +471,37 @@ describe("EnrollmentsPage — attendance", () => {
     ).toBeInTheDocument();
   });
 
-  it("on a network failure shows the error, keeps the modal usable and leaves the row alone", async () => {
-    serveActivity();
-    serveList([makeEnrollment({ user: { fullName: "Maria Silva" } })]);
-    server.use(
-      http.put(`${API}/enrollments/:enrollmentId/attendance`, () =>
-        HttpResponse.error(),
-      ),
-    );
+  it.each([0, 500])(
+    "on a connection failure (%i) keeps the modal usable and leaves the row alone",
+    async (status) => {
+      serveActivity();
+      serveList([makeEnrollment({ user: { fullName: "Maria Silva" } })]);
+      server.use(
+        http.put(`${API}/enrollments/:enrollmentId/attendance`, () =>
+          status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status }),
+        ),
+      );
 
-    const { user } = renderPage();
+      const { user } = renderPage();
 
-    const dialog = await openModal(user, "Maria Silva");
-    await user.click(within(dialog).getByLabelText("Falta"));
-    await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
+      const dialog = await openModal(user, "Maria Silva");
+      await user.click(within(dialog).getByLabelText("Falta"));
+      await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
 
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "Falha de comunicação com o servidor. Tente novamente.",
-    );
-    expect(
-      within(dialog).getByRole("button", { name: "Salvar" }),
-    ).toBeEnabled();
-    expect(within(dialog).getByLabelText("Presente")).toBeEnabled();
-    expect(
-      within(rowOf("Maria Silva")).getByText("Não homologado"),
-    ).toBeInTheDocument();
-  });
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
+      expect(
+        within(dialog).getByRole("button", { name: "Salvar" }),
+      ).toBeEnabled();
+      expect(within(dialog).getByLabelText("Presente")).toBeEnabled();
+      expect(
+        within(rowOf("Maria Silva")).getByText("Não homologado"),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("sends a single request on a double click", async () => {
     let calls = 0;

@@ -1039,25 +1039,34 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps what was typed when the update fails with a server error", async () => {
-    mockAction();
-    failUpdate(500, { message: "Internal server error." });
-    const { user } = renderEditAction();
+  it.each([0, 500])(
+    "shows a connection failure (%i) and keeps what was typed",
+    async (status) => {
+      mockAction();
+      server.use(
+        http.patch(`${API}/activities/:id`, () =>
+          status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status }),
+        ),
+      );
+      const { user } = renderEditAction();
 
-    const title = await findTitleField();
-    await user.clear(title);
-    await user.type(title, "Título preservado após o erro");
-    await user.click(getSaveButton());
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Título preservado após o erro");
+      await user.click(getSaveButton());
 
-    expect(
-      await screen.findByText(
-        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Título")).toHaveValue(
-      "Título preservado após o erro",
-    );
-  });
+      expect(
+        await screen.findByText(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Título")).toHaveValue(
+        "Título preservado após o erro",
+      );
+    },
+  );
 
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(

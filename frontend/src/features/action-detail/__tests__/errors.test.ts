@@ -111,14 +111,14 @@ describe("getEnrollmentErrorMessage", () => {
       );
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe(
-        "Falha de comunicação com o servidor. Tente novamente.",
+        "Não foi possível conectar ao servidor. Tente novamente.",
       );
     });
   });
 
   describe("Unknown status", () => {
     it("returns generic pt-BR message for unexpected status", () => {
-      const error = new ApiError(500, "Internal server error");
+      const error = new ApiError(418, "Unexpected error");
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("Erro ao realizar inscrição. Tente novamente.");
     });
@@ -161,7 +161,7 @@ describe("resolveCancellationError", () => {
     const error = new ApiError(NETWORK_ERROR_STATUS, "Network request failed");
     expect(resolveCancellationError(error)).toEqual({
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: "Não foi possível conectar ao servidor. Tente novamente.",
     });
   });
 
@@ -174,7 +174,7 @@ describe("resolveCancellationError", () => {
   });
 
   it("falls back to a generic message on an unknown status", () => {
-    const error = new ApiError(500, "Erro na comunicação com o servidor");
+    const error = new ApiError(418, "Unexpected error");
     expect(resolveCancellationError(error)).toEqual({
       kind: "message",
       text: "Não foi possível cancelar a inscrição. Tente novamente.",

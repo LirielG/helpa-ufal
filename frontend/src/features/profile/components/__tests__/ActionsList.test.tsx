@@ -412,7 +412,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
     const { user } = await confirmCancellation();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falha de comunicação com o servidor. Tente novamente.",
+      "Não foi possível conectar ao servidor. Tente novamente.",
     );
     expect(
       screen.getByRole("button", { name: "Cancelar inscrição" }),

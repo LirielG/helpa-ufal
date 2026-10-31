@@ -240,7 +240,9 @@ describe("api client", () => {
       const error = await catchApiError(api.get(ENDPOINT));
 
       expect(error.status).toBe(500);
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
 
     it("rejects with a pt-BR message when the request gets no response", async () => {
@@ -249,7 +251,9 @@ describe("api client", () => {
       const error = await catchApiError(api.get(ENDPOINT));
 
       expect(error.status).toBe(NETWORK_ERROR_STATUS);
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
 
     it("joins an array of messages into a single newline-separated string", async () => {
@@ -284,7 +288,9 @@ describe("api client", () => {
 
       const error = await catchApiError(api.post(ENDPOINT, {}));
 
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
   });
 
