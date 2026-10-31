@@ -3,27 +3,32 @@ import request from "supertest";
 import { randomUUID } from "crypto";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
-import { createTeacher, createStudent, createManager, createActivity } from "../../helpers/factories.js";
-import { authHeader } from "../../helpers/auth.js";
+import {
+  createTeacher,
+  createStudent,
+  createManager,
+  createActivity,
+} from "../../helpers/factories.js";
+import { authCookie } from "../../helpers/auth.js";
 
 describe("PATCH /activities/:activityId/status", () => {
-
   it("returns 400 when status is not a valid enum value", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "NOT_A_STATUS" });
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Validation error.");
-        expect(response.body.errors).toEqual([
+    expect(response.body.errors).toEqual([
       {
         field: "status",
         code: "VALIDATION_ERROR",
-        message: 'Invalid option: expected one of "IN_PROGRESS"|"COMPLETED"|"CANCELLED"',
+        message:
+          'Invalid option: expected one of "IN_PROGRESS"|"COMPLETED"|"CANCELLED"',
       },
     ]);
   });
@@ -45,7 +50,7 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const toInProgress = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(toInProgress.status).toBe(200);
@@ -56,13 +61,15 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const toCompleted = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "COMPLETED" });
 
     expect(toCompleted.status).toBe(200);
     expect(toCompleted.body.status).toBe("COMPLETED");
 
-    const afterSecondStep = await request(app).get(`/activities/${activity.id}`);
+    const afterSecondStep = await request(app).get(
+      `/activities/${activity.id}`,
+    );
     expect(afterSecondStep.body.status).toBe("COMPLETED");
   });
 
@@ -72,7 +79,7 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "COMPLETED" });
 
     expect(response.status).toBe(409);
@@ -85,11 +92,13 @@ describe("PATCH /activities/:activityId/status", () => {
 
   it("returns 409 when the activity is already CANCELLED", async () => {
     const author = await createTeacher();
-    const activity = await createActivity(author.user.id, { status: "CANCELLED" });
+    const activity = await createActivity(author.user.id, {
+      status: "CANCELLED",
+    });
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(409);
@@ -107,7 +116,7 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(outsider.token))
+      .set(...authCookie(outsider.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(403);
@@ -123,11 +132,15 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const response = await request(app)
       .patch(`/activities/${randomUUID()}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -139,14 +152,16 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
-
-  
 
   it("returns 403 for a valid token of a deleted user (ghost user)", async () => {
     const author = await createTeacher();
@@ -159,7 +174,7 @@ describe("PATCH /activities/:activityId/status", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}/status`)
-      .set(...authHeader(ghost.token))
+      .set(...authCookie(ghost.token))
       .send({ status: "IN_PROGRESS" });
 
     expect(response.status).toBe(403);

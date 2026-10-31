@@ -10,7 +10,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import { authCookie, authHeader, invalidToken } from "../../helpers/auth.js";
+import { authCookie, invalidToken } from "../../helpers/auth.js";
 
 // Route contract: docs/bruno/Enrollments/List Activity Enrollments.yml.
 const listUrl = (activityId: string) => `/activities/${activityId}/enrollments`;
@@ -38,7 +38,7 @@ const USER_KEYS = ["email", "fullName", "id", "registrationCode"];
 describe("GET /activities/:activityId/enrollments", () => {
   // ---------- 200 - Success ----------
 
-  it("returns the paginated list of APPROVED enrollments to the activity creator (Bearer)", async () => {
+  it("returns the paginated list of APPROVED enrollments to the activity creator (cookie)", async () => {
     const { author, activity } = await anActivityWithAuthor();
     const enrolled = await createStudent({
       fullName: "Maria Clara Santos",
@@ -48,7 +48,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -82,15 +82,15 @@ describe("GET /activities/:activityId/enrollments", () => {
     const enrolled = await createStudent();
     await createEnrollment(enrolled.user.id, activity.id);
 
-    const viaBearer = await request(app)
+    const firstResponse = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
     const viaCookie = await request(app)
       .get(listUrl(activity.id))
       .set(...authCookie(author.token));
 
     expect(viaCookie.status).toBe(200);
-    expect(viaCookie.body).toEqual(viaBearer.body);
+    expect(viaCookie.body).toEqual(firstResponse.body);
   });
 
   it("returns the identical payload to a manager who is not the creator", async () => {
@@ -101,10 +101,10 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const asCreator = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
     const asManager = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(manager.token));
+      .set(...authCookie(manager.token));
 
     expect(asCreator.status).toBe(200);
     expect(asManager.status).toBe(200);
@@ -125,7 +125,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body.items).toHaveLength(1);
@@ -151,7 +151,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(3);
@@ -188,7 +188,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
       const response = await request(app)
         .get(listUrl(activity.id))
-        .set(...authHeader(author.token));
+        .set(...authCookie(author.token));
 
       expect(response.status).toBe(200);
       expect(response.body.items[0].attendanceConfirmed).toBeNull();
@@ -205,7 +205,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body.items[0].user.registrationCode).toBeNull();
@@ -216,7 +216,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200); // never 404 for lack of enrollees
     expect(response.body).toEqual({
@@ -237,7 +237,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([]);
@@ -262,7 +262,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(
@@ -287,7 +287,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(`${listUrl(activity.id)}?page=3&limit=2`)
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(response.body.page).toBe(3);
@@ -304,7 +304,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(200);
     expect(JSON.stringify(response.body)).not.toContain("passwordHash");
@@ -333,7 +333,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
       const response = await request(app)
         .get(`${listUrl(activity.id)}?${queryString}`)
-        .set(...authHeader(author.token));
+        .set(...authCookie(author.token));
 
       expect(response.status).toBe(400);
       expect(response.body.status).toBe(400);
@@ -364,12 +364,12 @@ describe("GET /activities/:activityId/enrollments", () => {
     // "Unauthenticated." — assert only the status until the team aligns them.
   });
 
-  it("rejects an invalid Bearer token", async () => {
+  it("rejects an invalid session cookie", async () => {
     const { activity } = await anActivityWithAuthor();
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(invalidToken()));
+      .set(...authCookie(invalidToken()));
 
     expect(response.status).toBe(401);
   });
@@ -391,7 +391,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(ghost.token));
+      .set(...authCookie(ghost.token));
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
@@ -408,7 +408,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(randomUUID()))
-      .set(...authHeader(user.token));
+      .set(...authCookie(user.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -427,7 +427,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -445,7 +445,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl("not-a-uuid"))
-      .set(...authHeader(user.token));
+      .set(...authCookie(user.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -470,7 +470,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(randomUUID()))
-      .set(...authHeader(user.token));
+      .set(...authCookie(user.token));
 
     expect(response.status).toBe(404);
   });
@@ -485,7 +485,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(outsider.token));
+      .set(...authCookie(outsider.token));
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
@@ -506,7 +506,7 @@ describe("GET /activities/:activityId/enrollments", () => {
 
     const response = await request(app)
       .get(listUrl(activity.id))
-      .set(...authHeader(volunteer.token));
+      .set(...authCookie(volunteer.token));
 
     expect(response.status).toBe(403);
     expect(response.body.items).toBeUndefined();

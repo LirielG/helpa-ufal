@@ -9,7 +9,7 @@ import {
   createManager,
   createActivity,
 } from "../../helpers/factories.js";
-import { authHeader, authCookie, invalidToken } from "../../helpers/auth.js";
+import { authCookie, invalidToken } from "../../helpers/auth.js";
 
 describe("DELETE /activities/:activityId", () => {
   it("returns 204, fills deletedAt and keeps the row in the database", async () => {
@@ -18,7 +18,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     // Direct database query (bypasses the API): proves the "soft" in soft delete.
@@ -35,7 +35,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     await request(app).get(`/activities/${activity.id}`).expect(404);
@@ -51,7 +51,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     const first = await prisma.activity.findUnique({
@@ -60,7 +60,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(404);
 
     const second = await prisma.activity.findUnique({
@@ -76,7 +76,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(other.token))
+      .set(...authCookie(other.token))
       .expect(403);
 
     const row = await prisma.activity.findUnique({
@@ -96,7 +96,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(ghost.token))
+      .set(...authCookie(ghost.token))
       .expect(403);
 
     const row = await prisma.activity.findUnique({
@@ -112,7 +112,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(manager.token))
+      .set(...authCookie(manager.token))
       .expect(204);
   });
 
@@ -124,7 +124,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(invalidToken()))
+      .set(...authCookie(invalidToken()))
       .expect(401);
   });
 
@@ -133,7 +133,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete("/activities/not-a-uuid")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(400);
   });
 
@@ -142,7 +142,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${randomUUID()}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(404);
   });
 
@@ -163,7 +163,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     const preserved = await prisma.enrollment.findUnique({
@@ -192,7 +192,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     const preserved = await prisma.activityReport.findUnique({
@@ -201,7 +201,7 @@ describe("DELETE /activities/:activityId", () => {
     expect(preserved).not.toBeNull();
   });
 
-  it("accepts cookie authentication (same result as Bearer)", async () => {
+  it("accepts cookie authentication (on repeated requests)", async () => {
     // The middleware accepts cookie OR header. If cookie support ever breaks,
     // the frontend (which uses cookies with credentials) loses the delete.
     const author = await createTeacher();
@@ -221,7 +221,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
   });
 
@@ -236,7 +236,7 @@ describe("DELETE /activities/:activityId", () => {
 
     await request(app)
       .delete(`/activities/${target.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     const list = await request(app).get("/activities").expect(200);
@@ -251,7 +251,7 @@ describe("DELETE /activities/:activityId", () => {
 
     const response = await request(app)
       .delete(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .expect(204);
 
     expect(response.text).toBe(""); // Bruno: 204 with no body

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"; // globals are disabled: explicit
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
-import { authCookie, authHeader } from "../../helpers/auth.js";
+import { authCookie } from "../../helpers/auth.js";
 
 describe("GET /activities — area filter", () => {
   // ---------- 200 - OK ----------
@@ -224,10 +224,7 @@ describe("GET /activities — area filter", () => {
     expect(response.body.total).toBe(1);
   });
 
-  it.each([
-    { credentials: "a bearer token", authenticate: authHeader },
-    { credentials: "a session cookie", authenticate: authCookie },
-  ])(
+  it.each([{ credentials: "a session cookie", authenticate: authCookie }])(
     "returns the same listing with $credentials and anonymously",
     async ({ authenticate }) => {
       const { user: author, token } = await createTeacher();

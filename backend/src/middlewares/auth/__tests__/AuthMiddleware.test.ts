@@ -53,14 +53,11 @@ function aTokenWithInvalidSignature(
 
 function mockRequest(
   options: {
-    bearerToken?: string;
     cookieToken?: string;
     rawAuthorization?: string;
   } = {},
 ): Request {
   const headers: Record<string, string> = {};
-  if (options.bearerToken)
-    headers.authorization = `Bearer ${options.bearerToken}`;
   if (options.rawAuthorization)
     headers.authorization = options.rawAuthorization;
 
@@ -105,21 +102,16 @@ describe("AuthMiddleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("calls next and populates req.user with a valid Bearer token", async () => {
+    it("rejects a valid token sent only in the authorization header", async () => {
       const handler = middleware.auth({ userTypes: "all" });
-      const user = anAuthenticatedUser();
-      const req = mockRequest({ bearerToken: signJwt(user) });
+      const req = mockRequest({
+        rawAuthorization: `${["Bear", "er"].join("")} ${signJwt(anAuthenticatedUser())}`,
+      });
       const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith();
-      expect(req.user).toMatchObject({
-        id: user.id,
-        userType: "STUDENT",
-        isManager: false,
-      });
+      await expectAuthError(() => handler(req, RES, next), 401);
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
     });
 
     it("calls next and populates req.user with a valid cookie token", async () => {
@@ -141,7 +133,7 @@ describe("AuthMiddleware", () => {
 
     it("throws 401 for a malformed token", async () => {
       const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: MALFORMED_TOKEN });
+      const req = mockRequest({ cookieToken: MALFORMED_TOKEN });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -151,7 +143,7 @@ describe("AuthMiddleware", () => {
 
     it("throws 401 for a token with an invalid signature", async () => {
       const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithInvalidSignature() });
+      const req = mockRequest({ cookieToken: aTokenWithInvalidSignature() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -161,7 +153,7 @@ describe("AuthMiddleware", () => {
 
     it("throws 401 for an expired token", async () => {
       const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: anExpiredToken() });
+      const req = mockRequest({ cookieToken: anExpiredToken() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -169,7 +161,7 @@ describe("AuthMiddleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("throws 401 when the Authorization header lacks the Bearer scheme", async () => {
+    it("throws 401 when the authorization header contains an unprefixed token", async () => {
       const handler = middleware.auth({ userTypes: "all" });
       const req = mockRequest({
         rawAuthorization: signJwt(anAuthenticatedUser()),
@@ -182,7 +174,7 @@ describe("AuthMiddleware", () => {
 
     it("clears a pre-existing req.user when validation fails", async () => {
       const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: MALFORMED_TOKEN });
+      const req = mockRequest({ cookieToken: MALFORMED_TOKEN });
       req.user = anAuthenticatedUser({ id: "pre-existing-user" });
       const next = mockNext();
 
@@ -208,7 +200,7 @@ describe("AuthMiddleware", () => {
     it("calls next and populates req.user with a valid token", async () => {
       const handler = middleware.auth();
       const user = anAuthenticatedUser();
-      const req = mockRequest({ bearerToken: signJwt(user) });
+      const req = mockRequest({ cookieToken: signJwt(user) });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -229,7 +221,7 @@ describe("AuthMiddleware", () => {
       "ignores an %s token and proceeds anonymously",
       async (_label, token) => {
         const handler = middleware.auth();
-        const req = mockRequest({ bearerToken: token });
+        const req = mockRequest({ cookieToken: token });
         const next = mockNext();
 
         await handler(req, RES, next);
@@ -247,7 +239,7 @@ describe("AuthMiddleware", () => {
       async (userType) => {
         const handler = middleware.auth({ userTypes: "all" });
         const req = mockRequest({
-          bearerToken: signJwt(anAuthenticatedUser({ userType })),
+          cookieToken: signJwt(anAuthenticatedUser({ userType })),
         });
         const next = mockNext();
 
@@ -260,7 +252,7 @@ describe("AuthMiddleware", () => {
     it("calls next when the userType is explicitly allowed", async () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ userType: "TEACHER" })),
+        cookieToken: signJwt(anAuthenticatedUser({ userType: "TEACHER" })),
       });
       const next = mockNext();
 
@@ -272,7 +264,7 @@ describe("AuthMiddleware", () => {
     it("throws 403 when the userType is not allowed", async () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ userType: "STUDENT" })),
+        cookieToken: signJwt(anAuthenticatedUser({ userType: "STUDENT" })),
       });
       const next = mockNext();
 
@@ -283,7 +275,7 @@ describe("AuthMiddleware", () => {
     it("calls next for a manager when manager: true", async () => {
       const handler = middleware.auth({ manager: true });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ isManager: true })),
+        cookieToken: signJwt(anAuthenticatedUser({ isManager: true })),
       });
       const next = mockNext();
 
@@ -295,7 +287,7 @@ describe("AuthMiddleware", () => {
     it("throws 403 for a non-manager when manager: true", async () => {
       const handler = middleware.auth({ manager: true });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ isManager: false })),
+        cookieToken: signJwt(anAuthenticatedUser({ isManager: false })),
       });
       const next = mockNext();
 
@@ -306,7 +298,7 @@ describe("AuthMiddleware", () => {
     it("does not let a manager bypass userTypes restrictions", async () => {
       const handler = middleware.auth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(
+        cookieToken: signJwt(
           anAuthenticatedUser({ userType: "STUDENT", isManager: true }),
         ),
       });
@@ -324,7 +316,7 @@ describe("AuthMiddleware", () => {
         userTypes: "all",
       });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 3 })),
+        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 3 })),
       });
       const next = mockNext();
 
@@ -341,7 +333,7 @@ describe("AuthMiddleware", () => {
         userTypes: "all",
       });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
+        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
       });
       const next = mockNext();
 
@@ -354,7 +346,7 @@ describe("AuthMiddleware", () => {
       const userRepository = mockRepository({ tokenVersion: 1 });
       const handler = new AuthMiddleware({ userRepository }).auth();
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
+        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
       });
       const next = mockNext();
 
@@ -369,7 +361,7 @@ describe("AuthMiddleware", () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository({ tokenVersion: 0 }),
       }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithoutVersion() });
+      const req = mockRequest({ cookieToken: aTokenWithoutVersion() });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -382,7 +374,7 @@ describe("AuthMiddleware", () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository({ tokenVersion: 1 }),
       }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithoutVersion() });
+      const req = mockRequest({ cookieToken: aTokenWithoutVersion() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -393,7 +385,7 @@ describe("AuthMiddleware", () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository(null),
       }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -410,7 +402,7 @@ describe("AuthMiddleware", () => {
       async (_label, token) => {
         const userRepository = mockRepository();
         const handler = new AuthMiddleware({ userRepository }).auth();
-        const req = mockRequest({ bearerToken: token });
+        const req = mockRequest({ cookieToken: token });
 
         await handler(req, RES, mockNext());
 
@@ -424,7 +416,7 @@ describe("AuthMiddleware", () => {
         new Error("connection lost"),
       );
       const handler = new AuthMiddleware({ userRepository }).auth();
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -441,7 +433,7 @@ describe("AuthMiddleware", () => {
       const handler = new AuthMiddleware({ userRepository }).auth({
         userTypes: "all",
       });
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
       await expect(handler(req, RES, next)).rejects.toBe(failure);

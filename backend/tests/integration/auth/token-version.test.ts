@@ -4,7 +4,7 @@ import type { User } from "@prisma/client";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
-import { authHeader, signToken } from "../../helpers/auth.js";
+import { authCookie, signToken } from "../../helpers/auth.js";
 
 // Session revocation: a token signed before the user's tokenVersion moved
 // on answers 401. GET /users/me is the probe because it reads the user.
@@ -20,7 +20,7 @@ const REVOKED_TOKEN_BODY = {
 function getMe(token: string) {
   return request(app)
     .get(meUrl)
-    .set(...authHeader(token));
+    .set(...authCookie(token));
 }
 
 function tokenAtVersion(user: User, tokenVersion: number): string {
@@ -73,7 +73,10 @@ describe("token version", () => {
       .send({ email: user.email, password: DEFAULT_PASSWORD });
     expect(login.status).toBe(200);
 
-    expect((await getMe(login.body.token)).status).toBe(200);
+    expect(
+      (await request(app).get(meUrl).set("Cookie", login.headers["set-cookie"]))
+        .status,
+    ).toBe(200);
   });
 
   it("does not affect other users' tokens", async () => {

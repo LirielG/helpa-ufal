@@ -10,7 +10,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import { authHeader, invalidToken } from "../../helpers/auth.js";
+import { authCookie, invalidToken } from "../../helpers/auth.js";
 
 // Route contract: docs/bruno/Enrollments/Enroll-in-an-activity.yml.
 // If the team flattens the route (POST /enroll), this helper is the only line to change.
@@ -31,7 +31,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(201);
     expect(response.body).toEqual({
@@ -61,7 +61,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(201);
     expect(response.body.id).toBe(canceled.id);
@@ -90,12 +90,12 @@ describe("POST /activities/:activityId/enroll", () => {
 
     await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .set(...authCookie(student.token))
       .expect(201);
 
     const detail = await request(app)
       .get(`/activities/${activity.id}`)
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(detail.status).toBe(200);
     expect(detail.body.availableSlots).toBe(1);
@@ -108,7 +108,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .set(...authCookie(student.token))
       .send({ userId: other.user.id });
 
     expect(response.status).toBe(201);
@@ -133,7 +133,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(invalidToken()));
+      .set(...authCookie(invalidToken()));
 
     expect(response.status).toBe(401);
   });
@@ -147,7 +147,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(ghost.token));
+      .set(...authCookie(ghost.token));
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
@@ -164,7 +164,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(randomUUID()))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -186,7 +186,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -207,7 +207,7 @@ describe("POST /activities/:activityId/enroll", () => {
 
       const response = await request(app)
         .post(enrollUrl(activity.id))
-        .set(...authHeader(student.token));
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
@@ -223,12 +223,12 @@ describe("POST /activities/:activityId/enroll", () => {
     const student = await createStudent();
     await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .set(...authCookie(student.token))
       .expect(201);
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
@@ -249,12 +249,12 @@ describe("POST /activities/:activityId/enroll", () => {
     const second = await createStudent();
     await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(first.token))
+      .set(...authCookie(first.token))
       .expect(201);
 
     const response = await request(app)
       .post(enrollUrl(activity.id))
-      .set(...authHeader(second.token));
+      .set(...authCookie(second.token));
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
@@ -282,7 +282,7 @@ describe("POST /activities/:activityId/enroll", () => {
       students.map((s) =>
         request(app)
           .post(enrollUrl(activity.id))
-          .set(...authHeader(s.token)),
+          .set(...authCookie(s.token)),
       ),
     );
 

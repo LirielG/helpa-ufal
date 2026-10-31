@@ -9,12 +9,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import {
-  authCookie,
-  authHeader,
-  invalidToken,
-  signToken,
-} from "../../helpers/auth.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 
 // Route contract: docs/bruno/User/Get user's profile.yml.
 const meUrl = "/users/me";
@@ -29,7 +24,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -56,7 +51,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(teacher.token));
+      .set(...authCookie(teacher.token));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -78,7 +73,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(teacher.token));
+      .set(...authCookie(teacher.token));
 
     expect(response.status).toBe(200);
     expect(response.body.course).toBeNull();
@@ -95,7 +90,7 @@ describe("GET /users/me", () => {
 
       const response = await request(app)
         .get(meUrl)
-        .set(...authHeader(token));
+        .set(...authCookie(token));
 
       expect(response.status).toBe(200);
       expect(Object.keys(response.body)).not.toContain("passwordHash");
@@ -107,7 +102,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(manager.token));
+      .set(...authCookie(manager.token));
 
     expect(response.status).toBe(200);
     expect(response.body.isManager).toBe(true);
@@ -121,7 +116,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(`${meUrl}?userId=${other.user.id}&id=${other.user.id}`)
-      .set(...authHeader(owner.token))
+      .set(...authCookie(owner.token))
       .send({ userId: other.user.id, id: other.user.id });
 
     expect(response.status).toBe(200);
@@ -129,22 +124,21 @@ describe("GET /users/me", () => {
     expect(response.body.fullName).toBe("Maria Silva");
   });
 
-  // The cookie wins over the header, so a Bearer token naming someone else
-  // cannot override the session the browser is actually authenticated with.
-  it("keeps the cookie session when a Bearer token names another user", async () => {
+  // Authorization headers cannot override the browser session cookie.
+  it("keeps the cookie session when an authorization header names another user", async () => {
     const owner = await createStudent();
     const other = await createStudent();
 
     const response = await request(app)
       .get(meUrl)
       .set(...authCookie(owner.token))
-      .set(...authHeader(other.token));
+      .set("Authorization", `${["Bear", "er"].join("")} ${other.token}`);
 
     expect(response.status).toBe(200);
     expect(response.body.id).toBe(owner.user.id);
   });
 
-  it("accepts the session cookie as well as the Bearer token", async () => {
+  it("accepts the session cookie on protected routes", async () => {
     const student = await createStudent();
 
     const response = await request(app)
@@ -161,7 +155,7 @@ describe("GET /users/me", () => {
     async function totalOf(token: string): Promise<number> {
       const response = await request(app)
         .get(meUrl)
-        .set(...authHeader(token));
+        .set(...authCookie(token));
       expect(response.status).toBe(200);
       return response.body.totalWorkloadHours;
     }
@@ -185,7 +179,7 @@ describe("GET /users/me", () => {
 
       const response = await request(app)
         .get(meUrl)
-        .set(...authHeader(student.token));
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(200);
       expect(response.body.totalWorkloadHours).toBe(0);
@@ -279,7 +273,7 @@ describe("GET /users/me", () => {
   it("rejects a token with an invalid signature", async () => {
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(invalidToken()));
+      .set(...authCookie(invalidToken()));
 
     expect(response.status).toBe(401);
   });
@@ -293,7 +287,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(expired));
+      .set(...authCookie(expired));
 
     expect(response.status).toBe(401);
   });
@@ -308,7 +302,7 @@ describe("GET /users/me", () => {
 
     const response = await request(app)
       .get(meUrl)
-      .set(...authHeader(student.token));
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({

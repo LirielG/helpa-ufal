@@ -24,12 +24,7 @@ class AuthMiddleware implements IAuthMiddleware {
     required: boolean,
   ): Promise<AuthenticatedUser | null> {
     try {
-      const cookieToken = req.cookies?.token as string | undefined;
-      const headerToken = req.headers.authorization?.startsWith("Bearer ")
-        ? req.headers.authorization.slice(7)
-        : undefined;
-
-      const token = cookieToken ?? headerToken;
+      const token = req.cookies?.token as string | undefined;
 
       if (!token) throw new CustomError(401, "No token provided.");
 

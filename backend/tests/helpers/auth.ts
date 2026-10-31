@@ -36,11 +36,6 @@ export function invalidToken(): string {
   return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImZha2UifQ.assinatura-invalida";
 }
 
-/** Ready for `.set(...authHeader(token))`. */
-export function authHeader(token: string): [string, string] {
-  return ["Authorization", `Bearer ${token}`];
-}
-
 /** Ready for `.set(...authCookie(token))`. */
 export function authCookie(token: string): [string, string] {
   return ["Cookie", `token=${token}`];
