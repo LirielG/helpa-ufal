@@ -497,6 +497,27 @@ describe("ActivityService.update", () => {
 
   // ---------- Format, url and address ----------
 
+  it("accepts a frozen DTO when changing to ONLINE and preserves its address", async () => {
+    const { activityRepository, userRepository } = mockRepositories({
+      activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },
+    });
+    const service = new ActivityService({ activityRepository, userRepository });
+    const data = Object.freeze({ format: "ONLINE" as const, address: ADDRESS });
+
+    await expect(service.update("act-1", AUTHOR, data)).resolves.toMatchObject({
+      id: "act-1",
+      format: "ONLINE",
+      address: null,
+    });
+
+    expect(data).toEqual({ format: "ONLINE", address: ADDRESS });
+    expect(activityRepository.update).toHaveBeenCalledWith(
+      "act-1",
+      { format: "ONLINE", address: null },
+      "DELETE",
+    );
+  });
+
   it("accepts ONLINE when no url is sent and none is stored", async () => {
     const { activityRepository, userRepository } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivity()) },

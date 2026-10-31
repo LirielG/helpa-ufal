@@ -467,9 +467,10 @@ class ActivityService implements IActivityService {
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";
     const hasExistingAddress = !!activity.details?.address;
+    const updateData = { ...data };
 
     if (finalFormat === "ONLINE") {
-      data.address = null;
+      updateData.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -484,7 +485,7 @@ class ActivityService implements IActivityService {
 
     const updatedActivity = await this._activityRepository.update(
       id,
-      data,
+      updateData,
       addressAction,
     );
 
