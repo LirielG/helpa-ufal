@@ -28,6 +28,8 @@ const RELOAD_FAILED_MESSAGE =
   "Não foi possível carregar o status atual. Recarregue a página.";
 const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
+const STATUS_HINT_MESSAGE =
+  "Para concluir, primeiro marque a ação como Em andamento.";
 
 function managed(activityStatus: ActivityStatus): UserActivity {
   return makeManagedActivity({
@@ -116,6 +118,11 @@ describe("ManagedCard status control", () => {
       expect(statusSelect()).toBeEnabled();
       expect(statusSelect()).toHaveDisplayValue("Aberta");
       expect(optionLabels()).toEqual(["Aberta", "Em andamento", "Cancelada"]);
+      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
+      expect(statusSelect()).toHaveAttribute(
+        "aria-describedby",
+        `status-hint-${ACTION_ID}`,
+      );
     });
 
     it("offers completing and cancelling an IN_PROGRESS action", () => {
@@ -128,6 +135,8 @@ describe("ManagedCard status control", () => {
         "Concluída",
         "Cancelada",
       ]);
+      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
     });
 
     it.each([
@@ -141,6 +150,8 @@ describe("ManagedCard status control", () => {
         expect(statusSelect()).toBeDisabled();
         expect(statusSelect()).toHaveDisplayValue(label);
         expect(optionLabels()).toEqual([label]);
+        expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+        expect(statusSelect()).not.toHaveAttribute("aria-describedby");
       },
     );
   });
@@ -149,6 +160,8 @@ describe("ManagedCard status control", () => {
     it("applies IN_PROGRESS right away and shows it without reloading", async () => {
       const bodies = recordPatches(respondWithStatus("IN_PROGRESS"));
       const { user } = renderCard(managed("OPEN"));
+
+      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
 
       await user.selectOptions(statusSelect(), "Em andamento");
 
@@ -161,6 +174,8 @@ describe("ManagedCard status control", () => {
         "Concluída",
         "Cancelada",
       ]);
+      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
       expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
     });
   });
