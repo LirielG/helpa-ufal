@@ -60,6 +60,15 @@ describe("AppRoutes", () => {
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
+    it("sends a guest from /moderacao to the login screen without rendering moderation", async () => {
+      render(<AppRoutes />, { route: "/moderacao" });
+
+      expect(
+        await screen.findByRole("button", { name: "Entrar" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Moderação de denúncias")).toBeNull();
+    });
+
     it("returns the user to the route they tried to reach after logging in", async () => {
       const { user } = render(<AppRoutes />, { route: "/profile" });
 

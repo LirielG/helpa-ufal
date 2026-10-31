@@ -6,6 +6,11 @@ import type {
 } from "@/services/contracts/enrollment";
 import type { UserActivityItem } from "@/services/contracts/user";
 import type { CertificateValidation } from "@/services/contracts/certificate";
+import type {
+  Report,
+  ReportActivity,
+  ReportReporter,
+} from "@/services/contracts/report";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 
@@ -259,6 +264,39 @@ export function makeCertificateValidation(
     workloadHours: 8,
     issuedAt: "2026-06-15T12:00:00.000Z",
     ...overrides,
+  };
+}
+
+/** Item of GET /reports and response of PUT /reports/:reportId/resolution. */
+export function makeReport(
+  overrides: Partial<Omit<Report, "activity" | "reporter">> & {
+    activity?: Partial<ReportActivity>;
+    reporter?: Partial<ReportReporter> | null;
+  } = {},
+): Report {
+  const { activity, reporter, ...rest } = overrides;
+
+  return {
+    id: unique("report"),
+    category: "MISINFORMATION",
+    description: "O endereço informado na descrição não confere.",
+    createdAt: "2026-06-05T19:44:20.000Z",
+    resolvedAt: null,
+    ...rest,
+    activity: {
+      id: unique("activity"),
+      title: "Oficina de Introdução à Programação",
+      authorId: unique("author"),
+      ...activity,
+    },
+    reporter:
+      reporter === null
+        ? null
+        : {
+            id: unique("reporter"),
+            fullName: "Maria Clara Santos",
+            ...reporter,
+          },
   };
 }
 

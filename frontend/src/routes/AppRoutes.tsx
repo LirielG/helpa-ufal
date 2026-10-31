@@ -10,6 +10,7 @@ import {
   NotFound,
   EnrollmentsPage,
   CertificateValidation,
+  ModerationPage,
 } from "../pages";
 
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
@@ -82,6 +83,14 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/moderacao"
+        element={
+          <ProtectedRoute>
+            <ModerationPage />
           </ProtectedRoute>
         }
       />
