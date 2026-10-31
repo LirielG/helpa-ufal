@@ -9,24 +9,24 @@ fazer de certo jeito só desempata duas opções de mesmo valor para o consumido
 
 ## 1. Recursos e caminhos
 
-| Regra | Exemplo |
-|---|---|
-| O path só tem substantivos. Coleções vão no plural. | `/activities`, `/reports` |
-| Segmentos com mais de uma palavra usam kebab-case. | `/sigaa-activities`, `/certificate-validations` |
-| Parâmetros de path se chamam `:<recurso>Id`, nunca `:id`. | `/activities/:activityId` |
-| Algo do próprio usuário se acessa por `me` no path. Quem age vem sempre do token, nunca de params, query ou corpo. | `/users/me`, `/activities/:activityId/enrollments/me` |
-| `POST` em coleção fica reservado para quando o cliente escolhe o que criar. | `POST /activities` |
-| Uma operação de estado é um sub-recurso no singular. | `/activities/:activityId/status`, `/reports/:reportId/resolution` |
-| Uma representação diferente do mesmo dado ganha coleção própria. | `/certificate-validations/:validationCode` (DTO público mínimo) |
-| Arquivos são um sub-recurso `file`. | `/certificates/:certificateId/file` |
+| Regra                                                                                                                                                                                            | Exemplo                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| O path só tem substantivos. Coleções vão no plural.                                                                                                                                              | `/activities`, `/reports`                                                                  |
+| Segmentos com mais de uma palavra usam kebab-case.                                                                                                                                               | `/sigaa-activities`, `/certificate-validations`                                            |
+| Parâmetros de path se chamam `:<recurso>Id`, nunca `:id`.                                                                                                                                        | `/activities/:activityId`                                                                  |
+| Algo do próprio usuário se acessa por `me` no path. Quem age vem sempre do token, nunca de params, query ou corpo.                                                                               | `/users/me`, `/activities/:activityId/enrollments/me`                                      |
+| `POST` em coleção fica reservado para quando o cliente escolhe o que criar.                                                                                                                      | `POST /activities`                                                                         |
+| Uma operação de estado é um sub-recurso no singular.                                                                                                                                             | `/activities/:activityId/status`, `/reports/:reportId/resolution`                          |
+| Uma representação diferente do mesmo dado ganha coleção própria.                                                                                                                                 | `/certificate-validations/:validationCode` (DTO público mínimo)                            |
+| Arquivos são um sub-recurso `file`.                                                                                                                                                              | `/certificates/:certificateId/file`                                                        |
 | Aninhamento tem no máximo um id ancestral, usado só para escopar uma coleção (listar ou criar dentro do pai) ou para `me`. Um item com id próprio tem uma única URL canônica, no primeiro nível. | `GET /activities/:activityId/enrollments`, mas `PUT /enrollments/:enrollmentId/attendance` |
 
 **Inscrição do próprio usuário:**
 
-| Rota | Efeito | Status |
-|---|---|---|
-| `PUT /activities/:activityId/enrollments/me` | cria a minha inscrição | `201` na primeira vez; `200` com a inscrição existente se eu já estiver inscrito |
-| `DELETE /activities/:activityId/enrollments/me` | cancela a minha inscrição | `204` |
+| Rota                                            | Efeito                    | Status                                                                           |
+| ----------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `PUT /activities/:activityId/enrollments/me`    | cria a minha inscrição    | `201` na primeira vez; `200` com a inscrição existente se eu já estiver inscrito |
+| `DELETE /activities/:activityId/enrollments/me` | cancela a minha inscrição | `204`                                                                            |
 
 Como o `PUT` é idempotente, não existe 409 "already enrolled". Os 409 de regra de negócio
 continuam (ação fechada, sem vagas). Se um gestor precisar inscrever outra pessoa, a rota será
@@ -55,14 +55,14 @@ continuam (ação fechada, sem vagas). Se um gestor precisar inscrever outra pes
 
 ## 3. Paginação
 
-| Ponto | Regra |
-|---|---|
-| Nomes | `page` (começa em 1) e `limit` |
-| Teto de `limit` | **100**, numa constante única |
-| Padrão de `limit` | **20** em toda rota paginada |
-| Fora da faixa ou não inteiro | **400**, com um item `{ field, code, message }` por parâmetro. Nunca *clamp* silencioso |
-| `page` além da última | **200** com `items: []`, e `total`/`totalPages` corretos |
-| Onde é validado | um schema Zod compartilhado, aplicado pelo `validateQuery` |
+| Ponto                        | Regra                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| Nomes                        | `page` (começa em 1) e `limit`                                                          |
+| Teto de `limit`              | **100**, numa constante única                                                           |
+| Padrão de `limit`            | **20** em toda rota paginada                                                            |
+| Fora da faixa ou não inteiro | **400**, com um item `{ field, code, message }` por parâmetro. Nunca _clamp_ silencioso |
+| `page` além da última        | **200** com `items: []`, e `total`/`totalPages` corretos                                |
+| Onde é validado              | um schema Zod compartilhado, aplicado pelo `validateQuery`                              |
 
 **Envelope:**
 
@@ -91,34 +91,36 @@ continuam (ação fechada, sem vagas). Se um gestor precisar inscrever outra pes
   "status": 422,
   "code": "SLOTS_BELOW_APPROVED_ENROLLMENTS",
   "message": "slots cannot be reduced below the current number of approved enrollments (12).",
-  "errors": [{ "field": "slots", "code": "BELOW_APPROVED_ENROLLMENTS", "message": "..." }],
+  "errors": [
+    { "field": "slots", "code": "BELOW_APPROVED_ENROLLMENTS", "message": "..." }
+  ],
   "details": { "approvedEnrollments": 12 }
 }
 ```
 
-| Campo | Regra |
-|---|---|
-| `status` | obrigatório, igual ao status HTTP |
-| `code` | **obrigatório**. Identificador estável em `SCREAMING_SNAKE_CASE` e parte do contrato: mudá-lo é quebra de contrato. É o que o frontend usa para escolher o texto |
-| `message` | obrigatório. Texto em **inglês** para quem depura: uma frase, com ponto final, citando campos pelo nome da API. O cliente nunca faz parse dela, e mudar a redação não quebra contrato |
-| `errors[]` | em 400 e 422, um item `{ field, code, message }` por problema. `field` usa notação de ponto (`address.zipCode`) ou o nome do parâmetro de path/query |
-| `details` | opcional. Dados que o cliente precisaria extrair do texto |
-| `stack` | só com `NODE_ENV=development` |
+| Campo      | Regra                                                                                                                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`   | obrigatório, igual ao status HTTP                                                                                                                                                     |
+| `code`     | **obrigatório**. Identificador estável em `SCREAMING_SNAKE_CASE` e parte do contrato: mudá-lo é quebra de contrato. É o que o frontend usa para escolher o texto                      |
+| `message`  | obrigatório. Texto em **inglês** para quem depura: uma frase, com ponto final, citando campos pelo nome da API. O cliente nunca faz parse dela, e mudar a redação não quebra contrato |
+| `errors[]` | em 400 e 422, um item `{ field, code, message }` por problema. `field` usa notação de ponto (`address.zipCode`) ou o nome do parâmetro de path/query                                  |
+| `details`  | opcional. Dados que o cliente precisaria extrair do texto                                                                                                                             |
+| `stack`    | só com `NODE_ENV=development`                                                                                                                                                         |
 
 Nenhuma `message` do backend é exibida diretamente ao usuário. O frontend traduz para pt-BR a
 partir de `code` e `field` e, quando não há tradução, cai num texto genérico.
 
 **`code`s genéricos**, usados quando não há um específico:
 
-| Status | `code` |
-|---|---|
-| 400 | `VALIDATION_ERROR` |
-| 401 | `UNAUTHENTICATED` |
-| 403 | `FORBIDDEN` |
-| 404 | `NOT_FOUND` |
-| 409 | `CONFLICT` |
-| 422 | `UNPROCESSABLE` |
-| 500 | `INTERNAL_ERROR` |
+| Status | `code`             |
+| ------ | ------------------ |
+| 400    | `VALIDATION_ERROR` |
+| 401    | `UNAUTHENTICATED`  |
+| 403    | `FORBIDDEN`        |
+| 404    | `NOT_FOUND`        |
+| 409    | `CONFLICT`         |
+| 422    | `UNPROCESSABLE`    |
+| 500    | `INTERNAL_ERROR`   |
 
 `code`s de item de `errors[]` já definidos: `INVALID_UUID`, `UNKNOWN_PARAMETER`,
 `INVALID_DATETIME`. `SESSION_INVALID` é o 401 de sessão inválida (seção 5). Os `code`s
@@ -148,11 +150,11 @@ a validação pública e o download de certificado.
 
 **Fronteira entre 400, 409 e 422:**
 
-| Status | Quando | Corpo |
-|---|---|---|
-| **400** | Dá para decidir olhando só a requisição: tipo, formato e regras entre campos do mesmo corpo. | sempre com `errors[]` |
-| **422** | A requisição é bem formada, mas um valor viola uma regra que depende de dados guardados (teto de horas da ação, vagas abaixo das inscrições aprovadas, senha nova igual à atual). | `errors[]` com `field` quando há um campo culpado |
-| **409** | O estado atual do recurso impede a operação, seja qual for o valor enviado (ação fechada, sem vagas, duplicidade). | sem `errors[]`; dados para o cliente vão em `details` |
+| Status  | Quando                                                                                                                                                                            | Corpo                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **400** | Dá para decidir olhando só a requisição: tipo, formato e regras entre campos do mesmo corpo.                                                                                      | sempre com `errors[]`                                 |
+| **422** | A requisição é bem formada, mas um valor viola uma regra que depende de dados guardados (teto de horas da ação, vagas abaixo das inscrições aprovadas, senha nova igual à atual). | `errors[]` com `field` quando há um campo culpado     |
+| **409** | O estado atual do recurso impede a operação, seja qual for o valor enviado (ação fechada, sem vagas, duplicidade).                                                                | sem `errors[]`; dados para o cliente vão em `details` |
 
 ## 5. Autenticação
 
@@ -191,24 +193,24 @@ número) responde 400 `INVALID_DATETIME`, via `z.iso.datetime()`. Converter para
 
 **Ausente × `null`:**
 
-| Contexto | Regra |
-|---|---|
-| Resposta | todo campo do tipo sempre presente; sem valor = `null`; lista vazia = `[]`, nunca `null` |
-| `POST` e `PUT` | campo opcional pode vir ausente ou `null`, com o mesmo significado: sem valor |
-| `PATCH` | ausente = mantém; `null` = limpa, só em campo anulável. Em campo obrigatório, `null` dá 400 |
-| String vazia | nunca significa "sem valor": `""` (depois do `trim`) num campo anulável dá 400 |
+| Contexto       | Regra                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| Resposta       | todo campo do tipo sempre presente; sem valor = `null`; lista vazia = `[]`, nunca `null`    |
+| `POST` e `PUT` | campo opcional pode vir ausente ou `null`, com o mesmo significado: sem valor               |
+| `PATCH`        | ausente = mantém; `null` = limpa, só em campo anulável. Em campo obrigatório, `null` dá 400 |
+| String vazia   | nunca significa "sem valor": `""` (depois do `trim`) num campo anulável dá 400              |
 
 ## 7. Filtros e busca
 
-| Ponto | Regra |
-|---|---|
-| Combinação | todos os filtros, inclusive `search`, se combinam com `AND`. Não existe precedência |
-| `search` | parcial, sem diferenciar maiúsculas, sobre os campos que a rota declara no Bruno |
-| Valor vazio (`?type=`) | **400**. Ausente = sem filtro; presente = precisa ser válido |
-| Enum inválido | **400** |
-| Parâmetro desconhecido | **400** `UNKNOWN_PARAMETER`. A query é um `z.strictObject` |
-| Onde valida | schema Zod da rota, aplicado pelo `validateQuery` (o mesmo da paginação) |
-| Opções de filtro dinâmicas | rota irmã `GET /<coleção>/filters` |
+| Ponto                      | Regra                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| Combinação                 | todos os filtros, inclusive `search`, se combinam com `AND`. Não existe precedência |
+| `search`                   | parcial, sem diferenciar maiúsculas, sobre os campos que a rota declara no Bruno    |
+| Valor vazio (`?type=`)     | **400**. Ausente = sem filtro; presente = precisa ser válido                        |
+| Enum inválido              | **400**                                                                             |
+| Parâmetro desconhecido     | **400** `UNKNOWN_PARAMETER`. A query é um `z.strictObject`                          |
+| Onde valida                | schema Zod da rota, aplicado pelo `validateQuery` (o mesmo da paginação)            |
+| Opções de filtro dinâmicas | rota irmã `GET /<coleção>/filters`                                                  |
 
 ## 8. Tipos no frontend
 
