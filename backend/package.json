@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
@@ -42,8 +42,8 @@
     "pdf-lib": "^1.17.1",
     "pg": "^8.20.0",
     "qrcode": "^1.5.4",
-    "undici": "^8.10.0",
-    "zod": "^4.4.3"
+    "undici": "^8.12.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -58,7 +58,7 @@
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "prettier": "^3.9.8",
-    "prisma": "^7.8.0",
+    "prisma": "^7.10.1",
     "supertest": "^7.2.2",
     "tsc-alias": "^1.9.9",
     "tsx": "^4.7.1",
