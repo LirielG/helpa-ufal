@@ -429,16 +429,21 @@ class ActivityService implements IActivityService {
       const approvedEnrollments =
         await this._activityRepository.countApprovedEnrollments(activity.id);
       if (data.slots < approvedEnrollments) {
+        const message = `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`;
         throw new ValidationError(
           [
             {
               field: "slots",
               code: "BELOW_APPROVED_ENROLLMENTS",
-              message: `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`,
+              message,
             },
           ],
-          undefined,
-          { details: { approvedEnrollments } },
+          message,
+          {
+            status: 422,
+            code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+            details: { approvedEnrollments },
+          },
         );
       }
     }

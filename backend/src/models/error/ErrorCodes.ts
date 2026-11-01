@@ -21,7 +21,8 @@ export type SpecificErrorCode =
   | "NO_AVAILABLE_SLOTS"
   | "ACTIVITY_NOT_COMPLETED"
   | "ENROLLMENT_NOT_APPROVED"
-  | "ALREADY_IN_USE";
+  | "ALREADY_IN_USE"
+  | "SLOTS_BELOW_APPROVED_ENROLLMENTS";
 
 export type ErrorCode = GenericErrorCode | SpecificErrorCode;
 
