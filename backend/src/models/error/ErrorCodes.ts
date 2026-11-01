@@ -5,6 +5,7 @@ export const GENERIC_ERROR_CODES = {
   404: "NOT_FOUND",
   409: "CONFLICT",
   422: "UNPROCESSABLE",
+  429: "TOO_MANY_REQUESTS",
   500: "INTERNAL_ERROR",
 } as const;
 

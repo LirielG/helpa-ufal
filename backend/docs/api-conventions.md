@@ -112,15 +112,52 @@ partir de `code` e `field` e, quando não há tradução, cai num texto genéric
 
 **`code`s genéricos**, usados quando não há um específico:
 
-| Status | `code`             |
-| ------ | ------------------ |
-| 400    | `VALIDATION_ERROR` |
-| 401    | `UNAUTHENTICATED`  |
-| 403    | `FORBIDDEN`        |
-| 404    | `NOT_FOUND`        |
-| 409    | `CONFLICT`         |
-| 422    | `UNPROCESSABLE`    |
-| 500    | `INTERNAL_ERROR`   |
+| Status | `code`              |
+| ------ | ------------------- |
+| 400    | `VALIDATION_ERROR`  |
+| 401    | `UNAUTHENTICATED`   |
+| 403    | `FORBIDDEN`         |
+| 404    | `NOT_FOUND`         |
+| 409    | `CONFLICT`          |
+| 422    | `UNPROCESSABLE`     |
+| 429    | `TOO_MANY_REQUESTS` |
+| 500    | `INTERNAL_ERROR`    |
+
+O `429` inclui `Retry-After` em segundos até a janela do limite que bloqueou a
+requisição expirar. `RateLimit` e `RateLimit-Policy` informam as políticas aplicadas;
+os três cabeçalhos são expostos pelo CORS para o frontend.
+
+**Limites de requisições:**
+
+| Política                      | Chave do contador                                                      | Limite padrão | Janela |
+| ----------------------------- | ---------------------------------------------------------------------- | ------------- | ------ |
+| Geral da instância            | Única, compartilhada por todos os clientes e rotas                     | 3.000         | 1 min  |
+| Geral do cliente anônimo      | IP                                                                     | 120           | 1 min  |
+| Geral do cliente identificado | ID do usuário no JWT verificado                                        | 300           | 1 min  |
+| Login                         | IP, somente `POST /auth/login`                                         | 10            | 15 min |
+| Cadastro                      | IP, somente `POST /auth/register`                                      | 5             | 1 h    |
+| Validação de certificado      | IP, todos os códigos em `GET /certificate-validations/:validationCode` | 60            | 15 min |
+
+- A quota geral do cliente é compartilhada entre rotas. Um mesmo usuário mantém
+  seu contador ao trocar de IP ou renovar o token; usuários diferentes no mesmo IP
+  têm contadores próprios. Requisições sem JWT válido compartilham a quota do IP.
+- A identidade para a quota vem somente do cookie `token`, após verificação da
+  assinatura e da expiração. Isso não autentica a requisição: as rotas protegidas
+  continuam verificando no banco a existência do usuário, a versão da sessão e as
+  permissões. Um token revogado não recupera acesso por identificar um contador.
+- Os contadores específicos de login, cadastro e certificado são independentes entre
+  si e continuam por IP, mesmo com cookie válido. As quotas gerais também se aplicam.
+- `OPTIONS` não consome quota. As demais requisições contam, inclusive as que
+  respondem erro. Ao esgotar a quota da instância, todos os clientes recebem `429`
+  nas requisições seguintes até o contador reiniciar.
+- O IP é obtido pelo Express conforme `TRUST_PROXY`. A normalização padrão da
+  biblioteca agrupa endereços IPv6 em redes `/56`.
+- `RATE_LIMIT_ANONYMOUS_PER_MINUTE`, `RATE_LIMIT_AUTHENTICATED_PER_MINUTE` e
+  `RATE_LIMIT_GLOBAL_PER_MINUTE` aceitam inteiros positivos e configuram as quotas
+  gerais. Os valores padrão são iniciais e precisam ser calibrados conforme a carga.
+- `RATE_LIMIT_ENABLED=false` desliga todos os limitadores. Os contadores ficam em
+  memória por processo, são perdidos no reinício e não são compartilhados entre
+  instâncias. O teto no Express complementa a proteção do proxy reverso.
 
 `code`s de item de `errors[]` já definidos: `INVALID_UUID`, `UNKNOWN_PARAMETER`,
 `INVALID_DATETIME`. `SESSION_INVALID` é o 401 de sessão inválida (seção 5). Os `code`s

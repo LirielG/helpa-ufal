@@ -17,6 +17,7 @@ describe("CustomError", () => {
     [404, "NOT_FOUND"],
     [409, "CONFLICT"],
     [422, "UNPROCESSABLE"],
+    [429, "TOO_MANY_REQUESTS"],
     [500, "INTERNAL_ERROR"],
   ] as const)("derives the generic code of status %i: %s", (status, code) => {
     expect(new CustomError(status, "Any message.").code).toBe(code);
