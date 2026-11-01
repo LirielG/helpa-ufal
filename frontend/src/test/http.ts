@@ -56,7 +56,7 @@ export const handlers = [
       items: [makeUserActivityItem()],
       total: 1,
       page: 1,
-      limit: 100,
+      limit: 20,
       totalPages: 1,
     }),
   ),

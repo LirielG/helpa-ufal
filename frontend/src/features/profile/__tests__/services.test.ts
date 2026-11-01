@@ -7,6 +7,7 @@ import {
 } from "@/test/factories";
 import { ApiError } from "@/services/apiError";
 import type { UserActivityItem } from "@/services/contracts/user";
+import type { Paginated } from "@/services/contracts/common";
 import {
   fetchUserActivities,
   updateActivityStatus,
@@ -15,7 +16,10 @@ import {
 
 const ACTION_ID = "act-status";
 
-function serveUserActivities(items: UserActivityItem[]) {
+function serveUserActivities(
+  items: UserActivityItem[],
+  metadata: Partial<Omit<Paginated<UserActivityItem>, "items">> = {},
+) {
   let url: URL | undefined;
   server.use(
     http.get(`${API}/users/me/activities`, ({ request }) => {
@@ -24,8 +28,9 @@ function serveUserActivities(items: UserActivityItem[]) {
         items,
         total: items.length,
         page: 1,
-        limit: 100,
+        limit: 20,
         totalPages: 1,
+        ...metadata,
       });
     }),
   );
@@ -36,11 +41,25 @@ describe("fetchUserActivities", () => {
   it.each(["enrolled", "completed", "managed"] as const)(
     "asks the history route for the %s filter",
     async (filter) => {
-      const requestedUrl = serveUserActivities([]);
+      const item = makeUserActivityItem();
+      const requestedUrl = serveUserActivities([item], {
+        total: 121,
+        page: 3,
+        totalPages: 7,
+      });
 
-      await fetchUserActivities(filter);
+      const result = await fetchUserActivities(filter, 3);
 
       expect(requestedUrl()?.searchParams.get("filter")).toBe(filter);
+      expect(requestedUrl()?.searchParams.get("page")).toBe("3");
+      expect(requestedUrl()?.searchParams.get("limit")).toBe("20");
+      expect(result).toMatchObject({
+        items: [{ action: item }],
+        total: 121,
+        page: 3,
+        limit: 20,
+        totalPages: 7,
+      });
     },
   );
 
@@ -54,7 +73,9 @@ describe("fetchUserActivities", () => {
     const item = makeUserActivityItem({ ...action });
     serveUserActivities([item]);
 
-    const [activity] = await fetchUserActivities("enrolled");
+    const {
+      items: [activity],
+    } = await fetchUserActivities("enrolled", 1);
 
     expect(activity).toMatchObject({
       description: "Descrição da ação de teste.",
@@ -73,7 +94,9 @@ describe("fetchUserActivities", () => {
       makeUserActivityItem({ campus: "PENEDO", details: null }),
     ]);
 
-    const [activity] = await fetchUserActivities("managed");
+    const {
+      items: [activity],
+    } = await fetchUserActivities("managed", 1);
 
     expect(activity.location).toBe("UFAL - Campus Penedo");
     expect(activity.description).toBe("Sem descrição informada.");
@@ -89,7 +112,7 @@ describe("fetchUserActivities", () => {
       ),
     );
 
-    await expect(fetchUserActivities("managed")).rejects.toBeInstanceOf(
+    await expect(fetchUserActivities("managed", 1)).rejects.toBeInstanceOf(
       ApiError,
     );
   });
