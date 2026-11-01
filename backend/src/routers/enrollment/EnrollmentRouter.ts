@@ -1,5 +1,6 @@
 import express from "express";
 import EnrollmentController from "@/controllers/enrollment/EnrollmentController.js";
+import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollmentController.js";
 import AuthMiddleware from "@/middlewares/auth/AuthMiddleware.js";
 
 import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
@@ -7,7 +8,7 @@ import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
 import { validateQuery } from "@/middlewares/validation/validateQuery.js";
 
 const router = express.Router();
-const enrollmentController = new EnrollmentController();
+const enrollmentController: IEnrollmentController = new EnrollmentController();
 const authMiddleware = new AuthMiddleware();
 
 /**
