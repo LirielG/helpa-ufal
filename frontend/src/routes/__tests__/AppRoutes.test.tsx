@@ -11,6 +11,7 @@ import {
   signIn,
   userEvent,
   waitFor,
+  within,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
@@ -203,7 +204,10 @@ describe("AppRoutes", () => {
       signIn();
       const { user } = render(<AppRoutes />, { route: "/profile" });
 
-      await user.click(await screen.findByRole("button", { name: "Ações" }));
+      await screen.findByText("Dados Pessoais");
+
+      const actionButtons = screen.getAllByRole("button", { name: "Ações" });
+      await user.click(actionButtons[actionButtons.length - 1]);
 
       expect(
         await screen.findByRole("button", { name: "Entrar" }),
