@@ -1,0 +1,321 @@
+info:
+  name: List activities
+  type: http
+  seq: 2
+  tags:
+    - Activities
+
+http:
+  method: GET
+  url: "{{baseUrl}}/activities"
+  params:
+    - name: page
+      value: "1"
+      type: query
+      description: "Page number"
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: "Items per page"
+      disabled: true
+    - name: search
+      value: ""
+      type: query
+      description: Free text search on activity title (partial, case-insensitive). Combines with all other filters.
+      disabled: true
+    - name: area
+      value: Saúde
+      type: query
+      description: Filter by area — exact match, case-insensitive, on details.area. Empty values are ignored (no filtering, never a 400). Valid values come from GET /activities/filters.
+      disabled: true
+    - name: status
+      value: OPEN
+      type: query
+      description: Filter by activity status.
+      disabled: true
+    - name: status
+      value: IN_PROGRESS
+      type: query
+      description: Filter by activity status.
+      disabled: true
+    - name: status
+      value: COMPLETED
+      type: query
+      description: Filter by activity status.
+      disabled: true
+    - name: status
+      value: CANCELLED
+      type: query
+      description: Filter by activity status.
+      disabled: true
+    - name: type
+      value: EXTENSION
+      type: query
+      description: Filter by activity type.
+      disabled: true
+    - name: type
+      value: COURSE
+      type: query
+      description: Filter by activity type.
+      disabled: true
+    - name: type
+      value: EVENT
+      type: query
+      description: Filter by activity type.
+      disabled: true
+    - name: type
+      value: LECTURE
+      type: query
+      description: Filter by activity type.
+      disabled: true
+    - name: type
+      value: OTHER
+      type: query
+      description: Filter by activity type.
+      disabled: true
+    - name: campus
+      value: MACEIO
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: ARAPIRACA
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: PALMEIRA
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: PENEDO
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: RIO_LARGO
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: DELMIRO_GOUVEIA
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: campus
+      value: SANTANA_IPANEMA
+      type: query
+      description: Filter by campus.
+      disabled: true
+    - name: format
+      value: IN_PERSON
+      type: query
+      description: Filter by activity format.
+      disabled: true
+    - name: format
+      value: ONLINE
+      type: query
+      description: Filter by activity format.
+      disabled: true
+    - name: format
+      value: HYBRID
+      type: query
+      description: Filter by activity format.
+      disabled: true
+    - name: page
+      value: "1"
+      type: query
+      description: "Page number."
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: "Items per page."
+      disabled: true
+    - name: orderBy
+      value: created_at
+      type: query
+      description: "Sort field: created_at (default) or start_date."
+      disabled: true
+    - name: order
+      value: desc
+      type: query
+      description: "Sort direction: asc or desc (default: desc)."
+      disabled: true
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Filtered by area and format
+    description: Activities from a single area, combined with another filter.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: GET
+      params:
+        - name: area
+          value: Saúde
+          type: query
+          description: Exact match, case-insensitive, on details.area
+        - name: format
+          value: ONLINE
+          type: query
+          description: Combines with area (AND)
+        - name: page
+          value: "1"
+          type: query
+        - name: limit
+          value: "20"
+          type: query
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "activities": [
+              {
+                "id": "a1b2c3d4-0000-4000-8000-000000000001",
+                "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+                "title": "Primeiros Socorros para Iniciantes",
+                "type": "COURSE",
+                "campus": "ARAPIRACA",
+                "startDate": "2026-08-01T08:00:00.000Z",
+                "endDate": "2026-08-15T12:00:00.000Z",
+                "slots": 40,
+                "status": "OPEN",
+                "createdAt": "2026-07-20T10:00:00.000Z",
+                "updatedAt": "2026-07-20T10:00:00.000Z",
+                "deletedAt": null,
+                "details": {
+                  "activityId": "a1b2c3d4-0000-4000-8000-000000000001",
+                  "description": "Noções básicas de primeiros socorros.",
+                  "area": "Saúde",
+                  "format": "ONLINE",
+                  "url": "https://meet.example.com/primeiros-socorros",
+                  "workloadHours": 20,
+                  "addressId": null,
+                  "createdAt": "2026-07-20T10:00:00.000Z",
+                  "updatedAt": "2026-07-20T10:00:00.000Z"
+                },
+                "availableSlots": 27
+              }
+            ],
+            "total": 1
+          }
+  - name: 200 Area with no matches
+    description: Unknown area answers 200 with an empty page — never 404.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: GET
+      params:
+        - name: area
+          value: Astrobiologia
+          type: query
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "activities": [],
+            "total": 0
+          }
+  - name: 400 Validation error
+    description: Invalid pagination or enum filter value.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: GET
+      params:
+        - name: limit
+          value: "101"
+          type: query
+          description: Above the ceiling
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "limit",
+                "message": "limit can not exceed 100."
+              }
+            ]
+          }
+  - name: 500 Internal server error
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  # GET /activities — List activities
+
+  Returns the paginated list of activities. Removed activities (soft delete,
+  `deletedAt`) never appear.
+
+  **Authentication:** public.
+
+  ## Response envelope
+  This route does not use the conventional envelope yet: it answers
+  `{ "activities": [...], "total": <number> }`. `total` reflects all applied
+  filters; `activities` carries the current page. Items embed the `details`
+  relation (including `details.area`) and the computed `availableSlots`.
+
+  ## Filters (all optional; all combine with AND)
+  | Param | Match | Notes |
+  |-------|-------|-------|
+  | `search` | Partial, case-insensitive, on `title` | Combines with the other filters |
+  | `area` | Exact, case-insensitive, on `details.area` | Empty value = no filtering, never a 400. Valid values: `GET /activities/filters` |
+  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED | Present-and-empty (`?status=`) is a 400, not "no filter" |
+  | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | Present-and-empty (`?type=`) is a 400, not "no filter" |
+  | `campus` | Enum: MACEIO, ARAPIRACA, PALMEIRA, PENEDO, RIO_LARGO, DELMIRO_GOUVEIA, SANTANA_IPANEMA | Case-sensitive. Unknown or empty value is a 400 on `campus` |
+  | `format` | Enum: IN_PERSON, ONLINE, HYBRID | Present-and-empty (`?format=`) is a 400, not "no filter" |
+  | `page` / `limit` | Pagination | Defaults and ceiling from the conventions. Integers only: `10.9`, `20abc` and an empty value are a 400 |
+  | `orderBy` / `order` | `created_at` (default) or `start_date`; `asc`/`desc` (default `desc`) | Present-and-empty is a 400 |
+
+  A parameter that is **absent** takes its default or means "no filter". A
+  parameter that is **present but empty** is a validation error.
+
+  `startAfter` / `endBefore` were documented in a previous version of this
+  contract but are **not implemented**; they return when a route actually
+  supports them.
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400    | Invalid pagination or enum filter (`{ status, message, errors[] }`) |
+  | 500    | Unexpected server error (`{ status, message }`) |
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

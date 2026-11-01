@@ -1,0 +1,337 @@
+info:
+  name: List user's activities
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseUrl}}/users/me/activities"
+  params:
+    - name: filter
+      value: enrolled
+      type: query
+      description: enrolled | completed | managed (required)
+    - name: page
+      value: "1"
+      type: query
+      description: Current page
+      disabled: true
+    - name: limit
+      value: "20"
+      type: query
+      description: Items per page
+      disabled: true
+
+examples:
+  - name: 200 filter=enrolled
+    description: Approved enrollment in an activity with status OPEN or IN_PROGRESS.
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000030",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+              "title": "Lagoon Cleanup Volunteer Day",
+              "type": "EXTENSION",
+              "campus": "MACEIO",
+              "startDate": "2026-08-20T14:00:00.000Z",
+              "endDate": "2026-08-20T18:00:00.000Z",
+              "slots": 50,
+              "availableSlots": 12,
+              "status": "OPEN",
+              "details": {
+                "description": "Volunteer action to collect waste around the lagoon.",
+                "area": "Meio Ambiente",
+                "format": "IN_PERSON",
+                "url": null,
+                "workloadHours": 8,
+                "address": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000040",
+                  "addressLine": "Rua da Lagoa, 100",
+                  "district": "Pontal da Barra",
+                  "zipCode": "57010000",
+                  "city": "Maceió",
+                  "state": "AL"
+                }
+              },
+              "deletedAt": null,
+              "enrollment": {
+                "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000030",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": null,
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-02T12:00:00.000Z",
+                "updatedAt": "2026-08-02T12:00:00.000Z"
+              },
+              "certificate": null
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+
+  - name: 200 filter=completed
+    description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear. A homologated presence (true) carries its certificate; a not homologated one (null) has certificate null.
+
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000032",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+              "title": "Academic Writing Lecture",
+              "type": "LECTURE",
+              "campus": "ARAPIRACA",
+              "startDate": "2026-06-10T13:00:00.000Z",
+              "endDate": "2026-06-10T17:00:00.000Z",
+              "slots": 80,
+              "availableSlots": 3,
+              "status": "COMPLETED",
+              "details": {
+                "description": "Lecture on scientific writing.",
+                "area": "Educação",
+                "format": "IN_PERSON",
+                "url": null,
+                "workloadHours": 4,
+                "address": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000041",
+                  "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                  "district": "Bom Sucesso",
+                  "zipCode": "57309005",
+                  "city": "Arapiraca",
+                  "state": "AL"
+                }
+              },
+              "deletedAt": null,
+              "enrollment": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000032",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-05-28T09:00:00.000Z",
+                "updatedAt": "2026-06-11T10:30:00.000Z"
+              },
+              "certificate": {
+                "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "validationCode": "7KQ4MX9T2R",
+                "issuedAt": "2026-06-11T10:30:00.000Z"
+              }
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+
+  - name: 200 filter=completed with a deleted activity
+    description: The author deleted the activity after the user's presence was homologated. It stays in completed because the certificate is still valid and downloadable, and deletedAt carries the deletion instant. Without a certificate, a deleted activity does not appear.
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000034",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+              "title": "Introduction to Git Workshop",
+              "type": "COURSE",
+              "campus": "ARAPIRACA",
+              "startDate": "2026-05-04T13:00:00.000Z",
+              "endDate": "2026-05-04T17:00:00.000Z",
+              "slots": 30,
+              "availableSlots": 22,
+              "status": "COMPLETED",
+              "details": {
+                "description": "Hands-on workshop on version control.",
+                "area": "Tecnologia",
+                "format": "ONLINE",
+                "url": "https://meet.example.com/git-workshop",
+                "workloadHours": 4,
+                "address": null
+              },
+              "deletedAt": "2026-06-20T15:00:00.000Z",
+              "enrollment": {
+                "id": "6fa459ea-ee8a-4ca4-894e-db77e160355e",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000034",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-04-20T09:00:00.000Z",
+                "updatedAt": "2026-05-05T11:00:00.000Z"
+              },
+              "certificate": {
+                "id": "3d6f4e2a-8b1c-4f7e-9a2d-5c8b7e6f1a90",
+                "validationCode": "Q2W8E4R6T9",
+                "issuedAt": "2026-05-05T11:00:00.000Z"
+              }
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+  - name: 200 filter=managed
+    description: Activities created by the user (Activity.authorId = userId), in any status. enrollment is null when the author is not enrolled in their own activity, as here; details is null when the activity has no ActivityDetails.
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000033",
+              "authorId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "title": "Study Group",
+              "type": "OTHER",
+              "campus": "ARAPIRACA",
+              "startDate": "2026-09-05T18:00:00.000Z",
+              "endDate": "2026-09-05T20:00:00.000Z",
+              "slots": 15,
+              "availableSlots": 15,
+              "status": "OPEN",
+              "details": null,
+              "deletedAt": null,
+              "enrollment": null,
+              "certificate": null
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+
+  - name: 200 Empty list
+    description: No activity matches the filter, or page is beyond the last one. Never 404. total is the real total and totalPages is never below 1.
+    response:
+      status: 200
+      body: |-
+        { "items": [], "total": 0, "page": 1, "limit": 20, "totalPages": 1 }
+
+  - name: 400 Invalid query
+    description: Every invalid or unknown parameter gets its own entry in errors[].
+    response:
+      status: 400
+      body: |-
+        {
+          "status": 400,
+          "message": "Invalid query parameters.",
+          "errors": [
+            { "field": "filter", "message": "filter must be one of: enrolled, completed, managed." },
+            { "field": "page", "message": "page must be a positive integer." },
+            { "field": "limit", "message": "limit must be at most 100." },
+            { "field": "foo", "code": "UNKNOWN_PARAMETER", "message": "foo is not a supported query parameter." }
+          ]
+        }
+
+  - name: 401 Missing token
+    description: No session cookie was sent.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "No token provided." }
+
+  - name: 401 Invalid or expired token
+    description: A credential was sent but failed verification - malformed, wrong signature or past its expiry. One message on purpose, so the response never tells which one it was.
+    response:
+      status: 401
+      body: |-
+        { "status": 401, "message": "Token malformatted, expired or invalid." }
+
+  - name: 404 User no longer exists
+    description: Valid credential, but the user from the token is gone. Same answer as GET /users/me.
+    response:
+      status: 404
+      body: |-
+        { "status": 404, "message": "User not found." }
+
+docs: |-
+  # GET /users/me/activities — Enrolled, completed and managed activities
+
+  Lists the activities linked to the authenticated user according to the chosen filter,
+  in three groups: `enrolled`, `completed` and `managed`. It backs the "Ações" tab of the
+  profile.
+
+  ## Authentication
+  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie.
+  - The `userId` is extracted exclusively from the token — never from `params`, `query` or
+    `body`. There is no way to ask this route for someone else's activities.
+
+  ## Query params
+  | Param  | Type | Required | Description |
+  |--------|------|----------|-------------|
+  | filter | enum | yes      | `enrolled` \| `completed` \| `managed` |
+  | page   | int  | no       | Conventional pagination |
+  | limit  | int  | no       | Conventional pagination |
+
+  Any other parameter answers 400 `UNKNOWN_PARAMETER`.
+
+  ## Filter matrix
+  | filter      | Rule |
+  |-------------|------|
+  | `enrolled`  | `Activity.deletedAt IS NULL` AND `Enrollment.status = APPROVED` for the user AND `Activity.status` in (`OPEN`, `IN_PROGRESS`) |
+  | `completed` | `Enrollment.status = APPROVED` AND `Activity.status = COMPLETED` AND either `Activity.deletedAt IS NULL` with `Enrollment.attendanceConfirmed` `true` or `null`, or a deleted activity whose enrollment has a `Certificate` (see below) |
+  | `managed`   | `Activity.deletedAt IS NULL` AND `Activity.authorId = userId`, in any `Activity.status` (including `CANCELLED` and `COMPLETED`). Moderators (`Enrollment.isModerator`) are not included unless they are the author |
+
+  `Enrollment.attendanceConfirmed` is tri-state (`null` = not homologated yet, `true` =
+  present, `false` = absent). Only a registered absence leaves `completed`: someone whose
+  attendance nobody homologated yet still took part, and the client tells the two apart
+  through `enrollment.attendanceConfirmed`.
+
+  `enrolled` and `completed` are mutually exclusive: `Activity.status` separates them.
+  `managed` may overlap with the other two when the author is also enrolled in their own
+  activity. The activity then appears in each filter it matches, never duplicated within
+  one response.
+
+  ## Item
+  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller
+  (with `details`, `null` when the activity has none), plus:
+
+  | Field        | Description |
+  |--------------|-------------|
+  | `deletedAt`  | When the activity was deleted, or `null`. Always present, in every filter. Only `completed` can bring a non-null value |
+  | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled` and `completed`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
+  | `certificate` | The certificate of that enrollment: `{ id, validationCode, issuedAt }`, or `null` when there is none. Always present, in every filter. A certificate exists exactly when `enrollment.attendanceConfirmed` is `true` |
+
+  The detail route's `enrollmentStatus` is not repeated: `enrollment.status` carries it.
+
+  `certificate.validationCode` comes in its stored form (10 characters, no hyphen); showing it
+  as `7KQ4M-X9T2R` is the screen's job. `certificate.id` is what
+  `GET /certificates/:certificateId/file` takes to download the PDF.
+
+  ## Business rules
+  - The user only sees their own history.
+  - `PENDING`, `REJECTED` or `CANCELLED` enrollments never place an activity in
+    `enrolled` or `completed`.
+  - Soft-deleted activities (`deletedAt != null`) are left out of `enrolled` and `managed`. In
+    `completed`, one appears only when the user's enrollment has a certificate
+    (`attendanceConfirmed = true`): the certificate stays valid and downloadable, and this list is
+    where the client gets its `id`. A deleted activity where the user was absent or never
+    homologated stays out.
+  - Ordering: `startDate` descending, ties broken by `id`, so pagination is deterministic.
+
+  ## Validation order
+  1. Authentication (401)
+  2. Query params (400 — every invalid param appears in `errors[]`)
+  3. The user exists (404)
+
+  ## Errors
+  | Status | When |
+  |--------|------|
+  | 400 | Missing or invalid `filter`; invalid `page` or `limit`; unknown parameter |
+  | 401 | Missing credential, invalid signature, malformed or expired token |
+  | 404 | The user from the token no longer exists |
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

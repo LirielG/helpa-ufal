@@ -1,4 +1,4 @@
-export type UserType = "student" | "teacher";
+export type UserType = "STUDENT" | "TEACHER";
 
 export interface LoginRequest {
   email: string;
@@ -13,26 +13,36 @@ export interface LoginResponse {
 export interface User {
   id: string;
   email: string;
-  name: string;
-  type: UserType;
+  fullName: string;
+  userType: UserType;
+  isManager: boolean;
   createdAt: string;
+  /** Absent once the session is verified: `GET /users/me` does not return it. */
+  updatedAt?: string;
+}
+
+/**
+ * Body of `PATCH /users/me`: only what changes is sent. A new password needs
+ * the current one alongside it.
+ */
+export interface UpdateProfileRequest {
+  fullName?: string;
+  currentPassword?: string;
+  newPassword?: string;
 }
 
 export interface RegisterRequest {
-  name: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
-  type: UserType;
-  cndbNumber?: string;
+  userType: UserType;
   course?: string;
-  enrollment?: string;
+  registrationCode: string;
+  cndb?: string;
 }
 
-export interface RegisterResponse {
-  token: string;
-  user: User;
-}
+export type RegisterResponse = User;
 
 export interface AuthError {
   message: string;

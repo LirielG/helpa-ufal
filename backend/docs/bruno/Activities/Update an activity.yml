@@ -1,0 +1,442 @@
+info:
+  name: Update an activity
+  type: http
+  seq: 4
+  tags:
+    - Activities
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/activities/:activityId"
+  params:
+    - name: activityId
+      value: 22ac40bd-e160-4c6e-8505-b63913d2482f
+      type: path
+      description: Activity UUID
+  body:
+    type: json
+    data: |-
+      {
+        "title": "Oficina de Introdução à Programação — Turma 2",
+        "slots": 50,
+        "format": "HYBRID",
+        "url": "https://meet.example.com/turma2",
+        "address": {
+          "addressLine": "Av. Manoel Severino Barbosa, s/n",
+          "district": "Bom Sucesso",
+          "zipCode": "57309005",
+          "city": "Arapiraca",
+          "state": "AL"
+        }
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Response
+    description: Activity updated successfully.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "slots": 50,
+            "format": "HYBRID",
+            "url": "https://meet.example.com/turma2"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+            "authorId": "84dc4df7-53e1-4b4e-8468-f3da7028c24a",
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 50,
+            "status": "OPEN",
+            "createdAt": "2026-10-17T15:06:52.422Z",
+            "updatedAt": "2026-10-17T15:07:52.930Z",
+            "deletedAt": null,
+            "details": {
+              "activityId": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/turma2",
+              "workloadHours": 20,
+              "addressId": "a990da3f-91b3-4ce6-a51e-0a3fcb95d4a2",
+              "createdAt": "2026-10-17T15:06:52.426Z",
+              "updatedAt": "2026-10-17T15:07:52.930Z",
+              "address": {
+                "id": "a990da3f-91b3-4ce6-a51e-0a3fcb95d4a2",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL",
+                "createdAt": "2026-10-17T15:06:52.424Z",
+                "updatedAt": "2026-10-17T15:06:52.424Z"
+              }
+            }
+          }
+  - name: 400 - Invalid body
+    description: A field fails schema validation.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "slots": -5
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "VALIDATION_ERROR",
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "code": "VALIDATION_ERROR",
+                "field": "slots",
+                "message": "Too small: expected number to be >=1"
+              }
+            ]
+          }
+  - name: 400 - Title too long
+    description: title is limited to 150 characters, the length the certificate's two title lines are sized for.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Programa de Formação Continuada em Tecnologias Educacionais, Robótica Livre e Pensamento Computacional para Professores da Rede Pública do Agreste Alag"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "title",
+                "code": "VALIDATION_ERROR",
+                "message": "Too big: expected string to have <=150 characters"
+              }
+            ]
+          }
+  - name: 400 - Empty body
+    description: No field was sent.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {}
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "VALIDATION_ERROR",
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "code": "VALIDATION_ERROR",
+                "field": "",
+                "message": "Body cannot be empty. At least one field must be provided."
+              }
+            ]
+          }
+  - name: 400 - Invalid id
+    description: The activityId in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Invalid activityId parameter. Must be a valid UUID."
+          }
+  - name: 400 - Slots below approved enrollments
+    description: slots is lower than the number of APPROVED enrollments. The count is in details.approvedEnrollments and in the message. Status stays 400 for now (a change to 422 is planned, see api-conventions section 4).
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "slots": 2
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "slots",
+                "code": "BELOW_APPROVED_ENROLLMENTS",
+                "message": "slots cannot be reduced below the current number of approved enrollments (12)."
+              }
+            ],
+            "details": {
+              "approvedEnrollments": 12
+            }
+          }
+  - name: 401 Response
+    description: Missing, invalid or expired session cookie.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "UNAUTHENTICATED",
+            "status": 401,
+            "message": "Unauthenticated."
+          }
+  - name: 403 Response
+    description: Requester is not the author or a manager.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "FORBIDDEN",
+            "status": 403,
+            "message": "You do not have permission to update this activity."
+          }
+  - name: 404 Response
+    description: Activity not found or deleted.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "00000000-0000-4000-8000-000000000000"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "NOT_FOUND",
+            "status": 404,
+            "message": "Activity not found."
+          }
+  - name: 409 Response
+    description: Activity is COMPLETED or CANCELLED.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "CONFLICT",
+            "status": 409,
+            "message": "Activity cannot be updated because it is already CANCELLED."
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "INTERNAL_ERROR",
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Partially updates an activity. At least one field must be provided.
+
+  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can update.
+
+  - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
+  - The 200 body is the stored row, not the shape of `GET /activities/:activityId`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

@@ -13,7 +13,10 @@ enum UserType {
 
 enum ActivityType {
   EXTENSION
+  COURSE
   EVENT
+  LECTURE
+  OTHER
 }
 
 enum ActivityFormat {
@@ -33,7 +36,27 @@ enum EnrollmentStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
 }
+
+enum CampusLocation {
+  MACEIO         
+  ARAPIRACA      
+  PALMEIRA       
+  PENEDO         
+  RIO_LARGO      
+  DELMIRO_GOUVEIA
+  SANTANA_IPANEMA
+}
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE_CONTENT
+  MISINFORMATION
+  DUPLICATE
+  OTHER
+}
+
 
 model User {
   id           String   @id @default(uuid())
@@ -42,6 +65,7 @@ model User {
   passwordHash String
   userType     UserType
   isManager    Boolean  @default(false)
+  tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -49,11 +73,14 @@ model User {
   teacher     Teacher?
   activities  Activity[]
   enrollments Enrollment[]
+
+  reports          ActivityReport[] @relation("ActivityReporter")
+  resolvedReports  ActivityReport[] @relation("ReportResolver")
 }
 
 model Student {
   userId           String   @id
-  registrationCode String
+  registrationCode String   @unique
   course           String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -63,8 +90,8 @@ model Student {
 
 model Teacher {
   userId           String   @id
-  registrationCode String
-  cndb             String
+  registrationCode String   @unique
+  cndb             String   @unique
   course           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -75,6 +102,7 @@ model Teacher {
 model Address {
   id          String   @id @default(uuid())
   addressLine String
+  district    String
   zipCode     String
   city        String
   state       String
@@ -85,18 +113,26 @@ model Address {
 }
 
 model Activity {
-  id        String         @id @default(uuid())
+  id        String          @id @default(uuid())
   authorId  String
   title     String
   type      ActivityType
+  campus    CampusLocation
   startDate DateTime
   endDate   DateTime
-  slots     Int
-  status    ActivityStatus
+  slots     Int             @default(1)
+  status    ActivityStatus  @default(OPEN)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  deletedAt DateTime?       
 
-  author      User             @relation(fields: [authorId], references: [id], onUpdate: Cascade)
+  @@index([type])
+  @@index([authorId])
+
+  author      User             @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   details     ActivityDetails?
   enrollments Enrollment[]
+  activityReports ActivityReport[]
 }
 
 model ActivityDetails {
@@ -105,13 +141,15 @@ model ActivityDetails {
   area        String
   format      ActivityFormat
   url         String?
-  workload    Int
+  workloadHours    Int
   addressId   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  @@map("activity_details")
+
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  address  Address? @relation(fields: [addressId], references: [id], onUpdate: Cascade)
+  address  Address? @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 }
 
 model Enrollment {
@@ -119,11 +157,17 @@ model Enrollment {
   userId              String
   activityId          String
   status              EnrollmentStatus
-  attendanceConfirmed Boolean          @default(false)
+  /// Tri-state: null = nada dito | true = presente | false = faltou.
+  attendanceConfirmed Boolean?
+  /// Horas homologadas. Só significativo quando attendanceConfirmed = true.
+  confirmedWorkloadHours Int       @default(0)
   isModerator         Boolean          @default(false)
   enrolledAt          DateTime         @default(now())
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([activityId])
 
   user        User         @relation(fields: [userId], references: [id], onUpdate: Cascade)
   activity    Activity     @relation(fields: [activityId], references: [id], onUpdate: Cascade)
@@ -136,10 +180,44 @@ model Certificate {
   id             String   @id @default(uuid())
   enrollmentId   String   @unique
   validationCode String   @unique
-  fileUrl        String
   issuedAt       DateTime
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onUpdate: Cascade)
+}
+
+model ActivityReport {
+  id           String       @id @default(uuid())
+  activityId   String
+  userId       String?
+  category     ReportReason
+  description  String?
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User?    @relation("ActivityReporter", fields: [userId], references: [id], onDelete: SetNull)
+  resolvedBy User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, activityId])
+}
+
+model SigaaActivity {
+  id             String        @id @default(uuid())
+  sigaaId        String        @unique
+  title          String
+  type           String
+  normalizedType ActivityType  @default(EXTENSION)
+  department     String?
+  isActive       Boolean       @default(true)
+  lastSeenAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([isActive])
+  @@index([type])
+  @@index([normalizedType])
+  @@map("sigaa_activities")
 }

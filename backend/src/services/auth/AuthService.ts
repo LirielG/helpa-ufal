@@ -4,6 +4,7 @@ import type { IAuthService } from "@/services/auth/IAuthService.js";
 import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { signJwt } from "@/utils/jwt.js";
+import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 import type { Login, RegisterInput } from "@/schemas/auth/AuthSchemas.js";
 import type { AuthenticatedUser, UserResponse } from "@/types/auth.js";
 
@@ -40,6 +41,7 @@ class AuthService implements IAuthService {
       id: user.id,
       userType: user.userType,
       isManager: user.isManager,
+      tokenVersion: user.tokenVersion,
     };
 
     const loginUser: UserResponse = {
@@ -57,16 +59,17 @@ class AuthService implements IAuthService {
     return { token, user: loginUser };
   }
 
-  public async register(
-    data: RegisterInput,
-  ): Promise<{ token: string; user: UserResponse }> {
+  public async register(data: RegisterInput): Promise<UserResponse> {
     const existingUser = await this._userRepository.findByEmail(data.email);
 
     if (existingUser) {
-      throw new CustomError(409, "Email already in use.");
+      throw new CustomError(409, "Email already in use.", {
+        code: "ALREADY_IN_USE",
+        details: { field: "email" },
+      });
     }
 
-    const passwordHash = await bcryptjs.hash(data.password, 12);
+    const passwordHash = await bcryptjs.hash(data.password, BCRYPT_SALT_ROUNDS);
 
     const newUser = await this._userRepository.createWithSubtype({
       ...data,
@@ -83,16 +86,7 @@ class AuthService implements IAuthService {
       updatedAt: newUser.updatedAt,
     };
 
-    const authenticatedUser: AuthenticatedUser = {
-      id: newUser.id,
-      userType: newUser.userType,
-      isManager: newUser.isManager,
-    };
-
-    const token = signJwt(authenticatedUser);
-
-    return { token, user: userResponse };
+    return userResponse;
   }
 }
-
 export default AuthService;

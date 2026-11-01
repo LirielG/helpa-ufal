@@ -1,0 +1,365 @@
+info:
+  name: Create a new activity
+  type: http
+  seq: 1
+  tags:
+    - Activities
+
+http:
+  method: POST
+  url: "{{baseUrl}}/activities"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "string",
+        "type": "EXTENSION",
+        "campus": "MACEIO",
+        "startDate": "2026-08-31T16:00:00.000Z",
+        "endDate": "2026-08-31T17:00:00.000Z",
+        "slots": 1,
+        "description": "string",
+        "area": "string",
+        "workloadHours": 1,
+        "format": "IN_PERSON",
+        "address": {
+          "addressLine": "string",
+          "district": "string",
+          "zipCode": "89985218",
+          "city": "string",
+          "state": "AC"
+        }
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 201 Response
+    description: Activity created successfully.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+            "authorId": "84dc4df7-53e1-4b4e-8468-f3da7028c24a",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 40,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "IN_PERSON",
+              "url": null,
+              "workloadHours": 20,
+              "address": {
+                "id": "a990da3f-91b3-4ce6-a51e-0a3fcb95d4a2",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            }
+          }
+  - name: 400 - Invalid body
+    description: The body fails schema validation.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "title",
+                "message": "Invalid input: expected string, received undefined"
+              }
+            ]
+          }
+  - name: 400 - Title too long
+    description: title is limited to 150 characters, the length the certificate's two title lines are sized for.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Programa de Formação Continuada em Tecnologias Educacionais, Robótica Livre e Pensamento Computacional para Professores da Rede Pública do Agreste Alag",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "ONLINE",
+            "url": "https://meet.example.com/oficina"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "title",
+                "message": "Too big: expected string to have <=150 characters"
+              }
+            ]
+          }
+  - name: 400 - Business rule
+    description: startDate is not before endDate.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-14T12:00:00.000Z",
+            "endDate": "2026-11-03T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "startDate",
+                "message": "startDate must be before endDate."
+              }
+            ]
+          }
+  - name: 401 Response
+    description: Missing, invalid or expired session cookie.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Unauthenticated."
+          }
+  - name: 403 Response
+    description: The token is valid but its user no longer exists.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 403,
+            "message": "You do not have permission to create an activity."
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 40,
+            "description": "Introdução à lógica de programação para iniciantes.",
+            "area": "Tecnologia",
+            "workloadHours": 20,
+            "format": "IN_PERSON",
+            "address": {
+              "addressLine": "Av. Manoel Severino Barbosa, s/n",
+              "district": "Bom Sucesso",
+              "zipCode": "57309005",
+              "city": "Arapiraca",
+              "state": "AL"
+            }
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Creates an activity authored by the logged-in user.
+
+  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`.
+
+  - `IN_PERSON` and `HYBRID` require `address`; `ONLINE` and `HYBRID` take `url`.
+  - Date and capacity rules (future start, duration, workload, slots) answer 400 with one item per broken rule in `errors`.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

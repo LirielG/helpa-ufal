@@ -1,0 +1,347 @@
+info:
+  name: List Activity Enrollments
+  type: http
+  seq: 10
+  tags:
+    - Enroll
+
+http:
+  method: GET
+  url: "{{baseUrl}}/activities/:activityId/enrollments"
+  params:
+    - name: activityId
+      value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
+      type: path
+      description: Activity UUID
+    - name: page
+      value: "1"
+      type: query
+      description: Page number
+    - name: limit
+      value: "10"
+      type: query
+      description: Items per page
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Successful
+    description: Returns the paginated list of active (APPROVED) enrollments, ordered by enrolledAt ascending (oldest first, tie-broken by id for stable pagination). Available to the activity creator or to a manager (isManager) — both receive exactly the same result. CANCELLED enrollments are hidden and count neither in total nor in totalPresent. attendanceConfirmed is null when no one homologated yet, true for confirmed presence and false for registered absence; confirmedWorkloadHours is 0 in both null and false cases — consumers must always discriminate by attendanceConfirmed, never by the number. registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists in the database).
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
+        - name: limit
+          value: "10"
+          type: query
+          description: Items per page
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [
+              {
+                "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-08-22T21:00:00.000Z",
+                "updatedAt": "2026-08-30T18:45:00.000Z",
+                "user": {
+                  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                  "fullName": "Maria Clara Santos",
+                  "email": "maria.santos@aluno.ufal.br",
+                  "registrationCode": "20240012345"
+                }
+              },
+              {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+                "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "status": "APPROVED",
+                "attendanceConfirmed": null,
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-23T14:00:00.000Z",
+                "updatedAt": "2026-08-23T14:00:00.000Z",
+                "user": {
+                  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "fullName": "João Pedro Ferreira",
+                  "email": "joao.ferreira@aluno.ufal.br",
+                  "registrationCode": "20240067890"
+                }
+              },
+              {
+                "id": "6f1c2a34-9b8d-4e7f-a1b2-c3d4e5f60718",
+                "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+                "userId": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
+                "status": "APPROVED",
+                "attendanceConfirmed": false,
+                "confirmedWorkloadHours": 0,
+                "createdAt": "2026-08-24T09:30:00.000Z",
+                "updatedAt": "2026-08-30T18:50:00.000Z",
+                "user": {
+                  "id": "8d2b4c66-1a3e-4f5b-9c7d-e8f901234567",
+                  "fullName": "Prof. Ricardo Almeida",
+                  "email": "ricardo.almeida@ufal.br",
+                  "registrationCode": null
+                }
+              }
+            ],
+            "total": 3,
+            "page": 1,
+            "limit": 10,
+            "totalPresent": 1
+          }
+
+  - name: 200 - Empty list
+    description: Activity has no active enrollments. Returns 200 with an empty list — never 404 for lack of enrollees.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "limit": 10,
+            "totalPresent": 0
+          }
+
+  - name: 400 - Invalid query params
+    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+        - name: page
+          value: abc
+          type: query
+          description: Page number
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "VALIDATION_ERROR",
+            "status": 400,
+            "message": "Invalid query parameters.",
+            "errors": [
+              { "field": "page", "code": "VALIDATION_ERROR", "message": "page must be a positive integer." }
+            ]
+          }
+
+  - name: 400 - Limit above maximum
+    description: limit above the route's ceiling is rejected. The ceiling protects the query against unbounded page sizes.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+        - name: limit
+          value: "51"
+          type: query
+          description: Items per page
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "VALIDATION_ERROR",
+            "status": 400,
+            "message": "Invalid query parameters.",
+            "errors": [
+              { "field": "limit", "code": "VALIDATION_ERROR", "message": "limit must be at most 50." }
+            ]
+          }
+
+  - name: 401 - Unauthenticated
+    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "UNAUTHENTICATED",
+            "status": 401,
+            "message": "No token provided."
+          }
+
+  - name: 403 - Forbidden
+    description: Authenticated user is neither the activity creator nor a manager (isManager). Volunteers enrolled in the activity also receive 403. No enrollee data is exposed. Checked only after the activity is known to exist (404 takes precedence).
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "FORBIDDEN",
+            "status": 403,
+            "message": "Only the activity creator or a manager can view the enrollment list."
+          }
+
+  - name: 404 - Activity not found
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: not-a-uuid
+          type: path
+          description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "NOT_FOUND",
+            "status": 404,
+            "message": "Activity not found."
+          }
+
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "INTERNAL_ERROR",
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Lists the active enrollments of an activity for its creator or a manager.
+
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  ## Query params
+  | Param | Rule | Default |
+  |-------|------|---------|
+  | `page` | positive integer | `1` |
+  | `limit` | positive integer, up to the route's ceiling | `10` |
+
+  Unknown parameters are ignored.
+
+  - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
+  - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
+  - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
+  - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
+  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
+  - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
+  - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
+  - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
+  - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
+  - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
+  - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
+  - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
+  - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:activityId.
+  - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
+  - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
+  - A nonexistent, soft-deleted or non-UUID activity id returns 404.
+  - Status filters and sorting are additive evolutions that do not break this contract; the enrolledAt ASC ordering is fixed.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

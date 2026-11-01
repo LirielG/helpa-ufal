@@ -1,72 +1,33 @@
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from "../types";
-import { config } from "../config";
+import type {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+} from "../types";
+import type { UserProfile } from "../types/profile";
+import { api } from "./api";
 
-const API_BASE_URL = config.apiUrl;
+// A 401 on these routes means the credentials were rejected, not that a session
+// ended, so they opt out of the client's session-expiry handling and let the
+// screen show the message.
+const AUTH_REQUEST = { handleUnauthorized: false } as const;
 
 export const authService = {
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error("Falha ao fazer login");
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error("Erro na comunicação com o servidor");
-    }
+  login(data: LoginRequest): Promise<LoginResponse> {
+    return api.post<LoginResponse>("/auth/login", data, AUTH_REQUEST);
   },
 
-  async register(data: RegisterRequest): Promise<RegisterResponse> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error("Falha ao criar conta");
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error("Erro na comunicação com o servidor");
-    }
+  register(data: RegisterRequest): Promise<RegisterResponse> {
+    return api.post<RegisterResponse>("/auth/register", data, AUTH_REQUEST);
   },
 
-  async logout(): Promise<void> {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  logout(): Promise<void> {
+    return api.post<void>("/auth/logout", undefined, AUTH_REQUEST);
   },
 
-  getToken(): string | null {
-    return localStorage.getItem("token");
-  },
-
-  setToken(token: string): void {
-    localStorage.setItem("token", token);
-  },
-
-  getUser() {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : null;
-  },
-
-  setUser(user: any): void {
-    localStorage.setItem("user", JSON.stringify(user));
-  },
-
-  isAuthenticated(): boolean {
-    return !!this.getToken();
+  // Unlike the routes above, a 401 here does mean the session ended, so it
+  // keeps the client's default handling: the same path as any other request.
+  me(): Promise<UserProfile> {
+    return api.get<UserProfile>("/users/me");
   },
 };

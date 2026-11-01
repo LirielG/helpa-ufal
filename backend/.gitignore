@@ -37,6 +37,7 @@ node_modules/
 .env.*
 !.env.example
 !.env.*.example
+!.env.test
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
@@ -54,5 +55,8 @@ node_modules/
 # build
 dist/
 
+# tests
+coverage/
+
 # Prisma
-/src/generated/prisma
+/src/generated/prismacookies.txt

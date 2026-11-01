@@ -13,7 +13,9 @@ export const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${colors[type]} flex justify-between items-center`}>
+    <div
+      className={`border rounded-lg p-4 ${colors[type]} flex justify-between items-center`}
+    >
       <p>{message}</p>
       {onClose && (
         <button onClick={onClose} className="text-lg font-semibold">

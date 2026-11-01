@@ -1,11 +1,13 @@
 # 🚀 Guia Rápido de Início
 
 ## 📍 Localização do Projeto
+
 ```
 /mnt/storage/2-Education/University/6-8/ACE6/helpa-ufal/frontend
 ```
 
 ## 1️⃣ Pré-requisitos
+
 - Node.js 18+
 - npm 9+
 
@@ -25,6 +27,7 @@ echo "VITE_API_URL=http://localhost:3001/api" > .env.local
 ## 3️⃣ Desenvolvimento
 
 ### Iniciar servidor de desenvolvimento
+
 ```bash
 npm run dev
 ```
@@ -32,16 +35,19 @@ npm run dev
 Acesso: http://localhost:5173
 
 ### Build para produção
+
 ```bash
 npm run build
 ```
 
 ### Verificar tipos TypeScript
+
 ```bash
 npx tsc --noEmit
 ```
 
 ### Lint
+
 ```bash
 npm run lint
 ```
@@ -49,6 +55,7 @@ npm run lint
 ## 🧪 Testando a Aplicação
 
 ### 1. Testar página de Login
+
 - URL: `http://localhost:5173/login`
 - Validações automáticas:
   - Email vazio → Erro
@@ -57,11 +64,13 @@ npm run lint
   - Senha < 6 caracteres → Erro
 
 ### 2. Testar página de Registro
+
 - URL: `http://localhost:5173/register`
 - Etapa 1: Selecione tipo de usuário
 - Etapa 2: Preencha formulário específico
 
 #### Para Alunos:
+
 ```
 Nome: João Silva
 Email: joao@example.com
@@ -72,6 +81,7 @@ Senha: senhaSegura123
 ```
 
 #### Para Docentes:
+
 ```
 Nome: Prof. Maria
 Email: maria@example.com
@@ -79,6 +89,7 @@ Senha: senhaSegura123
 ```
 
 #### Para Público Externo:
+
 ```
 Nome: João Comunidade
 Email: joao.comun@example.com
@@ -90,6 +101,7 @@ Senha: senhaSegura123
 Seu backend precisa ter os seguintes endpoints:
 
 ### POST `/api/auth/login`
+
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
@@ -100,6 +112,7 @@ curl -X POST http://localhost:3001/api/auth/login \
 ```
 
 Response esperado:
+
 ```json
 {
   "token": "eyJhbGc...",
@@ -114,6 +127,7 @@ Response esperado:
 ```
 
 ### POST `/api/auth/register`
+
 ```bash
 curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
@@ -132,12 +146,14 @@ curl -X POST http://localhost:3001/api/auth/register \
 ## 🐛 Troubleshooting
 
 ### Problema: "Vite: command not found"
+
 ```bash
 # Solução: Use npx
 npx vite
 ```
 
 ### Problema: Erros de TypeScript
+
 ```bash
 # Verificar todos os erros
 npx tsc --noEmit
@@ -147,12 +163,14 @@ npm run build
 ```
 
 ### Problema: Porta 5173 já em uso
+
 ```bash
 # Usar porta diferente
 npx vite --port 3000
 ```
 
 ### Problema: API não conecta
+
 ```bash
 # Verificar .env.local
 cat .env.local
@@ -191,6 +209,7 @@ src/
 ## 🎯 Fluxo de Uso
 
 ### Como um usuário faria login:
+
 1. Acessa `http://localhost:5173/login`
 2. Preenche email e senha
 3. Clica em "Entrar"
@@ -201,6 +220,7 @@ src/
 8. Redireciona para `/dashboard` (a ser criada)
 
 ### Como um novo usuário se registraria:
+
 1. Acessa `http://localhost:5173/register`
 2. Seleciona tipo de perfil
 3. Pode voltar para mudar o tipo (botão voltar)
@@ -215,21 +235,25 @@ src/
 ## 💡 Dicas de Desenvolvimento
 
 ### Adicionar nova página
+
 1. Crie arquivo em `src/pages/`
 2. Exporte em `src/pages/index.ts`
 3. Adicione rota em `src/App.tsx`
 
 ### Adicionar novo componente
+
 1. Crie arquivo em `src/components/`
 2. Exporte em `src/components/index.ts`
 3. Use em outros componentes
 
 ### Adicionar novo hook
+
 1. Crie arquivo em `src/hooks/`
 2. Exporte em `src/hooks/index.ts`
 3. Use em componentes
 
 ### Adicionar novo validador
+
 1. Crie função em `src/validators/auth.ts`
 2. Exporte em `src/validators/index.ts`
 3. Use em páginas

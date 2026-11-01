@@ -1,2 +1,10 @@
 export { Login } from "./Login";
 export { Register } from "./Register";
+export { Dashboard } from "./Dashboard";
+export { Home } from "./Home";
+export { ActionDetail } from "./ActionDetail";
+export { EditAction } from "./EditAction";
+export { Profile } from "./Profile";
+export { NotFound } from "./NotFound";
+export { EnrollmentsPage } from "./EnrollmentsPage";
+export { CertificateValidation } from "./CertificateValidation";

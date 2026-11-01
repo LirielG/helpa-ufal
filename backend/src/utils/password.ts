@@ -1,3 +1,5 @@
+export const BCRYPT_SALT_ROUNDS = 12;
+
 const PASSWORD_RULES = {
   minLength: (p: string) => p.length >= 8,
   uppercaseLetter: (p: string) => /[A-Z]/.test(p),

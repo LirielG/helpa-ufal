@@ -1,0 +1,468 @@
+import { describe, expect, it } from "vitest";
+import request from "supertest";
+import { randomUUID } from "crypto";
+import { app } from "@/app.js";
+import { prisma } from "@/database/prisma.js";
+import {
+  anAddress,
+  createActivity,
+  createEnrollment,
+  createManager,
+  createStudent,
+  createTeacher,
+} from "../../helpers/factories.js";
+import { authCookie } from "../../helpers/auth.js";
+import { daysFromNow } from "../../helpers/dates.js";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
+
+describe("PATCH /activities/:activityId", () => {
+  describe.each(["startDate", "endDate"])("%s", (field) => {
+    it.each([
+      ["date without timezone", "2026-01-01T08:00"],
+      ["date only", "2026-01-01"],
+      ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+      ["numeric timestamp", 1767225600000],
+    ])(
+      "returns 400 when it is not ISO 8601 in UTC with Z (%s)",
+      async (_, invalidDate) => {
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id);
+
+        const response = await request(app)
+          .patch(`/activities/${activity.id}`)
+          .set(...authCookie(author.token))
+          .send({ [field]: invalidDate });
+
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field })]),
+        );
+      },
+    );
+  });
+
+  it("updates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+    // createActivity ends the activity 14 days from now, so the new start must come before it.
+    const startDate = daysFromNow(10).toISOString();
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ startDate });
+
+    expect(response.status).toBe(200);
+    expect(response.body.startDate).toBe(startDate);
+  });
+
+  it("updates the title to one at the length limit", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+    const title = "a".repeat(ACTIVITY_TITLE_MAX_LENGTH);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe(title);
+  });
+
+  it("returns 400 when the title is one character over the length limit", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "title" }),
+    ]);
+  });
+
+  it("returns 400 for an empty body", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "",
+          code: "VALIDATION_ERROR",
+          message: "Body cannot be empty. At least one field must be provided.",
+        },
+      ],
+    });
+  });
+
+  it("returns 400 when activityId is not a valid UUID", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .patch("/activities/not-a-uuid")
+      .set(...authCookie(author.token))
+      .send({ title: "Tentativa com id inválido" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Invalid activityId parameter. Must be a valid UUID.",
+    });
+  });
+
+  it("returns 401 without a token", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .send({ title: "Tentativa sem token" });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const manager = await createManager();
+
+    await prisma.teacher.deleteMany({ where: { userId: manager.user.id } });
+    await prisma.student.deleteMany({ where: { userId: manager.user.id } });
+    await prisma.user.delete({ where: { id: manager.user.id } });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(manager.token))
+      .send({ title: "Título Atualizado de Usuário Fantasma" });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
+    });
+  });
+
+  it("rejects a manager token after the user lost manager status", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const manager = await createManager();
+
+    await prisma.user.update({
+      where: { id: manager.user.id },
+      data: { isManager: false },
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(manager.token))
+      .send({ title: "Tentativa após rebaixamento" });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("allows the author to update their own activity", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Título Atualizado pelo Autor" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe("Título Atualizado pelo Autor");
+  });
+
+  it("allows a manager to update a third party's activity", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const manager = await createManager();
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(manager.token))
+      .send({ title: "Editado pelo Gestor" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe("Editado pelo Gestor");
+  });
+
+  it("returns 403 when requester is neither the author nor a manager", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const outsider = await createStudent();
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(outsider.token))
+      .send({ title: "Tentativa de terceiro" });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      status: 403,
+      code: "FORBIDDEN",
+      message: "You do not have permission to update this activity.",
+    });
+  });
+
+  it("returns 404 for a non-existent activity", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .patch(`/activities/${randomUUID()}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Ação inexistente" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
+  });
+
+  it("returns 404 for a soft-deleted activity", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      slots: 10,
+      deletedAt: new Date(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Tentativa em ação removida" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
+  });
+
+  it.each(["COMPLETED", "CANCELLED"] as const)(
+    "returns 409 when the activity status is %s",
+    async (status) => {
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, {
+        slots: 10,
+        status,
+      });
+
+      const response = await request(app)
+        .patch(`/activities/${activity.id}`)
+        .set(...authCookie(author.token))
+        .send({ title: "Tentativa em ação em estado terminal" });
+
+      expect(response.status).toBe(409);
+      expect(response.body).toEqual({
+        status: 409,
+        code: "CONFLICT",
+        message: `Activity cannot be updated because it is already ${status}.`,
+      });
+    },
+  );
+
+  it("returns 400 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const students = await Promise.all([
+      createStudent(),
+      createStudent(),
+      createStudent(),
+    ]);
+    for (const student of students) {
+      await createEnrollment(student.user.id, activity.id);
+    }
+    // A canceled enrollment must not count as approved.
+    const canceled = await createStudent();
+    await createEnrollment(canceled.user.id, activity.id, {
+      status: "CANCELLED",
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ slots: 2 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "slots",
+          code: "BELOW_APPROVED_ENROLLMENTS",
+          message:
+            "slots cannot be reduced below the current number of approved enrollments (3).",
+        },
+      ],
+      details: { approvedEnrollments: 3 },
+    });
+    // Acceptance criterion: the number in `details` is the one in the message.
+    expect(response.body.errors[0].message).toContain(
+      `(${response.body.details.approvedEnrollments}).`,
+    );
+
+    const stored = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(stored.slots).toBe(10);
+  });
+
+  it("accepts slots equal to the approved enrollments, without details", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+    const student = await createStudent();
+    await createEnrollment(student.user.id, activity.id);
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ slots: 1 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.slots).toBe(1);
+  });
+
+  it("preserves fields not sent in a partial update", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      title: "Título Original",
+      slots: 10,
+      campus: "ARAPIRACA",
+      type: "COURSE",
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ slots: 15 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.slots).toBe(15);
+
+    const persisted = await request(app).get(`/activities/${activity.id}`);
+    expect(persisted.body.title).toBe("Título Original");
+    expect(persisted.body.campus).toBe("ARAPIRACA");
+    expect(persisted.body.type).toBe("COURSE");
+    expect(persisted.body.slots).toBe(15);
+  });
+
+  // ---------- Format, url and address against the stored state ----------
+
+  it("returns 200 when changing HYBRID to IN_PERSON on an activity that already has an address saved", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "HYBRID",
+      url: "https://meet.google.com/exemplo",
+      address: anAddress(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ format: "IN_PERSON" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.details.format).toBe("IN_PERSON");
+  });
+
+  it("returns 400 from service when changing ONLINE to IN_PERSON without sending or having a saved address", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: "https://meet.google.com/exemplo",
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ format: "IN_PERSON" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "IN_PERSON activities require an address.",
+    );
+  });
+
+  it("returns 400 from Zod schema when sending an invalid URL format", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: "https://meet.google.com/exemplo",
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ url: "não-é-url" });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+    });
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "url" })]),
+    );
+  });
+
+  it("returns 200 when editing an ONLINE activity that has no url saved", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "ONLINE",
+      url: null,
+      address: null,
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ title: "Título Atualizado" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe("Título Atualizado");
+  });
+
+  it("returns 400 when clearing the url of a HYBRID activity and keeps the saved url", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      format: "HYBRID",
+      url: "https://meet.google.com/exemplo",
+      address: anAddress(),
+    });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ url: null });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("HYBRID activities require a url.");
+
+    const persisted = await request(app).get(`/activities/${activity.id}`);
+    expect(persisted.body.details.url).toBe("https://meet.google.com/exemplo");
+  });
+});

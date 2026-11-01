@@ -1,0 +1,492 @@
+import { Route, Routes } from "react-router";
+import { delay } from "msw";
+import { describe, expect, it } from "vitest";
+import type { UserEvent } from "@testing-library/user-event";
+import { render, screen, http, HttpResponse, server } from "@/test";
+import { makeUser } from "@/test";
+import { config } from "@/config";
+import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
+import { GuestRoute } from "@/routes/GuestRoute";
+import { useAuthStore } from "@/stores/authStore";
+import { FULL_NAME_MAX_LENGTH } from "@/validators/limits";
+import { Login } from "../Login";
+import { Register } from "../Register";
+
+const REGISTER_URL = `${config.apiUrl}/auth/register`;
+
+/**
+ * Renders <Register/> at "/register" with the real login screen to land on
+ * after success, so the notice the sign-up hands over is asserted where the
+ * visitor actually reads it. `GuestRoute` wraps both because a sign-up must
+ * leave the visitor signed out.
+ */
+function renderRegisterPage() {
+  return render(
+    <Routes>
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+    </Routes>,
+    { route: "/register" },
+  );
+}
+
+async function goToStudentForm(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: /estudante/i }));
+}
+
+async function goToTeacherForm(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: /docente/i }));
+}
+
+type FormOverrides = Partial<{
+  name: string;
+  email: string;
+  course: string;
+  registrationCode: string;
+  password: string;
+  confirmPassword: string;
+  cndb: string;
+}>;
+
+async function fillCommonFields(
+  user: UserEvent,
+  overrides: FormOverrides = {},
+) {
+  await user.type(
+    screen.getByPlaceholderText("Digite seu nome completo"),
+    overrides.name ?? "Jéssica Pereira da Silva",
+  );
+  await user.type(
+    screen.getByPlaceholderText("seu.email@exemplo.com"),
+    overrides.email ?? "jessica@ufal.br",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Ex.: Ciência da Computação"),
+    overrides.course ?? "Ciência da Computação",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Número de matrícula"),
+    overrides.registrationCode ?? "2023001122",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Digite sua senha"),
+    overrides.password ?? "Senha@123",
+  );
+  await user.type(
+    screen.getByPlaceholderText("Digite a senha novamente"),
+    overrides.confirmPassword ?? "Senha@123",
+  );
+}
+
+/** Answers the sign-up with the backend's unique-constraint conflict. */
+function respondWithConflict(message: string, details?: { field: string }) {
+  server.use(
+    http.post(REGISTER_URL, () =>
+      HttpResponse.json(
+        { status: 409, code: "ALREADY_IN_USE", message, details },
+        { status: 409 },
+      ),
+    ),
+  );
+}
+
+describe("Register page", () => {
+  describe("profile selection step", () => {
+    it("shows the profile choice before any form field", () => {
+      renderRegisterPage();
+
+      expect(
+        screen.getByRole("heading", { name: "Criar conta no helpa" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /docente/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /estudante/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Digite seu nome completo"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens the student form without a CNDB field", async () => {
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+
+      expect(
+        screen.getByRole("heading", { name: "Cadastro de Estudante" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Ex.: Número da carteira docente"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens the teacher form with the CNDB field", async () => {
+      const { user } = renderRegisterPage();
+      await goToTeacherForm(user);
+
+      expect(
+        screen.getByRole("heading", { name: "Cadastro de Docente" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Ex.: Número da carteira docente"),
+      ).toBeInTheDocument();
+    });
+
+    it("returns to the selection screen and clears the form on 'Voltar'", async () => {
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await user.type(
+        screen.getByPlaceholderText("Digite seu nome completo"),
+        "Texto que deve ser descartado",
+      );
+
+      await user.click(
+        screen.getByRole("button", {
+          name: /voltar para a seleção de cadastro/i,
+        }),
+      );
+
+      expect(
+        screen.getByRole("heading", { name: "Criar conta no helpa" }),
+      ).toBeInTheDocument();
+
+      await goToStudentForm(user);
+      expect(
+        screen.getByPlaceholderText("Digite seu nome completo"),
+      ).toHaveValue("");
+    });
+
+    it("toggling one password field's visibility also reveals the other", async () => {
+      // Register.tsx wires both PasswordField instances to a single
+      // showPassword state, so clicking either "eye" icon flips both
+      // fields together. This locks in that shared behavior explicitly.
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+
+      const passwordInput = screen.getByPlaceholderText("Digite sua senha");
+      const confirmInput = screen.getByPlaceholderText(
+        "Digite a senha novamente",
+      );
+      expect(passwordInput).toHaveAttribute("type", "password");
+      expect(confirmInput).toHaveAttribute("type", "password");
+
+      const toggles = screen.getAllByRole("button", { name: "Mostrar senha" });
+      expect(toggles).toHaveLength(2);
+      await user.click(toggles[0]);
+
+      expect(passwordInput).toHaveAttribute("type", "text");
+      expect(confirmInput).toHaveAttribute("type", "text");
+
+      // Clicking the *other* field's own toggle flips the shared state back,
+      // hiding both fields again.
+      const [, hideToggleOnConfirmField] = screen.getAllByRole("button", {
+        name: "Ocultar senha",
+      });
+      await user.click(hideToggleOnConfirmField);
+
+      expect(passwordInput).toHaveAttribute("type", "password");
+      expect(confirmInput).toHaveAttribute("type", "password");
+    });
+  });
+
+  describe("validation", () => {
+    it("shows required-field errors when submitting an empty student form", async () => {
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(await screen.findByText("Nome é obrigatório")).toBeInTheDocument();
+      expect(screen.getByText("E-mail é obrigatório")).toBeInTheDocument();
+      expect(screen.getByText("Curso é obrigatório")).toBeInTheDocument();
+      expect(
+        screen.getByText("Código de matrícula é obrigatório"),
+      ).toBeInTheDocument();
+    });
+
+    it("requires the CNDB field only for teachers", async () => {
+      const { user } = renderRegisterPage();
+      await goToTeacherForm(user);
+
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(await screen.findByText("CNDB é obrigatório")).toBeInTheDocument();
+    });
+
+    it("flags mismatched password confirmation", async () => {
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+
+      await fillCommonFields(user, { confirmPassword: "Outra@123" });
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText("As senhas não correspondem"),
+      ).toBeInTheDocument();
+    });
+
+    it("flags a password that doesn't meet the strength rules", async () => {
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+
+      await fillCommonFields(user, { password: "abc", confirmPassword: "abc" });
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText("Senha deve ter no mínimo 8 caracteres"),
+      ).toBeInTheDocument();
+    });
+    it.each([
+      ["student", goToStudentForm],
+      ["teacher", goToTeacherForm],
+    ])(
+      "blocks a %s name over the length limit without calling the API",
+      async (_profile, goToForm) => {
+        let requested = false;
+        server.use(
+          http.post(REGISTER_URL, () => {
+            requested = true;
+            return HttpResponse.json(makeUser(), { status: 201 });
+          }),
+        );
+        const { user } = renderRegisterPage();
+        await goToForm(user);
+
+        await fillCommonFields(user, {
+          name: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
+        });
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+        expect(
+          await screen.findByText("O nome deve ter no máximo 120 caracteres."),
+        ).toBeInTheDocument();
+        expect(requested).toBe(false);
+      },
+    );
+  });
+
+  describe("submission", () => {
+    it("sends the expected payload for a student and redirects to /login", async () => {
+      let capturedBody: unknown;
+      server.use(
+        http.post(REGISTER_URL, async ({ request }) => {
+          capturedBody = await request.json();
+          return HttpResponse.json(makeUser(), { status: 201 });
+        }),
+      );
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
+      // Creating an account must not sign the visitor in.
+      expect(useAuthStore.getState().user).toBeNull();
+
+      expect(capturedBody).toMatchObject({
+        fullName: "Jéssica Pereira da Silva",
+        email: "jessica@ufal.br",
+        userType: "STUDENT",
+        course: "Ciência da Computação",
+        registrationCode: "2023001122",
+      });
+      expect(capturedBody).not.toHaveProperty("cndb");
+    });
+
+    it("sends the CNDB field for a teacher", async () => {
+      let capturedBody: unknown;
+      server.use(
+        http.post(REGISTER_URL, async ({ request }) => {
+          capturedBody = await request.json();
+          return HttpResponse.json(makeUser(), { status: 201 });
+        }),
+      );
+
+      const { user } = renderRegisterPage();
+      await goToTeacherForm(user);
+      await fillCommonFields(user, {
+        name: "Eduardo Rocha",
+        email: "eduardo@ufal.br",
+      });
+      await user.type(
+        screen.getByPlaceholderText("Ex.: Número da carteira docente"),
+        "CNDB-998877",
+      );
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
+
+      expect(capturedBody).toMatchObject({
+        userType: "TEACHER",
+        cndb: "CNDB-998877",
+      });
+    });
+
+    it.each([
+      [
+        "email",
+        goToStudentForm,
+        "Email already in use.",
+        "Este e-mail já está cadastrado.",
+      ],
+      [
+        "registrationCode",
+        goToStudentForm,
+        "Registration code already in use.",
+        "Esta matrícula já está cadastrada.",
+      ],
+      [
+        "cndb",
+        goToTeacherForm,
+        "CNDB already in use.",
+        "Esta CNDB já está cadastrada.",
+      ],
+    ])(
+      "shows a 409 on %s under its field and keeps what was typed",
+      async (field, goToForm, apiMessage, fieldMessage) => {
+        respondWithConflict(apiMessage, { field });
+
+        const { user } = renderRegisterPage();
+        await goToForm(user);
+        await fillCommonFields(user);
+        if (field === "cndb") {
+          await user.type(
+            screen.getByPlaceholderText("Ex.: Número da carteira docente"),
+            "CNDB-998877",
+          );
+        }
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+        expect(await screen.findByText(fieldMessage)).toBeInTheDocument();
+        expect(screen.queryByText(apiMessage)).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
+        expect(screen.queryByText(REGISTER_SUCCESS_MESSAGE)).toBeNull();
+        expect(
+          screen.getByPlaceholderText("Digite seu nome completo"),
+        ).toHaveValue("Jéssica Pereira da Silva");
+        expect(
+          screen.getByPlaceholderText("seu.email@exemplo.com"),
+        ).toHaveValue("jessica@ufal.br");
+        expect(screen.getByPlaceholderText("Número de matrícula")).toHaveValue(
+          "2023001122",
+        );
+      },
+    );
+
+    it("shows the generic conflict message when the 409 names no field", async () => {
+      respondWithConflict("This value is already in use.");
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText(
+          "Algum dos dados informados já está cadastrado.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("This value is already in use.")).toBeNull();
+    });
+
+    it("asks to check the data when the API rejects it (400)", async () => {
+      server.use(
+        http.post(REGISTER_URL, () =>
+          HttpResponse.json(
+            {
+              status: 400,
+              code: "VALIDATION_ERROR",
+              message: "Validation error.",
+              errors: [
+                {
+                  field: "email",
+                  code: "INVALID_FORMAT",
+                  message: "Invalid email.",
+                },
+              ],
+            },
+            { status: 400 },
+          ),
+        ),
+      );
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByText(
+          "Verifique os dados informados e tente novamente.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Validation error.")).toBeNull();
+    });
+
+    it.each([0, 500])(
+      "shows the connection error for status %i",
+      async (status) => {
+        server.use(
+          http.post(REGISTER_URL, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
+
+        const { user } = renderRegisterPage();
+        await goToStudentForm(user);
+        await fillCommonFields(user);
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+        expect(
+          await screen.findByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it("disables the submit button while the request is in flight", async () => {
+      server.use(
+        http.post(REGISTER_URL, async () => {
+          await delay(50);
+          return HttpResponse.json(makeUser(), { status: 201 });
+        }),
+      );
+
+      const { user } = renderRegisterPage();
+      await goToStudentForm(user);
+      await fillCommonFields(user);
+      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+
+      expect(
+        await screen.findByRole("button", { name: "Carregando..." }),
+      ).toBeDisabled();
+
+      expect(
+        await screen.findByText(REGISTER_SUCCESS_MESSAGE),
+      ).toBeInTheDocument();
+    });
+  });
+});

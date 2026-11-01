@@ -1,0 +1,195 @@
+import { useId, useState } from "react";
+import { useNavigate } from "react-router";
+import { UserPlus, CheckCircle } from "lucide-react";
+import { Button } from "../../../components/Button";
+import { ActionSummary } from "./ActionSummary";
+import { Alert } from "../../../components/Alert";
+import { enrollInAction } from "../services";
+import { getEnrollmentErrorMessage } from "../errors";
+import type { Activity } from "@/services/contracts/activity";
+import { ApiError } from "../../../services/apiError";
+import { useDialog } from "../../../hooks/useDialog";
+
+type ModalStep = "confirm" | "loading" | "success" | "error";
+
+interface EnrollmentModalProps {
+  action: Activity;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export function EnrollmentModal({
+  action,
+  onClose,
+  onSuccess,
+}: EnrollmentModalProps) {
+  const navigate = useNavigate();
+  const titleId = useId();
+  const [step, setStep] = useState<ModalStep>("confirm");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dialogRef = useDialog({ onClose, closeDisabled: isSubmitting });
+
+  const handleConfirm = async () => {
+    if (isSubmitting) return; // Prevent double-click
+
+    setIsSubmitting(true);
+    setStep("loading");
+    try {
+      await enrollInAction(action.id);
+    } catch (err) {
+      let message: string | null = null;
+
+      if (err instanceof ApiError) {
+        message = getEnrollmentErrorMessage(err);
+      } else {
+        message = "Erro ao realizar inscrição. Tente novamente.";
+      }
+
+      // Don't show error for 401 (session middleware handles redirect)
+      if (message !== null) {
+        setErrorMessage(message);
+        setStep("error");
+      }
+      return;
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    setStep("success");
+    onSuccess?.();
+  };
+
+  const handleBackToFeed = () => {
+    onClose();
+    navigate("/dashboard");
+  };
+
+  const handleRetry = () => {
+    setErrorMessage(null);
+    setStep("confirm");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <button
+        type="button"
+        aria-label="Fechar modal"
+        className="absolute inset-0 bg-black/40 cursor-pointer"
+        onClick={step !== "loading" ? onClose : undefined}
+      />
+
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
+        <div className="px-8 py-8 flex flex-col items-center gap-5 text-center">
+          {step === "success" && (
+            <>
+              <div className="size-16 rounded-xl bg-[#1a4a1a] flex items-center justify-center">
+                <CheckCircle className="size-9 text-white" />
+              </div>
+              <div>
+                <h2 id={titleId} className="text-xl font-bold text-gray-900">
+                  Oba! Você está dentro!
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Sua inscrição foi confirmada
+                </p>
+              </div>
+              <Button
+                variant="navy"
+                size="lg"
+                rounded
+                onClick={handleBackToFeed}
+                className="flex items-center justify-center gap-2 mt-2"
+              >
+                ← Voltar para o feed
+              </Button>
+            </>
+          )}
+
+          {step === "error" && (
+            <>
+              <h2 id={titleId} className="sr-only">
+                Erro ao realizar inscrição
+              </h2>
+              <Alert
+                type="error"
+                message={errorMessage ?? "Erro ao realizar inscrição."}
+                onClose={handleRetry}
+              />
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  className="flex-1"
+                  onClick={onClose}
+                >
+                  Fechar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="flex-1"
+                  onClick={handleRetry}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            </>
+          )}
+
+          {(step === "confirm" || step === "loading") && (
+            <>
+              <div className="size-14 rounded-full bg-blue-100 flex items-center justify-center">
+                <UserPlus className="size-7 text-blue-600" />
+              </div>
+              <div>
+                <h2 id={titleId} className="text-xl font-bold text-gray-900">
+                  Confirmar inscrição
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Você está prestes a se inscrever em:
+                </p>
+              </div>
+              <ActionSummary action={action} />
+              <div className="w-full border border-yellow-300 bg-yellow-50 rounded-xl px-5 py-4 text-sm text-left text-yellow-800">
+                <span className="font-semibold">Atenção: </span>
+                Ao confirmar, você se compromete a participar da atividade.
+                Certifique-se de estar disponível nas datas e horários
+                informados.
+              </div>
+              <div className="flex gap-16 w-full">
+                <Button
+                  variant="danger"
+                  size="md"
+                  rounded
+                  className="flex-1"
+                  disabled={step === "loading" || isSubmitting}
+                  onClick={onClose}
+                >
+                  ✕ Cancelar
+                </Button>
+                <Button
+                  variant="navy"
+                  size="md"
+                  rounded
+                  className="flex-1"
+                  disabled={isSubmitting}
+                  isLoading={step === "loading"}
+                  onClick={handleConfirm}
+                >
+                  ✓ Confirmar
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

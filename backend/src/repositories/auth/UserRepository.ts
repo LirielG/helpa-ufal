@@ -1,11 +1,29 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import type { PrismaClient, User } from "@prisma/client";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
+import type {
+  IUserRepository,
+  UpdateProfileData,
+  UserWithProfile,
+  UserWithProfileAndHash,
+} from "@/repositories/auth/IUserRepository.js";
 import { prisma } from "@/database/prisma.js";
 import { RegisterInput } from "@/schemas/auth/AuthSchemas.js";
-
 type Props = {
   prisma?: PrismaClient;
 };
+
+const PROFILE_SELECT = {
+  id: true,
+  fullName: true,
+  email: true,
+  userType: true,
+  isManager: true,
+  createdAt: true,
+  student: { select: { registrationCode: true, course: true } },
+  teacher: {
+    select: { registrationCode: true, course: true, cndb: true },
+  },
+} as const;
 
 class UserRepository implements IUserRepository {
   private _prisma: PrismaClient;
@@ -16,6 +34,64 @@ class UserRepository implements IUserRepository {
 
   public async findByEmail(email: string): Promise<User | null> {
     return this._prisma.user.findUnique({ where: { email } });
+  }
+
+  public async findById(id: string): Promise<UserWithProfileAndHash> {
+    return this._prisma.user.findUniqueOrThrow({
+      where: { id },
+      select: {
+        ...PROFILE_SELECT,
+        passwordHash: true,
+      },
+    });
+  }
+
+  public async findSessionById(id: string): Promise<AuthenticatedUser | null> {
+    return this._prisma.user.findUnique({
+      where: { id },
+      select: { id: true, userType: true, isManager: true, tokenVersion: true },
+    });
+  }
+
+  public async findProfileById(id: string): Promise<UserWithProfile> {
+    return this._prisma.user.findUniqueOrThrow({
+      where: { id },
+      select: PROFILE_SELECT,
+    });
+  }
+
+  public async updateProfile(
+    id: string,
+    data: UpdateProfileData,
+  ): Promise<UserWithProfile> {
+    return this._prisma.$transaction(async (tx) => {
+      if (data.fullName !== undefined || data.passwordHash !== undefined) {
+        await tx.user.update({
+          where: { id },
+          data: {
+            ...(data.fullName !== undefined && { fullName: data.fullName }),
+            // A new password revokes every token issued before it, including
+            // the one making this request.
+            ...(data.passwordHash !== undefined && {
+              passwordHash: data.passwordHash,
+              tokenVersion: { increment: 1 },
+            }),
+          },
+        });
+      }
+
+      if (data.course !== undefined) {
+        await tx.teacher.update({
+          where: { userId: id },
+          data: { course: data.course },
+        });
+      }
+
+      return tx.user.findUniqueOrThrow({
+        where: { id },
+        select: PROFILE_SELECT,
+      });
+    });
   }
 
   public async createWithSubtype(

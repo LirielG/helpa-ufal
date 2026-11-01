@@ -1,14 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
-import { Login, Register } from "./pages";
+import { BrowserRouter as Router } from "react-router";
+import { ToastContainer } from "react-toastify";
+import { AppRoutes } from "./routes/AppRoutes";
 
 export default function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AppRoutes />
+      <ToastContainer position="top-right" />
     </Router>
   );
 }

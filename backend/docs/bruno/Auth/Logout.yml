@@ -1,0 +1,62 @@
+info:
+  name: Logout
+  type: http
+  seq: 3
+  tags:
+    - Auth
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/logout"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 204 - Logged out successfully
+    description: Session cookie cleared. No content returned. The same 204 is returned when there was no session to begin with.
+    request:
+      url: "{{baseUrl}}/auth/logout"
+      method: POST
+    response:
+      status: 204
+      statusText: No Content
+      headers:
+        - name: Set-Cookie
+          value: token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Strict
+      body:
+        type: text
+        data: ""
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/auth/logout"
+      method: POST
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Ends the browser session by clearing the `token` cookie.
+
+  **Authentication:** public. The route does not go through AuthMiddleware, takes no request body and returns 204 with or without an active session. Calling it twice is harmless.
+
+  - The cookie is cleared with the same options used to write it on login (src/config/auth-cookie.ts): `httpOnly`, `secure` only in production, and `sameSite` taken from COOKIE_SAME_SITE (default `strict`). Options must match, otherwise the browser keeps the original cookie.
+  - Logout only drops the cookie — it does not revoke the JWT. A token captured before the logout stays valid until it expires.
+  - The response carries an already expired `Set-Cookie`. Clients that honor it, like browsers, stop sending the cookie. If a request in Bruno still goes out authenticated after the logout, clear the `token` cookie in the cookie jar.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

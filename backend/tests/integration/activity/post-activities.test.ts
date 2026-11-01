@@ -1,0 +1,485 @@
+import { describe, it, expect } from "vitest";
+import request from "supertest";
+import { app } from "@/app.js";
+import { prisma } from "@/database/prisma.js";
+import {
+  anAddress,
+  createTeacher,
+  createStudent,
+} from "../../helpers/factories.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
+import { daysFromNow } from "../../helpers/dates.js";
+import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
+
+function validPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    title: "Oficina de Introdução à Programação",
+    type: "EXTENSION",
+    campus: "ARAPIRACA",
+    startDate: daysFromNow(30).toISOString(),
+    endDate: daysFromNow(44).toISOString(),
+    slots: 40,
+    description: "Introdução à lógica de programação para iniciantes.",
+    area: "Tecnologia",
+    workloadHours: 20,
+    format: "ONLINE",
+    url: "https://meet.example.com/oficina",
+    ...overrides,
+  };
+}
+
+describe("POST /activities", () => {
+  describe.each(["startDate", "endDate"])("%s", (field) => {
+    it.each([
+      ["date without timezone", "2026-01-01T08:00"],
+      ["date only", "2026-01-01"],
+      ["local timezone offset", "2026-01-01T08:00:00-03:00"],
+      ["numeric timestamp", 1767225600000],
+    ])(
+      "returns 400 when it is not ISO 8601 in UTC with Z (%s)",
+      async (_, invalidDate) => {
+        const author = await createTeacher();
+
+        const response = await request(app)
+          .post("/activities")
+          .set(...authCookie(author.token))
+          .send(validPayload({ [field]: invalidDate }));
+
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual(
+          expect.arrayContaining([expect.objectContaining({ field })]),
+        );
+      },
+    );
+  });
+
+  it("creates an activity with a valid ISO 8601 UTC date ending in Z", async () => {
+    const author = await createTeacher();
+    const startDate = daysFromNow(30).toISOString();
+    const endDate = daysFromNow(44).toISOString();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ startDate, endDate }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.startDate).toBe(startDate);
+    expect(response.body.endDate).toBe(endDate);
+  });
+
+  // The POST response does not include details, so url and address are read back via GET.
+  it("creates an IN_PERSON activity with url: null and stores url as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          format: "IN_PERSON",
+          url: null,
+          address: anAddress(),
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.url).toBeNull();
+  });
+
+  it("creates an ONLINE activity with address: null and stores address as null", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          format: "ONLINE",
+          address: null,
+        }),
+      );
+
+    expect(response.status).toBe(201);
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.address).toBeNull();
+  });
+
+  it("returns 401 without a token", async () => {
+    const response = await request(app)
+      .post("/activities")
+      .send(validPayload());
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 with an invalid token", async () => {
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(invalidToken()))
+      .send(validPayload());
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 with an expired token", async () => {
+    const author = await createTeacher();
+    const expiredToken = signToken(
+      { id: author.user.id, userType: "TEACHER", isManager: false },
+      "-1h",
+    );
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(expiredToken))
+      .send(validPayload());
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
+    const teacher = await createTeacher();
+
+    await prisma.teacher.deleteMany({ where: { userId: teacher.user.id } });
+    await prisma.user.delete({ where: { id: teacher.user.id } });
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(teacher.token))
+      .send(validPayload());
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
+    });
+
+    const count = await prisma.activity.count({
+      where: { authorId: teacher.user.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it.each([
+    ["student", createStudent],
+    ["teacher", createTeacher],
+  ] as const)(
+    "creates an activity for a %s and persists it with authorId from the token",
+    async (_role, createUser) => {
+      // authMiddleware.auth() (no options) requires a valid token but does not
+      // restrict by userType/isManager: any authenticated user create an action.
+      const author = await createUser();
+
+      const response = await request(app)
+        .post("/activities")
+        .set(...authCookie(author.token))
+        .send(validPayload());
+
+      expect(response.status).toBe(201);
+      expect(response.body.authorId).toBe(author.user.id);
+      expect(response.body.status).toBe("OPEN");
+      expect(response.body.availableSlots).toBe(response.body.slots);
+
+      const persisted = await request(app).get(
+        `/activities/${response.body.id}`,
+      );
+      expect(persisted.status).toBe(200);
+      expect(persisted.body.authorId).toBe(author.user.id);
+    },
+  );
+
+  it("ignores an authorId sent in the body — authorship always comes from the token", async () => {
+    // ActivityService.create(authorId, data) receives authorId as a separate
+    // parameter (from the controller/JWT) and never reads data.authorId.
+    const author = await createTeacher();
+    const someoneElse = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ authorId: someoneElse.user.id }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.authorId).toBe(author.user.id);
+  });
+
+  it("returns 400 when format is IN_PERSON without an address", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          format: "IN_PERSON",
+          url: undefined,
+          address: undefined,
+        }),
+      );
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "address",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected object, received undefined",
+        },
+      ],
+    });
+  });
+
+  it("returns 400 when format is HYBRID without an address", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ format: "HYBRID", address: undefined }));
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "address",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected object, received undefined",
+        },
+      ],
+    });
+  });
+
+  it("returns 400 when format is HYBRID without a url", async () => {
+    const author = await createTeacher();
+    const address = {
+      addressLine: "Av. Manoel Severino Barbosa, s/n",
+      district: "Bom Sucesso",
+      zipCode: "57309005",
+      city: "Arapiraca",
+      state: "AL",
+    };
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ format: "HYBRID", url: undefined, address }));
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "url",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected string, received undefined",
+        },
+      ],
+    });
+  });
+
+  it("creates an ONLINE activity without a url", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ format: "ONLINE", url: undefined }));
+
+    expect(response.status).toBe(201);
+
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.format).toBe("ONLINE");
+    expect(persisted.body.details.url).toBeNull();
+  });
+
+  it("discards the address of an ONLINE activity", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ format: "ONLINE", address: anAddress() }));
+
+    expect(response.status).toBe(201);
+
+    expect(response.body.details.format).toBe("ONLINE");
+    expect(response.body.details.address).toBeNull();
+
+    const persisted = await request(app).get(`/activities/${response.body.id}`);
+    expect(persisted.body.details.format).toBe("ONLINE");
+    expect(persisted.body.details.address).toBeNull();
+  });
+
+  it.each(["IN_PERSON", "HYBRID"] as const)(
+    "persists the address of a %s activity",
+    async (format) => {
+      const author = await createTeacher();
+      const address = anAddress();
+
+      const response = await request(app)
+        .post("/activities")
+        .set(...authCookie(author.token))
+        .send(validPayload({ format, address }));
+
+      expect(response.status).toBe(201);
+
+      expect(response.body.details.address).toEqual({
+        id: expect.any(String),
+        ...address,
+      });
+
+      const persisted = await request(app).get(
+        `/activities/${response.body.id}`,
+      );
+      expect(persisted.body.details.address).toEqual({
+        id: expect.any(String),
+        ...address,
+      });
+    },
+  );
+
+  it("returns 400 when format is ONLINE with a malformed url", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ format: "ONLINE", url: "url-invalida" }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "url" }),
+    ]);
+  });
+
+  it("returns 400 when endDate is not after startDate", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          startDate: daysFromNow(44).toISOString(),
+          endDate: daysFromNow(30).toISOString(),
+        }),
+      );
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      {
+        field: "startDate",
+        code: "VALIDATION_ERROR",
+        message: "startDate must be before endDate.",
+      },
+    ]);
+  });
+
+  it("returns 400 when the activity duration exceeds 365 days", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          startDate: "2027-01-01T00:00:00.000Z",
+          endDate: "2028-06-01T00:00:00.000Z", // > 365 days
+        }),
+      );
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([
+        {
+          field: "endDate",
+          code: "VALIDATION_ERROR",
+          message: "Activity duration cannot exceed 365 days.",
+        },
+      ]),
+    );
+  });
+
+  it("creates an activity whose title is at the length limit", async () => {
+    const author = await createTeacher();
+    const title = "a".repeat(ACTIVITY_TITLE_MAX_LENGTH);
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ title }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.title).toBe(title);
+  });
+
+  it("returns 400 when the title is one character over the length limit", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      expect.objectContaining({ field: "title" }),
+    ]);
+  });
+
+  it("returns 400 when slots exceeds the maximum of 10000", async () => {
+    const author = await createTeacher();
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(validPayload({ slots: 10_001 }));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([
+        {
+          field: "slots",
+          code: "VALIDATION_ERROR",
+          message: "slots cannot exceed 10000.",
+        },
+      ]),
+    );
+  });
+
+  it("returns 400 when workloadHours exceeds the activity duration in hours", async () => {
+    const author = await createTeacher();
+    const start = daysFromNow(30);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2hours
+
+    const response = await request(app)
+      .post("/activities")
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          workloadHours: 20, // way above 2h
+        }),
+      );
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual(
+      expect.arrayContaining([
+        {
+          field: "workloadHours",
+          code: "VALIDATION_ERROR",
+          message:
+            "workloadHours cannot exceed the total duration of the activity.",
+        },
+      ]),
+    );
+  });
+});

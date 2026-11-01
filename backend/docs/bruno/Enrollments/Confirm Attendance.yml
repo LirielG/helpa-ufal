@@ -1,0 +1,460 @@
+info:
+  name: Confirm Attendance
+  type: http
+  seq: 11
+  tags:
+    - Enroll
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+  params:
+    - name: enrollmentId
+      value: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+      type: path
+      description: Enrollment UUID
+  body:
+    type: json
+    data: |-
+      {
+        "attended": true,
+        "workloadHours": 4
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 - Presence confirmed
+    description: Presence homologated for an APPROVED enrollment in a COMPLETED activity. attendanceConfirmed moves from null to true with the confirmed hours, and the response is the enrollment in its canonical format. Success is always 200 — there is no 201/200 distinction between first homologation and correction.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+            "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "status": "APPROVED",
+            "attendanceConfirmed": true,
+            "confirmedWorkloadHours": 4,
+            "createdAt": "2026-08-22T21:00:00.000Z",
+            "updatedAt": "2026-08-30T18:45:00.000Z"
+          }
+  - name: 200 - Absence registered
+    description: attended=false registers an absence (falta), forcing confirmedWorkloadHours to 0. workloadHours must be omitted (its presence returns 400). This is different from null, which means "no one homologated yet".
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": false
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+            "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "status": "APPROVED",
+            "attendanceConfirmed": false,
+            "confirmedWorkloadHours": 0,
+            "createdAt": "2026-08-22T21:00:00.000Z",
+            "updatedAt": "2026-08-30T18:50:00.000Z"
+          }
+  - name: 200 - Correction (overwrite)
+    description: Re-sending freely overwrites the previous homologation (e.g., fixing a typo in the hours). The pair (attendanceConfirmed, confirmedWorkloadHours) is always written together, atomically — never one field without the other.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 6
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+            "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "status": "APPROVED",
+            "attendanceConfirmed": true,
+            "confirmedWorkloadHours": 6,
+            "createdAt": "2026-08-22T21:00:00.000Z",
+            "updatedAt": "2026-08-30T19:02:00.000Z"
+          }
+  - name: 400 - Malformed body
+    description: 'Fails when a field has the wrong type (e.g., attended as string) or attended is missing. Any field beyond attended and workloadHours is refused too — an id in the body is a second source of truth for the target, which lives in the path — with an empty field name, since the unknown key belongs to the object and not to one of its properties (message: Unrecognized key: "userId"). Field messages come from the Zod issues and are pinned by the integration tests.'
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": "yes",
+            "workloadHours": 4
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              { "field": "attended", "code": "VALIDATION_ERROR", "message": "Invalid input: expected boolean, received string" }
+            ]
+          }
+  - name: 400 - Invalid attended/workloadHours combination
+    description: 'attended=true requires workloadHours; attended=false forbids it. Both rules depend only on the body, so they answer 400 with errors[] before any lookup, and nothing is changed. The symmetric case answers the same shape with { "field": "workloadHours", "message": "workloadHours is required when attended is true." }.'
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": false,
+            "workloadHours": 4
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              { "field": "workloadHours", "code": "VALIDATION_ERROR", "message": "workloadHours must be omitted when attended is false." }
+            ]
+          }
+  - name: 401 - Unauthenticated
+    description: 'No session cookie was sent. An invalid or expired cookie returns the same 401, with the message "Token malformatted, expired or invalid." instead.'
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "UNAUTHENTICATED",
+            "status": 401,
+            "message": "No token provided."
+          }
+  - name: 401 - User not found
+    description: Token is valid, but the user it identifies no longer exists or is inactive.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "UNAUTHENTICATED",
+            "status": 401,
+            "message": "User account not found or inactive."
+          }
+  - name: 403 - Forbidden
+    description: Authenticated user is neither the creator of the enrollment's activity nor a manager (isManager). The enrolled volunteer can never homologate their own attendance — they also receive 403. Checked only after the enrollment is known to exist (404 takes precedence).
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "FORBIDDEN",
+            "status": 403,
+            "message": "Only the activity creator or a manager can confirm attendance."
+          }
+  - name: 404 - Enrollment not found
+    description: No enrollment with this id, a non-UUID enrollmentId, or an enrollment whose activity was soft-deleted. A malformed id is a lookup that finds nothing, so the three cases answer exactly this 404 and are indistinguishable from the outside; Answers the generic NOT_FOUND, unlike DELETE /activities/:activityId/enroll, which uses `ENROLLMENT_NOT_FOUND` no screen needs to tell them apart here yet..
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "NOT_FOUND",
+            "status": 404,
+            "message": "Enrollment not found."
+          }
+  - name: 409 - Activity not completed
+    description: Homologation only makes sense on COMPLETED activities. OPEN, IN_PROGRESS or CANCELLED activities return 409 — otherwise hours could be granted for activities that never happened.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "ACTIVITY_NOT_COMPLETED",
+            "status": 409,
+            "message": "Attendance can only be confirmed for completed activities."
+          }
+  - name: 409 - Enrollment not approved
+    description: Only APPROVED enrollments can be homologated. A CANCELLED enrollment returns 409 and nothing is changed.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "ENROLLMENT_NOT_APPROVED",
+            "status": 409,
+            "message": "Only approved enrollments can have attendance confirmed."
+          }
+  - name: 422 - Hours out of range
+    description: workloadHours must be an integer between 1 and the activity's workloadHours (both limits included). Zero, negative, fractional or above-the-ceiling values return 422 and nothing is changed. The ceiling depends on stored data, which is why this is 422 and not 400.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 99
+          }
+    response:
+      status: 422
+      statusText: Unprocessable Entity
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "UNPROCESSABLE",
+            "status": 422,
+            "message": "workloadHours must be an integer between 1 and the activity's workload hours."
+          }
+  - name: 500 - Internal error
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: ""
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "code": "INTERNAL_ERROR",
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Homologates the attendance of an enrolled volunteer on a completed activity, registering presence or absence and the confirmed workload hours.
+
+  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  - Route: PUT /enrollments/:enrollmentId/attendance. The enrollment has its own id, so it has a single top-level URL; the activity is resolved from the enrollment. The target is identified exclusively by the path — the body carries only the homologation outcome.
+  - Body: { attended: boolean, workloadHours?: number }. attended=true requires workloadHours (integer, 1..activity's workloadHours); attended=false forbids it and stores 0.
+  - The homologating user is resolved exclusively from the session (never from params, query or body), and must still exist and be active in the database (light hybrid authentication).
+  - Validation order: authentication (401) → body shape and attended/workloadHours combination (400) → existence of the enrollment and its activity (404) → authorization (403) → business rules (409/422).
+  - Authorization: only the creator of the enrollment's activity or a manager (isManager). The enrolled volunteer can never homologate their own attendance (403).
+  - Only COMPLETED activities accept homologation; only APPROVED enrollments can be homologated. Both violations return 409.
+  - The pair (attendanceConfirmed, confirmedWorkloadHours) is written together, in a single atomic operation: (true, n >= 1) or (false, 0). Validation and write run in the same transaction.
+  - Correction is free: re-sending overwrites the previous values. Success is always 200 — no 201/200 distinction.
+  - Non-UUID ids, nonexistent enrollments and enrollments of soft-deleted activities all return the same 404 `Enrollment not found.`.
+  - Response: the enrollment in its canonical format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }), the same shape as an item of GET /activities/:activityId/enrollments without `user`. No volunteer personal data is exposed.
+  - Reading rule for consumers: always discriminate by attendanceConfirmed (null = not homologated | true = present | false = absent), never by confirmedWorkloadHours — 0 is ambiguous by construction.
+  - Homologated records are preserved by the activity's soft delete and unreachable by enrollment cancellation (cancellation is only allowed while the activity is OPEN).
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

@@ -1,0 +1,318 @@
+info:
+  name: Transition activity status
+  type: http
+  seq: 5
+  tags:
+    - Activities
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/activities/:activityId/status"
+  params:
+    - name: activityId
+      value: 22ac40bd-e160-4c6e-8505-b63913d2482f
+      type: path
+      description: Activity UUID
+  body:
+    type: json
+    data: |-
+      {
+        "status": "IN_PROGRESS"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
+
+examples:
+  - name: 200 Response
+    description: Status transitioned successfully.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "2448a310-6c92-4db2-8389-2fbee52e81e9",
+            "authorId": "84dc4df7-53e1-4b4e-8468-f3da7028c24a",
+            "title": "Oficina de Introdução à Programação — Turma 2",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-11-03T12:00:00.000Z",
+            "endDate": "2026-11-14T20:00:00.000Z",
+            "slots": 50,
+            "availableSlots": 50,
+            "status": "IN_PROGRESS"
+          }
+  - name: 400 - Invalid status
+    description: status is not IN_PROGRESS, COMPLETED or CANCELLED. OPEN is also rejected here, since no transition leads back to it.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "OPEN"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "status",
+                "message": "Invalid option: expected one of \"IN_PROGRESS\"|\"COMPLETED\"|\"CANCELLED\""
+              }
+            ]
+          }
+  - name: 400 - Invalid id
+    description: The activityId in the path is not a UUID.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "not-a-uuid"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "message": "Invalid UUID format."
+          }
+  - name: 401 Response
+    description: Missing, invalid or expired session cookie.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "message": "Unauthenticated."
+          }
+  - name: 403 Response
+    description: Requester is not the author or a manager.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "COMPLETED"
+          }
+    response:
+      status: 403
+      statusText: Forbidden
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 403,
+            "message": "Forbidden. Requester is not the author or a manager."
+          }
+  - name: 404 Response
+    description: Activity not found or deleted.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "00000000-0000-4000-8000-000000000000"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 404
+      statusText: Not Found
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 404,
+            "message": "Activity not found."
+          }
+  - name: 409 - Terminal state
+    description: Activity is already COMPLETED or CANCELLED.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "COMPLETED"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Activity is already CANCELLED and cannot be transitioned."
+          }
+  - name: 409 - Invalid transition
+    description: The target status is not reachable from the current one.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "COMPLETED"
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "message": "Cannot transition from OPEN to COMPLETED."
+          }
+  - name: 500 Response
+    description: Internal server error.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 500
+      statusText: Internal Server Error
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 500,
+            "message": "Internal server error."
+          }
+
+docs: |-
+  Transitions an activity through its lifecycle. Status is treated as a business state with controlled transitions, not a free-update field.
+
+  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can transition.
+
+  **Allowed transitions:**
+  - `OPEN => IN_PROGRESS | CANCELLED`
+  - `IN_PROGRESS => COMPLETED | CANCELLED`
+
+  `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.
+
+  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

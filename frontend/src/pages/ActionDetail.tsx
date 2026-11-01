@@ -1,0 +1,241 @@
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router";
+import { Users } from "lucide-react";
+import { DashboardShell } from "../features/dashboard/components/DashboardShell";
+import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
+import { Footer } from "../components/Footer";
+import { Button } from "../components/Button";
+import { Alert } from "../components/Alert";
+import { ActionHero } from "../features/action-detail/components/ActionHero";
+import { ActionDescription } from "../features/action-detail/components/ActionDescription";
+import { ActionInfoCard } from "../features/action-detail/components/ActionInfoCard";
+import { EnrollmentModal } from "../features/action-detail/components/EnrollmentModal";
+import { CancelEnrollmentModal } from "../features/action-detail/components/CancelEnrollmentModal";
+import { EnrollmentActions } from "../features/action-detail/components/EnrollmentActions";
+import { GuestEnrollmentActions } from "../features/action-detail/components/GuestEnrollmentActions";
+import { getActionById } from "../features/action-detail/services";
+import { ReportActionButton } from "../features/report/components/ReportActionButton";
+import { ReportActionModal } from "../features/report/ReportActionModal";
+import { useAuth } from "../hooks/useAuth";
+import bgDashboard from "../assets/bg.svg";
+import type { Activity } from "@/services/contracts/activity";
+import { ApiError } from "@/services/apiError";
+
+export function ActionDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+
+  const [action, setAction] = useState<Activity | null>(null);
+  const [isLoading, setIsLoading] = useState(!!id);
+  const [error, setError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  // No route tells whether the user already reported this action, so this
+  // only reflects what happened while the page is open; a reload falls back
+  // to the 409 shown by the modal.
+  const [isReported, setIsReported] = useState(false);
+
+  // Stable references: the modal's effect depends on onClose.
+  const closeReportModal = useCallback(() => setShowReportModal(false), []);
+  const markReported = useCallback(() => setIsReported(true), []);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+
+    getActionById(id)
+      .then((data) => {
+        if (isMounted) setAction(data);
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+        if (error instanceof ApiError && error.status === 401) return;
+
+        const notFound = error instanceof ApiError && error.status === 404;
+        setCanRetry(!notFound);
+        setError(
+          notFound
+            ? "Ação não encontrada."
+            : "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.",
+        );
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, loadAttempt]);
+
+  const retryLoad = () => {
+    setError(null);
+    setCanRetry(false);
+    setIsLoading(true);
+    setLoadAttempt((attempt) => attempt + 1);
+  };
+
+  // The server is the source of the slots and of enrollmentStatus, so both
+  // enrolling and cancelling refetch instead of patching the local copy.
+  const refreshAction = async () => {
+    if (!id) return;
+    try {
+      const updatedAction = await getActionById(id);
+      setAction(updatedAction);
+    } catch {
+      // A failed refresh must not erase the action after a completed enrollment change.
+    }
+  };
+
+  const handleCancelled = () => {
+    setShowCancelModal(false);
+    void refreshAction();
+  };
+
+  const handleActivityRemoved = () => {
+    setShowCancelModal(false);
+    setAction(null);
+    setError("Esta ação não existe mais.");
+  };
+
+  // Convenience only: GET /activities/:id/enrollments still enforces this on
+  // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
+  const canViewEnrollments = Boolean(
+    action && user && (user.id === action.authorId || user.isManager),
+  );
+
+  return (
+    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+      {isLoading && (
+        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <p className="text-gray-500 text-lg">Carregando...</p>
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="max-w-2xl mx-auto px-4 py-12">
+          <Alert type="error" message={error} />
+          {canRetry && (
+            <Button
+              variant="primary"
+              size="md"
+              className="mt-4 mr-3"
+              onClick={retryLoad}
+            >
+              Tentar novamente
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="md"
+            className="mt-4"
+            onClick={() => navigate(-1)}
+          >
+            ← Voltar
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && action && (
+        <>
+          <ActionHero
+            bannerUrl="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200"
+            category={action.details?.area || action.type}
+            title={action.title}
+            shortDescription={action.details?.description ?? ""}
+            onBack={() => navigate(-1)}
+          />
+
+          <div
+            className="bg-white flex-1"
+            style={{
+              backgroundImage: `url(${bgDashboard})`,
+              backgroundPosition: "top center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "cover",
+            }}
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <ActionDescription
+                    description={
+                      action.details?.description || "Descrição não informada."
+                    }
+                  />
+                </div>
+
+                <div className="lg:col-span-1 flex flex-col gap-4">
+                  <ActionInfoCard action={action} />
+
+                  {isAuthenticated ? (
+                    <EnrollmentActions
+                      action={action}
+                      onEnroll={() => setShowModal(true)}
+                      onCancel={() => setShowCancelModal(true)}
+                    />
+                  ) : (
+                    <GuestEnrollmentActions action={action} />
+                  )}
+
+                  {canViewEnrollments && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="lg"
+                      onClick={() =>
+                        navigate(`/activity/${action.id}/enrollments`)
+                      }
+                      className="flex items-center justify-center gap-3 rounded-xl"
+                    >
+                      <Users className="size-6" />
+                      Ver inscritos
+                    </Button>
+                  )}
+
+                  {/* The API answers 401 to visitors and 403 to the author. */}
+                  {isAuthenticated && user?.id !== action.authorId && (
+                    <ReportActionButton
+                      reported={isReported}
+                      onClick={() => setShowReportModal(true)}
+                      className="self-center"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {showModal && (
+            <EnrollmentModal
+              action={action}
+              onClose={() => setShowModal(false)}
+              onSuccess={refreshAction}
+            />
+          )}
+
+          {showCancelModal && (
+            <CancelEnrollmentModal
+              action={action}
+              onClose={() => setShowCancelModal(false)}
+              onCancelled={handleCancelled}
+              onActivityRemoved={handleActivityRemoved}
+              onActivityClosed={refreshAction}
+            />
+          )}
+
+          <ReportActionModal
+            open={showReportModal}
+            actionId={action.id}
+            onClose={closeReportModal}
+            onReported={markReported}
+          />
+        </>
+      )}
+    </DashboardShell>
+  );
+}

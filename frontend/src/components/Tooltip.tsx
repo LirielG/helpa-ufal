@@ -15,7 +15,7 @@ export function Tooltip({ content }: TooltipProps) {
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="size-5 rounded-full bg-[#0B2B58] flex items-center justify-center hover:opacity-90 transition"
+        className="size-5 rounded-full bg-[#0B2B58] flex items-center justify-center hover:opacity-90 transition cursor-pointer"
       >
         <HelpCircle className="size-3.5 text-white" />
       </button>
@@ -25,14 +25,16 @@ export function Tooltip({ content }: TooltipProps) {
           <button
             type="button"
             aria-label="Fechar informação"
-            className="absolute inset-0 cursor-default bg-transparent"
+            className="absolute inset-0 cursor-pointer bg-transparent"
             onClick={() => setIsOpen(false)}
           />
 
           <div className="relative w-full max-w-[500px] overflow-hidden rounded-[28px] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
             <div className="h-[60px] bg-[#0B2B58] px-6 flex items-start pt-4">
               <div className="size-8 rounded-full border-2 border-white flex items-center justify-center">
-                <span className="text-white text-sm font-semibold leading-none">?</span>
+                <span className="text-white text-sm font-semibold leading-none">
+                  ?
+                </span>
               </div>
             </div>
 

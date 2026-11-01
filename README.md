@@ -30,7 +30,12 @@ helpa-ufal/
 
 ├── backend/      # API e lógica de negócio (Node.js)
 
+│   └── docs/     # Documentação da API (coleção do Bruno em backend/docs/bruno)
+
 └── README.md     # Documentação geral do projeto
+
+A documentação das rotas da API é a coleção do Bruno em `backend/docs/bruno`.
+Veja `backend/docs/README.md` para saber como abri-la.
 
 ## Como Executar o Projeto
 

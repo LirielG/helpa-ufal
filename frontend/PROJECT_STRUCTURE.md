@@ -60,6 +60,7 @@ frontend/
 ## 📊 Estatísticas
 
 ### Arquivos Criados
+
 - **Páginas**: 2 (Login, Register)
 - **Componentes**: 4 (Input, Button, Select, Alert)
 - **Tipos**: 1 arquivo (auth.ts)
@@ -133,6 +134,7 @@ ValidationError { field, message }
 ## 🎨 Componentes de UI
 
 ### Input
+
 ```tsx
 <Input
   label="string"
@@ -147,6 +149,7 @@ ValidationError { field, message }
 ```
 
 ### Button
+
 ```tsx
 <Button
   type="submit|button"
@@ -160,6 +163,7 @@ ValidationError { field, message }
 ```
 
 ### Select
+
 ```tsx
 <Select
   label="string"
@@ -173,29 +177,27 @@ ValidationError { field, message }
 ```
 
 ### Alert
+
 ```tsx
-<Alert
-  type="error|success|warning|info"
-  message="string"
-  onClose="function?"
-/>
+<Alert type="error|success|warning|info" message="string" onClose="function?" />
 ```
 
 ## 🔥 Validações Implementadas
 
-| Campo | Regras |
-|-------|--------|
-| Email | Obrigatório, formato válido (xxx@xxx.xxx) |
-| Senha | Obrigatório, mín 6, máx 128 caracteres |
-| Nome | Obrigatório, mín 3, máx 255 caracteres |
-| Confirmação | Deve corresponder à senha |
-| Instituição | Obrigatório para alunos |
-| Curso | Obrigatório para alunos |
-| Matrícula | Obrigatório para alunos |
+| Campo       | Regras                                    |
+| ----------- | ----------------------------------------- |
+| Email       | Obrigatório, formato válido (xxx@xxx.xxx) |
+| Senha       | Obrigatório, mín 6, máx 128 caracteres    |
+| Nome        | Obrigatório, mín 3, máx 255 caracteres    |
+| Confirmação | Deve corresponder à senha                 |
+| Instituição | Obrigatório para alunos                   |
+| Curso       | Obrigatório para alunos                   |
+| Matrícula   | Obrigatório para alunos                   |
 
 ## 🚀 Endpoints Esperados
 
 ### Login
+
 ```
 POST /api/auth/login
 Body: { email, password }
@@ -203,6 +205,7 @@ Response: { token, user }
 ```
 
 ### Register
+
 ```
 POST /api/auth/register
 Body: { name, email, password, confirmPassword, type, institution?, course?, enrollment? }
@@ -224,21 +227,25 @@ Response: { token, user }
 ## 🎨 Design System
 
 ### Cores
+
 - **Primária**: Blue-600 (#2563eb)
 - **Aluno**: Blue
 - **Docente**: Green
 - **Público Externo**: Purple
 
 ### Espaçamento
+
 - Padding: 4px, 8px, 12px, 16px, 24px, 32px
 - Margin: padrão Tailwind
 
 ### Tipografia
+
 - **Heading**: text-4xl, text-3xl, text-2xl
 - **Body**: text-base, text-sm
 - **Weights**: normal, medium, semibold, bold
 
 ### Gradiente
+
 ```css
 bg-gradient-to-br from-blue-50 to-indigo-50
 ```
@@ -306,6 +313,7 @@ bg-gradient-to-br from-blue-50 to-indigo-50
 ## 🤝 Contribuindo
 
 Para adicionar novas funcionalidades:
+
 1. Crie arquivos na pasta apropriada
 2. Exporte via `index.ts` da pasta
 3. Reutilize componentes e hooks existentes

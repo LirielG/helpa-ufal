@@ -1,0 +1,54 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
+import type { Activity } from "@prisma/client";
+import type {
+  CreateActivityInput,
+  UpdateActivityInput,
+} from "@/schemas/activity/ActivitySchemas.js";
+import {
+  ActivityFilterOptions,
+  ActivityFullResponse,
+  ActivityResponse,
+  ActivityStatus,
+} from "@/types/activity.js";
+
+export interface IActivityService {
+  create(
+    authorId: string,
+    data: CreateActivityInput,
+  ): Promise<ActivityFullResponse>;
+  list(filters: IListActivitiesFilters): Promise<IListActivitiesResponse>;
+  findById(id: string, userId?: string): Promise<ActivityFullResponse>;
+  update(
+    id: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+    data: UpdateActivityInput,
+  ): Promise<ActivityFullResponse>;
+  updateStatus(
+    activityId: string,
+    newStatus: ActivityStatus,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<ActivityResponse>;
+  delete(
+    id: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<void>;
+  listFilterOptions(): Promise<ActivityFilterOptions>;
+}
+
+export interface IListActivitiesFilters {
+  type?: string;
+  format?: string;
+  status?: string;
+  search?: string;
+  page?: string;
+  limit?: string;
+  orderBy?: string;
+  order?: string;
+  campus?: string;
+  area?: string;
+}
+
+export interface IListActivitiesResponse {
+  activities: ActivityResponse[];
+  total: number;
+}

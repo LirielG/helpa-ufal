@@ -42,7 +42,7 @@ export const useFormErrors = () => {
 };
 
 export const useFormInput = (
-  initialValue: string = ""
+  initialValue: string = "",
 ): [string, Dispatch<SetStateAction<string>>, () => void] => {
   const [value, setValue] = useState(initialValue);
 

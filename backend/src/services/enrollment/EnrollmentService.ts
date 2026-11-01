@@ -1,0 +1,332 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
+import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
+import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
+import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
+import type {
+  EnrollmentWithActivity,
+  EnrollmentWithParticipant,
+  IEnrollmentRepository,
+} from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
+import CustomError from "@/models/error/CustomError.js";
+import ValidationError, {
+  type ValidationErrorItem,
+} from "@/models/error/ValidationError.js";
+import { isValidUUID } from "@/utils/uuid.js";
+import type { Enrollment } from "@prisma/client";
+import {
+  ACTIVE_ENROLLMENT_STATUS,
+  type ConfirmAttendanceInput,
+  type EnrollResponse,
+  type EnrollmentListResponse,
+  type EnrollmentParticipantResponse,
+  type EnrollmentResponse,
+  type EnrollmentWithActivityResponse,
+  type ParticipantsListResponse,
+  toEnrollmentResponse,
+} from "@/types/enrollment.js";
+
+/**
+ * The single place where the 1-based page/limit of the service becomes the
+ * skip of the repository, and the guard for callers that bypass the HTTP
+ * validateQuery: page 0 would build skip -10, which Prisma rejects as a 500.
+ *
+ * Invalid values answer 400 with the same items as the route schema, never a
+ * silent clamp (api-conventions, section 3). The upper bound on limit is
+ * enforced by the route schema only.
+ */
+function toSkip(page: number, limit: number): number {
+  const errors: ValidationErrorItem[] = [];
+
+  if (!Number.isInteger(page) || page < 1) {
+    errors.push({ field: "page", message: "page must be a positive integer." });
+  }
+  if (!Number.isInteger(limit) || limit < 1) {
+    errors.push({
+      field: "limit",
+      message: "limit must be a positive integer.",
+    });
+  }
+  if (errors.length > 0) throw new ValidationError(errors);
+
+  return (page - 1) * limit;
+}
+
+type Props = {
+  enrollmentRepository?: IEnrollmentRepository;
+  activityRepository?: IActivityRepository;
+};
+
+class EnrollmentService implements IEnrollmentService {
+  private _enrollmentRepository: IEnrollmentRepository;
+  private _activityRepository: IActivityRepository;
+
+  constructor(props?: Props) {
+    this._enrollmentRepository =
+      props?.enrollmentRepository ?? new EnrollmentRepository();
+    this._activityRepository =
+      props?.activityRepository ?? new ActivityRepository();
+  }
+
+  public async enroll(
+    userId: string,
+    activityId: string,
+  ): Promise<EnrollResponse> {
+    if (!isValidUUID(activityId)) {
+      throw new ValidationError([
+        { field: "activityId", message: "activityId must be a valid UUID." },
+      ]);
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.", {
+        code: "ACTIVITY_NOT_FOUND",
+      });
+    }
+
+    if (activity.status !== "OPEN") {
+      throw new CustomError(409, "Activity is not open for enrollment.", {
+        code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+      });
+    }
+
+    const enrollment = await this._enrollmentRepository.enroll(
+      userId,
+      activityId,
+    );
+
+    return this.toEnrollResponse(enrollment);
+  }
+
+  public async cancel(userId: string, activityId: string): Promise<void> {
+    if (!isValidUUID(activityId)) {
+      throw new ValidationError([
+        { field: "activityId", message: "activityId must be a valid UUID." },
+      ]);
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.", {
+        code: "ACTIVITY_NOT_FOUND",
+      });
+    }
+
+    if (activity.status !== "OPEN") {
+      throw new CustomError(409, "Activity is not open for cancellation.");
+    }
+
+    await this._enrollmentRepository.cancel(userId, activityId);
+  }
+
+  public async listActiveByUser(
+    userId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<EnrollmentListResponse> {
+    const skip = toSkip(page, limit);
+    const { items, total } =
+      await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
+
+    return {
+      items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  public async listParticipants(
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+    activityId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<ParticipantsListResponse> {
+    const userId = user.id;
+
+    if (!isValidUUID(activityId)) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    const activity = await this._activityRepository.findById(activityId);
+    if (!activity) {
+      throw new CustomError(404, "Activity not found.");
+    }
+
+    if (activity.authorId !== userId && !user.isManager) {
+      throw new CustomError(
+        403,
+        "Only the activity creator or a manager can view the enrollment list.",
+      );
+    }
+
+    const skip = toSkip(page, limit);
+    const { items, total, totalPresent } =
+      await this._enrollmentRepository.findByActivityId(
+        activityId,
+        skip,
+        limit,
+      );
+
+    // totalPresent comes from the repository as-is: the service forwards the
+    // authoritative count instead of re-deriving it from confirmedWorkloadHours.
+    return {
+      items: items.map((item) => this.toParticipantResponse(item)),
+      total,
+      page,
+      limit,
+      totalPresent,
+    };
+  }
+
+  public async confirmAttendance(
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+    enrollmentId: string,
+    input: ConfirmAttendanceInput,
+  ): Promise<EnrollmentResponse> {
+    const userId = user.id;
+
+    // A malformed id is a lookup that finds nothing, never operator input: it
+    // answers the same 404 as a nonexistent or soft-deleted row, so the route
+    // never reveals which ids are merely badly shaped.
+    if (!isValidUUID(enrollmentId)) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    const enrollment = await this._enrollmentRepository.findById(enrollmentId);
+    if (!enrollment) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    // The path names only the enrollment, so an enrollment whose activity was
+    // soft-deleted reads as the same 404 as one that never existed.
+    const activity = await this._activityRepository.findById(
+      enrollment.activityId,
+    );
+    if (!activity) {
+      throw new CustomError(404, "Enrollment not found.");
+    }
+
+    // Order is the contract: existence (404) is decided before authorization
+    // (403), which is decided before the business rules (409/422).
+    if (activity.authorId !== userId && !user.isManager) {
+      throw new CustomError(
+        403,
+        "Only the activity creator or a manager can confirm attendance.",
+      );
+    }
+
+    if (activity.status !== "COMPLETED") {
+      throw new CustomError(
+        409,
+        "Attendance can only be confirmed for completed activities.",
+        { code: "ACTIVITY_NOT_COMPLETED" },
+      );
+    }
+
+    if (enrollment.status !== ACTIVE_ENROLLMENT_STATUS) {
+      throw new CustomError(
+        409,
+        "Only approved enrollments can have attendance confirmed.",
+        { code: "ENROLLMENT_NOT_APPROVED" },
+      );
+    }
+
+    // An activity with no details has no declared workload, so no amount of
+    // hours can be homologated against it: the ceiling of 0 rejects them all.
+    const confirmedWorkloadHours = this.resolveConfirmedHours(
+      input,
+      activity.details?.workloadHours ?? 0,
+    );
+
+    const updated = await this._enrollmentRepository.confirmAttendance(
+      enrollment.activityId,
+      enrollmentId,
+      input.attended,
+      confirmedWorkloadHours,
+    );
+
+    return toEnrollmentResponse(updated);
+  }
+
+  /**
+   * Turns the request body into the hours that will be persisted.
+   * Returning a single number is what makes the invalid states
+   * unrepresentable downstream: the pair is always (true, n >= 1) or (false, 0).
+   */
+  private resolveConfirmedHours(
+    input: ConfirmAttendanceInput,
+    workloadCeiling: number,
+  ): number {
+    if (!input.attended) {
+      return 0;
+    }
+
+    if (
+      !Number.isInteger(input.workloadHours) ||
+      input.workloadHours < 1 ||
+      input.workloadHours > workloadCeiling
+    ) {
+      throw new CustomError(
+        422,
+        "workloadHours must be an integer between 1 and the activity's workload hours.",
+      );
+    }
+
+    return input.workloadHours;
+  }
+
+  private toEnrollResponse(enrollment: Enrollment): EnrollResponse {
+    return {
+      id: enrollment.id,
+      activityId: enrollment.activityId,
+      userId: enrollment.userId,
+      createdAt: enrollment.createdAt,
+    };
+  }
+
+  private toEnrollmentWithActivityResponse(
+    enrollment: EnrollmentWithActivity,
+  ): EnrollmentWithActivityResponse {
+    return {
+      id: enrollment.id,
+      activityId: enrollment.activityId,
+      userId: enrollment.userId,
+      status: enrollment.status,
+      enrolledAt: enrollment.enrolledAt,
+      activity: {
+        id: enrollment.activity.id,
+        title: enrollment.activity.title,
+        type: enrollment.activity.type,
+        campus: enrollment.activity.campus,
+        startDate: enrollment.activity.startDate,
+        endDate: enrollment.activity.endDate,
+        status: enrollment.activity.status,
+      },
+    };
+  }
+
+  private toParticipantResponse(
+    enrollment: EnrollmentWithParticipant,
+  ): EnrollmentParticipantResponse {
+    return {
+      id: enrollment.id,
+      activityId: enrollment.activityId,
+      userId: enrollment.userId,
+      status: enrollment.status,
+      attendanceConfirmed: enrollment.attendanceConfirmed,
+      confirmedWorkloadHours: enrollment.confirmedWorkloadHours,
+      createdAt: enrollment.createdAt,
+      updatedAt: enrollment.updatedAt,
+      user: {
+        id: enrollment.user.id,
+        fullName: enrollment.user.fullName,
+        email: enrollment.user.email,
+        registrationCode: enrollment.user.student?.registrationCode ?? null,
+      },
+    };
+  }
+}
+
+export default EnrollmentService;
