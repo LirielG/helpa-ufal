@@ -8,3 +8,4 @@ export { Profile } from "./Profile";
 export { NotFound } from "./NotFound";
 export { EnrollmentsPage } from "./EnrollmentsPage";
 export { CertificateValidation } from "./CertificateValidation";
+export { ModerationPage } from "./ModerationPage";

@@ -1,5 +1,5 @@
 import { Plus, LogOut } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
 import { useActionRegister } from "../../../hooks/useActionRegister";
@@ -68,6 +68,22 @@ export function DashboardHeader() {
 
             {isAuthenticated && (
               <>
+                {user?.isManager && (
+                  <Link
+                    to="/moderation"
+                    aria-current={
+                      location.pathname === "/moderation" ? "page" : undefined
+                    }
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      location.pathname === "/moderation"
+                        ? "bg-blue-50 text-[#072C59] font-semibold"
+                        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    }`}
+                  >
+                    Denúncias
+                  </Link>
+                )}
+
                 <button
                   type="button"
                   onClick={() => navigate("/profile")}
