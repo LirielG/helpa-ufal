@@ -542,6 +542,136 @@ describe("EditAction", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
+  it.each(["A", "Ab", "  Ab  "])(
+    "saves slots while leaving the saved short title %j unchanged",
+    async (title) => {
+      mockAction(editableAction({}, { title }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const slots = await screen.findByLabelText("Número de vagas");
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+      expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    ["", "O título é obrigatório"],
+    ["   ", "O título é obrigatório"],
+    ["Ab", "O título deve ter no mínimo 3 caracteres"],
+    ["  Ab  ", "O título deve ter no mínimo 3 caracteres"],
+  ])("blocks an invalid changed title %j", async (value, message) => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    if (value) await user.type(title, value);
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("sends a changed three-character title without surrounding spaces", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "  Abc  ");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ title: "Abc" }),
+    );
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+  });
+
+  it.each(["B", "Bc", "  Bc  "])(
+    "blocks replacing a saved short title with another short title %j",
+    async (value) => {
+      mockAction(editableAction({}, { title: "Ab" }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, value);
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("O título deve ter no mínimo 3 caracteres"),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["   ", "O título é obrigatório"],
+    ["a".repeat(151), "O título deve ter no máximo 150 caracteres."],
+  ])(
+    "blocks an invalid saved title %j even when unchanged",
+    async (title, message) => {
+      mockAction(editableAction({}, { title }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const slots = await screen.findByLabelText("Número de vagas");
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses the saved title of the newly loaded action after the route changes", async () => {
+    mockAction(editableAction({}, { title: "Ab" }));
+    server.use(
+      http.get(`${API}/activities/action-2`, () =>
+        HttpResponse.json(editableAction({}, { id: "action-2", title: "Cd" })),
+      ),
+    );
+    const onUpdate = spyOnUpdate();
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/activity/:id/edit"
+          element={
+            <>
+              <Link to="/activity/action-2/edit">Editar outra ação</Link>
+              <EditAction />
+            </>
+          }
+        />
+        <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+      </Routes>,
+      { route: `/activity/${ACTION_ID}/edit` },
+    );
+
+    expect(await findTitleField()).toHaveValue("Ab");
+    await user.click(screen.getByRole("link", { name: "Editar outra ação" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Título")).toHaveValue("Cd"),
+    );
+
+    const slots = screen.getByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+  });
+
   describe("description saved before the length rule", () => {
     it("saves another field without touching the short description", async () => {
       mockAction(editableAction({ description: "Oficina" }));
