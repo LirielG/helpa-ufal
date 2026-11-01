@@ -7,6 +7,8 @@ import { env } from "@/config/env.js";
 
 const app = express();
 
+app.set("trust proxy", env.TRUST_PROXY);
+
 app.use(
   cors({
     origin: env.CORS_ORIGIN,

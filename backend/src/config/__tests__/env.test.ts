@@ -8,6 +8,47 @@ const minimalEnv = {
   JWT_SECRET: "x".repeat(32),
 };
 
+describe("EnvSchema — rate limiting", () => {
+  it("enables rate limiting and trusts no proxies by default", () => {
+    const parsed = EnvSchema.parse(minimalEnv);
+
+    expect(parsed.RATE_LIMIT_ENABLED).toBe(true);
+    expect(parsed.TRUST_PROXY).toBe(0);
+  });
+
+  it.each(["true", "false"])("parses RATE_LIMIT_ENABLED=%s", (value) => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      RATE_LIMIT_ENABLED: value,
+    });
+
+    expect(parsed.RATE_LIMIT_ENABLED).toBe(value === "true");
+  });
+
+  it("rejects an invalid RATE_LIMIT_ENABLED value", () => {
+    const result = EnvSchema.safeParse({
+      ...minimalEnv,
+      RATE_LIMIT_ENABLED: "sometimes",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["RATE_LIMIT_ENABLED"]);
+  });
+
+  it.each(["0", "1", "2"])("parses TRUST_PROXY=%s as a number", (value) => {
+    const parsed = EnvSchema.parse({ ...minimalEnv, TRUST_PROXY: value });
+
+    expect(parsed.TRUST_PROXY).toBe(Number(value));
+  });
+
+  it.each(["-1", "1.5", "abc"])("rejects TRUST_PROXY=%s", (value) => {
+    const result = EnvSchema.safeParse({ ...minimalEnv, TRUST_PROXY: value });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["TRUST_PROXY"]);
+  });
+});
+
 describe("EnvSchema — CORS_ORIGIN", () => {
   it("defaults to http://localhost:5173 when unset (criteria 1)", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });

@@ -112,15 +112,20 @@ partir de `code` e `field` e, quando não há tradução, cai num texto genéric
 
 **`code`s genéricos**, usados quando não há um específico:
 
-| Status | `code`             |
-| ------ | ------------------ |
-| 400    | `VALIDATION_ERROR` |
-| 401    | `UNAUTHENTICATED`  |
-| 403    | `FORBIDDEN`        |
-| 404    | `NOT_FOUND`        |
-| 409    | `CONFLICT`         |
-| 422    | `UNPROCESSABLE`    |
-| 500    | `INTERNAL_ERROR`   |
+| Status | `code`              |
+| ------ | ------------------- |
+| 400    | `VALIDATION_ERROR`  |
+| 401    | `UNAUTHENTICATED`   |
+| 403    | `FORBIDDEN`         |
+| 404    | `NOT_FOUND`         |
+| 409    | `CONFLICT`          |
+| 422    | `UNPROCESSABLE`     |
+| 429    | `TOO_MANY_REQUESTS` |
+| 500    | `INTERNAL_ERROR`    |
+
+O `429` inclui `Retry-After` em segundos até a janela do limite expirar. Login,
+cadastro e validação de certificado têm contadores independentes por IP; os limites
+e as janelas de cada rota estão documentados no Bruno.
 
 `code`s de item de `errors[]` já definidos: `INVALID_UUID`, `UNKNOWN_PARAMETER`,
 `INVALID_DATETIME`. `SESSION_INVALID` é o 401 de sessão inválida (seção 5). Os `code`s
