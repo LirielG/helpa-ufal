@@ -280,7 +280,7 @@ describe("PATCH /activities/:activityId", () => {
     },
   );
 
-  it("returns 400 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
+  it("returns 422 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
     const students = await Promise.all([
@@ -302,11 +302,12 @@ describe("PATCH /activities/:activityId", () => {
       .set(...authCookie(author.token))
       .send({ slots: 2 });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
     expect(response.body).toEqual({
-      status: 400,
-      code: "VALIDATION_ERROR",
-      message: "Validation error.",
+      status: 422,
+      code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+      message:
+        "slots cannot be reduced below the current number of approved enrollments (3).",
       errors: [
         {
           field: "slots",
