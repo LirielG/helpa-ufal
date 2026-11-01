@@ -34,11 +34,13 @@ export function ActionsList() {
     const load = async () => {
       try {
         const list = await fetchUserActivities(activeSubTab, page);
+
         if (isCurrent) {
           if (list.items.length === 0 && page > 1) {
             setPage(page - 1);
             return;
           }
+
           setActivities(list.items);
           setTotalPages(list.totalPages);
           setError(null);
@@ -62,6 +64,7 @@ export function ActionsList() {
   useEffect(() => {
     if (activeSubTab === "managed") {
       setOnSuccessCallback(reloadActivities);
+
       return () => {
         setOnSuccessCallback(undefined);
       };
@@ -77,6 +80,7 @@ export function ActionsList() {
   // rendering for one frame with the new tab's cards and controls.
   const selectSubTab = (tab: ActivityStatus) => {
     if (tab === activeSubTab) return;
+
     setActivities([]);
     setError(null);
     setIsLoading(true);
@@ -87,6 +91,7 @@ export function ActionsList() {
 
   const selectPage = (nextPage: number) => {
     if (nextPage === page) return;
+
     setError(null);
     setIsLoading(true);
     setPage(nextPage);
@@ -99,6 +104,7 @@ export function ActionsList() {
       <nav className="flex items-center gap-2 border-b border-gray-200">
         {PROFILE_SUB_TABS.map((tab) => {
           const isActive = tab.id === activeSubTab;
+
           return (
             <button
               key={tab.id}
@@ -127,6 +133,7 @@ export function ActionsList() {
           <p role="alert" className="text-red-600">
             {error}
           </p>
+
           <button
             type="button"
             onClick={reloadActivities}
@@ -162,6 +169,7 @@ export function ActionsList() {
                     />
                   );
                 }
+
                 if (activeSubTab === "managed") {
                   return (
                     <ManagedCard
@@ -173,6 +181,7 @@ export function ActionsList() {
                     />
                   );
                 }
+
                 return (
                   <EnrolledCard
                     key={activity.action.id}
@@ -183,6 +192,7 @@ export function ActionsList() {
               })}
             </div>
           )}
+
           <Pagination
             page={page}
             totalPages={totalPages}

@@ -40,6 +40,7 @@ export async function fetchUserActivities(
     page: String(page),
     limit: String(LIST_LIMIT),
   });
+
   const response = await api.get<Paginated<UserActivityItem>>(
     `/users/me/activities?${params}`,
   );
@@ -62,6 +63,7 @@ export async function updateActivityStatus(
   status: ActivityStatusTransition,
 ): Promise<Omit<ActivityListItem, "details">> {
   const body: UpdateActivityStatusRequest = { status };
+
   return await api.patch<Omit<ActivityListItem, "details">>(
     `/activities/${id}/status`,
     body,

@@ -21,9 +21,11 @@ function serveUserActivities(
   metadata: Partial<Omit<Paginated<UserActivityItem>, "items">> = {},
 ) {
   let url: URL | undefined;
+
   server.use(
     http.get(`${API}/users/me/activities`, ({ request }) => {
       url = new URL(request.url);
+
       return HttpResponse.json({
         items,
         total: items.length,
@@ -34,6 +36,7 @@ function serveUserActivities(
       });
     }),
   );
+
   return () => url;
 }
 
@@ -122,12 +125,14 @@ describe("updateActivityStatus", () => {
   it("sends PATCH /activities/:id/status with only the status in the body", async () => {
     let method: string | undefined;
     let body: unknown;
+
     server.use(
       http.patch(
         `${API}/activities/${ACTION_ID}/status`,
         async ({ request }) => {
           method = request.method;
           body = await request.json();
+
           return HttpResponse.json(
             makeAction({ id: ACTION_ID, status: "IN_PROGRESS" }),
           );
@@ -148,6 +153,7 @@ describe("updateActivityStatus", () => {
       status: "COMPLETED",
       availableSlots: 4,
     });
+
     server.use(
       http.patch(`${API}/activities/${ACTION_ID}/status`, () =>
         HttpResponse.json(updated),
@@ -185,9 +191,11 @@ describe("updateActivityStatus", () => {
 describe("updateProfile", () => {
   it("sends the body as a PATCH to /users/me and returns the saved profile", async () => {
     let request: { method: string; body: unknown } | undefined;
+
     server.use(
       http.patch(`${API}/users/me`, async ({ request: req }) => {
         request = { method: req.method, body: await req.json() };
+
         return HttpResponse.json({
           fullName: "Nome Salvo",
           totalWorkloadHours: 0,
@@ -206,6 +214,7 @@ describe("updateProfile", () => {
 
   it("rejects with the API's field errors so the form can place them", async () => {
     const errors = [{ field: "fullName", message: "Too big" }];
+
     server.use(
       http.patch(`${API}/users/me`, () =>
         HttpResponse.json(

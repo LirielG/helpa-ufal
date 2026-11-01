@@ -15,6 +15,7 @@ const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
   const actual =
     await vi.importActual<typeof import("react-router")>("react-router");
+
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -50,6 +51,7 @@ function serveByFilter(
     http.get(`${API}/users/me/activities`, ({ request }) => {
       const params = new URL(request.url).searchParams;
       const filter = params.get("filter") as UserActivityFilter;
+
       return HttpResponse.json(
         page(
           lists[filter] ?? [],
@@ -63,11 +65,13 @@ function serveByFilter(
 
 async function openSubTab(filter: UserActivityFilter) {
   const view = render(<ActionsList />, { route: "/profile" });
+
   if (filter !== "enrolled") {
     await view.user.click(
       screen.getByRole("button", { name: SUB_TAB_LABELS[filter] }),
     );
   }
+
   return view;
 }
 
@@ -91,6 +95,7 @@ describe("ActionsList sub-tabs", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
   });
+
   it("shows a different list of the signed-in user on each sub-tab", async () => {
     signIn();
     serveByFilter({
@@ -102,6 +107,7 @@ describe("ActionsList sub-tabs", () => {
         makeUserActivityItem({ title: "Gerenciada", enrollment: null }),
       ],
     });
+
     const { user } = render(<ActionsList />, { route: "/profile" });
 
     expect(await screen.findByText("Inscrita")).toBeInTheDocument();
@@ -109,12 +115,14 @@ describe("ActionsList sub-tabs", () => {
     await user.click(
       screen.getByRole("button", { name: "Atividades Concluídas" }),
     );
+
     expect(await screen.findByText("Concluída")).toBeInTheDocument();
     expect(screen.queryByText("Inscrita")).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Atividades Gerenciadas" }),
     );
+
     expect(await screen.findByText("Gerenciada")).toBeInTheDocument();
     expect(screen.queryByText("Concluída")).not.toBeInTheDocument();
   });
@@ -127,26 +135,32 @@ describe("ActionsList sub-tabs", () => {
     const slowAnswered = new Promise<void>(
       (resolve) => (answeredSlow = resolve),
     );
+
     server.use(
       http.get(`${API}/users/me/activities`, async ({ request }) => {
         const filter = new URL(request.url).searchParams.get("filter");
+
         if (filter === "enrolled") {
           await gate;
           answeredSlow();
+
           return HttpResponse.json(
             page([makeUserActivityItem({ title: "Lenta" })]),
           );
         }
+
         return HttpResponse.json(
           page([makeUserActivityItem({ title: "Rápida" })]),
         );
       }),
     );
+
     const { user } = render(<ActionsList />, { route: "/profile" });
 
     await user.click(
       screen.getByRole("button", { name: "Atividades Gerenciadas" }),
     );
+
     expect(await screen.findByText("Rápida")).toBeInTheDocument();
 
     release();
@@ -171,6 +185,7 @@ describe("ActionsList sub-tabs", () => {
     async (filter, text, buttonLabel) => {
       signIn();
       serveByFilter({});
+
       await openSubTab(filter);
 
       expect(await screen.findByText(text)).toBeInTheDocument();
@@ -185,6 +200,7 @@ describe("ActionsList sub-tabs", () => {
     server.use(
       http.get(`${API}/users/me/activities`, () => HttpResponse.error()),
     );
+
     await openSubTab("enrolled");
 
     expect(
@@ -200,6 +216,7 @@ describe("ActionsList sub-tabs", () => {
   it("navigates to /dashboard when clicking 'Explorar ações' on enrolled empty state", async () => {
     signIn();
     serveByFilter({});
+
     const { user } = await openSubTab("enrolled");
 
     const button = await screen.findByRole("button", {
@@ -213,6 +230,7 @@ describe("ActionsList sub-tabs", () => {
   it("navigates to /dashboard when clicking 'Explorar ações' on completed empty state", async () => {
     signIn();
     serveByFilter({});
+
     const { user } = await openSubTab("completed");
 
     const button = await screen.findByRole("button", {
@@ -226,6 +244,7 @@ describe("ActionsList sub-tabs", () => {
   it("opens register modal when clicking 'Criar uma ação' on managed empty state and reloads list after creation", async () => {
     signIn();
     serveByFilter({ managed: [] });
+
     const { user } = await openSubTab("managed");
 
     const button = await screen.findByRole("button", {
@@ -275,37 +294,49 @@ describe("ActionsList pagination", () => {
         releaseCurrent = resolve;
       });
       const requests: string[] = [];
+
       server.use(
         http.get(`${API}/users/me/activities`, async ({ request }) => {
           const params = new URL(request.url).searchParams;
           const currentPage = Number(params.get("page"));
           const filter = params.get("filter");
           requests.push(`${filter}:${currentPage}`);
+
           if (filter === "enrolled" && currentPage === 2) {
             await oldGate;
             answeredOld();
+
             if (outcome === "error") return HttpResponse.error();
+
             return HttpResponse.json(page(outcome === "empty" ? [] : items, 2));
           }
+
           if (filter === "managed") {
             await currentGate;
+
             return HttpResponse.json(
               page([makeUserActivityItem({ title: "Atual" })]),
             );
           }
+
           return HttpResponse.json(page(items, currentPage));
         }),
       );
+
       const { user } = await openSubTab("enrolled");
       await screen.findByText("Ação 1");
+
       await user.click(screen.getByRole("button", { name: "Página 2" }));
       await waitFor(() => expect(requests).toContain("enrolled:2"));
+
       await user.click(
         screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
       );
+
       if (state === "loaded") {
         releaseCurrent();
         await screen.findByText("Atual");
+
         await user.click(
           screen.getByRole("button", { name: SUB_TAB_LABELS.enrolled }),
         );
@@ -324,7 +355,9 @@ describe("ActionsList pagination", () => {
       expect(Boolean(screen.queryByText("Carregando atividades..."))).toBe(
         state === "loading",
       );
+
       if (state === "loading") releaseCurrent();
+
       expect(
         await screen.findByText(state === "loading" ? "Atual" : "Ação 1"),
       ).toBeInTheDocument();
@@ -343,10 +376,13 @@ describe("ActionsList pagination", () => {
       );
     },
   );
+
   it.each([0, 7, 20])("hides pagination for %i actions", async (count) => {
     signIn();
     serveByFilter({ enrolled: makeItems(count) });
+
     await openSubTab("enrolled");
+
     if (count) await screen.findByText("Ação 1");
     else
       await screen.findByText(
@@ -361,23 +397,29 @@ describe("ActionsList pagination", () => {
   it("starts at page one every time a sub-tab is selected", async () => {
     signIn();
     const requests: string[] = [];
+
     server.use(
       http.get(`${API}/users/me/activities`, ({ request }) => {
         const params = new URL(request.url).searchParams;
         requests.push(`${params.get("filter")}:${params.get("page")}`);
+
         return HttpResponse.json(
           page(makeItems(45), Number(params.get("page"))),
         );
       }),
     );
+
     const { user } = await openSubTab("enrolled");
     await screen.findByText("Ação 1");
+
     await user.click(screen.getByRole("button", { name: "Página 2" }));
     await screen.findByText("Ação 21");
+
     await user.click(
       screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
     );
     await screen.findByText("Ação 1");
+
     await user.click(
       screen.getByRole("button", { name: SUB_TAB_LABELS.enrolled }),
     );
@@ -403,22 +445,29 @@ describe("ActionsList pagination", () => {
       release = resolve;
     });
     const items = makeItems(45);
+
     server.use(
       http.get(`${API}/users/me/activities`, async ({ request }) => {
         const currentPage = Number(
           new URL(request.url).searchParams.get("page"),
         );
+
         if (currentPage === 2) await gate;
+
         return HttpResponse.json(page(items, currentPage));
       }),
     );
+
     const { user } = await openSubTab("enrolled");
     await screen.findByText("Ação 1");
+
     await user.click(screen.getByRole("button", { name: "Página 2" }));
 
     expect(screen.getByText("Carregando atividades...")).toBeInTheDocument();
     expect(screen.queryByText("Ação 1")).not.toBeInTheDocument();
+
     release();
+
     expect(await screen.findByText("Ação 21")).toBeInTheDocument();
   });
 
@@ -426,18 +475,23 @@ describe("ActionsList pagination", () => {
     signIn();
     const lists = { enrolled: makeItems(45) };
     serveByFilter(lists);
+
     server.use(
       http.delete(`${API}/activities/paginated-21/enroll`, () => {
         lists.enrolled = lists.enrolled.filter(
           (item) => item.id !== "paginated-21",
         );
+
         return new HttpResponse(null, { status: 204 });
       }),
     );
+
     const { user } = await openSubTab("enrolled");
     await screen.findByText("Ação 1");
+
     await user.click(screen.getByRole("button", { name: "Página 2" }));
     await screen.findByText("Ação 21");
+
     await user.click(
       within(cardWithTitle("Ação 21")).getByRole("button", {
         name: "Cancelar",
@@ -456,6 +510,7 @@ describe("ActionsList pagination", () => {
       "page",
     );
   });
+
   it("loads the previous page after deleting the last action on page three", async () => {
     signIn();
     const items = Array.from({ length: 41 }, (_, index) =>
@@ -467,24 +522,32 @@ describe("ActionsList pagination", () => {
     );
     const lists = { managed: items };
     const requests: number[] = [];
+
     server.use(
       http.get(`${API}/users/me/activities`, ({ request }) => {
         const params = new URL(request.url).searchParams;
         const currentPage = Number(params.get("page"));
+
         if (params.get("filter") !== "managed")
           return HttpResponse.json(page([]));
+
         requests.push(currentPage);
+
         return HttpResponse.json(page(lists.managed, currentPage));
       }),
       http.delete(`${API}/activities/delete-41`, () => {
         lists.managed = lists.managed.filter((item) => item.id !== "delete-41");
+
         return new HttpResponse(null, { status: 204 });
       }),
     );
+
     const { user } = await openSubTab("managed");
     await screen.findByText("Ação 1");
+
     await user.click(screen.getByRole("button", { name: "Página 3" }));
     await screen.findByText("Ação 41");
+
     await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
     await user.click(await screen.findByRole("button", { name: "Fechar" }));
@@ -497,6 +560,7 @@ describe("ActionsList pagination", () => {
     );
     expect(requests).toEqual([1, 3, 3, 2]);
   });
+
   it("refills the current page after cancelling an enrollment", async () => {
     signIn();
     const items = Array.from({ length: 21 }, (_, index) =>
@@ -507,16 +571,20 @@ describe("ActionsList pagination", () => {
     );
     const lists = { enrolled: items };
     serveByFilter(lists);
+
     server.use(
       http.delete(`${API}/activities/refill-1/enroll`, () => {
         lists.enrolled = lists.enrolled.filter(
           (item) => item.id !== "refill-1",
         );
+
         return new HttpResponse(null, { status: 204 });
       }),
     );
+
     const { user } = await openSubTab("enrolled");
     await screen.findByRole("heading", { name: "Ação 1" });
+
     await user.click(
       within(cardWithTitle("Ação 1")).getByRole("button", { name: "Cancelar" }),
     );
@@ -531,6 +599,7 @@ describe("ActionsList pagination", () => {
       screen.queryByRole("navigation", { name: "Paginação" }),
     ).not.toBeInTheDocument();
   });
+
   it("retries the failed page and leaves sub-tabs available", async () => {
     signIn();
     const items = Array.from({ length: 45 }, (_, index) =>
@@ -538,18 +607,23 @@ describe("ActionsList pagination", () => {
     );
     const requests: number[] = [];
     let shouldFail = true;
+
     server.use(
       http.get(`${API}/users/me/activities`, ({ request }) => {
         const currentPage = Number(
           new URL(request.url).searchParams.get("page"),
         );
         requests.push(currentPage);
+
         if (currentPage === 2 && shouldFail) return HttpResponse.error();
+
         return HttpResponse.json(page(items, currentPage));
       }),
     );
+
     const { user } = await openSubTab("enrolled");
     await screen.findByText("Ação 1");
+
     await user.click(screen.getByRole("button", { name: "Página 2" }));
 
     expect(
@@ -560,6 +634,7 @@ describe("ActionsList pagination", () => {
     expect(
       screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
     ).toBeEnabled();
+
     shouldFail = false;
     await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
 
@@ -570,6 +645,7 @@ describe("ActionsList pagination", () => {
       "page",
     );
   });
+
   it.each(["enrolled", "completed", "managed"] as const)(
     "replaces the %s cards when navigating through 45 actions",
     async (filter) => {
@@ -578,11 +654,13 @@ describe("ActionsList pagination", () => {
         makeUserActivityItem({ title: `Ação ${index + 1}` }),
       );
       serveByFilter({ [filter]: items });
+
       const { user } = await openSubTab(filter);
 
       expect(await screen.findByText("Ação 1")).toBeInTheDocument();
       expect(screen.getAllByRole("heading", { level: 4 })).toHaveLength(20);
       expect(screen.queryByText("Ação 21")).not.toBeInTheDocument();
+
       await user.click(screen.getByRole("button", { name: "Página 3" }));
 
       expect(await screen.findByText("Ação 45")).toBeInTheDocument();
@@ -605,6 +683,7 @@ describe("ActionsList deletion", () => {
     const kept = makeUserActivityItem({ title: KEPT_TITLE, enrollment: null });
     const lists = { managed: [deleted, kept] };
     serveByFilter(lists);
+
     return {
       deleted,
       remove: () => {
@@ -616,18 +695,22 @@ describe("ActionsList deletion", () => {
   async function openManagedTab() {
     const view = await openSubTab("managed");
     await screen.findByText(DELETED_TITLE);
+
     return view;
   }
 
   it("reloads the list after the deletion success modal is dismissed", async () => {
     signIn();
     const { deleted, remove } = mockManagedActions();
+
     server.use(
       http.delete(`${API}/activities/${deleted.id}`, () => {
         remove();
+
         return new HttpResponse(null, { status: 204 });
       }),
     );
+
     const { user } = await openManagedTab();
 
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
@@ -647,12 +730,15 @@ describe("ActionsList deletion", () => {
   it("removes an action already deleted elsewhere without showing an error", async () => {
     signIn();
     const { deleted, remove } = mockManagedActions();
+
     server.use(
       http.delete(`${API}/activities/${deleted.id}`, () => {
         remove();
+
         return HttpResponse.json({ message: "Not found" }, { status: 404 });
       }),
     );
+
     const { user } = await openManagedTab();
 
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
@@ -672,11 +758,13 @@ describe("ActionsList deletion", () => {
 
 describe("ActionsList cancellation from the enrolled card", () => {
   let enrolledItems: UserActivityItem[];
+
   function mockEnrolledActions() {
     const cancelled = makeUserActivityItem({ title: CANCELLED_TITLE });
     const kept = makeUserActivityItem({ title: KEPT_TITLE });
     enrolledItems = [cancelled, kept];
     serveByFilter({ enrolled: enrolledItems });
+
     return cancelled;
   }
 
@@ -689,13 +777,16 @@ describe("ActionsList cancellation from the enrolled card", () => {
     server.use(
       http.delete(`${API}/activities/${actionId}/enroll`, () => {
         if (status === 0) return HttpResponse.error();
+
         if (status === 204 || status === 404) {
           const removed = enrolledItems.findIndex(
             (item) => item.id === actionId,
           );
           if (removed !== -1) enrolledItems.splice(removed, 1);
         }
+
         if (status === 204) return new HttpResponse(null, { status });
+
         return HttpResponse.json({ status, message, code }, { status });
       }),
     );
@@ -704,6 +795,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
   async function confirmCancellation() {
     const view = await openSubTab("enrolled");
     await screen.findByText(CANCELLED_TITLE);
+
     await view.user.click(
       within(cardWithTitle(CANCELLED_TITLE)).getByRole("button", {
         name: "Cancelar",
@@ -712,6 +804,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
     await view.user.click(
       screen.getByRole("button", { name: "Cancelar inscrição" }),
     );
+
     return view;
   }
 
@@ -723,6 +816,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
         makeUserActivityItem({ title: CLOSED_TITLE, status: "IN_PROGRESS" }),
       ],
     });
+
     await openSubTab("enrolled");
     await screen.findByText(CLOSED_TITLE);
 
@@ -783,6 +877,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Esta ação não está mais aberta, não é possível cancelar a inscrição.",
     );
+
     await user.click(screen.getByRole("button", { name: "Manter inscrição" }));
 
     expect(screen.getByText(CANCELLED_TITLE)).toBeInTheDocument();
@@ -803,6 +898,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
     expect(
       screen.getByRole("button", { name: "Cancelar inscrição" }),
     ).toBeEnabled();
+
     await user.click(screen.getByRole("button", { name: "Manter inscrição" }));
 
     expect(screen.getByText(CANCELLED_TITLE)).toBeInTheDocument();
@@ -825,6 +921,7 @@ describe("ActionsList certificates", () => {
         issuedAt: "2026-03-18T12:00:00.000Z",
       },
     });
+
     return {
       ...item,
       enrollment: item.enrollment && {
@@ -850,23 +947,28 @@ describe("ActionsList certificates", () => {
         downloads.push(this.download);
       });
     let requestedCertificate: string | undefined;
+
     serveByFilter({ completed: [...makeItems(100), certifiedItem()] });
     server.use(
       http.get(`${API}/certificates/:id/file`, ({ params }) => {
         requestedCertificate = String(params.id);
+
         return new HttpResponse("%PDF-1.7", {
           headers: { "Content-Type": "application/pdf" },
         });
       }),
     );
+
     try {
       const { user } = await openSubTab("completed");
       await screen.findByText("Ação 1");
+
       await user.click(screen.getByRole("button", { name: "Página 6" }));
       await screen.findByText(CERTIFIED_TITLE);
 
       expect(screen.getAllByRole("heading", { level: 4 })).toHaveLength(1);
       expect(screen.getByText("18 horas homologadas")).toBeInTheDocument();
+
       await user.click(
         within(cardWithTitle(CERTIFIED_TITLE)).getByRole("button", {
           name: "Baixar certificado",
@@ -893,6 +995,7 @@ describe("ActionsList certificates", () => {
         makeUserActivityItem({ title: PENDING_TITLE, status: "COMPLETED" }),
       ],
     });
+
     await openSubTab("completed");
 
     expect(await screen.findByText(CERTIFIED_TITLE)).toBeInTheDocument();
@@ -912,6 +1015,7 @@ describe("ActionsList certificates", () => {
       serveByFilter({
         [filter]: [makeUserActivityItem({ title: KEPT_TITLE })],
       });
+
       await openSubTab(filter);
 
       expect(await screen.findByText(KEPT_TITLE)).toBeInTheDocument();
