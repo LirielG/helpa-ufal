@@ -62,6 +62,7 @@ export function EditAction() {
   const user = useAuthStore((state) => state.user);
   const [actionAuthorId, setActionAuthorId] = useState<string | null>(null);
   const [savedDescription, setSavedDescription] = useState("");
+  const [savedTitle, setSavedTitle] = useState("");
 
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
   const [loadError, setLoadError] = useState<"notFound" | "connection" | null>(
@@ -92,7 +93,7 @@ export function EditAction() {
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
-    resolver: zodResolver(actionEditSchemaFor(savedDescription)),
+    resolver: zodResolver(actionEditSchemaFor(savedDescription, savedTitle)),
     mode: "onSubmit",
   });
 
@@ -120,6 +121,7 @@ export function EditAction() {
 
         setActionAuthorId(action.authorId);
         setSavedDescription(action.details?.description ?? "");
+        setSavedTitle(action.title);
 
         reset({
           title: action.title,
