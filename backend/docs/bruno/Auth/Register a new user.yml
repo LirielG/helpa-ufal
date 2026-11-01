@@ -294,7 +294,7 @@ examples:
           }
 
   - name: 429 Too many requests
-    description: 5 requests per IP every hour. This quota is independent of the other public routes.
+    description: 5 requests per IP every hour. The route-specific quota is independent; general client and instance quotas also apply.
     response:
       status: 429
       statusText: Too Many Requests

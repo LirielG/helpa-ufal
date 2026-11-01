@@ -88,7 +88,7 @@ describe("public route rate limits", () => {
       .expect(400);
   });
 
-  it("leaves authenticated routes, public listings and logout unlimited", async () => {
+  it("applies only the general policies to authenticated routes, public listings and logout", async () => {
     const { token } = await createStudent();
     const app = await importApp();
 
@@ -103,12 +103,14 @@ describe("public route rate limits", () => {
       expect(activities.status).toBe(200);
       expect(logout.status).toBe(204);
       for (const response of [profile, activities, logout]) {
-        expect(response.headers).not.toHaveProperty("ratelimit");
+        expect(response.headers["ratelimit-policy"]).toContain('"global"');
+        expect(response.headers["ratelimit-policy"]).toContain('"client"');
+        expect(response.headers["ratelimit-policy"].split(",")).toHaveLength(2);
       }
     }
   });
 
-  it("disables all three limits with RATE_LIMIT_ENABLED=false", async () => {
+  it("disables all rate limits with RATE_LIMIT_ENABLED=false", async () => {
     const app = await importApp("false");
 
     for (let count = 0; count < 61; count++) {

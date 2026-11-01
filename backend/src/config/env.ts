@@ -18,6 +18,21 @@ export const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.string().default("1d"),
   TRUST_PROXY: z.coerce.number().int().nonnegative().default(0),
   RATE_LIMIT_ENABLED: z.stringbool().default(true),
+  RATE_LIMIT_ANONYMOUS_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(120),
+  RATE_LIMIT_AUTHENTICATED_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(300),
+  RATE_LIMIT_GLOBAL_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3000),
   // Origin allowed by CORS (with credentials). Validated as an http(s) URL
   // and normalized to scheme://host[:port] — path and trailing slash are
   // dropped, since the Origin header never carries them.

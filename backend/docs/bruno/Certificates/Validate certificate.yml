@@ -48,7 +48,7 @@ examples:
         { "status": 404, "message": "Certificate not found." }
 
   - name: 429 Too many requests
-    description: 60 requests per IP every 15 minutes, shared across all validation codes. This quota is independent of the other public routes.
+    description: 60 requests per IP every 15 minutes, shared across all validation codes. The route-specific quota is independent; general client and instance quotas also apply.
     response:
       status: 429
       statusText: Too Many Requests
