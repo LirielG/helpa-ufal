@@ -70,12 +70,12 @@ export function DashboardHeader() {
               <>
                 {user?.isManager && (
                   <Link
-                    to="/moderacao"
+                    to="/moderation"
                     aria-current={
-                      location.pathname === "/moderacao" ? "page" : undefined
+                      location.pathname === "/moderation" ? "page" : undefined
                     }
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      location.pathname === "/moderacao"
+                      location.pathname === "/moderation"
                         ? "bg-blue-50 text-[#072C59] font-semibold"
                         : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     }`}

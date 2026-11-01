@@ -60,8 +60,8 @@ describe("AppRoutes", () => {
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
-    it("sends a guest from /moderacao to the login screen without rendering moderation", async () => {
-      render(<AppRoutes />, { route: "/moderacao" });
+    it("sends a guest from /moderation to the login screen without rendering moderation", async () => {
+      render(<AppRoutes />, { route: "/moderation" });
 
       expect(
         await screen.findByRole("button", { name: "Entrar" }),

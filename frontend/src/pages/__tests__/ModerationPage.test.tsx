@@ -20,10 +20,10 @@ import { ModerationPage } from "@/pages/ModerationPage";
 function renderModerationPage() {
   return render(
     <Routes>
-      <Route path="/moderacao" element={<ModerationPage />} />
+      <Route path="/moderation" element={<ModerationPage />} />
       <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
     </Routes>,
-    { route: "/moderacao" },
+    { route: "/moderation" },
   );
 }
 
@@ -55,6 +55,65 @@ function serveReports(
   );
 
   return queries;
+}
+
+/**
+ * Serves an open queue that behaves like the real API: GET slices whatever is
+ * still open by page and PUT removes the report, so resolving one shifts the
+ * following reports into earlier pages.
+ */
+function serveStatefulOpenQueue(count: number) {
+  const limit = 20;
+  let open = Array.from({ length: count }, (_, index) =>
+    makeReport({
+      id: `rep-${index + 1}`,
+      description: `Denúncia ${index + 1}`,
+    }),
+  );
+  const requestedPages: Array<string | null> = [];
+
+  server.use(
+    http.get(`${API}/reports`, ({ request }) => {
+      const pageParam = new URL(request.url).searchParams.get("page");
+      requestedPages.push(pageParam);
+
+      const page = Number(pageParam ?? "1");
+      const start = (page - 1) * limit;
+      return HttpResponse.json({
+        items: open.slice(start, start + limit),
+        total: open.length,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(open.length / limit)),
+      });
+    }),
+    http.put(`${API}/reports/:reportId/resolution`, ({ params }) => {
+      const report = open.find((item) => item.id === params.reportId);
+      open = open.filter((item) => item.id !== params.reportId);
+      return HttpResponse.json({
+        ...report,
+        resolvedAt: "2026-06-10T12:00:00.000Z",
+      });
+    }),
+  );
+
+  return {
+    requestedPages,
+    openIds: () => open.map((item) => item.id),
+  };
+}
+
+async function resolveFirstVisibleReport(
+  user: ReturnType<typeof renderModerationPage>["user"],
+) {
+  const [firstCard] = screen.getAllByRole("article");
+  await user.click(within(firstCard).getByRole("button", { name: "Resolver" }));
+  const dialog = screen.getByRole("dialog", { name: "Confirmar resolução" });
+  await user.click(within(dialog).getByRole("button", { name: "Sim" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  await waitFor(() => expect(firstCard).not.toBeInTheDocument());
 }
 
 describe("ModerationPage", () => {
@@ -356,6 +415,69 @@ describe("ModerationPage", () => {
       expect(listCalls).toBe(1);
       expect(screen.queryByText("Primeira denúncia")).not.toBeInTheDocument();
       expect(screen.getByText("Segunda denúncia")).toBeInTheDocument();
+    });
+
+    it("backfills the report that shifts in from the next page and only shows the empty state when the server queue is empty", async () => {
+      signIn({ isManager: true });
+      const queue = serveStatefulOpenQueue(21);
+
+      const { user } = renderModerationPage();
+
+      expect(await screen.findByText("Denúncia 1")).toBeInTheDocument();
+      expect(screen.getAllByRole("article")).toHaveLength(20);
+      expect(screen.queryByText("Denúncia 21")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("navigation", { name: "Paginação" }),
+      ).toBeInTheDocument();
+
+      await resolveFirstVisibleReport(user);
+
+      // The 21st report moved into page 1 on the server and must be loaded.
+      expect(await screen.findByText("Denúncia 21")).toBeInTheDocument();
+      expect(screen.queryByText("Denúncia 1")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("article")).toHaveLength(20);
+      expect(
+        screen.queryByRole("navigation", { name: "Paginação" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+      for (let remaining = 20; remaining > 0; remaining -= 1) {
+        expect(
+          screen.queryByText("Nenhuma denúncia em aberto."),
+        ).not.toBeInTheDocument();
+        await resolveFirstVisibleReport(user);
+      }
+
+      expect(
+        await screen.findByText("Nenhuma denúncia em aberto."),
+      ).toBeInTheDocument();
+      expect(queue.openIds()).toEqual([]);
+      // Resolves all 21 reports through the modal, which outlasts the default
+      // 5s timeout when the whole suite runs in parallel.
+    }, 20_000);
+
+    it("loads the previous page when resolving the last report of the last page", async () => {
+      signIn({ isManager: true });
+      const queue = serveStatefulOpenQueue(21);
+
+      const { user } = renderModerationPage();
+
+      expect(await screen.findByText("Denúncia 1")).toBeInTheDocument();
+      await user.click(
+        within(
+          screen.getByRole("navigation", { name: "Paginação" }),
+        ).getByRole("button", { name: "Página 2" }),
+      );
+      expect(await screen.findByText("Denúncia 21")).toBeInTheDocument();
+
+      await resolveFirstVisibleReport(user);
+
+      expect(await screen.findByText("Denúncia 1")).toBeInTheDocument();
+      expect(screen.getAllByRole("article")).toHaveLength(20);
+      expect(
+        screen.queryByText("Nenhuma denúncia em aberto."),
+      ).not.toBeInTheDocument();
+      expect(queue.requestedPages).toEqual(["1", "2", "1"]);
     });
 
     it("cancels without calling PUT when 'Não' or Escape is used", async () => {

@@ -87,7 +87,7 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/moderacao"
+        path="/moderation"
         element={
           <ProtectedRoute>
             <ModerationPage />

@@ -31,7 +31,7 @@ function renderHeaderAt(route: string) {
         }
       />
       <Route path="/login" element={<LoginProbe />} />
-      <Route path="/moderacao" element={<h1>Moderação</h1>} />
+      <Route path="/moderation" element={<h1>Moderação</h1>} />
     </Routes>,
     { route },
   );
@@ -137,12 +137,12 @@ describe("DashboardHeader", () => {
   });
 
   describe("for a manager", () => {
-    it("shows the Denúncias link pointing to /moderacao and navigates on click", async () => {
+    it("shows the Denúncias link pointing to /moderation and navigates on click", async () => {
       signIn({ isManager: true });
       const { user } = renderHeaderAt("/activity/act-1");
 
       const link = screen.getByRole("link", { name: "Denúncias" });
-      expect(link).toHaveAttribute("href", "/moderacao");
+      expect(link).toHaveAttribute("href", "/moderation");
 
       await user.click(link);
 
