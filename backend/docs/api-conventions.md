@@ -173,6 +173,14 @@ a validação pública e o download de certificado.
 - Usuário removido ou token revogado respondem **401 `SESSION_INVALID`** em toda rota, inclusive
   `/users/me`. Services não repetem essa checagem.
 
+**Forma do handler no router.** Todo handler é `(req, res) => ctrl.x(req, res)`, sem
+`.catch(next)`: no Express 5 (`^5.2.1`) uma promise rejeitada devolvida pelo handler já é
+encaminhada ao error handler, e o `.catch(next)` é resíduo do Express 4. Por isso a ausência dele
+não é esquecimento. O que importa é o handler **devolver** a promise (arrow sem chaves, ou
+`return`): se ela for descartada, o erro se perde. Toda instância de controller no router tem o
+tipo da interface anotado, como em
+`const activityController: IActivityController = new ActivityController();`.
+
 ## 6. Datas, enums, nomes e nulos
 
 **Datas:** todo instante trafega, na entrada e na saída, como ISO 8601 em UTC com `Z`
