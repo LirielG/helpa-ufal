@@ -125,7 +125,9 @@ export function handleCreateActionApiErrors<T extends FieldValues>(
       setGeneralError("Você não tem permissão para criar esta ação.");
       break;
     case 409:
-      setGeneralError("Já existe uma ação com estes dados. Verifique e tente novamente.");
+      setGeneralError(
+        "Já existe uma ação com estes dados. Verifique e tente novamente.",
+      );
       break;
     case NETWORK_ERROR_STATUS:
       setGeneralError("Falha de comunicação com o servidor. Tente novamente.");

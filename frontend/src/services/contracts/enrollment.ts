@@ -59,5 +59,4 @@ export interface ListEnrollmentsResponse {
  * one pair: hours are required with a presence and forbidden with an absence.
  */
 export type ConfirmAttendanceRequest =
-  | { attended: true; workloadHours: number }
-  | { attended: false };
+  { attended: true; workloadHours: number } | { attended: false };

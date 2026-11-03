@@ -43,16 +43,28 @@ describe("DashboardHeader", () => {
       expect(
         screen.getByRole("button", { name: "Ir para a página inicial" }),
       ).toBeInTheDocument();
-      
-      expect(screen.getByRole("button", { name: "Sobre o Projeto" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Como Funciona" })).toBeInTheDocument();
+
+      expect(
+        screen.getByRole("button", { name: "Sobre o Projeto" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Como Funciona" }),
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Ações" })).toBeInTheDocument();
 
-      expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Cadastrar-se" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Entrar" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Cadastrar-se" }),
+      ).toBeInTheDocument();
 
-      expect(screen.queryByRole("button", { name: "Abrir perfil" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Sair" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Abrir perfil" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Sair" }),
+      ).not.toBeInTheDocument();
     });
 
     it("sends Entrar to the login, remembering the current page", async () => {
@@ -88,16 +100,26 @@ describe("DashboardHeader", () => {
       signIn({ fullName: "Maria Souza" });
       renderHeaderAt("/activity/act-1");
 
-      expect(screen.getByRole("button", { name: "Ir para a página inicial" })).toBeInTheDocument();
-      
+      expect(
+        screen.getByRole("button", { name: "Ir para a página inicial" }),
+      ).toBeInTheDocument();
+
       // O dropdown de perfil antigo do Header não existe mais
-      expect(screen.queryByRole("button", { name: "Abrir perfil" })).not.toBeInTheDocument();
-      
+      expect(
+        screen.queryByRole("button", { name: "Abrir perfil" }),
+      ).not.toBeInTheDocument();
+
       // Elementos exclusivos de visitante não devem existir para quem está logado
-      expect(screen.queryByRole("button", { name: "Entrar" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Cadastrar-se" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Sobre o Projeto" })).not.toBeInTheDocument();
-      
+      expect(
+        screen.queryByRole("button", { name: "Entrar" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Cadastrar-se" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Sobre o Projeto" }),
+      ).not.toBeInTheDocument();
+
       // O botão "Sair" não é mais testado como ausente aqui, pois a DashboardShell o renderiza através da Sidebar.
     });
   });

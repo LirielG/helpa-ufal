@@ -12,9 +12,7 @@ import {
   waitFor,
 } from "@/test";
 
-
 import { EnrollmentsPage } from "@/pages/EnrollmentsPage";
-
 
 /** Renders EnrollmentsPage mounted at the route /activity/act-1/enrollments. */
 function renderPage() {
@@ -180,19 +178,14 @@ describe("EnrollmentsPage", () => {
     it("displays pt-BR permission message and no enrollment data", async () => {
       server.use(
         http.get(`${API}/activities/:id/enrollments`, () =>
-          HttpResponse.json(
-            { message: "Forbidden" },
-            { status: 403 },
-          ),
+          HttpResponse.json({ message: "Forbidden" }, { status: 403 }),
         ),
       );
 
       renderPage();
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/Você não tem permissão/),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Você não tem permissão/)).toBeInTheDocument();
       });
 
       // No table should be visible
@@ -204,10 +197,7 @@ describe("EnrollmentsPage", () => {
     it("displays pt-BR message when activity does not exist", async () => {
       server.use(
         http.get(`${API}/activities/:id/enrollments`, () =>
-          HttpResponse.json(
-            { message: "Activity not found" },
-            { status: 404 },
-          ),
+          HttpResponse.json({ message: "Activity not found" }, { status: 404 }),
         ),
       );
 
@@ -230,7 +220,6 @@ describe("EnrollmentsPage", () => {
       );
 
       renderPage();
-
 
       await waitFor(() => {
         expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
@@ -274,7 +263,9 @@ describe("EnrollmentsPage", () => {
       });
 
       // Click retry
-      await user.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Tentar novamente/i }),
+      );
 
       // Data should now load
       await waitFor(() => {
@@ -301,7 +292,9 @@ describe("EnrollmentsPage", () => {
       renderPage();
 
       await waitFor(() => {
-        expect(screen.getByRole("navigation", { name: /Paginação/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("navigation", { name: /Paginação/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -367,7 +360,9 @@ describe("EnrollmentsPage", () => {
       // Page 2 fails: the error state replaces the list.
       await screen.findByText(/Falha de comunicação/);
 
-      await user.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Tentar novamente/i }),
+      );
 
       expect(await screen.findByText("Pessoa da página 2")).toBeInTheDocument();
       expect(requestedPages).toEqual(["1", "2", "2"]);

@@ -32,7 +32,8 @@ interface FeedSectionProps {
 
 export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const feed: FeedKey = searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
+  const feed: FeedKey =
+    searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
   const [actions, setActions] = useState<ActivityListItem[]>([]);
   const [page, setPage] = useState(1);
@@ -133,7 +134,10 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
     <div className="w-full flex flex-col">
       <HeroBanner actions={actions} />
 
-      <div className="w-full min-h-[50vh] bg-white" style={FEED_BACKGROUND_STYLE}>
+      <div
+        className="w-full min-h-[50vh] bg-white"
+        style={FEED_BACKGROUND_STYLE}
+      >
         <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
           <FeedTabs
             active={feed}

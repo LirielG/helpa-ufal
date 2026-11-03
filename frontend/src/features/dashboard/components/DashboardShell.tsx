@@ -1,35 +1,96 @@
 import { useActionRegister } from "../../../hooks/useActionRegister";
-import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { ActionRegister } from "./ActionForm";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { useAuth } from "../../../hooks/useAuth";
+import { getProfile } from "../../profile/services";
+import type { UserProfile } from "../../../types/profile";
 
 type DashboardShellProps = {
   children: ReactNode;
   header?: ReactNode;
   footer?: ReactNode;
   containerStyle?: React.CSSProperties;
+  showCreateAction?: boolean;
 };
+
+let cachedProfileUserId: string | null = null;
+let cachedProfileData: UserProfile | null = null;
+let inflightProfilePromise: Promise<UserProfile> | null = null;
 
 export function DashboardShell({
   children,
   header,
   footer,
   containerStyle,
+  showCreateAction = true,
 }: DashboardShellProps) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [wasCreated, setWasCreated] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const [profile, setProfile] = useState<UserProfile | null>(() =>
+    user && cachedProfileUserId === user.id ? cachedProfileData : null,
+  );
+  const [profileError, setProfileError] = useState(false);
 
   const { isOpen, openRegisterModal, closeRegisterModal, onSuccessCallback } =
     useActionRegister();
 
   useEffect(() => closeRegisterModal, [closeRegisterModal]);
+
+  const loadProfile = useCallback(
+    async (force = false) => {
+      if (!user) {
+        cachedProfileUserId = null;
+        cachedProfileData = null;
+        inflightProfilePromise = null;
+        setProfile(null);
+        setProfileError(false);
+        return;
+      }
+
+      if (!force && cachedProfileUserId === user.id && cachedProfileData) {
+        setProfile(cachedProfileData);
+        setProfileError(false);
+        return;
+      }
+
+      setProfileError(false);
+
+      try {
+        if (!inflightProfilePromise || force) {
+          inflightProfilePromise = getProfile();
+        }
+        const data = await inflightProfilePromise;
+        cachedProfileUserId = user.id;
+        cachedProfileData = data;
+        setProfile(data);
+      } catch {
+        setProfileError(true);
+      } finally {
+        inflightProfilePromise = null;
+      }
+    },
+    [user],
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      cachedProfileUserId = null;
+      cachedProfileData = null;
+      inflightProfilePromise = null;
+      setProfile(null);
+      setProfileError(false);
+      return;
+    }
+
+    void loadProfile(false);
+  }, [isAuthenticated, loadProfile]);
 
   const handleSuccess = () => {
     setWasCreated(true);
@@ -49,8 +110,6 @@ export function DashboardShell({
     }
   };
 
-  const isDashboard = location.pathname === "/dashboard";
-
   return (
     <div
       className="min-h-screen flex flex-col bg-gray-50"
@@ -65,13 +124,16 @@ export function DashboardShell({
           <DashboardSidebar
             isOpenMobile={mobileSidebarOpen}
             onCloseMobile={() => setMobileSidebarOpen(false)}
+            profile={profile}
+            profileError={profileError}
+            onRetryProfile={() => void loadProfile(true)}
           />
         )}
 
         <main className="flex-1 flex flex-col min-w-0 w-full relative">
           {children}
 
-          {isAuthenticated && isDashboard && (
+          {isAuthenticated && showCreateAction && (
             <button
               type="button"
               onClick={openRegisterModal}

@@ -200,8 +200,10 @@ describe("Profile — personal data", () => {
 
       await screen.findByText("Perfil atualizado com sucesso.");
       expect(useAuthStore.getState().user?.fullName).toBe("Mariana Costa");
-      
-      const headings = screen.getAllByRole("heading", { name: "Mariana Costa" });
+
+      const headings = screen.getAllByRole("heading", {
+        name: "Mariana Costa",
+      });
       expect(headings.length).toBeGreaterThanOrEqual(1);
     });
 

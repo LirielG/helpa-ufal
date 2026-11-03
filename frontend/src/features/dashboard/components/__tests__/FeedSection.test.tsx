@@ -9,15 +9,17 @@ describe("FeedSection", () => {
       <Routes>
         <Route path="/dashboard" element={<FeedSection debounceMs={0} />} />
       </Routes>,
-      { route: "/dashboard" }
+      { route: "/dashboard" },
     );
 
-    // Verifica se as tabs de Helpa e SIGAA estão presentes 
+    // Verifica se as tabs de Helpa e SIGAA estão presentes
     // O role correto para elas no DOM é "tab"
     expect(screen.getByRole("tab", { name: /Helpa/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /SIGAA/i })).toBeInTheDocument();
 
     // Verifica se a barra de pesquisa do HelpaFeed carregou
-    expect(screen.getByPlaceholderText(/Buscar ações pelo título/i)).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(/Buscar ações pelo título/i),
+    ).toBeInTheDocument();
   });
 });

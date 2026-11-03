@@ -5,20 +5,7 @@ import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
 import { useAuthStore } from "../../../stores/authStore";
 import type { ReturnToState } from "../../../routes/GuestRoute";
-
-export const HEADER_NAV_ITEMS = [
-  { id: "sobre", label: "Sobre o Projeto", path: "/" },
-  { id: "como-funciona", label: "Como Funciona", path: "/#como-funciona" },
-  { id: "acoes", label: "Ações", path: "/#acoes" },
-] as const;
-
-export const HEADER_LABELS = {
-  homeAriaLabel: "Ir para a página inicial",
-  openProfileAriaLabel: "Abrir perfil",
-  openSidebarAriaLabel: "Abrir menu lateral",
-  login: "Entrar",
-  register: "Cadastrar-se",
-} as const;
+import { HEADER_LABELS, HEADER_NAV_ITEMS } from "../constants";
 
 interface DashboardHeaderProps {
   onToggleSidebar?: () => void;
@@ -35,7 +22,9 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
     navigate("/login", { state: { from: location } satisfies ReturnToState });
 
   const goToRegister = () =>
-    navigate("/register", { state: { from: location } satisfies ReturnToState });
+    navigate("/register", {
+      state: { from: location } satisfies ReturnToState,
+    });
 
   const isNavItemActive = (itemPath: string) => {
     if (itemPath === "/") {
@@ -47,11 +36,25 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
     return location.pathname.startsWith(itemPath);
   };
 
-  if (isAuthenticated && !isSessionVerified && !user) {
+  const handleNavClick = (itemPath: string) => {
+    if (itemPath.startsWith("/#")) {
+      const hash = itemPath.slice(1);
+      navigate({ pathname: "/", hash });
+      return;
+    }
+    navigate(itemPath);
+  };
+
+  if (!isSessionVerified && user === undefined) {
     return (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 h-16 md:h-20 flex items-center">
-        <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+        <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <img src={helpaBlueLogo} alt="helpa" className="h-8 md:h-10 w-auto" />
+          <div
+            role="status"
+            aria-label="Verificando sessão"
+            className="h-8 w-28 rounded-lg bg-gray-200 animate-pulse"
+          />
         </div>
       </header>
     );
@@ -117,7 +120,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavClick(item.path)}
                 aria-current={active ? "page" : undefined}
                 className={`py-1 text-sm lg:text-[15px] font-medium rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                   active
@@ -155,7 +158,11 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
           aria-label="Menu de navegação"
           className="md:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
         >
-          {mobileGuestMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+          {mobileGuestMenuOpen ? (
+            <X className="size-6" />
+          ) : (
+            <Menu className="size-6" />
+          )}
         </button>
       </div>
 
@@ -170,7 +177,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
                   type="button"
                   onClick={() => {
                     setMobileGuestMenuOpen(false);
-                    navigate(item.path);
+                    handleNavClick(item.path);
                   }}
                   aria-current={active ? "page" : undefined}
                   className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium ${
