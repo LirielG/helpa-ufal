@@ -18,15 +18,13 @@ router.get(
   "/reports",
   authMiddleware.auth({ manager: true }),
   validateQuery(ListReportsQuerySchema, INVALID_QUERY_MESSAGE),
-  (req, res, next) =>
-    activityReportController.listReports(req, res).catch(next),
+  (req, res) => activityReportController.listReports(req, res),
 );
 
 router.put(
   "/reports/:reportId/resolution",
   authMiddleware.auth({ manager: true }),
-  (req, res, next) =>
-    activityReportController.resolveReport(req, res).catch(next),
+  (req, res) => activityReportController.resolveReport(req, res),
 );
 
 export default router;

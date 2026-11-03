@@ -1,10 +1,12 @@
 import express from "express";
 import CertificateController from "@/controllers/certificate/CertificateController.js";
+import type { ICertificateController } from "@/controllers/certificate/ICertificateController.js";
 import AuthMiddleware from "@/middlewares/auth/AuthMiddleware.js";
 import { certificateValidationRateLimiter } from "@/middlewares/rateLimit/publicRateLimiters.js";
 
 const router = express.Router();
-const certificateController = new CertificateController();
+const certificateController: ICertificateController =
+  new CertificateController();
 const authMiddleware = new AuthMiddleware();
 
 // No param validation on purpose: a malformed id must answer the same 404 as
@@ -12,7 +14,7 @@ const authMiddleware = new AuthMiddleware();
 router.get(
   "/certificates/:certificateId/file",
   authMiddleware.auth({ userTypes: "all" }),
-  (req, res, next) => certificateController.downloadFile(req, res).catch(next),
+  (req, res) => certificateController.downloadFile(req, res),
 );
 
 // Public on purpose: whoever checks a certificate has no HELPA account, and a
@@ -20,7 +22,7 @@ router.get(
 router.get(
   "/certificate-validations/:validationCode",
   certificateValidationRateLimiter,
-  (req, res, next) => certificateController.validate(req, res).catch(next),
+  (req, res) => certificateController.validate(req, res),
 );
 
 export default router;
