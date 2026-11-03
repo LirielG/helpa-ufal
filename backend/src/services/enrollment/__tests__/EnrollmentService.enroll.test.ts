@@ -57,7 +57,9 @@ function mockRepositories(
 
   const enrollmentRepository = {
     findByUserAndActivity: vi.fn().mockResolvedValue(null),
-    enroll: vi.fn().mockResolvedValue(anEnrollment()),
+    enroll: vi
+      .fn()
+      .mockResolvedValue({ enrollment: anEnrollment(), created: true }),
     cancel: vi.fn().mockResolvedValue(undefined),
     countApprovedByActivityId: vi.fn().mockResolvedValue(0),
     findActiveByUserId: vi.fn().mockResolvedValue({ items: [], total: 0 }),
@@ -131,7 +133,7 @@ describe("EnrollmentService.enroll", () => {
 
   // ---------- Happy path ----------
 
-  it("creates an enrollment and returns the contract's 201 shape", async () => {
+  it("returns the canonical enrollment with the creation indicator", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories();
     const service = new EnrollmentService({
       activityRepository,
@@ -142,10 +144,17 @@ describe("EnrollmentService.enroll", () => {
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
     expect(response).toEqual({
-      id: ENROLLMENT_ID,
-      activityId: ACTIVITY_ID,
-      userId: USER_ID,
-      createdAt: new Date("2026-08-22T21:00:00.000Z"),
+      created: true,
+      enrollment: {
+        id: ENROLLMENT_ID,
+        activityId: ACTIVITY_ID,
+        userId: USER_ID,
+        status: "APPROVED",
+        attendanceConfirmed: null,
+        confirmedWorkloadHours: 0,
+        createdAt: new Date("2026-08-22T21:00:00.000Z"),
+        updatedAt: new Date("2026-08-22T21:00:00.000Z"),
+      },
     });
   });
 
@@ -155,7 +164,11 @@ describe("EnrollmentService.enroll", () => {
       enrolledAt: new Date("2026-08-22T21:00:00.000Z"),
     });
     const { activityRepository, enrollmentRepository } = mockRepositories({
-      enrollment: { enroll: vi.fn().mockResolvedValue(reactivated) },
+      enrollment: {
+        enroll: vi
+          .fn()
+          .mockResolvedValue({ enrollment: reactivated, created: true }),
+      },
     });
     const service = new EnrollmentService({
       activityRepository,
@@ -165,33 +178,31 @@ describe("EnrollmentService.enroll", () => {
 
     const response = await service.enroll(USER_ID, ACTIVITY_ID);
 
-    expect(response.id).toBe(ENROLLMENT_ID);
-    expect(response.createdAt).toEqual(new Date("2026-06-01T10:00:00.000Z"));
+    expect(response.enrollment.id).toBe(ENROLLMENT_ID);
+    expect(response.enrollment.createdAt).toEqual(
+      new Date("2026-06-01T10:00:00.000Z"),
+    );
   });
 
   // ---------- Repository business rules (propagation) ----------
 
-  it("propagates 409 when the user is already enrolled", async () => {
+  it("forwards the repository's indicator for an existing enrollment", async () => {
     const { activityRepository, enrollmentRepository } = mockRepositories({
       enrollment: {
         enroll: vi
           .fn()
-          .mockRejectedValue(
-            new CustomError(409, "User is already enrolled in this activity."),
-          ),
+          .mockResolvedValue({ enrollment: anEnrollment(), created: false }),
       },
     });
     const service = new EnrollmentService({
       activityRepository,
-
       enrollmentRepository,
     });
 
-    await expectHttpError(
-      service.enroll(USER_ID, ACTIVITY_ID),
-      409,
-      "User is already enrolled in this activity.",
-    );
+    const response = await service.enroll(USER_ID, ACTIVITY_ID);
+
+    expect(response.created).toBe(false);
+    expect(response.enrollment.id).toBe(ENROLLMENT_ID);
   });
 
   it("propagates 409 when the activity has no available slots", async () => {

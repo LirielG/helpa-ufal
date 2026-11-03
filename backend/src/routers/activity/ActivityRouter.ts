@@ -43,14 +43,14 @@ router.post(
   (req, res) => activityReportController.createReport(req, res),
 );
 
-router.post(
-  "/activities/:activityId/enroll",
+router.put(
+  "/activities/:activityId/enrollments/me",
   authMiddleware.requireAuth(),
   (req, res) => enrollmentController.enroll(req, res),
 );
 
 router.delete(
-  "/activities/:activityId/enroll",
+  "/activities/:activityId/enrollments/me",
   authMiddleware.requireAuth(),
   (req, res) => enrollmentController.cancel(req, res),
 );

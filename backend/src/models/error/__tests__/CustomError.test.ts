@@ -24,11 +24,15 @@ describe("CustomError", () => {
   });
 
   it("prefers an explicit code over the generic one", () => {
-    const error = new CustomError(409, "User is already enrolled.", {
-      code: "ALREADY_ENROLLED",
-    });
+    const error = new CustomError(
+      409,
+      "No available slots for this activity.",
+      {
+        code: "NO_AVAILABLE_SLOTS",
+      },
+    );
 
-    expect(error.code).toBe("ALREADY_ENROLLED");
+    expect(error.code).toBe("NO_AVAILABLE_SLOTS");
     expect(error.statusCode).toBe(409);
   });
 

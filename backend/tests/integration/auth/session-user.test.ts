@@ -12,7 +12,8 @@ import {
 
 const protectedRoutes = [
   { method: "get", path: "/users/me", body: undefined },
-  { method: "post", path: "/activities/:id/enroll", body: undefined },
+  { method: "put", path: "/activities/:id/enrollments/me", body: undefined },
+  { method: "delete", path: "/activities/:id/enrollments/me", body: undefined },
   {
     method: "patch",
     path: "/activities/:id",

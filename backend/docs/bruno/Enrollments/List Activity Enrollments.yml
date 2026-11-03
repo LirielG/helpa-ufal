@@ -260,7 +260,7 @@ examples:
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order authentication (401) → query format (400) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order authentication (401) → query format (400) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enrollments/me currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -330,7 +330,7 @@ docs: |-
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
   - Validation order: authentication (401) → query format (400) → activity existence (404) → authorization (403). Authentication runs first so expired sessions reach the client's 401 handling even when the query is invalid; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
-  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
+  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enrollments/me predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
   - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).

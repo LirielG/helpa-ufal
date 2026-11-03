@@ -13,11 +13,10 @@ import ValidationError, {
   type ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
 import { isValidUUID } from "@/utils/uuid.js";
-import type { Enrollment } from "@prisma/client";
 import {
   ACTIVE_ENROLLMENT_STATUS,
   type ConfirmAttendanceInput,
-  type EnrollResponse,
+  type EnrollResult,
   type EnrollmentListResponse,
   type EnrollmentParticipantResponse,
   type EnrollmentResponse,
@@ -71,7 +70,7 @@ class EnrollmentService implements IEnrollmentService {
   public async enroll(
     userId: string,
     activityId: string,
-  ): Promise<EnrollResponse> {
+  ): Promise<EnrollResult<EnrollmentResponse>> {
     if (!isValidUUID(activityId)) {
       throw new ValidationError([
         { field: "activityId", message: "activityId must be a valid UUID." },
@@ -91,12 +90,12 @@ class EnrollmentService implements IEnrollmentService {
       });
     }
 
-    const enrollment = await this._enrollmentRepository.enroll(
+    const { enrollment, created } = await this._enrollmentRepository.enroll(
       userId,
       activityId,
     );
 
-    return this.toEnrollResponse(enrollment);
+    return { enrollment: toEnrollmentResponse(enrollment), created };
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
@@ -275,15 +274,6 @@ class EnrollmentService implements IEnrollmentService {
     }
 
     return input.workloadHours;
-  }
-
-  private toEnrollResponse(enrollment: Enrollment): EnrollResponse {
-    return {
-      id: enrollment.id,
-      activityId: enrollment.activityId,
-      userId: enrollment.userId,
-      createdAt: enrollment.createdAt,
-    };
   }
 
   private toEnrollmentWithActivityResponse(

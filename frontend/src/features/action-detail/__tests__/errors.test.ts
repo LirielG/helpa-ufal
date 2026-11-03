@@ -76,14 +76,6 @@ describe("getEnrollmentErrorMessage", () => {
       expect(message).toBe("As inscrições para esta ação não estão abertas.");
     });
 
-    it("returns pt-BR message for user already enrolled using code", () => {
-      const error = new ApiError(409, "Arbitrary backend text", [], {
-        code: "ALREADY_ENROLLED",
-      });
-      const message = getEnrollmentErrorMessage(error);
-      expect(message).toBe("Você já está inscrito nesta ação.");
-    });
-
     it("returns pt-BR message for no available slots", () => {
       const error = new ApiError(409, "Arbitrary backend text", [], {
         code: "NO_AVAILABLE_SLOTS",

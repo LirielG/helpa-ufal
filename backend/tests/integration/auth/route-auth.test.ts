@@ -5,6 +5,8 @@ import { app } from "@/app.js";
 describe("activity write authentication", () => {
   it.each([
     ["post", "/activities"],
+    ["put", "/activities/not-a-uuid/enrollments/me"],
+    ["delete", "/activities/not-a-uuid/enrollments/me"],
     ["patch", "/activities/not-a-uuid"],
     ["put", "/activities/not-a-uuid/status"],
     ["delete", "/activities/not-a-uuid"],
