@@ -67,7 +67,8 @@ export type ApiErrorCode =
   | "ENROLLMENT_NOT_FOUND"
   | "ACTIVITY_NOT_FOUND"
   | "ENROLLMENT_NOT_APPROVED"
-  | "ACTIVITY_NOT_COMPLETED";
+  | "ACTIVITY_NOT_COMPLETED"
+  | "SLOTS_BELOW_APPROVED_ENROLLMENTS";
 
 /** §4 "codes de item de `errors[]` já definidos". */
 export type ApiErrorItemCode =

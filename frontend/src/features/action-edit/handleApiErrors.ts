@@ -80,6 +80,7 @@ export function handleActionApiErrors<T extends FieldValues>(
 
   switch (error.status) {
     case 400:
+    case 422:
       if (!applyValidationErrors(error, setError)) {
         setGeneralError(GENERIC_ERROR);
       }

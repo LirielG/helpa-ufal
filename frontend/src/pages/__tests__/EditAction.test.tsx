@@ -917,6 +917,37 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
+  it("translates the slots error when the API answers 422", async () => {
+    mockAction();
+    failUpdate(422, {
+      status: 422,
+      message:
+        "slots cannot be reduced below the current number of approved enrollments (15).",
+      code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+      errors: [
+        {
+          field: "slots",
+          message:
+            "slots cannot be reduced below the current number of approved enrollments (15).",
+          code: "BELOW_APPROVED_ENROLLMENTS",
+        },
+      ],
+      details: { approvedEnrollments: 15 },
+    });
+    const { user } = renderEditAction();
+
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "5");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (15).",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows a pt-BR message when the API rejects the zip code", async () => {
     mockAction();
     failUpdate(400, {

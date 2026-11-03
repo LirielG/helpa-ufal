@@ -154,6 +154,35 @@ describe("handleActionApiErrors", () => {
     });
   });
 
+  describe("422", () => {
+    it("translates the slots error like a 400 does, keeping the count", () => {
+      const { setError, setGeneralError } = callWith(
+        new ApiError(
+          422,
+          "slots cannot be reduced below the current number of approved enrollments (13).",
+          [
+            {
+              field: "slots",
+              message: "Arbitrary backend text.",
+              code: "BELOW_APPROVED_ENROLLMENTS",
+            },
+          ],
+          {
+            code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+            details: { approvedEnrollments: 13 },
+          },
+        ),
+      );
+
+      expect(setError).toHaveBeenCalledWith("slots", {
+        type: "server",
+        message:
+          "A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (13).",
+      });
+      expect(setGeneralError).not.toHaveBeenCalled();
+    });
+  });
+
   it("leaves an expired session to the global session handler", () => {
     const { setError, setGeneralError } = callWith(
       new ApiError(401, "Token malformatted, expired or invalid."),
