@@ -1,6 +1,7 @@
 import express from "express";
 import CertificateController from "@/controllers/certificate/CertificateController.js";
 import AuthMiddleware from "@/middlewares/auth/AuthMiddleware.js";
+import { certificateValidationRateLimiter } from "@/middlewares/rateLimit/publicRateLimiters.js";
 
 const router = express.Router();
 const certificateController = new CertificateController();
@@ -16,8 +17,10 @@ router.get(
 
 // Public on purpose: whoever checks a certificate has no HELPA account, and a
 // stale session cookie in their browser must not turn the answer into a 401.
-router.get("/certificate-validations/:validationCode", (req, res, next) =>
-  certificateController.validate(req, res).catch(next),
+router.get(
+  "/certificate-validations/:validationCode",
+  certificateValidationRateLimiter,
+  (req, res, next) => certificateController.validate(req, res).catch(next),
 );
 
 export default router;
