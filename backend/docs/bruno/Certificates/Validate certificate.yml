@@ -47,6 +47,25 @@ examples:
       body: |-
         { "status": 404, "message": "Certificate not found." }
 
+  - name: 429 Too many requests
+    description: 60 requests per IP every 15 minutes, shared across all validation codes. The route-specific quota is independent; general client and instance quotas also apply.
+    response:
+      status: 429
+      statusText: Too Many Requests
+      headers:
+        - name: Content-Type
+          value: application/json; charset=utf-8
+        - name: Retry-After
+          value: "900"
+      body:
+        type: json
+        data: |-
+          {
+            "status": 429,
+            "code": "TOO_MANY_REQUESTS",
+            "message": "Too many requests. Please try again later."
+          }
+
 docs: |-
   # GET /certificate-validations/:validationCode — Validate a certificate
 

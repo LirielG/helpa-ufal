@@ -7,6 +7,7 @@ import {
 } from "@/test/factories";
 import { ApiError } from "@/services/apiError";
 import type { UserActivityItem } from "@/services/contracts/user";
+import type { Paginated } from "@/services/contracts/common";
 import {
   fetchUserActivities,
   updateActivityStatus,
@@ -15,20 +16,27 @@ import {
 
 const ACTION_ID = "act-status";
 
-function serveUserActivities(items: UserActivityItem[]) {
+function serveUserActivities(
+  items: UserActivityItem[],
+  metadata: Partial<Omit<Paginated<UserActivityItem>, "items">> = {},
+) {
   let url: URL | undefined;
+
   server.use(
     http.get(`${API}/users/me/activities`, ({ request }) => {
       url = new URL(request.url);
+
       return HttpResponse.json({
         items,
         total: items.length,
         page: 1,
-        limit: 100,
+        limit: 20,
         totalPages: 1,
+        ...metadata,
       });
     }),
   );
+
   return () => url;
 }
 
@@ -36,11 +44,25 @@ describe("fetchUserActivities", () => {
   it.each(["enrolled", "completed", "managed"] as const)(
     "asks the history route for the %s filter",
     async (filter) => {
-      const requestedUrl = serveUserActivities([]);
+      const item = makeUserActivityItem();
+      const requestedUrl = serveUserActivities([item], {
+        total: 121,
+        page: 3,
+        totalPages: 7,
+      });
 
-      await fetchUserActivities(filter);
+      const result = await fetchUserActivities(filter, 3);
 
       expect(requestedUrl()?.searchParams.get("filter")).toBe(filter);
+      expect(requestedUrl()?.searchParams.get("page")).toBe("3");
+      expect(requestedUrl()?.searchParams.get("limit")).toBe("20");
+      expect(result).toMatchObject({
+        items: [{ action: item }],
+        total: 121,
+        page: 3,
+        limit: 20,
+        totalPages: 7,
+      });
     },
   );
 
@@ -54,7 +76,9 @@ describe("fetchUserActivities", () => {
     const item = makeUserActivityItem({ ...action });
     serveUserActivities([item]);
 
-    const [activity] = await fetchUserActivities("enrolled");
+    const {
+      items: [activity],
+    } = await fetchUserActivities("enrolled", 1);
 
     expect(activity).toMatchObject({
       description: "Descrição da ação de teste.",
@@ -73,7 +97,9 @@ describe("fetchUserActivities", () => {
       makeUserActivityItem({ campus: "PENEDO", details: null }),
     ]);
 
-    const [activity] = await fetchUserActivities("managed");
+    const {
+      items: [activity],
+    } = await fetchUserActivities("managed", 1);
 
     expect(activity.location).toBe("UFAL - Campus Penedo");
     expect(activity.description).toBe("Sem descrição informada.");
@@ -89,7 +115,7 @@ describe("fetchUserActivities", () => {
       ),
     );
 
-    await expect(fetchUserActivities("managed")).rejects.toBeInstanceOf(
+    await expect(fetchUserActivities("managed", 1)).rejects.toBeInstanceOf(
       ApiError,
     );
   });
@@ -99,12 +125,14 @@ describe("updateActivityStatus", () => {
   it("sends PATCH /activities/:id/status with only the status in the body", async () => {
     let method: string | undefined;
     let body: unknown;
+
     server.use(
       http.patch(
         `${API}/activities/${ACTION_ID}/status`,
         async ({ request }) => {
           method = request.method;
           body = await request.json();
+
           return HttpResponse.json(
             makeAction({ id: ACTION_ID, status: "IN_PROGRESS" }),
           );
@@ -125,6 +153,7 @@ describe("updateActivityStatus", () => {
       status: "COMPLETED",
       availableSlots: 4,
     });
+
     server.use(
       http.patch(`${API}/activities/${ACTION_ID}/status`, () =>
         HttpResponse.json(updated),
@@ -162,9 +191,11 @@ describe("updateActivityStatus", () => {
 describe("updateProfile", () => {
   it("sends the body as a PATCH to /users/me and returns the saved profile", async () => {
     let request: { method: string; body: unknown } | undefined;
+
     server.use(
       http.patch(`${API}/users/me`, async ({ request: req }) => {
         request = { method: req.method, body: await req.json() };
+
         return HttpResponse.json({
           fullName: "Nome Salvo",
           totalWorkloadHours: 0,
@@ -183,6 +214,7 @@ describe("updateProfile", () => {
 
   it("rejects with the API's field errors so the form can place them", async () => {
     const errors = [{ field: "fullName", message: "Too big" }];
+
     server.use(
       http.patch(`${API}/users/me`, () =>
         HttpResponse.json(
