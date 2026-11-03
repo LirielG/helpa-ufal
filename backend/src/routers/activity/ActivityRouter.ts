@@ -55,7 +55,7 @@ router.delete(
   (req, res) => enrollmentController.cancel(req, res),
 );
 
-router.patch(
+router.put(
   "/activities/:activityId/status",
   authMiddleware.requireAuth(),
   (req, res) => activityController.updateStatus(req, res),

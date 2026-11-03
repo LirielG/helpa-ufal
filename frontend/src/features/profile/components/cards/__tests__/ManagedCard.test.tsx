@@ -3,7 +3,6 @@ import { useLocation } from "react-router";
 import { render, screen, waitFor, within } from "@/test/render";
 import { API, http, HttpResponse, server } from "@/test/http";
 import {
-  makeAction,
   makeActionDetail,
   makeManagedActivity,
   makeManager,
@@ -73,13 +72,11 @@ function optionLabels() {
     .map((option) => option.textContent);
 }
 
-/** Answers every PATCH with `respond` and records each body it received. */
-function recordPatches(
-  respond: (body: unknown) => Response | Promise<Response>,
-) {
+/** Records PUT bodies to verify that confirmation sends each transition once. */
+function recordPuts(respond: (body: unknown) => Response | Promise<Response>) {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API}/activities/${ACTION_ID}/status`, async ({ request }) => {
+    http.put(`${API}/activities/${ACTION_ID}/status`, async ({ request }) => {
       const body = await request.json();
       bodies.push(body);
       return respond(body);
@@ -103,7 +100,7 @@ function recordDeletes(
 }
 
 function respondWithStatus(status: ActivityStatus) {
-  return () => HttpResponse.json(makeAction({ id: ACTION_ID, status }));
+  return () => HttpResponse.json(makeActionDetail({ id: ACTION_ID, status }));
 }
 
 function respondWithError(status: number, message: string) {
@@ -158,7 +155,7 @@ describe("ManagedCard status control", () => {
 
   describe("starting an action", () => {
     it("applies IN_PROGRESS right away and shows it without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("IN_PROGRESS"));
+      const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
       const { user } = renderCard(managed("OPEN"));
 
       expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
@@ -182,7 +179,7 @@ describe("ManagedCard status control", () => {
 
   describe("completing an action", () => {
     it("asks for confirmation, then shows the new status without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("COMPLETED"));
+      const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
       await user.selectOptions(statusSelect(), "Concluída");
@@ -201,7 +198,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends nothing and keeps the current status when the user backs out", async () => {
-      const bodies = recordPatches(respondWithStatus("COMPLETED"));
+      const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
       await user.selectOptions(statusSelect(), "Concluída");
@@ -288,7 +285,7 @@ describe("ManagedCard status control", () => {
 
   describe("cancelling an action", () => {
     it("asks for confirmation in a modal titled 'Cancelar ação'", async () => {
-      recordPatches(respondWithStatus("CANCELLED"));
+      recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -306,7 +303,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("cancels after confirmation and shows the new status without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -322,7 +319,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends nothing and keeps the current status when the user backs out", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -340,7 +337,7 @@ describe("ManagedCard status control", () => {
 
   it("lets a manager who is not the author change the status", async () => {
     signIn(makeManager());
-    const bodies = recordPatches(respondWithStatus("IN_PROGRESS"));
+    const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
     const { user } = renderCard(managed("OPEN"));
 
     await user.selectOptions(statusSelect(), "Em andamento");
@@ -357,10 +354,10 @@ describe("ManagedCard status control", () => {
       const pending = new Promise<void>((resolve) => {
         release = resolve;
       });
-      const bodies = recordPatches(async () => {
+      const bodies = recordPuts(async () => {
         await pending;
         return HttpResponse.json(
-          makeAction({ id: ACTION_ID, status: "IN_PROGRESS" }),
+          makeActionDetail({ id: ACTION_ID, status: "IN_PROGRESS" }),
         );
       });
       const { user } = renderCard(managed("OPEN"));
@@ -377,7 +374,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends a single request when the confirm button is double-clicked", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -396,7 +393,7 @@ describe("ManagedCard status control", () => {
 
   describe("errors", () => {
     it("shows a permission message on 403 and keeps the previous status", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           403,
           "Forbidden. Requester is not the author or a manager.",
@@ -413,7 +410,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("shows a not-found message on 404 and stops offering transitions", async () => {
-      recordPatches(respondWithError(404, "Activity not found."));
+      recordPuts(respondWithError(404, "Activity not found."));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Em andamento");
@@ -425,7 +422,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("reloads the real status on 409 so no stale option stays on screen", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -454,7 +451,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("shows the not-found message when the reload after a 409 finds the action removed", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -480,7 +477,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("stops offering transitions when the reload after a 409 fails", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -504,7 +501,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends the user to the login screen on 401", async () => {
-      recordPatches(respondWithError(401, "No token provided."));
+      recordPuts(respondWithError(401, "No token provided."));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Em andamento");
@@ -520,7 +517,7 @@ describe("ManagedCard status control", () => {
     ])(
       "shows a retryable message on %s without changing the displayed status",
       async (_case, respond) => {
-        recordPatches(respond);
+        recordPuts(respond);
         const { user } = renderCard(managed("OPEN"));
 
         await user.selectOptions(statusSelect(), "Em andamento");
@@ -537,12 +534,12 @@ describe("ManagedCard status control", () => {
 
     it("retries the same transition without asking for confirmation again", async () => {
       let attempts = 0;
-      const bodies = recordPatches(() => {
+      const bodies = recordPuts(() => {
         attempts += 1;
         return attempts === 1
           ? HttpResponse.error()
           : HttpResponse.json(
-              makeAction({ id: ACTION_ID, status: "CANCELLED" }),
+              makeActionDetail({ id: ACTION_ID, status: "CANCELLED" }),
             );
       });
       const { user } = renderCard(managed("OPEN"));

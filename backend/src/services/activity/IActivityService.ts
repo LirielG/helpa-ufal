@@ -27,7 +27,7 @@ export interface IActivityService {
     activityId: string,
     newStatus: ActivityStatus,
     user: Pick<AuthenticatedUser, "id" | "isManager">,
-  ): Promise<ActivityResponse>;
+  ): Promise<ActivityFullResponse>;
   delete(
     id: string,
     user: Pick<AuthenticatedUser, "id" | "isManager">,

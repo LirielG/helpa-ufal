@@ -6,7 +6,7 @@ describe("activity write authentication", () => {
   it.each([
     ["post", "/activities"],
     ["patch", "/activities/not-a-uuid"],
-    ["patch", "/activities/not-a-uuid/status"],
+    ["put", "/activities/not-a-uuid/status"],
     ["delete", "/activities/not-a-uuid"],
   ] as const)(
     "%s %s returns 401 without a token before validating params or body",
