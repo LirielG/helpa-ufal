@@ -26,7 +26,7 @@ const protectedRoutes = [
   { method: "post", path: "/activities", body: {} },
   { method: "delete", path: "/activities/:id", body: undefined },
   {
-    method: "patch",
+    method: "put",
     path: "/activities/:id/status",
     body: { status: "IN_PROGRESS" },
   },

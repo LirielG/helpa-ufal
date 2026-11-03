@@ -20,7 +20,7 @@ export interface UserActivity {
   confirmedWorkloadHours: number;
 }
 
-/** Targets `PATCH /activities/:id/status` accepts; an action never goes back to OPEN. */
+/** Targets `PUT /activities/:id/status` accepts; an action never goes back to OPEN. */
 export type ActivityStatusTransition = Exclude<Activity["status"], "OPEN">;
 
 export interface UpdateActivityStatusRequest {

@@ -23,7 +23,6 @@ import {
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
-  ActivityResponse,
   ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
@@ -487,7 +486,7 @@ class ActivityService implements IActivityService {
     activityId: string,
     newStatus: ActivityStatus,
     user: Pick<AuthenticatedUser, "id" | "isManager">,
-  ): Promise<ActivityResponse> {
+  ): Promise<ActivityFullResponse> {
     const userId = user.id;
     const activity = await this._activityRepository.findById(activityId);
 
@@ -521,28 +520,9 @@ class ActivityService implements IActivityService {
       );
     }
 
-    const updated = await this._activityRepository.updateStatus(
-      activityId,
-      newStatus as any,
-    );
+    await this._activityRepository.updateStatus(activityId, newStatus as any);
 
-    const approvedCount =
-      await this._activityRepository.countApprovedEnrollments(activityId);
-
-    const activityResponse: ActivityResponse = {
-      id: updated.id,
-      authorId: updated.authorId,
-      title: updated.title,
-      type: updated.type,
-      campus: updated.campus,
-      startDate: updated.startDate,
-      endDate: updated.endDate,
-      slots: updated.slots,
-      availableSlots: Math.max(0, updated.slots - approvedCount),
-      status: updated.status,
-    };
-
-    return activityResponse;
+    return this.findById(activityId, user.id);
   }
 
   public async delete(
