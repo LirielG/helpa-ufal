@@ -271,3 +271,9 @@ export function futureDateInput(daysAhead = 30): string {
   date.setDate(date.getDate() + daysAhead);
   return date.toISOString().split("T")[0];
 }
+
+/** The same date as `futureDateInput`, as the date field shows it (`dd/mm/aaaa`). */
+export function futureDateDisplay(daysAhead = 30): string {
+  const [y, m, d] = futureDateInput(daysAhead).split("-");
+  return `${d}/${m}/${y}`;
+}

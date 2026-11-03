@@ -10,3 +10,5 @@ export { Pagination } from "./Pagination";
 export { Navbar } from "./Navbar";
 export { Footer } from "./Footer";
 export { Layout } from "./Layout";
+export { DatePicker } from "./DatePicker";
+export { TimeInput } from "./TimeInput";

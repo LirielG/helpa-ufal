@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
-import { Button, Input, Select, Textarea } from "../components";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import {
+  Button,
+  DatePicker,
+  Input,
+  Select,
+  Textarea,
+  TimeInput,
+} from "../components";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -385,13 +392,19 @@ export function EditAction() {
                       >
                         Início
                       </label>
-                      <Input
-                        id="edit-start-time"
-                        size="sm"
-                        type="time"
-                        aria-label="Horário de início"
-                        error={errors.startTime?.message}
-                        {...register("startTime")}
+                      <Controller
+                        name="startTime"
+                        control={control}
+                        render={({ field }) => (
+                          <TimeInput
+                            id="edit-start-time"
+                            aria-label="Horário de início"
+                            error={errors.startTime?.message}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            ref={field.ref}
+                          />
+                        )}
                       />
                     </div>
 
@@ -402,13 +415,19 @@ export function EditAction() {
                       >
                         Fim
                       </label>
-                      <Input
-                        id="edit-end-time"
-                        size="sm"
-                        type="time"
-                        aria-label="Horário de encerramento"
-                        error={errors.endTime?.message}
-                        {...register("endTime")}
+                      <Controller
+                        name="endTime"
+                        control={control}
+                        render={({ field }) => (
+                          <TimeInput
+                            id="edit-end-time"
+                            aria-label="Horário de encerramento"
+                            error={errors.endTime?.message}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            ref={field.ref}
+                          />
+                        )}
                       />
                     </div>
                   </div>
@@ -425,13 +444,19 @@ export function EditAction() {
                       >
                         Início
                       </label>
-                      <Input
-                        id="edit-start-date"
-                        size="sm"
-                        type="date"
-                        aria-label="Data de início"
-                        error={errors.startDate?.message}
-                        {...register("startDate")}
+                      <Controller
+                        name="startDate"
+                        control={control}
+                        render={({ field }) => (
+                          <DatePicker
+                            id="edit-start-date"
+                            aria-label="Data de início"
+                            error={errors.startDate?.message}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            ref={field.ref}
+                          />
+                        )}
                       />
                     </div>
                     <div>
@@ -441,13 +466,19 @@ export function EditAction() {
                       >
                         Fim
                       </label>
-                      <Input
-                        id="edit-end-date"
-                        size="sm"
-                        type="date"
-                        aria-label="Data de encerramento"
-                        error={errors.endDate?.message}
-                        {...register("endDate")}
+                      <Controller
+                        name="endDate"
+                        control={control}
+                        render={({ field }) => (
+                          <DatePicker
+                            id="edit-end-date"
+                            aria-label="Data de encerramento"
+                            error={errors.endDate?.message}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            ref={field.ref}
+                          />
+                        )}
                       />
                     </div>
                   </div>

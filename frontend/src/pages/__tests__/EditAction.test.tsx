@@ -280,7 +280,7 @@ describe("EditAction", () => {
 
     expect(screen.getByLabelText("CEP")).toHaveValue("57309-005");
     expect(screen.getByLabelText("Data de encerramento")).toHaveValue(
-      "2026-03-17",
+      "17/03/2026",
     );
   });
 
@@ -708,10 +708,10 @@ describe("EditAction", () => {
 
       await findTitleField();
 
-      expect(screen.getByLabelText("Data de início")).toHaveValue("2026-03-10");
+      expect(screen.getByLabelText("Data de início")).toHaveValue("10/03/2026");
       expect(screen.getByLabelText("Horário de início")).toHaveValue("08:00");
       expect(screen.getByLabelText("Data de encerramento")).toHaveValue(
-        "2026-03-17",
+        "17/03/2026",
       );
       expect(screen.getByLabelText("Horário de encerramento")).toHaveValue(
         "18:00",
@@ -725,7 +725,7 @@ describe("EditAction", () => {
 
       await findTitleField();
 
-      changeField("Data de início", "2026-03-11");
+      changeField("Data de início", "11/03/2026");
       await user.click(getSaveButton());
 
       await waitFor(() =>
@@ -743,7 +743,7 @@ describe("EditAction", () => {
 
       await findTitleField();
 
-      changeField("Data de encerramento", "2026-03-18");
+      changeField("Data de encerramento", "18/03/2026");
       await user.click(getSaveButton());
 
       await waitFor(() =>
@@ -800,6 +800,39 @@ describe("EditAction", () => {
 
       expect(
         await screen.findByText(/encerramento deve ser posterior/),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("time validation", () => {
+    it.each([
+      ["Horário de início", "8:3"],
+      ["Horário de início", "25:70"],
+      ["Horário de encerramento", "8:3"],
+      ["Horário de encerramento", "25:70"],
+    ])("blocks %s %s", async (label, value) => {
+      mockAction(
+        editableAction(
+          {},
+          {
+            startDate: "2026-03-10T11:00:00.000Z",
+            endDate: "2026-03-17T21:00:00.000Z",
+          },
+        ),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      const field = screen.getByLabelText(label);
+      await user.clear(field);
+      await user.type(field, value);
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("Informe um horário válido (hh:mm)."),
       ).toBeInTheDocument();
       expect(onUpdate).not.toHaveBeenCalled();
     });
