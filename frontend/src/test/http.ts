@@ -7,6 +7,7 @@ import {
   makeActionDetail,
   makeCertificateValidation,
   makeEnrollment,
+  makeReport,
   makeSigaaActivity,
   makeUser,
   makeUserActivityItem,
@@ -108,6 +109,32 @@ export const handlers = [
 
   http.get(`${API}/certificate-validations/:validationCode`, () =>
     HttpResponse.json(makeCertificateValidation()),
+  ),
+
+  http.get(`${API}/reports`, ({ request }) => {
+    const resolved =
+      new URL(request.url).searchParams.get("resolved") === "true";
+
+    return HttpResponse.json({
+      items: [
+        makeReport({
+          resolvedAt: resolved ? "2026-06-10T12:00:00.000Z" : null,
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
+  }),
+
+  http.put(`${API}/reports/:reportId/resolution`, ({ params }) =>
+    HttpResponse.json(
+      makeReport({
+        id: String(params.reportId),
+        resolvedAt: "2026-06-10T12:00:00.000Z",
+      }),
+    ),
   ),
 ];
 
