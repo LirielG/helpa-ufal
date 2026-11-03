@@ -28,48 +28,66 @@ describe("EnrollmentModal", () => {
     server.resetHandlers();
   });
 
-  describe("success enrollment (201)", () => {
-    it("shows success message after post /activities/:id/enroll resolves", async () => {
-      const action = makeActionDetail({ id: "act-123" });
-      const onClose = vi.fn();
-      const onSuccess = vi.fn();
+  describe("successful enrollment", () => {
+    it.each([201, 200])(
+      "shows success after PUT returns %i",
+      async (status) => {
+        const action = makeActionDetail({ id: "act-123" });
+        const onClose = vi.fn();
+        const onSuccess = vi.fn();
 
-      server.use(
-        http.post(
-          `${API}/activities/act-123/enroll`,
-          () => new HttpResponse(null, { status: 201 }),
-        ),
-      );
+        server.use(
+          http.put(`${API}/activities/act-123/enrollments/me`, () =>
+            HttpResponse.json(
+              {
+                id: "enrollment-1",
+                activityId: action.id,
+                userId: "user-1",
+                status: "APPROVED",
+                attendanceConfirmed: null,
+                confirmedWorkloadHours: 0,
+                createdAt: "2026-09-11T00:00:00.000Z",
+                updatedAt: "2026-09-11T00:00:00.000Z",
+              },
+              { status },
+            ),
+          ),
+        );
 
-      const { user } = render(
-        <EnrollmentModal
-          action={action}
-          onClose={onClose}
-          onSuccess={onSuccess}
-        />,
-      );
+        const { user } = render(
+          <EnrollmentModal
+            action={action}
+            onClose={onClose}
+            onSuccess={onSuccess}
+          />,
+        );
 
-      expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+        expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
 
-      const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
-      await user.click(confirmButton);
+        const confirmButton = screen.getByRole("button", {
+          name: /Confirmar/i,
+        });
+        await user.click(confirmButton);
 
-      // Should call onSuccess callback
-      expect(onSuccess).toHaveBeenCalledOnce();
+        // Should call onSuccess callback
+        expect(onSuccess).toHaveBeenCalledOnce();
 
-      // Should show success message
-      await waitFor(() => {
-        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
-      });
-      expect(
-        screen.getByRole("dialog", { name: "Oba! Você está dentro!" }),
-      ).toHaveAttribute("aria-modal", "true");
-    });
+        // Should show success message
+        await waitFor(() => {
+          expect(
+            screen.getByText("Oba! Você está dentro!"),
+          ).toBeInTheDocument();
+        });
+        expect(
+          screen.getByRole("dialog", { name: "Oba! Você está dentro!" }),
+        ).toHaveAttribute("aria-modal", "true");
+      },
+    );
 
     it("shows loading state during request", async () => {
       const action = makeActionDetail({ id: "act-456" });
       server.use(
-        http.post(`${API}/activities/act-456/enroll`, async () => {
+        http.put(`${API}/activities/act-456/enrollments/me`, async () => {
           // Delay to observe loading state
           await new Promise((resolve) => setTimeout(resolve, 100));
           return new HttpResponse(null, { status: 201 });
@@ -108,7 +126,7 @@ describe("EnrollmentModal", () => {
     it("displays pt-BR message for 'not open for enrollment'", async () => {
       const action = makeActionDetail({ id: "act-409-1" });
       server.use(
-        http.post(`${API}/activities/act-409-1/enroll`, () =>
+        http.put(`${API}/activities/act-409-1/enrollments/me`, () =>
           HttpResponse.json(
             {
               message: "Activity is not open for enrollment.",
@@ -136,37 +154,10 @@ describe("EnrollmentModal", () => {
       ).toBeInTheDocument();
     });
 
-    it("displays pt-BR message for 'already enrolled'", async () => {
-      const action = makeActionDetail({ id: "act-409-2" });
-      server.use(
-        http.post(`${API}/activities/act-409-2/enroll`, () =>
-          HttpResponse.json(
-            {
-              message: "User is already enrolled in this activity.",
-              code: "ALREADY_ENROLLED",
-            },
-            { status: 409 },
-          ),
-        ),
-      );
-
-      const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
-      );
-
-      await user.click(screen.getByRole("button", { name: /Confirmar/i }));
-
-      await waitFor(() => {
-        expect(
-          screen.getByText("Você já está inscrito nesta ação."),
-        ).toBeInTheDocument();
-      });
-    });
-
     it("displays pt-BR message for 'no available slots'", async () => {
       const action = makeActionDetail({ id: "act-409-3" });
       server.use(
-        http.post(`${API}/activities/act-409-3/enroll`, () =>
+        http.put(`${API}/activities/act-409-3/enrollments/me`, () =>
           HttpResponse.json(
             {
               message: "No available slots for this activity.",
@@ -195,7 +186,7 @@ describe("EnrollmentModal", () => {
     it("displays pt-BR message when activity is not found", async () => {
       const action = makeActionDetail({ id: "act-404" });
       server.use(
-        http.post(`${API}/activities/act-404/enroll`, () =>
+        http.put(`${API}/activities/act-404/enrollments/me`, () =>
           HttpResponse.json(
             { message: "Activity not found." },
             { status: 404 },
@@ -223,7 +214,7 @@ describe("EnrollmentModal", () => {
       async (status) => {
         const action = makeActionDetail({ id: "act-net" });
         server.use(
-          http.post(`${API}/activities/act-net/enroll`, () =>
+          http.put(`${API}/activities/act-net/enrollments/me`, () =>
             status === 0
               ? HttpResponse.error()
               : new HttpResponse(null, { status }),
@@ -256,7 +247,7 @@ describe("EnrollmentModal", () => {
     it("enables retry after network error without locking button", async () => {
       const action = makeActionDetail({ id: "act-net2" });
       server.use(
-        http.post(`${API}/activities/act-net2/enroll`, () =>
+        http.put(`${API}/activities/act-net2/enrollments/me`, () =>
           HttpResponse.error(),
         ),
       );
@@ -284,7 +275,7 @@ describe("EnrollmentModal", () => {
     it("does not display error message for 401 (lets session middleware redirect)", async () => {
       const action = makeActionDetail({ id: "act-401" });
       server.use(
-        http.post(`${API}/activities/act-401/enroll`, () =>
+        http.put(`${API}/activities/act-401/enrollments/me`, () =>
           HttpResponse.json({ message: "No token provided." }, { status: 401 }),
         ),
       );
@@ -310,7 +301,7 @@ describe("EnrollmentModal", () => {
     it("does not expose internal server error details", async () => {
       const action = makeActionDetail({ id: "act-generic-err" });
       server.use(
-        http.post(`${API}/activities/act-generic-err/enroll`, () => {
+        http.put(`${API}/activities/act-generic-err/enrollments/me`, () => {
           return HttpResponse.json(
             { message: "Raw JavaScript Error Message" },
             { status: 500 },
@@ -343,7 +334,7 @@ describe("EnrollmentModal", () => {
       let requestCount = 0;
 
       server.use(
-        http.post(`${API}/activities/act-dblclick/enroll`, async () => {
+        http.put(`${API}/activities/act-dblclick/enrollments/me`, async () => {
           requestCount += 1;
           // Simulate a slow request to allow double-click attempt
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -373,7 +364,7 @@ describe("EnrollmentModal", () => {
     it("disables confirm button during submission", async () => {
       const action = makeActionDetail({ id: "act-disable" });
       server.use(
-        http.post(`${API}/activities/act-disable/enroll`, async () => {
+        http.put(`${API}/activities/act-disable/enrollments/me`, async () => {
           await new Promise((resolve) => setTimeout(resolve, 100));
           return new HttpResponse(null, { status: 201 });
         }),
@@ -468,7 +459,7 @@ describe("EnrollmentModal", () => {
         release = resolve;
       });
       server.use(
-        http.post(`${API}/activities/act-pending/enroll`, async () => {
+        http.put(`${API}/activities/act-pending/enrollments/me`, async () => {
           await responseReady;
           return HttpResponse.error();
         }),

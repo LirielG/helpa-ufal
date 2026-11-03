@@ -1,4 +1,3 @@
-// tests/integration/enrollment/delete-enroll.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
@@ -12,8 +11,8 @@ import {
 } from "../../helpers/factories.js";
 import { authCookie, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: docs/bruno/Enrollments/Cancel Enrollment.yml.
-const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
+const enrollUrl = (activityId: string) =>
+  `/activities/${activityId}/enrollments/me`;
 
 async function anOpenActivity(slots = 30) {
   const author = await createTeacher();
@@ -21,7 +20,7 @@ async function anOpenActivity(slots = 30) {
   return { author, activity };
 }
 
-describe("DELETE /activities/:activityId/enroll", () => {
+describe("DELETE /activities/:activityId/enrollments/me", () => {
   // ---------- 204 - No Content ----------
 
   it("soft-deletes the enrollment: row kept as CANCELLED, empty response", async () => {

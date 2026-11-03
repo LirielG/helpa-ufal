@@ -21,7 +21,7 @@ function recordCancellations(
 ) {
   const requests: string[] = [];
   server.use(
-    http.delete(`${API}/activities/${ACTION_ID}/enroll`, async () => {
+    http.delete(`${API}/activities/${ACTION_ID}/enrollments/me`, async () => {
       requests.push(ACTION_ID);
       return respond();
     }),

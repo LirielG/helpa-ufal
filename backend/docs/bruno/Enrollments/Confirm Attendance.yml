@@ -284,7 +284,7 @@ examples:
             "message": "Only the activity creator or a manager can confirm attendance."
           }
   - name: 404 - Enrollment not found
-    description: No enrollment with this id, a non-UUID enrollmentId, or an enrollment whose activity was soft-deleted. A malformed id is a lookup that finds nothing, so the three cases answer exactly this 404 and are indistinguishable from the outside; Answers the generic NOT_FOUND, unlike DELETE /activities/:activityId/enroll, which uses `ENROLLMENT_NOT_FOUND` no screen needs to tell them apart here yet..
+    description: No enrollment with this id, a non-UUID enrollmentId, or an enrollment whose activity was soft-deleted. A malformed id is a lookup that finds nothing, so the three cases answer exactly this 404 and are indistinguishable from the outside; Answers the generic NOT_FOUND, unlike DELETE /activities/:activityId/enrollments/me, which uses `ENROLLMENT_NOT_FOUND` no screen needs to tell them apart here yet..
     request:
       url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
       method: PUT

@@ -477,7 +477,7 @@ describe("ActionsList pagination", () => {
     serveByFilter(lists);
 
     server.use(
-      http.delete(`${API}/activities/paginated-21/enroll`, () => {
+      http.delete(`${API}/activities/paginated-21/enrollments/me`, () => {
         lists.enrolled = lists.enrolled.filter(
           (item) => item.id !== "paginated-21",
         );
@@ -573,7 +573,7 @@ describe("ActionsList pagination", () => {
     serveByFilter(lists);
 
     server.use(
-      http.delete(`${API}/activities/refill-1/enroll`, () => {
+      http.delete(`${API}/activities/refill-1/enrollments/me`, () => {
         lists.enrolled = lists.enrolled.filter(
           (item) => item.id !== "refill-1",
         );
@@ -775,7 +775,7 @@ describe("ActionsList cancellation from the enrolled card", () => {
     code?: string,
   ) {
     server.use(
-      http.delete(`${API}/activities/${actionId}/enroll`, () => {
+      http.delete(`${API}/activities/${actionId}/enrollments/me`, () => {
         if (status === 0) return HttpResponse.error();
 
         if (status === 204 || status === 404) {

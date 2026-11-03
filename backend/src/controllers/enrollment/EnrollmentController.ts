@@ -28,12 +28,12 @@ class EnrollmentController implements IEnrollmentController {
     if (!activityId || Array.isArray(activityId))
       throw new CustomError(400, "Invalid activityId parameter.");
 
-    const enrollment = await this._enrollmentService.enroll(
+    const { enrollment, created } = await this._enrollmentService.enroll(
       user.id,
       activityId,
     );
 
-    res.status(201).json(enrollment);
+    res.status(created ? 201 : 200).json(enrollment);
   }
 
   public async cancel(req: Request, res: Response): Promise<void> {
