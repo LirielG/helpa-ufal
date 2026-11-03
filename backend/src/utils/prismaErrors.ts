@@ -1,5 +1,8 @@
 import { Prisma } from "@prisma/client";
 
+// Prisma's default name for a unique index: `<Model>_<field>[_<field>...]_key`.
+const DEFAULT_UNIQUE_INDEX = /^[^_]+_(.+)_key$/;
+
 /**
  * Returns the field names of a unique-constraint violation (P2002), unquoted,
  * or null when the error is not one.
@@ -7,10 +10,14 @@ import { Prisma } from "@prisma/client";
  * Prisma's P2002 shape has changed across versions/engines:
  * - Legacy (Rust query engine): `meta.target` — a field name or array of
  *   field names (e.g. ["registrationCode"]).
- * - Driver adapters (e.g. @prisma/adapter-pg): the field names instead live
- *   nested at `meta.driverAdapterError.cause.constraint.fields`, as quoted SQL
+ * - Driver adapters up to 7.8 (@prisma/adapter-pg): the field names live at
+ *   `meta.driverAdapterError.cause.constraint.fields`, as quoted SQL
  *   identifiers (e.g. ['"registrationCode"']).
- * Both shapes are read so this keeps working regardless of which one this
+ * - Driver adapters from 7.10: only the index name is reported, at
+ *   `meta.driverAdapterError.cause.constraint.index`
+ *   (e.g. "Student_registrationCode_key"). The fields are taken from Prisma's
+ *   default index name; an index with a custom name yields no fields.
+ * All shapes are read so this keeps working regardless of which one this
  * project's Prisma setup produces.
  */
 export function uniqueViolationFields(err: unknown): string[] | null {
@@ -22,12 +29,16 @@ export function uniqueViolationFields(err: unknown): string[] | null {
   }
 
   const meta = err.meta as Record<string, unknown> | undefined;
-  const driverAdapterError = meta?.driverAdapterError as
-    { cause?: { constraint?: { fields?: unknown } } } | undefined;
+  const constraint = (
+    meta?.driverAdapterError as
+      | { cause?: { constraint?: { fields?: unknown; index?: unknown } } }
+      | undefined
+  )?.cause?.constraint;
 
   const rawCandidates: unknown[] = [
     meta?.target,
-    driverAdapterError?.cause?.constraint?.fields,
+    constraint?.fields,
+    fieldsFromIndexName(constraint?.index),
   ];
 
   return rawCandidates
@@ -40,4 +51,10 @@ export function uniqueViolationFields(err: unknown): string[] | null {
       return typeof candidate === "string" ? [candidate] : [];
     })
     .map((field) => field.replaceAll('"', ""));
+}
+
+function fieldsFromIndexName(index: unknown): string[] {
+  if (typeof index !== "string") return [];
+  const match = DEFAULT_UNIQUE_INDEX.exec(index);
+  return match ? match[1].split("_") : [];
 }
