@@ -329,6 +329,30 @@ describe("PATCH /activities/:activityId", () => {
     expect(stored.slots).toBe(10);
   });
 
+  it("keeps 400 with VALIDATION_ERROR when slots exceed the ceiling", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ slots: 10_001 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "slots",
+          code: "VALIDATION_ERROR",
+          message: "slots cannot exceed 10000.",
+        },
+      ],
+    });
+  });
+
   it("accepts slots equal to the approved enrollments, without details", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
