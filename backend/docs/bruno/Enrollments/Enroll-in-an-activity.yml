@@ -282,7 +282,7 @@ examples:
 docs: |-
   Creates an enrollment in the activity for the authenticated user.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()`. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   - Route: POST /activities/:activityId/enroll — the activity is identified by the activityId path param. No request body.
   - The user is resolved exclusively from the JWT token (never from params, query or body).

@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { AuthenticatedUser } from "@/types/auth.js";
 import { IActivityReportService } from "@/services/acitvityReport/IActivityReportService.js";
 import { IActivityReportController } from "./IActivityReportController.js";
 import ActivityReportService from "@/services/acitvityReport/ActivityReportService.js";
@@ -21,7 +22,7 @@ class ActivityReportController implements IActivityReportController {
   }
 
   public async createReport(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
     if (!activityId || Array.isArray(activityId))
@@ -30,7 +31,7 @@ class ActivityReportController implements IActivityReportController {
     const data = CreateActivityReportSchema.parse(req.body);
     const report = await this._activityReportService.createReport(
       activityId,
-      req.user.id,
+      user.id,
       data,
     );
 
@@ -38,8 +39,6 @@ class ActivityReportController implements IActivityReportController {
   }
 
   public async listReports(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
-
     // Parsed and defaulted by validateQuery(ListReportsQuerySchema) on the route.
     const query = res.locals.validatedQuery as ListReportsQuery;
     const result = await this._activityReportService.listReports(query);
@@ -49,11 +48,11 @@ class ActivityReportController implements IActivityReportController {
   }
 
   public async resolveReport(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const report = await this._activityReportService.resolveReport(
       req.params.reportId as string,
-      req.user.id,
+      user.id,
     );
 
     res.status(200).json(report);

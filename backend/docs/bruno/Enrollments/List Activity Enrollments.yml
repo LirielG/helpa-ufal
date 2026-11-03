@@ -142,7 +142,7 @@ examples:
           }
 
   - name: 400 - Invalid query params
-    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
+    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs after authentication; missing, invalid or expired credentials return 401 even when the query is invalid.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -206,7 +206,7 @@ examples:
           }
 
   - name: 401 - Unauthenticated
-    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
+    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked before query format and activity existence, so not even the existence of the activity is revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -260,7 +260,7 @@ examples:
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
+    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order authentication (401) → query format (400) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -316,7 +316,7 @@ examples:
 docs: |-
   Lists the active enrollments of an activity for its creator or a manager.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   ## Query params
   | Param | Rule | Default |
@@ -329,7 +329,7 @@ docs: |-
   - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
-  - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
+  - Validation order: authentication (401) → query format (400) → activity existence (404) → authorization (403). Authentication runs first so expired sessions reach the client's 401 handling even when the query is invalid; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
   - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.

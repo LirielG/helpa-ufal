@@ -62,7 +62,7 @@ examples:
             "message": "Invalid UUID format."
           }
   - name: 401 Response
-    description: Missing, invalid or expired session cookie.
+    description: No session cookie was sent; invalid or expired cookies also return 401.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
@@ -82,7 +82,8 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "code": "UNAUTHENTICATED",
+            "message": "No token provided."
           }
   - name: 403 Response
     description: Requester is not the author or a manager.
@@ -157,6 +158,6 @@ examples:
 docs: |-
   Soft-deletes an activity: it stops showing up in listings and in `GET /activities/:activityId`. Deleting it a second time answers 404.
 
-  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can delete.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can delete.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

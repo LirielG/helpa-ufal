@@ -442,7 +442,7 @@ examples:
 docs: |-
   Homologates the attendance of an enrolled volunteer on a completed activity, registering presence or absence and the confirmed workload hours.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()`. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   - Route: PUT /enrollments/:enrollmentId/attendance. The enrollment has its own id, so it has a single top-level URL; the activity is resolved from the enrollment. The target is identified exclusively by the path — the body carries only the homologation outcome.
   - Body: { attended: boolean, workloadHours?: number }. attended=true requires workloadHours (integer, 1..activity's workloadHours); attended=false forbids it and stores 0.

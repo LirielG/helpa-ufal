@@ -15,7 +15,7 @@ const activityReportController: IActivityReportController =
 const enrollmentController: IEnrollmentController = new EnrollmentController();
 const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 
-router.post("/activities", authMiddleware.auth(), (req, res) =>
+router.post("/activities", authMiddleware.requireAuth(), (req, res) =>
   activityController.create(req, res),
 );
 
@@ -25,40 +25,46 @@ router.get("/activities/filters", (req, res) =>
   activityController.listFilters(req, res),
 );
 
-router.get("/activities/:activityId", authMiddleware.auth(), (req, res) =>
-  activityController.findById(req, res),
+router.get(
+  "/activities/:activityId",
+  authMiddleware.optionalAuth(),
+  (req, res) => activityController.findById(req, res),
 );
 
-router.patch("/activities/:activityId", authMiddleware.auth(), (req, res) =>
-  activityController.update(req, res),
+router.patch(
+  "/activities/:activityId",
+  authMiddleware.requireAuth(),
+  (req, res) => activityController.update(req, res),
 );
 
 router.post(
   "/activities/:activityId/reports",
-  authMiddleware.auth({ userTypes: "all" }),
+  authMiddleware.requireAuth(),
   (req, res) => activityReportController.createReport(req, res),
 );
 
 router.post(
   "/activities/:activityId/enroll",
-  authMiddleware.auth({ userTypes: "all" }),
+  authMiddleware.requireAuth(),
   (req, res) => enrollmentController.enroll(req, res),
 );
 
 router.delete(
   "/activities/:activityId/enroll",
-  authMiddleware.auth({ userTypes: "all" }),
+  authMiddleware.requireAuth(),
   (req, res) => enrollmentController.cancel(req, res),
 );
 
 router.patch(
   "/activities/:activityId/status",
-  authMiddleware.auth(),
+  authMiddleware.requireAuth(),
   (req, res) => activityController.updateStatus(req, res),
 );
 
-router.delete("/activities/:activityId", authMiddleware.auth(), (req, res) =>
-  activityController.delete(req, res),
+router.delete(
+  "/activities/:activityId",
+  authMiddleware.requireAuth(),
+  (req, res) => activityController.delete(req, res),
 );
 
 export default router;

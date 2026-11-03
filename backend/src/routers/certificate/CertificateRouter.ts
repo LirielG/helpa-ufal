@@ -13,7 +13,7 @@ const authMiddleware = new AuthMiddleware();
 // an unknown or someone else's certificate, never a 400 INVALID_UUID.
 router.get(
   "/certificates/:certificateId/file",
-  authMiddleware.auth({ userTypes: "all" }),
+  authMiddleware.requireAuth(),
   (req, res) => certificateController.downloadFile(req, res),
 );
 

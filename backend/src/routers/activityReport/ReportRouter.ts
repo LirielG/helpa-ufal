@@ -16,14 +16,14 @@ const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 // middleware checks the current role before the request reaches the service.
 router.get(
   "/reports",
-  authMiddleware.auth({ manager: true }),
+  authMiddleware.requireAuth({ manager: true }),
   validateQuery(ListReportsQuerySchema, INVALID_QUERY_MESSAGE),
   (req, res) => activityReportController.listReports(req, res),
 );
 
 router.put(
   "/reports/:reportId/resolution",
-  authMiddleware.auth({ manager: true }),
+  authMiddleware.requireAuth({ manager: true }),
   (req, res) => activityReportController.resolveReport(req, res),
 );
 

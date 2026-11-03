@@ -205,7 +205,7 @@ examples:
 docs: |-
   Marks a report as resolved. General rules (status codes, error body, validation order) are in [api-conventions.md](../../api-conventions.md).
 
-  **Authentication:** manager only (`auth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
+  **Authentication:** manager only (`requireAuth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
 
   **Route-specific behavior**
 

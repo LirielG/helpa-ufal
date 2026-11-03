@@ -237,6 +237,33 @@ examples:
               }
             ]
           }
+  - name: 401 - Invalid token
+    description: A present but malformed, expired or invalid cookie is rejected before loading the activity.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      headers:
+        - name: Cookie
+          value: token=invalid-token
+      params:
+        - name: activityId
+          value: "a1b2c3d4-0000-4000-8000-000000000001"
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "code": "UNAUTHENTICATED",
+            "message": "Token malformatted, expired or invalid."
+          }
   - name: 404 Response
     description: Activity not found or deleted.
     request:
@@ -287,15 +314,15 @@ examples:
 docs: |-
   Returns the full data of an activity, including details and address if available.
 
-  **Authentication:** `optionalAuth`. Today the router uses `auth()` without
-  options, which decodes the cookie when present and never answers 401. When the
-  request carries a valid session, the response also includes `enrollmentStatus`,
+  **Authentication:** `optionalAuth()` on the router. Only requests without a
+  `token` cookie are anonymous. A present but empty, malformed, expired or invalid
+  cookie answers 401. When the request carries a valid session, the response also includes `enrollmentStatus`,
   the requester's enrollment in this activity:
 
   | Request | `enrollmentStatus` |
   |---|---|
   | no token | absent |
-  | malformed, expired or invalid token | absent (the request is treated as anonymous) |
+  | empty, malformed, expired or invalid token | 401, no activity data |
   | valid token, user never enrolled | `null` |
   | valid token, with an enrollment | the enrollment `status`: `PENDING`, `APPROVED`, `REJECTED` or `CANCELLED` |
 
@@ -303,8 +330,7 @@ docs: |-
   no session; `null` means authenticated with no enrollment.
 
   - The user is resolved exclusively from the JWT token (never from params, query or body).
-  - Invalid tokens are treated as anonymous for now. Once the route moves to
-    `optionalAuth()`, a present but invalid or expired token will answer 401
-    (see `docs/api-conventions.md`, section 5).
+  - Removed users and revoked sessions answer 401 with code `SESSION_INVALID`.
+  - Database failures propagate as server errors rather than anonymous access.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

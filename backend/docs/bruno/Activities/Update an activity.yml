@@ -281,7 +281,7 @@ examples:
             }
           }
   - name: 401 Response
-    description: Missing, invalid or expired session cookie.
+    description: No session cookie was sent; invalid or expired cookies also return 401.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
@@ -308,7 +308,7 @@ examples:
           {
             "code": "UNAUTHENTICATED",
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
   - name: 403 Response
     description: Requester is not the author or a manager.
@@ -434,7 +434,7 @@ examples:
 docs: |-
   Partially updates an activity. At least one field must be provided.
 
-  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can update.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can update.
 
   - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
   - The 200 body is the stored row, not the shape of `GET /activities/:activityId`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
