@@ -165,8 +165,6 @@ describe("POST /activities", () => {
   ] as const)(
     "creates an activity for a %s and persists it with authorId from the token",
     async (_role, createUser) => {
-      // authMiddleware.auth() (no options) requires a valid token but does not
-      // restrict by userType/isManager: any authenticated user create an action.
       const author = await createUser();
 
       const response = await request(app)

@@ -11,6 +11,7 @@ import {
   UpdateActivityStatusSchema,
 } from "@/schemas/activity/ActivitySchemas.js";
 import CustomError from "@/models/error/CustomError.js";
+import type { AuthenticatedUser } from "@/types/auth.js";
 import { isValidUUID } from "@/utils/uuid.js";
 
 type Props = {
@@ -25,10 +26,10 @@ class ActivityController implements IActivityController {
   }
 
   public async create(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const data = CreateActivitySchema.parse(req.body);
-    const activity = await this._activityService.create(req.user.id, data);
+    const activity = await this._activityService.create(user.id, data);
 
     res.status(201).json(activity);
   }
@@ -61,7 +62,7 @@ class ActivityController implements IActivityController {
   }
 
   public async update(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
 
@@ -82,7 +83,7 @@ class ActivityController implements IActivityController {
 
     const updatedActivity = await this._activityService.update(
       activityId,
-      req.user,
+      user,
       data,
     );
 
@@ -90,7 +91,7 @@ class ActivityController implements IActivityController {
   }
 
   public async updateStatus(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
 
@@ -107,14 +108,14 @@ class ActivityController implements IActivityController {
     const updatedActivity = await this._activityService.updateStatus(
       activityId,
       data.status,
-      req.user,
+      user,
     );
 
     res.status(200).json(updatedActivity);
   }
 
   public async delete(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
 
@@ -126,7 +127,7 @@ class ActivityController implements IActivityController {
       throw new CustomError(400, "Invalid UUID format.");
     }
 
-    await this._activityService.delete(activityId, req.user);
+    await this._activityService.delete(activityId, user);
 
     res.status(204).send();
   }

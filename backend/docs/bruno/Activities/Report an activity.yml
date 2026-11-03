@@ -318,6 +318,6 @@ examples:
 docs: |-
   Registers a report against an activity. Any authenticated user can report, except the activity's own author. Each user can only report a given activity once.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()`. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

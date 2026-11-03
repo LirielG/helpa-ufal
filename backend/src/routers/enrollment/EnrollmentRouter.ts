@@ -14,23 +14,20 @@ const authMiddleware = new AuthMiddleware();
 /**
  * GET /activities/:activityId/enrollments — enrollment list for the creator/manager.
  *
- * Middleware order IS the contract (docs/bruno/Enrollments/List Activity
- * Enrollments.yml): query format (400) -> auth (401) -> activity existence
- * (404) -> authorization (403). The last two live in the service.
- *
- * auth() has no effect without options — `userTypes: "all"` is what actually
- * requires a credential here (cookie session).
+ * Authentication precedes query validation so an expired session reaches
+ * the client's 401 handling even when the query is invalid. Existence (404)
+ * and authorization (403) are checked in the service.
  */
 router.get(
   "/activities/:activityId/enrollments",
+  authMiddleware.requireAuth(),
   validateQuery(ListParticipantsQuerySchema, INVALID_QUERY_MESSAGE),
-  authMiddleware.auth({ userTypes: "all" }),
   (req, res) => enrollmentController.listParticipants(req, res),
 );
 
 router.put(
   "/enrollments/:enrollmentId/attendance",
-  authMiddleware.auth({ userTypes: "all" }),
+  authMiddleware.requireAuth(),
   (req, res) => enrollmentController.confirmAttendance(req, res),
 );
 

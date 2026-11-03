@@ -22,14 +22,14 @@ class EnrollmentController implements IEnrollmentController {
   }
 
   public async enroll(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
     if (!activityId || Array.isArray(activityId))
       throw new CustomError(400, "Invalid activityId parameter.");
 
     const enrollment = await this._enrollmentService.enroll(
-      req.user.id,
+      user.id,
       activityId,
     );
 
@@ -37,19 +37,19 @@ class EnrollmentController implements IEnrollmentController {
   }
 
   public async cancel(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
     if (!activityId || Array.isArray(activityId))
       throw new CustomError(400, "Invalid activityId parameter.");
 
-    await this._enrollmentService.cancel(req.user.id, activityId);
+    await this._enrollmentService.cancel(user.id, activityId);
 
     res.status(204).send();
   }
 
   public async listParticipants(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { activityId } = req.params;
     if (!activityId || Array.isArray(activityId)) {
@@ -57,14 +57,14 @@ class EnrollmentController implements IEnrollmentController {
     }
 
     // Validated and defaulted upstream by validateQuery(ListParticipantsQuerySchema),
-    // registered BEFORE auth on the route. If it is absent, page/limit arrive as
+    // after authentication on the route. If it is absent, page/limit arrive as
     // undefined and the service defaults apply — defaults live in exactly one
     // runtime place (the service signature), never duplicated here.
     const query = res.locals.validatedQuery as
       ListParticipantsQuery | undefined;
 
     const result = await this._enrollmentService.listParticipants(
-      req.user,
+      user,
       activityId,
       query?.page,
       query?.limit,
@@ -75,10 +75,8 @@ class EnrollmentController implements IEnrollmentController {
   }
 
   public async confirmAttendance(req: Request, res: Response): Promise<void> {
-    // auth({ userTypes: "all" }) on the route already answered 401 for a
-    // missing or invalid credential, so req.user is set by the time we get
-    // here. The user is supplied by authentication — params, query and body
-    // never name who homologates.
+    // The authenticated session identifies who confirms attendance; callers
+    // cannot select that user through params, query or body.
     const user = req.user as AuthenticatedUser;
 
     const { enrollmentId } = req.params;

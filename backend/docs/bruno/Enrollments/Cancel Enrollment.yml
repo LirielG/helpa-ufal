@@ -241,7 +241,7 @@ examples:
 docs: |-
   Cancels the authenticated user's enrollment in the activity.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()`. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   - Enrollment is a top-level entity with a dedicated route: /enroll. The activity is identified by the activityId path param.
   - No request body: the user is resolved exclusively from the JWT token (never from params, query or body).
