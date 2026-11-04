@@ -3,7 +3,6 @@ import EnrollmentService from "../EnrollmentService.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
 import { expectHttpError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -70,22 +69,6 @@ function mockRepositories(
 }
 
 describe("EnrollmentService.enroll", () => {
-  // ---------- Input validation ----------
-
-  it("rejects a malformed activityId with a ValidationError", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({
-      activityRepository,
-
-      enrollmentRepository,
-    });
-
-    await expect(service.enroll(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
-  });
-
   // ---------- Activity existence/state ----------
 
   it("throws 404 when the activity does not exist (or was soft-deleted)", async () => {

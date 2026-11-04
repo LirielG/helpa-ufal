@@ -211,7 +211,7 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
@@ -238,7 +238,14 @@ examples:
           {
             "status": 400,
             "code": "VALIDATION_ERROR",
-            "message": "Invalid activityId parameter. Must be a valid UUID."
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "code": "INVALID_UUID",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
           }
   - name: 422 - Slots below approved enrollments
     description: slots is lower than the number of APPROVED enrollments. The count is in details.approvedEnrollments and in the message. The request is well formed, but the rule depends on stored data, so the status is 422 (see api-conventions section 4).
@@ -438,5 +445,7 @@ docs: |-
 
   - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
   - The 200 body is the stored row, not the shape of `GET /activities/:activityId`: it carries `createdAt`, `updatedAt`, `deletedAt`, `details.activityId`, `details.addressId` and the address timestamps, and it has no `availableSlots`.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

@@ -7,12 +7,11 @@ import type {
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
 import {
   CreateActivitySchema,
-  UpdateActivitySchema,
-  UpdateActivityStatusSchema,
+  type UpdateActivityInput,
+  type UpdateActivityStatusInput,
 } from "@/schemas/activity/ActivitySchemas.js";
-import CustomError from "@/models/error/CustomError.js";
 import type { AuthenticatedUser } from "@/types/auth.js";
-import { isValidUUID } from "@/utils/uuid.js";
+import type { ActivityPathParams } from "@/schemas/common/PathParamsSchemas.js";
 
 type Props = {
   activityService?: IActivityService;
@@ -48,11 +47,7 @@ class ActivityController implements IActivityController {
   }
 
   public async findById(req: Request, res: Response): Promise<void> {
-    const { activityId } = req.params;
-
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
 
     const activity = await this._activityService.findById(
       activityId,
@@ -64,22 +59,8 @@ class ActivityController implements IActivityController {
   public async update(req: Request, res: Response): Promise<void> {
     const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!activityId || !uuidRegex.test(activityId)) {
-      throw new CustomError(
-        400,
-        "Invalid activityId parameter. Must be a valid UUID.",
-      );
-    }
-
-    const data = UpdateActivitySchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as UpdateActivityInput;
 
     const updatedActivity = await this._activityService.update(
       activityId,
@@ -93,17 +74,8 @@ class ActivityController implements IActivityController {
   public async updateStatus(req: Request, res: Response): Promise<void> {
     const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-
-    if (Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(400, "Invalid UUID format.");
-    }
-
-    const data = UpdateActivityStatusSchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as UpdateActivityStatusInput;
 
     const updatedActivity = await this._activityService.updateStatus(
       activityId,
@@ -117,15 +89,7 @@ class ActivityController implements IActivityController {
   public async delete(req: Request, res: Response): Promise<void> {
     const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(400, "Invalid UUID format.");
-    }
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
 
     await this._activityService.delete(activityId, user);
 

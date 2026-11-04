@@ -58,7 +58,7 @@ examples:
           }
 
   - name: 400 - Invalid reportId
-    description: reportId is not a UUID.
+    description: The reportId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/reports/:reportId/resolution"
       method: PUT
@@ -77,6 +77,7 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
@@ -163,7 +164,7 @@ examples:
       method: PUT
       params:
         - name: reportId
-          value: 00000000-0000-4000-8000-000000000000
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
     response:
       status: 404
@@ -206,6 +207,8 @@ docs: |-
   Marks a report as resolved. General rules (status codes, error body, validation order) are in [api-conventions.md](../../api-conventions.md).
 
   **Authentication:** manager only (`requireAuth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
+
+  The `reportId` path parameter must be a UUID v4. `validateParams` runs after authentication and the manager role check, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   **Route-specific behavior**
 

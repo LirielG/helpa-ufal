@@ -3,11 +3,14 @@ import type { AuthenticatedUser } from "@/types/auth.js";
 import { IActivityReportService } from "@/services/acitvityReport/IActivityReportService.js";
 import { IActivityReportController } from "./IActivityReportController.js";
 import ActivityReportService from "@/services/acitvityReport/ActivityReportService.js";
-import {
-  CreateActivityReportSchema,
-  type ListReportsQuery,
+import type {
+  CreateActivityReportInput,
+  ListReportsQuery,
 } from "@/schemas/activityReport/activityReportSchemas.js";
-import CustomError from "@/models/error/CustomError.js";
+import type {
+  ActivityPathParams,
+  ReportPathParams,
+} from "@/schemas/common/PathParamsSchemas.js";
 
 type Props = {
   activityReportService?: IActivityReportService;
@@ -24,11 +27,8 @@ class ActivityReportController implements IActivityReportController {
   public async createReport(req: Request, res: Response): Promise<void> {
     const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-    if (!activityId || Array.isArray(activityId))
-      throw new CustomError(400, "Invalid activityId parameter.");
-
-    const data = CreateActivityReportSchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as CreateActivityReportInput;
     const report = await this._activityReportService.createReport(
       activityId,
       user.id,
@@ -49,9 +49,10 @@ class ActivityReportController implements IActivityReportController {
 
   public async resolveReport(req: Request, res: Response): Promise<void> {
     const user = req.user as AuthenticatedUser;
+    const { reportId } = res.locals.validatedParams as ReportPathParams;
 
     const report = await this._activityReportService.resolveReport(
-      req.params.reportId as string,
+      reportId,
       user.id,
     );
 

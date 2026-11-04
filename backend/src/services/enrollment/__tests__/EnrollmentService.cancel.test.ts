@@ -4,7 +4,6 @@ import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmen
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
 import { expectHttpError } from "@/utils/tests.js";
-import ValidationError from "@/models/error/ValidationError.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const ACTIVITY_ID = "f26559ac-d672-4252-a9a4-d6fe6583d8ec";
@@ -51,22 +50,6 @@ describe("EnrollmentService.cancel", () => {
       USER_ID,
       ACTIVITY_ID,
     );
-  });
-
-  // ---------- Input validation ----------
-
-  it("rejects a malformed activityId with a ValidationError", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({
-      activityRepository,
-
-      enrollmentRepository,
-    });
-
-    await expect(service.cancel(USER_ID, "not-a-uuid")).rejects.toBeInstanceOf(
-      ValidationError,
-    );
-    expect(enrollmentRepository.cancel).not.toHaveBeenCalled();
   });
 
   // ---------- Activity existence ----------

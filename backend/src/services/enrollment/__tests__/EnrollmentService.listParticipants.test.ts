@@ -463,30 +463,6 @@ describe("EnrollmentService.listParticipants", () => {
     expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
   });
 
-  it("throws a plain 404 (not a ValidationError) for a malformed activityId", async () => {
-    // Diverges from cancel(), which turns the same input into a 400:
-    // this contract treats path identifiers as resource lookups.
-    const { activityRepository, enrollmentRepository } = mockRepositories();
-    const service = new EnrollmentService({
-      activityRepository,
-
-      enrollmentRepository,
-    });
-
-    await expectCustomError(
-      service.listParticipants(
-        { id: AUTHOR_ID, isManager: false },
-        "not-a-uuid",
-        1,
-        10,
-      ),
-      404,
-      "Activity not found.",
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
-    expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
-  });
-
   // ---------- Authorization ----------
 
   it("throws 403 for an authenticated user who is neither author nor manager, without querying enrollments", async () => {

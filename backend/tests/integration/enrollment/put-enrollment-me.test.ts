@@ -283,7 +283,6 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
         confirmedWorkloadHours: 8,
         isModerator: true,
         enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-02T00:00:00.000Z"),
       });
 
       const response = await request(app)
@@ -362,7 +361,7 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
     expect(response.body.code).toBe("VALIDATION_ERROR");
     expect(response.body.errors).toContainEqual({
       field: "activityId",
-      code: "VALIDATION_ERROR",
+      code: "INVALID_UUID",
       message: "activityId must be a valid UUID.",
     });
   });

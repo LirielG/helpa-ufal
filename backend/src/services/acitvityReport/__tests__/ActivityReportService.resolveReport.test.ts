@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import ActivityReportService from "../ActivityReportService.js";
 import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { ReportResponse } from "@/types/activityReport.js";
-import { expectCustomError, expectValidationError } from "@/utils/tests.js";
+import { expectCustomError } from "@/utils/tests.js";
 
 const MANAGER_ID = "a1b2c3d4-0000-4000-8000-000000000001";
 const REPORT_ID = "b2c3d4e5-0000-4000-8000-000000000007";
@@ -86,20 +86,7 @@ describe("ActivityReportService.resolveReport", () => {
     expect(reportRepository.resolve).not.toHaveBeenCalled();
   });
 
-  // ---------- Format and existence ----------
-
-  it("returns 400 INVALID_UUID on reportId for a malformed id, without querying", async () => {
-    const { service, reportRepository } = setup();
-
-    await expectValidationError(service.resolveReport("123", MANAGER_ID), [
-      {
-        field: "reportId",
-        code: "INVALID_UUID",
-        message: "reportId must be a valid UUID.",
-      },
-    ]);
-    expect(reportRepository.findById).not.toHaveBeenCalled();
-  });
+  // ---------- Existence ----------
 
   it("returns 404 for a well-formed id with no report", async () => {
     const { service, reportRepository } = setup({ found: null });

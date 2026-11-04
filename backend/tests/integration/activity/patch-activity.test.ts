@@ -121,7 +121,14 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.body).toEqual({
       status: 400,
       code: "VALIDATION_ERROR",
-      message: "Invalid activityId parameter. Must be a valid UUID.",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "activityId",
+          code: "INVALID_UUID",
+          message: "activityId must be a valid UUID.",
+        },
+      ],
     });
   });
 
