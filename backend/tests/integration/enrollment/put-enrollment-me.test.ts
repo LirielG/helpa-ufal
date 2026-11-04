@@ -283,7 +283,6 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
         confirmedWorkloadHours: 8,
         isModerator: true,
         enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-02T00:00:00.000Z"),
       });
 
       const response = await request(app)
