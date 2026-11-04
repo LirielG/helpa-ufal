@@ -466,21 +466,25 @@ describe("GET /activities/:activityId/enrollments", () => {
     });
   });
 
-  it("returns 404 — not 400 — for a non-UUID activity id", async () => {
-    // Contract decision for THIS route: identifiers in the path are resource
-    // lookups, never operator input. NOTE: DELETE /activities/:activityId/enrollments/me
-    // returns 400 for the same input today; the team must reconcile the two.
+  it("returns 400 INVALID_UUID for a non-UUID activity id", async () => {
     const user = await createStudent();
 
     const response = await request(app)
       .get(listUrl("not-a-uuid"))
       .set(...authCookie(user.token));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "Activity not found.",
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "activityId",
+          code: "INVALID_UUID",
+          message: "activityId must be a valid UUID.",
+        },
+      ],
     });
   });
 

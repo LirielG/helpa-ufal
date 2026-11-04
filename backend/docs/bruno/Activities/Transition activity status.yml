@@ -119,7 +119,7 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId/status"
       method: PUT
@@ -146,7 +146,14 @@ examples:
           {
             "status": 400,
             "code": "VALIDATION_ERROR",
-            "message": "Invalid UUID format."
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "code": "INVALID_UUID",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
           }
   - name: 401 Response
     description: No session cookie was sent; invalid or expired cookies also return 401.
@@ -347,5 +354,7 @@ docs: |-
   | Query parameter | Description |
   | --- | --- |
   | None | This route has no query parameters. |
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

@@ -100,7 +100,7 @@ describe("POST /activities/:activityId/reports", () => {
       errors: [
         {
           field: "activityId",
-          code: "VALIDATION_ERROR",
+          code: "INVALID_UUID",
           message: "activityId must be a valid UUID.",
         },
       ],

@@ -6,6 +6,8 @@ import type { IAuthMiddleware } from "@/middlewares/auth/IAuthMiddleware.js";
 import { validateQuery } from "@/middlewares/validation/validateQuery.js";
 import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
 import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
+import { validateParams } from "@/middlewares/validation/validateParams.js";
+import { ReportPathParamsSchema } from "@/schemas/common/PathParamsSchemas.js";
 
 const router = express.Router();
 const activityReportController: IActivityReportController =
@@ -24,6 +26,7 @@ router.get(
 router.put(
   "/reports/:reportId/resolution",
   authMiddleware.requireAuth({ manager: true }),
+  validateParams(ReportPathParamsSchema),
   (req, res) => activityReportController.resolveReport(req, res),
 );
 

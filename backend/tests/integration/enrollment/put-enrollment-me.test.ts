@@ -362,7 +362,7 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
     expect(response.body.code).toBe("VALIDATION_ERROR");
     expect(response.body.errors).toContainEqual({
       field: "activityId",
-      code: "VALIDATION_ERROR",
+      code: "INVALID_UUID",
       message: "activityId must be a valid UUID.",
     });
   });

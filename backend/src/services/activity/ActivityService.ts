@@ -28,7 +28,6 @@ import {
 import ValidationError, {
   ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
-import { isValidUUID } from "@/utils/uuid.js";
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
 const MAX_SLOTS = 10_000;
@@ -291,12 +290,6 @@ class ActivityService implements IActivityService {
     id: string,
     userId?: string,
   ): Promise<ActivityFullResponse> {
-    if (!isValidUUID(id)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
     const activity = await this._activityRepository.findById(id);
 
     if (!activity) {

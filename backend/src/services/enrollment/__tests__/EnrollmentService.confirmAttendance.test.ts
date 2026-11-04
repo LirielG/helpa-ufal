@@ -483,25 +483,6 @@ describe("EnrollmentService.confirmAttendance", () => {
     );
   });
 
-  it("answers 404 for a non-UUID enrollmentId, without touching the database", async () => {
-    const { service, enrollmentRepository } = aService();
-
-    await expectCustomError(
-      service.confirmAttendance(
-        { id: AUTHOR_ID, isManager: false },
-        "not-a-uuid",
-        {
-          attended: true,
-          workloadHours: 4,
-        },
-      ),
-      404,
-      "Enrollment not found.",
-    );
-    expect(enrollmentRepository.findById).not.toHaveBeenCalled();
-    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
-  });
-
   it("checks authorization (403) before the business rules (409)", async () => {
     const { service } = aService({
       activity: {

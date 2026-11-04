@@ -99,7 +99,7 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId/reports"
       method: POST
@@ -126,10 +126,12 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
                 "field": "activityId",
+                "code": "INVALID_UUID",
                 "message": "activityId must be a valid UUID."
               }
             ]
@@ -319,5 +321,7 @@ docs: |-
   Registers a report against an activity. Any authenticated user can report, except the activity's own author. Each user can only report a given activity once.
 
   **Authentication:** `requireAuth()`. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

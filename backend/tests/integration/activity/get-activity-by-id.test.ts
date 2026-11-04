@@ -93,7 +93,7 @@ describe("GET /activities/:activityId", () => {
     expect(response.body.errors).toEqual([
       {
         field: "activityId",
-        code: "VALIDATION_ERROR",
+        code: "INVALID_UUID",
         message: "activityId must be a valid UUID.",
       },
     ]);

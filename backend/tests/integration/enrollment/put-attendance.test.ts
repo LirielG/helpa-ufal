@@ -546,7 +546,7 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     });
   });
 
-  it("returns 404 for a non-UUID enrollmentId", async () => {
+  it("returns 400 INVALID_UUID for a non-UUID enrollmentId", async () => {
     const { author } = await aHomologableEnrollment();
 
     const response = await request(app)
@@ -554,11 +554,18 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
       .set(...authCookie(author.token))
       .send({ attended: true, workloadHours: 4 });
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "Enrollment not found.",
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "enrollmentId",
+          code: "INVALID_UUID",
+          message: "enrollmentId must be a valid UUID.",
+        },
+      ],
     });
   });
 

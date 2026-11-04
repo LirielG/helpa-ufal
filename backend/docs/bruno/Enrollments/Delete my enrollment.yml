@@ -39,7 +39,7 @@ examples:
         type: text
         data: ""
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments/me"
       method: DELETE
@@ -58,13 +58,13 @@ examples:
         type: json
         data: |-
           {
-            "code": "VALIDATION_ERROR",
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
                 "field": "activityId",
-                "code": "VALIDATION_ERROR",
+                "code": "INVALID_UUID",
                 "message": "activityId must be a valid UUID."
               }
             ]
@@ -148,7 +148,7 @@ examples:
       method: DELETE
       params:
         - name: activityId
-          value: ""
+          value: "f26559ac-d672-4252-a9a4-d6fe6583d8ec"
           type: path
           description: Activity UUID
     response:
@@ -172,7 +172,7 @@ examples:
       method: DELETE
       params:
         - name: activityId
-          value: ""
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
     response:
@@ -256,5 +256,7 @@ docs: |-
   - An APPROVED enrollment immediately releases its slot. Two concurrent cancellations yield one 204 and one 404.
   - Re-enrollment uses PUT on this same path and reactivates the same record if a slot remains.
   - The former DELETE enrollment route has been removed. Backend and frontend must be deployed together.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Error format follows [api-conventions.md](../../api-conventions.md).

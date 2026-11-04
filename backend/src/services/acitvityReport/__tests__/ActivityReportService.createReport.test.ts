@@ -4,9 +4,8 @@ import type { IActivityReportRepository } from "@/repositories/activityReport/IA
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
 import type { ActivityReportResponse } from "@/types/activityReport.js";
-import { expectValidationError, expectCustomError } from "@/utils/tests.js";
+import { expectCustomError } from "@/utils/tests.js";
 
-// v4 UUIDs only: isValidUUID rejects anything else (project convention).
 const ACTIVITY_ID = "22ac40bd-e160-4c6e-8505-b63913d2482f"; // from the Bruno contract
 const REPORTER_ID = "a1b2c3d4-0000-4000-8000-000000000042";
 const AUTHOR_ID = "a1b2c3d4-0000-4000-8000-000000000099";
@@ -201,7 +200,7 @@ describe("ActivityReportService.createReport", () => {
     });
 
     // Today's behavior: category validation belongs to the Zod schema in the
-    // controller, so the service forwards whatever it receives. If the rule
+    // router, so the service forwards whatever it receives. If the rule
     // ever moves into the service, this test is the detector.
     const input = validInput({ category: "HARASSMENT" });
     const response = await service.createReport(
@@ -214,71 +213,7 @@ describe("ActivityReportService.createReport", () => {
     expect(response.category).toBe("HARASSMENT");
   });
 
-  // ---------- Block 1: activityId format (ValidationError, 400) ----------
-
-  it("rejects a malformed activity id with a ValidationError", async () => {
-    const activityRepository = mockActivityRepository();
-    const reportRepository = mockReportRepository();
-    const service = new ActivityReportService({
-      activityReportRepository: reportRepository,
-      activityRepository,
-    });
-
-    await expectValidationError(
-      service.createReport("not-a-uuid", REPORTER_ID, validInput()),
-      [{ field: "activityId", message: "activityId must be a valid UUID." }],
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
-    expect(reportRepository.findByUserAndActivity).not.toHaveBeenCalled();
-    expect(reportRepository.create).not.toHaveBeenCalled();
-  });
-
-  it("rejects a well-formed non-v4 UUID (isValidUUID only accepts v4)", async () => {
-    const activityRepository = mockActivityRepository();
-    const reportRepository = mockReportRepository();
-    const service = new ActivityReportService({
-      activityReportRepository: reportRepository,
-      activityRepository,
-    });
-
-    // Fixation: "a1b2...-1000-..." is a valid v1 UUID, but the project
-    // convention accepts v4 only.
-    await expectValidationError(
-      service.createReport(
-        "a1b2c3d4-0000-1000-8000-000000000001",
-        REPORTER_ID,
-        validInput(),
-      ),
-      [{ field: "activityId", message: "activityId must be a valid UUID." }],
-    );
-    expect(activityRepository.findById).not.toHaveBeenCalled();
-  });
-
-  it("accepts a boundary UUID whose version nibble is 4", async () => {
-    const activityRepository = mockActivityRepository({
-      findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),
-    });
-    const reportRepository = mockReportRepository({
-      findByUserAndActivity: vi.fn().mockResolvedValue(null),
-    });
-    const service = new ActivityReportService({
-      activityReportRepository: reportRepository,
-      activityRepository,
-    });
-
-    // Boundary of the version check: only the third group's first nibble
-    // distinguishes a v4 UUID from a rejected one.
-    const response = await service.createReport(
-      "a1b2c3d4-0000-4fff-bfff-ffffffffffff",
-      REPORTER_ID,
-      validInput(),
-    );
-
-    expect(reportRepository.create).toHaveBeenCalledTimes(1);
-    expect(response.activityId).toBe("a1b2c3d4-0000-4fff-bfff-ffffffffffff");
-  });
-
-  // ---------- Blocks 2-4: not found, own activity, duplicate (CustomError) ----------
+  // ---------- Existence, ownership and duplicates ----------
 
   it("throws 404 when the activity does not exist", async () => {
     const activityRepository = mockActivityRepository({
