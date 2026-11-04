@@ -11,7 +11,10 @@ import {
 } from "@/types/activity.js";
 
 export interface IActivityRepository {
-  create(authorId: string, data: CreateActivityInput): Promise<ActivityFullResponse>;
+  create(
+    authorId: string,
+    data: CreateActivityInput,
+  ): Promise<ActivityFullResponse>;
 
   findById(id: string): Promise<ActivityFullResponse | null>;
 

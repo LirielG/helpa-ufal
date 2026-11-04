@@ -1,5 +1,9 @@
 import type { UseFormSetError } from "react-hook-form";
-import { ApiError, NETWORK_ERROR_STATUS } from "../../services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "../../services/apiError";
 import { FULL_NAME_MAX_LENGTH } from "../../validators/limits";
 import type { EditProfileFields } from "../../validators/profile";
 
@@ -23,6 +27,8 @@ export function handleProfileApiErrors(
   setError: UseFormSetError<EditProfileFields>,
 ): string | null {
   if (!(error instanceof ApiError)) return GENERIC_ERROR;
+
+  if (isConnectionFailure(error)) return CONNECTION_ERROR_MESSAGE;
 
   switch (error.status) {
     case 400: {
@@ -54,8 +60,6 @@ export function handleProfileApiErrors(
         message: "A nova senha deve ser diferente da atual.",
       });
       return null;
-    case NETWORK_ERROR_STATUS:
-      return "Falha de comunicação com o servidor. Tente novamente.";
     default:
       return GENERIC_ERROR;
   }

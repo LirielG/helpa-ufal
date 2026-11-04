@@ -11,7 +11,7 @@ import {
   ACTION_FORMAT_LABELS,
 } from "../../dashboard/constants";
 import type { Activity } from "@/services/contracts/activity";
-import { formatDate, formatTime } from "../../../utils";
+import { formatDate, formatTime, formatWorkloadHours } from "../../../utils";
 
 interface ActionInfoCardProps {
   action: Activity;
@@ -65,9 +65,11 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
                 ? ACTION_FORMAT_LABELS[format]
                 : "Não informado"}
           </span>
-          <span className="text-gray-500 text-sm">
-            {action.details?.address?.addressLine || "Endereço não informado"}
-          </span>
+          {(format !== "ONLINE" || action.details?.address) && (
+            <span className="text-gray-500 text-sm">
+              {action.details?.address?.addressLine || "Endereço não informado"}
+            </span>
+          )}
         </InfoRow>
 
         <InfoRow
@@ -93,7 +95,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Carga Horária"
         >
           <span className="font-medium text-gray-900">
-            {action.details?.workloadHours || 0} horas
+            {formatWorkloadHours(action.details?.workloadHours || 0)}
           </span>
         </InfoRow>
 

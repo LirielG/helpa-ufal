@@ -1,8 +1,7 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
-import UserRepository from "@/repositories/auth/UserRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
@@ -24,13 +23,11 @@ import {
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
-  ActivityResponse,
   ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
   ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
-import { isValidUUID } from "@/utils/uuid.js";
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
 const MAX_SLOTS = 10_000;
@@ -59,19 +56,16 @@ function isInvalidFilterValue(
 
 type Props = {
   activityRepository?: IActivityRepository;
-  userRepository?: IUserRepository;
   enrollmentRepository?: IEnrollmentRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
-  private _userRepository: IUserRepository;
   private _enrollmentRepository: IEnrollmentRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
-    this._userRepository = props?.userRepository ?? new UserRepository();
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
   }
@@ -80,15 +74,6 @@ class ActivityService implements IActivityService {
     authorId: string,
     data: CreateActivityInput,
   ): Promise<ActivityFullResponse> {
-    const author = await this._userRepository.findById(authorId);
-
-    if (!author) {
-      throw new CustomError(
-        403,
-        "You do not have permission to create an activity.",
-      );
-    }
-
     const now = new Date();
     const durationDays =
       (data.endDate.getTime() - data.startDate.getTime()) /
@@ -177,7 +162,6 @@ class ActivityService implements IActivityService {
 
   public async list(
     filters: IListActivitiesFilters,
-    userId?: string,
   ): Promise<IListActivitiesResponse> {
     // Absent -> default. Present (even empty) -> must be a plain integer.
     const pageRaw: unknown = filters.page ?? "1";
@@ -306,12 +290,6 @@ class ActivityService implements IActivityService {
     id: string,
     userId?: string,
   ): Promise<ActivityFullResponse> {
-    if (!isValidUUID(id)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
     const activity = await this._activityRepository.findById(id);
 
     if (!activity) {
@@ -334,18 +312,18 @@ class ActivityService implements IActivityService {
 
   public async update(
     id: string,
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     data: UpdateActivityInput,
   ): Promise<ActivityFullResponse> {
+    const userId = user.id;
     const activity = await this._activityRepository.findById(id);
 
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const dbUser = await this._userRepository.findById(userId);
-    const isAuthor = !!dbUser && activity.authorId === userId;
-    const isManager = dbUser?.isManager ?? false;
+    const isAuthor = activity.authorId === userId;
+    const isManager = user.isManager;
 
     if (!isAuthor && !isManager) {
       throw new CustomError(
@@ -443,16 +421,21 @@ class ActivityService implements IActivityService {
       const approvedEnrollments =
         await this._activityRepository.countApprovedEnrollments(activity.id);
       if (data.slots < approvedEnrollments) {
+        const message = `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`;
         throw new ValidationError(
           [
             {
               field: "slots",
               code: "BELOW_APPROVED_ENROLLMENTS",
-              message: `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`,
+              message,
             },
           ],
-          undefined,
-          { details: { approvedEnrollments } },
+          message,
+          {
+            status: 422,
+            code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+            details: { approvedEnrollments },
+          },
         );
       }
     }
@@ -467,9 +450,10 @@ class ActivityService implements IActivityService {
 
     let addressAction: "CREATE" | "UPDATE" | "DELETE" | "NONE" = "NONE";
     const hasExistingAddress = !!activity.details?.address;
+    const updateData = { ...data };
 
     if (finalFormat === "ONLINE") {
-      data.address = null;
+      updateData.address = null;
       if (hasExistingAddress) addressAction = "DELETE";
     } else {
       if (data.address) {
@@ -484,7 +468,7 @@ class ActivityService implements IActivityService {
 
     const updatedActivity = await this._activityRepository.update(
       id,
-      data,
+      updateData,
       addressAction,
     );
 
@@ -494,17 +478,17 @@ class ActivityService implements IActivityService {
   public async updateStatus(
     activityId: string,
     newStatus: ActivityStatus,
-    userId: string,
-  ): Promise<ActivityResponse> {
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<ActivityFullResponse> {
+    const userId = user.id;
     const activity = await this._activityRepository.findById(activityId);
 
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._userRepository.findById(userId);
-    const isAuthor = !!user && activity.authorId === userId; // A valid JWT of a deleted/deactivated user must not authorize anything.
-    const isManager = user?.isManager ?? false;
+    const isAuthor = activity.authorId === userId;
+    const isManager = user.isManager;
 
     if (!isAuthor && !isManager) {
       throw new CustomError(
@@ -529,40 +513,23 @@ class ActivityService implements IActivityService {
       );
     }
 
-    const updated = await this._activityRepository.updateStatus(
-      activityId,
-      newStatus as any,
-    );
+    await this._activityRepository.updateStatus(activityId, newStatus as any);
 
-    const approvedCount =
-      await this._activityRepository.countApprovedEnrollments(activityId);
-
-    const activityResponse: ActivityResponse = {
-      id: updated.id,
-      authorId: updated.authorId,
-      title: updated.title,
-      type: updated.type,
-      campus: updated.campus,
-      startDate: updated.startDate,
-      endDate: updated.endDate,
-      slots: updated.slots,
-      availableSlots: Math.max(0, updated.slots - approvedCount),
-      status: updated.status,
-    };
-
-    return activityResponse;
+    return this.findById(activityId, user.id);
   }
 
-  public async delete(id: string, userId: string): Promise<void> {
+  public async delete(
+    id: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<void> {
     const activity = await this._activityRepository.findById(id);
 
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
 
-    const user = await this._userRepository.findById(userId);
-    const isAuthor = !!user && activity.authorId === userId;
-    const isManager = user?.isManager ?? false;
+    const isAuthor = activity.authorId === user.id;
+    const isManager = user.isManager;
 
     if (!isAuthor && !isManager) {
       throw new CustomError(

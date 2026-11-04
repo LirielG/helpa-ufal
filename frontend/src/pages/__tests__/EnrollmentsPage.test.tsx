@@ -212,27 +212,34 @@ describe("EnrollmentsPage", () => {
   });
 
   describe("network error", () => {
-    it("displays pt-BR error message and a retry button", async () => {
-      server.use(
-        http.get(`${API}/activities/:id/enrollments`, () =>
-          HttpResponse.error(),
-        ),
-      );
+    it.each([0, 500])(
+      "displays the connection error (%i) and a retry button",
+      async (status) => {
+        server.use(
+          http.get(`${API}/activities/:id/enrollments`, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
 
-      renderPage();
+        renderPage();
 
-      await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
-      });
+        await waitFor(() => {
+          expect(
+            screen.getByText(/Não foi possível conectar ao servidor/),
+          ).toBeInTheDocument();
+        });
 
-      const retryButton = screen.getByRole("button", {
-        name: /Tentar novamente/i,
-      });
-      expect(retryButton).toBeInTheDocument();
+        const retryButton = screen.getByRole("button", {
+          name: /Tentar novamente/i,
+        });
+        expect(retryButton).toBeInTheDocument();
 
-      // After retry, the button should still be clickable (no lock)
-      expect(retryButton).not.toBeDisabled();
-    });
+        // After retry, the button should still be clickable (no lock)
+        expect(retryButton).not.toBeDisabled();
+      },
+    );
 
     it("reloads data when retry button is clicked after a network error", async () => {
       let callCount = 0;
@@ -259,7 +266,9 @@ describe("EnrollmentsPage", () => {
 
       // Wait for the error state
       await waitFor(() => {
-        expect(screen.getByText(/Falha de comunicação/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Não foi possível conectar ao servidor/),
+        ).toBeInTheDocument();
       });
 
       // Click retry
@@ -358,7 +367,7 @@ describe("EnrollmentsPage", () => {
       await user.click(screen.getByRole("button", { name: "Próxima página" }));
 
       // Page 2 fails: the error state replaces the list.
-      await screen.findByText(/Falha de comunicação/);
+      await screen.findByText(/Não foi possível conectar ao servidor/);
 
       await user.click(
         screen.getByRole("button", { name: /Tentar novamente/i }),

@@ -1,9 +1,6 @@
 export const REGISTER_SUCCESS_MESSAGE =
   "Conta criada com sucesso. Faça login para continuar.";
 
-export const CONNECTION_ERROR_MESSAGE =
-  "Não foi possível conectar ao servidor. Tente novamente.";
-
 export const INVALID_CREDENTIALS_MESSAGE = "E-mail ou senha incorretos.";
 export const LOGIN_GENERIC_ERROR_MESSAGE =
   "Não foi possível entrar. Tente novamente.";

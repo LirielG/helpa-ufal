@@ -1,4 +1,5 @@
 import type { Enrollment, Prisma } from "@prisma/client";
+import type { EnrollResult } from "@/types/enrollment.js";
 
 export type EnrollmentWithActivity = Prisma.EnrollmentGetPayload<{
   include: { activity: { include: { details: true } } };
@@ -29,7 +30,7 @@ export interface IEnrollmentRepository {
   findById(enrollmentId: string): Promise<Enrollment | null>;
 
   /* Registers the user for the activity or REACTIVATES a CANCELLED registration */
-  enroll(userId: string, activityId: string): Promise<Enrollment>;
+  enroll(userId: string, activityId: string): Promise<EnrollResult<Enrollment>>;
 
   /* Atomic transition {APPROVED, PENDING} -> CANCELLED (soft delete) */
   cancel(userId: string, activityId: string): Promise<void>;

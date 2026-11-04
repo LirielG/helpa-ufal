@@ -443,20 +443,29 @@ describe("Register page", () => {
       expect(screen.queryByText("Validation error.")).toBeNull();
     });
 
-    it("shows the connection error when the request gets no response", async () => {
-      server.use(http.post(REGISTER_URL, () => HttpResponse.error()));
+    it.each([0, 500])(
+      "shows the connection error for status %i",
+      async (status) => {
+        server.use(
+          http.post(REGISTER_URL, () =>
+            status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status }),
+          ),
+        );
 
-      const { user } = renderRegisterPage();
-      await goToStudentForm(user);
-      await fillCommonFields(user);
-      await user.click(screen.getByRole("button", { name: "Criar conta" }));
+        const { user } = renderRegisterPage();
+        await goToStudentForm(user);
+        await fillCommonFields(user);
+        await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
-      expect(
-        await screen.findByText(
-          "Não foi possível conectar ao servidor. Tente novamente.",
-        ),
-      ).toBeInTheDocument();
-    });
+        expect(
+          await screen.findByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
+        ).toBeInTheDocument();
+      },
+    );
 
     it("disables the submit button while the request is in flight", async () => {
       server.use(

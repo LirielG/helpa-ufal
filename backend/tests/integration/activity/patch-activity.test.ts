@@ -11,7 +11,7 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import { authHeader } from "../../helpers/auth.js";
+import { authCookie } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
 import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
@@ -30,7 +30,7 @@ describe("PATCH /activities/:activityId", () => {
 
         const response = await request(app)
           .patch(`/activities/${activity.id}`)
-          .set(...authHeader(author.token))
+          .set(...authCookie(author.token))
           .send({ [field]: invalidDate });
 
         expect(response.status).toBe(400);
@@ -49,7 +49,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ startDate });
 
     expect(response.status).toBe(200);
@@ -63,7 +63,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title });
 
     expect(response.status).toBe(200);
@@ -76,7 +76,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) });
 
     expect(response.status).toBe(400);
@@ -91,7 +91,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({});
 
     expect(response.status).toBe(400);
@@ -114,14 +114,21 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch("/activities/not-a-uuid")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "Tentativa com id inválido" });
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
       code: "VALIDATION_ERROR",
-      message: "Invalid activityId parameter. Must be a valid UUID.",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "activityId",
+          code: "INVALID_UUID",
+          message: "activityId must be a valid UUID.",
+        },
+      ],
     });
   });
 
@@ -136,11 +143,6 @@ describe("PATCH /activities/:activityId", () => {
     expect(response.status).toBe(401);
   });
 
-  // TODO(#148): current behavior (403 with the same message used for
-  // "no permission") established as the baseline. ActivityService.update uses
-  // the same error path for "ghost user" and "unauthorized third party" —
-  // revisit in #148 whether a deleted user should have a distinct status
-  // or message (e.g., 401) instead of falling back to the generic 403.
   it("rejects a valid token whose user no longer exists in the database (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
@@ -152,14 +154,14 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(manager.token))
+      .set(...authCookie(manager.token))
       .send({ title: "Título Atualizado de Usuário Fantasma" });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You do not have permission to update this activity.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 
@@ -175,7 +177,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(manager.token))
+      .set(...authCookie(manager.token))
       .send({ title: "Tentativa após rebaixamento" });
 
     expect(response.status).toBe(403);
@@ -187,7 +189,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "Título Atualizado pelo Autor" });
 
     expect(response.status).toBe(200);
@@ -201,7 +203,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(manager.token))
+      .set(...authCookie(manager.token))
       .send({ title: "Editado pelo Gestor" });
 
     expect(response.status).toBe(200);
@@ -215,7 +217,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(outsider.token))
+      .set(...authCookie(outsider.token))
       .send({ title: "Tentativa de terceiro" });
 
     expect(response.status).toBe(403);
@@ -231,7 +233,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${randomUUID()}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "Ação inexistente" });
 
     expect(response.status).toBe(404);
@@ -251,7 +253,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "Tentativa em ação removida" });
 
     expect(response.status).toBe(404);
@@ -273,7 +275,7 @@ describe("PATCH /activities/:activityId", () => {
 
       const response = await request(app)
         .patch(`/activities/${activity.id}`)
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send({ title: "Tentativa em ação em estado terminal" });
 
       expect(response.status).toBe(409);
@@ -285,7 +287,7 @@ describe("PATCH /activities/:activityId", () => {
     },
   );
 
-  it("returns 400 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
+  it("returns 422 with details.approvedEnrollments when slots drop below the approved enrollments", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
     const students = await Promise.all([
@@ -304,14 +306,15 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ slots: 2 });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
     expect(response.body).toEqual({
-      status: 400,
-      code: "VALIDATION_ERROR",
-      message: "Validation error.",
+      status: 422,
+      code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+      message:
+        "slots cannot be reduced below the current number of approved enrollments (3).",
       errors: [
         {
           field: "slots",
@@ -333,6 +336,30 @@ describe("PATCH /activities/:activityId", () => {
     expect(stored.slots).toBe(10);
   });
 
+  it("keeps 400 with VALIDATION_ERROR when slots exceed the ceiling", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { slots: 10 });
+
+    const response = await request(app)
+      .patch(`/activities/${activity.id}`)
+      .set(...authCookie(author.token))
+      .send({ slots: 10_001 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "slots",
+          code: "VALIDATION_ERROR",
+          message: "slots cannot exceed 10000.",
+        },
+      ],
+    });
+  });
+
   it("accepts slots equal to the approved enrollments, without details", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { slots: 10 });
@@ -341,7 +368,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ slots: 1 });
 
     expect(response.status).toBe(200);
@@ -359,7 +386,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ slots: 15 });
 
     expect(response.status).toBe(200);
@@ -384,7 +411,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ format: "IN_PERSON" });
 
     expect(response.status).toBe(200);
@@ -401,7 +428,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ format: "IN_PERSON" });
 
     expect(response.status).toBe(400);
@@ -420,7 +447,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ url: "não-é-url" });
 
     expect(response.status).toBe(400);
@@ -444,7 +471,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ title: "Título Atualizado" });
 
     expect(response.status).toBe(200);
@@ -461,7 +488,7 @@ describe("PATCH /activities/:activityId", () => {
 
     const response = await request(app)
       .patch(`/activities/${activity.id}`)
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send({ url: null });
 
     expect(response.status).toBe(400);

@@ -65,6 +65,9 @@ describe("DashboardHeader", () => {
       expect(
         screen.queryByRole("button", { name: "Sair" }),
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "Denúncias" }),
+      ).not.toBeInTheDocument();
     });
 
     it("sends Entrar to the login, remembering the current page", async () => {

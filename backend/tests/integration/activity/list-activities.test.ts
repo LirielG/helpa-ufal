@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"; // globals are disabled: explicit
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
+import { authCookie } from "../../helpers/auth.js";
 
 describe("GET /activities — area filter", () => {
   // ---------- 200 - OK ----------
@@ -210,10 +211,6 @@ describe("GET /activities — area filter", () => {
 
   // ---------- 401 - Unauthorized (guard) ----------
   it("is public: answers without any token (and breaks if auth ever becomes required)", async () => {
-    // The listing registers no auth middleware on purpose. Note: a bare
-    // `auth()` without options does NOT require a token in this project —
-    // this guard catches the change that would actually make the route
-    // private: `auth({ userTypes: ... })` or `auth({ manager: ... })`.
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
@@ -222,6 +219,32 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
   });
+
+  it.each([
+    { credentials: "a valid session cookie", token: undefined },
+    { credentials: "an invalid session cookie", token: "invalid-token" },
+  ])(
+    "returns the same listing with $credentials and anonymously",
+    async ({ token: cookieToken }) => {
+      const { user: author, token } = await createTeacher();
+      const activity = await createActivity(author.id, { area: "Saúde" });
+      await createActivity(author.id, { area: "Educação" });
+      const filters = { area: "Saúde", page: 1, limit: 1 };
+
+      const anonymous = await request(app).get("/activities").query(filters);
+      const authenticated = await request(app)
+        .get("/activities")
+        .query(filters)
+        .set(...authCookie(cookieToken ?? token));
+
+      expect(anonymous.status).toBe(200);
+      expect(anonymous.body.total).toBe(1);
+      expect(anonymous.body.activities).toHaveLength(1);
+      expect(anonymous.body.activities[0].id).toBe(activity.id);
+      expect(authenticated.status).toBe(anonymous.status);
+      expect(authenticated.body).toEqual(anonymous.body);
+    },
+  );
 
   // ---------- 404: intentionally absent ----------
   // An unknown area answers 200 with an empty page (see CA3 above); the

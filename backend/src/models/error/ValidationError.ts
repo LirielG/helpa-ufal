@@ -1,5 +1,9 @@
 import CustomError from "@/models/error/CustomError.js";
-import type { ErrorDetails, ErrorItemCode } from "@/models/error/ErrorCodes.js";
+import type {
+  ErrorCode,
+  ErrorDetails,
+  ErrorItemCode,
+} from "@/models/error/ErrorCodes.js";
 
 // Input shape: `code` stays optional so existing call sites do not change.
 // The default is applied when the item is serialized (toApiErrorItems).
@@ -11,6 +15,8 @@ export type ValidationErrorItem = {
 
 export type ValidationErrorOptions = {
   details?: ErrorDetails;
+  status?: 400 | 422;
+  code?: ErrorCode;
 };
 
 class ValidationError extends CustomError {
@@ -21,7 +27,10 @@ class ValidationError extends CustomError {
     message = "Validation error.",
     options: ValidationErrorOptions = {},
   ) {
-    super(400, message, { code: "VALIDATION_ERROR", details: options.details });
+    super(options.status ?? 400, message, {
+      code: options.code ?? "VALIDATION_ERROR",
+      details: options.details,
+    });
     this._errors = errors;
   }
 

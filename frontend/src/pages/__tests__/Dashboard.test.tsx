@@ -294,17 +294,15 @@ describe("Dashboard", () => {
     // Upper case on purpose: the term travels verbatim and the API folds case.
     await search(user, "REACT");
 
-    // "Oficina de React" is on screen before the search too, so the unmatched
-    // action leaving is what marks the filtered response as rendered.
+    // Both cards disappear while loading, so wait for the filtered result too.
     await waitFor(() => {
+      expect(
+        screen.getAllByRole("heading", { name: "Oficina de React" })[0],
+      ).toBeInTheDocument();
       expect(
         screen.queryByRole("heading", { name: "Palestra de Dados" }),
       ).not.toBeInTheDocument();
     });
-
-    expect(
-      screen.getAllByRole("heading", { name: "Oficina de React" })[0],
-    ).toBeInTheDocument();
     expect(searches.at(-1)).toBe("REACT");
   });
 

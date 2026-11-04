@@ -130,7 +130,7 @@ docs: |-
   Powers the **Personal Data** section of the Profile screen.
 
   ## Authentication
-  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie.
+  - `requireAuth()`, through the httpOnly `token` cookie.
   - The `userId` is extracted exclusively from the token — never from `params`, `query` or `body`.
     There is no way to ask this route for someone else's profile.
 

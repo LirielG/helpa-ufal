@@ -153,7 +153,7 @@ class ActivityRepository implements IActivityRepository {
       if (data.format !== "ONLINE" && data.address) {
         const address = await tx.address.create({ data: data.address });
         addressId = address.id;
-        
+
         createdAddress = {
           id: address.id,
           addressLine: address.addressLine,

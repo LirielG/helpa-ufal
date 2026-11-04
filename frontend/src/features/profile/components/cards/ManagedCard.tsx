@@ -70,6 +70,7 @@ export function ManagedCard({
   const isTerminal =
     currentStatus === "COMPLETED" || currentStatus === "CANCELLED";
   const isLocked = errorState?.isLocked === true;
+  const showStatusHint = currentStatus === "OPEN" && !isLocked;
 
   const reloadAfterConflict = async () => {
     setErrorState({
@@ -218,6 +219,9 @@ export function ManagedCard({
               value={currentStatus}
               onChange={handleSelectChange}
               disabled={isLoading || isTerminal || isLocked}
+              aria-describedby={
+                showStatusHint ? `status-hint-${activity.action.id}` : undefined
+              }
               className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {STATUS_OPTIONS[currentStatus].map((opt) => (
@@ -230,6 +234,14 @@ export function ManagedCard({
                 </option>
               ))}
             </select>
+            {showStatusHint && (
+              <p
+                id={`status-hint-${activity.action.id}`}
+                className="text-xs text-gray-600 leading-tight max-w-[150px] mt-0.5"
+              >
+                Para concluir, primeiro marque a ação como Em andamento.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-3">

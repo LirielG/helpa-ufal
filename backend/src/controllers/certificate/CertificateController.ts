@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
+import type { AuthenticatedUser } from "@/types/auth.js";
 import CertificateService from "@/services/certificate/CertificateService.js";
 import type { ICertificateService } from "@/services/certificate/ICertificateService.js";
 import type { ICertificateController } from "@/controllers/certificate/ICertificateController.js";
-import CustomError from "@/models/error/CustomError.js";
 
 type Props = {
   certificateService?: ICertificateService;
@@ -17,10 +17,10 @@ class CertificateController implements ICertificateController {
   }
 
   public async downloadFile(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const { fileName, content } = await this._certificateService.getFile(
-      req.user.id,
+      user,
       req.params.certificateId as string,
     );
 

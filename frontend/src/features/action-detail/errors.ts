@@ -1,4 +1,8 @@
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "@/services/apiError";
 
 /**
  * Maps enrollment API errors to user-friendly messages in Portuguese.
@@ -12,9 +16,8 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
     return null;
   }
 
-  // Network error (fetch failed)
-  if (error.status === NETWORK_ERROR_STATUS) {
-    return "Falha de comunicação com o servidor. Tente novamente.";
+  if (isConnectionFailure(error)) {
+    return CONNECTION_ERROR_MESSAGE;
   }
 
   // 404: Activity not found
@@ -29,10 +32,6 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
 
   // 409: Enrollment conflict — differentiate by code
   if (error.status === 409) {
-    if (error.code === "ALREADY_ENROLLED") {
-      return "Você já está inscrito nesta ação.";
-    }
-
     if (error.code === "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT") {
       return "As inscrições para esta ação não estão abertas.";
     }
@@ -60,12 +59,7 @@ export type CancellationErrorResolution =
 const GENERIC_CANCELLATION_MESSAGE =
   "Não foi possível cancelar a inscrição. Tente novamente.";
 
-/**
- * Decides what the screen does when `DELETE /activities/:id/enroll` fails.
- *
- * The two 404s differ only by `message` until the API exposes error codes;
- * keep that comparison here so the switch to codes stays local.
- */
+/** Resolves failures of `DELETE /activities/:id/enrollments/me` for the screen. */
 export function resolveCancellationError(
   error: unknown,
 ): CancellationErrorResolution {
@@ -78,10 +72,10 @@ export function resolveCancellationError(
     return { kind: "sessionExpired" };
   }
 
-  if (error.status === NETWORK_ERROR_STATUS) {
+  if (isConnectionFailure(error)) {
     return {
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: CONNECTION_ERROR_MESSAGE,
     };
   }
 

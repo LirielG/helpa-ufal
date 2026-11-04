@@ -21,7 +21,7 @@ cd /mnt/storage/2-Education/University/6-8/ACE6/helpa-ufal/frontend
 npm install
 
 # Criar arquivo .env.local (opcional)
-echo "VITE_API_URL=http://localhost:3001/api" > .env.local
+echo "VITE_API_URL=http://localhost:3333" > .env.local
 ```
 
 ## 3️⃣ Desenvolvimento
@@ -103,7 +103,7 @@ Seu backend precisa ter os seguintes endpoints:
 ### POST `/api/auth/login`
 
 ```bash
-curl -X POST http://localhost:3001/api/auth/login \
+curl -X POST http://localhost:3333/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -129,7 +129,7 @@ Response esperado:
 ### POST `/api/auth/register`
 
 ```bash
-curl -X POST http://localhost:3001/api/auth/register \
+curl -X POST http://localhost:3333/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "New User",
@@ -176,7 +176,7 @@ npx vite --port 3000
 cat .env.local
 
 # Deve conter VITE_API_URL
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=http://localhost:3333
 ```
 
 ## 📁 Estrutura de Arquivos Importantes
@@ -269,7 +269,7 @@ src/
 - **Local Dev**: http://localhost:5173
 - **Login**: http://localhost:5173/login
 - **Register**: http://localhost:5173/register
-- **Backend API**: http://localhost:3001/api (padrão)
+- **Backend API**: http://localhost:3333 (padrão)
 
 ## ✅ Checklist Final
 
@@ -279,7 +279,7 @@ src/
 - [ ] Página de login acessível
 - [ ] Página de registro acessível
 - [ ] Validações funcionando
-- [ ] Backend rodando em http://localhost:3001
+- [ ] Backend rodando em http://localhost:3333
 - [ ] API endpoints implementados
 - [ ] Teste de login funciona
 - [ ] Teste de registro funciona

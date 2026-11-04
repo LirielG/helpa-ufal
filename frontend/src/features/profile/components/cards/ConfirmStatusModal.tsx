@@ -1,5 +1,6 @@
 import { Calendar, MapPin, Clock, Check, X } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
+import { formatWorkloadHours } from "@/utils";
 
 // The cancel title must not be "Confirmar cancelamento", which the enrollment
 // cancellation modal uses.
@@ -76,7 +77,7 @@ export function ConfirmStatusModal({
             {workloadHours !== undefined && (
               <span className="flex items-center gap-2">
                 <Clock className="size-3.5 text-gray-800" />
-                {workloadHours} horas
+                {formatWorkloadHours(workloadHours)}
               </span>
             )}
           </div>

@@ -24,11 +24,11 @@ describe("getEnrollmentsErrorMessage", () => {
   it("returns the network message for a network failure", () => {
     expect(
       getEnrollmentsErrorMessage(new ApiError(NETWORK_ERROR_STATUS, "fail")),
-    ).toBe("Falha de comunicação com o servidor. Tente novamente.");
+    ).toBe("Não foi possível conectar ao servidor. Tente novamente.");
   });
 
   it("falls back to a generic message for unexpected statuses", () => {
-    expect(getEnrollmentsErrorMessage(new ApiError(500, "boom"))).toBe(
+    expect(getEnrollmentsErrorMessage(new ApiError(418, "boom"))).toBe(
       "Erro ao carregar os inscritos. Tente novamente.",
     );
   });
@@ -135,7 +135,7 @@ describe("resolveAttendanceError", () => {
       resolveAttendanceError(new ApiError(NETWORK_ERROR_STATUS, "fail")),
     ).toEqual({
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: "Não foi possível conectar ao servidor. Tente novamente.",
     });
   });
 
@@ -145,7 +145,7 @@ describe("resolveAttendanceError", () => {
       text: "Não foi possível homologar a presença. Tente novamente.",
     };
 
-    expect(resolveAttendanceError(new ApiError(500, "boom"))).toEqual(generic);
+    expect(resolveAttendanceError(new ApiError(418, "boom"))).toEqual(generic);
     expect(resolveAttendanceError(new Error("boom"))).toEqual(generic);
   });
 });

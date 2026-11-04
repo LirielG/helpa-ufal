@@ -71,6 +71,8 @@ export function DashboardSidebar({
 
   const isCertificatesActive = location.pathname.startsWith("/validar");
 
+  const isModerationActive = location.pathname === "/moderation";
+
   const handleNavigate = (path: string) => {
     onCloseMobile?.();
     navigate(path);
@@ -274,14 +276,21 @@ export function DashboardSidebar({
               <span>{SIDEBAR_LABELS.certificates}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => handleNavigate("/dashboard")}
-              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${inactiveMainItemClass}`}
-            >
-              <AlertTriangle className="size-4 lg:size-5 text-[#C00F0C] shrink-0" />
-              <span>{SIDEBAR_LABELS.reports}</span>
-            </button>
+            {user?.isManager && (
+              <button
+                type="button"
+                onClick={() => handleNavigate("/moderation")}
+                aria-current={isModerationActive ? "page" : undefined}
+                className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
+                  isModerationActive
+                    ? activeMainItemClass
+                    : inactiveMainItemClass
+                }`}
+              >
+                <AlertTriangle className="size-4 lg:size-5 text-[#C00F0C] shrink-0" />
+                <span>{SIDEBAR_LABELS.reports}</span>
+              </button>
+            )}
           </nav>
         </div>
       </div>

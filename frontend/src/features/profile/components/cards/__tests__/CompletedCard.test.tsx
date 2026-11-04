@@ -10,11 +10,12 @@ import {
 import { useLocation } from "react-router";
 import { render, screen, waitFor } from "@/test/render";
 import { API, delay, http, HttpResponse, server } from "@/test/http";
-import { makeUserActivity } from "@/test/factories";
+import { makeUserActivity, makeActionDetail } from "@/test/factories";
 import { signIn } from "@/test/auth";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import type { UserActivity } from "../../../types";
 import { CompletedCard } from "../CompletedCard";
+import type { Activity } from "@/services/contracts/activity";
 
 const CERTIFICATE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const FILE_URL = `${API}/certificates/${CERTIFICATE_ID}/file`;
@@ -25,11 +26,11 @@ const DOWNLOAD_ERROR_MESSAGE =
 const UNAVAILABLE_MESSAGE =
   "Este certificado não está mais disponível. Recarregue a página para ver a situação atual.";
 
-function completed(): UserActivity {
-  return makeUserActivity({ action: { status: "COMPLETED" } });
+function completed(action: Partial<Activity> = {}): UserActivity {
+  return makeUserActivity({ action: { status: "COMPLETED", ...action } });
 }
 
-function certified(): UserActivity {
+function certified(overrides: Partial<UserActivity> = {}): UserActivity {
   return {
     ...completed(),
     certificate: {
@@ -38,6 +39,7 @@ function certified(): UserActivity {
       issuedAt: "2026-03-18T12:00:00.000Z",
     },
     confirmedWorkloadHours: 18,
+    ...overrides,
   };
 }
 
@@ -113,6 +115,19 @@ describe("CompletedCard without a certificate", () => {
     expect(screen.queryByText(/homologad/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("shows the planned hours in the singular when the action is 1 hour long", () => {
+    renderCard(
+      completed({
+        details: {
+          ...makeActionDetail().details!,
+          workloadHours: 1,
+        },
+      }),
+    );
+
+    expect(screen.getByText("1 hora")).toBeInTheDocument();
+  });
 });
 
 describe("CompletedCard with a certificate", () => {
@@ -124,6 +139,12 @@ describe("CompletedCard with a certificate", () => {
     expect(screen.getByText("7KQ4M-X9T2R")).toBeInTheDocument();
     expect(downloadButton()).toHaveTextContent("Baixar certificado");
     expect(downloadButton()).toBeEnabled();
+  });
+
+  it("shows '1 hora homologada' in the singular when confirmed workload is 1 hour", () => {
+    renderCard(certified({ confirmedWorkloadHours: 1 }));
+
+    expect(screen.getByText("1 hora homologada")).toBeInTheDocument();
   });
 
   it("downloads the PDF under the validation code and releases the object URL", async () => {

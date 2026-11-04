@@ -52,8 +52,8 @@ describe("DashboardSidebar", () => {
       screen.getByRole("button", { name: /Certificados/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Denúncias/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Denúncias/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ajuda/i })).toBeInTheDocument();
 
     // Match the exact aria-label defined on the logout button.
@@ -77,5 +77,32 @@ describe("DashboardSidebar", () => {
       name: /Dados Pessoais/i,
     });
     expect(personalDataButton).toHaveAttribute("aria-current", "page");
+  });
+
+  it("shows Denúncias to a manager and navigates to /moderation", async () => {
+    signIn({ isManager: true });
+    const { user } = render(
+      <Routes>
+        <Route path="/moderation" element={<h1>Moderação</h1>} />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Denúncias/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Moderação" }),
+    ).toBeInTheDocument();
+  });
+
+  it("highlights Denúncias on the moderation route", () => {
+    signIn({ isManager: true });
+    renderSidebarAt("/moderation");
+
+    expect(screen.getByRole("button", { name: /Denúncias/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });

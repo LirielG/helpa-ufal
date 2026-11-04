@@ -75,8 +75,33 @@ describe("api client", () => {
         expect(requests[0].method).toBe(method.toUpperCase());
         expect(requests[0].credentials).toBe("include");
         expect(requests[0].body).toBeNull();
+        expect(requests[0].headers.has("Content-Type")).toBe(false);
       },
     );
+  });
+
+  it.each(["post", "put", "patch"] as const)(
+    "%s without a body omits the content type",
+    async (method) => {
+      const requests = captureRequest(
+        method,
+        () => new HttpResponse(null, { status: 204 }),
+      );
+
+      await api[method](ENDPOINT);
+
+      expect(requests[0].headers.has("Content-Type")).toBe(false);
+      expect(requests[0].body).toBeNull();
+    },
+  );
+
+  it.each([null, false, 0, ""])("sends %j as a JSON body", async (body) => {
+    const requests = captureRequest("post", () => HttpResponse.json({}));
+
+    await api.post(ENDPOINT, body);
+
+    expect(requests[0].headers.get("Content-Type")).toBe("application/json");
+    await expect(requests[0].json()).resolves.toEqual(body);
   });
 
   describe("query string", () => {
@@ -215,7 +240,9 @@ describe("api client", () => {
       const error = await catchApiError(api.get(ENDPOINT));
 
       expect(error.status).toBe(500);
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
 
     it("rejects with a pt-BR message when the request gets no response", async () => {
@@ -224,7 +251,9 @@ describe("api client", () => {
       const error = await catchApiError(api.get(ENDPOINT));
 
       expect(error.status).toBe(NETWORK_ERROR_STATUS);
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
 
     it("joins an array of messages into a single newline-separated string", async () => {
@@ -259,7 +288,9 @@ describe("api client", () => {
 
       const error = await catchApiError(api.post(ENDPOINT, {}));
 
-      expect(error.message).toBe("Erro na comunicação com o servidor");
+      expect(error.message).toBe(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
     });
   });
 
@@ -282,6 +313,7 @@ describe("api client", () => {
 
       const blob = await api.getBlob(ENDPOINT);
 
+      expect(requests[0].headers.has("Content-Type")).toBe(false);
       expect(blob.type).toBe("application/pdf");
       await expect(blob.text()).resolves.toBe("%PDF-1.7");
       expect(requests[0].method).toBe("GET");
