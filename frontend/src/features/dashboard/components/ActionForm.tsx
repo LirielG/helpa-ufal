@@ -245,11 +245,13 @@ export function ActionRegister({
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
-
+  // eslint-disable-next-line react-hooks/incompatible-library
   const format = watch("format");
+   
   const startDate = watch("startDate");
 
   const needsUrl = format === "ONLINE" || format === "HYBRID";
+
   const needsAddress = format === "IN_PERSON" || format === "HYBRID";
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);

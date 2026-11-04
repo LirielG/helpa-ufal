@@ -84,7 +84,9 @@ export function DashboardShell({
       cachedProfileUserId = null;
       cachedProfileData = null;
       inflightProfilePromise = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null);
+       
       setProfileError(false);
       return;
     }

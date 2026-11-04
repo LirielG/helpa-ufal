@@ -45,11 +45,17 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
     navigate(itemPath);
   };
 
-  if (!isSessionVerified && user === undefined) {
+  const isVerifyingInitialSession = !isSessionVerified && user === null && localStorage.getItem("help_auth_token") !== null;
+
+  if (isVerifyingInitialSession) {
     return (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 h-16 md:h-20 flex items-center">
         <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <img src={helpaBlueLogo} alt="helpa" className="h-8 md:h-10 w-auto" />
+          <img
+            src={helpaBlueLogo}
+            alt="helpa"
+            className="h-8 md:h-10 w-auto"
+          />
           <div
             role="status"
             aria-label="Verificando sessão"
