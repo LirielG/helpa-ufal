@@ -165,8 +165,8 @@ describe("GET /sigaa-activities", () => {
 
     expect(platformFeed.status).toBe(200);
     expect(platformFeed.body.total).toBe(1);
-    expect(platformFeed.body.activities[0].id).toBe(platformActivity.id);
-    for (const activity of platformFeed.body.activities) {
+    expect(platformFeed.body.items[0].id).toBe(platformActivity.id);
+    for (const activity of platformFeed.body.items) {
       expect(activity).not.toHaveProperty("sigaaId");
     }
 
