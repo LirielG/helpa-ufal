@@ -32,7 +32,20 @@ export function useDialog({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
       if (previousActiveElement instanceof HTMLElement) {
-        previousActiveElement.focus();
+        if (previousActiveElement.isConnected) {
+          previousActiveElement.focus();
+        } else {
+          const cancelButton = Array.from(
+            document.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+          ).find((btn) => btn.textContent?.includes("Cancelar inscrição"));
+
+          if (cancelButton) {
+            cancelButton.focus();
+          } else {
+            const mainTitle = document.querySelector<HTMLElement>("h1");
+            mainTitle?.focus();
+          }
+        }
       }
     };
   }, []);

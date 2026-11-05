@@ -39,7 +39,10 @@ export function ActionHero({
           {category}
         </span>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+        <h1
+          tabIndex={-1}
+          className="text-3xl md:text-4xl font-bold text-white mb-2"
+        >
           {title}
         </h1>
       </div>
