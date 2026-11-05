@@ -130,7 +130,11 @@ describe("Dashboard", () => {
 
   it("shows the error state when the request fails", async () => {
     server.use(
-      http.get("*/activities", () => {
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json(mockApiActivities);
+        }
         return new HttpResponse(null, { status: 500 });
       }),
     );
@@ -149,7 +153,11 @@ describe("Dashboard", () => {
     let attempts = 0;
 
     server.use(
-      http.get("*/activities", () => {
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json(mockApiActivities);
+        }
         attempts += 1;
 
         return attempts === 1
@@ -866,5 +874,121 @@ describe("Dashboard", () => {
         screen.getByRole("button", { name: "Tentar de novo" }),
       ).toBeInTheDocument();
     });
+  });
+});
+
+describe("HeroBanner carousel (#358)", () => {
+  it("does not show CANCELLED or COMPLETED actions in the carousel", async () => {
+    const mixedCatalogue = [
+      {
+        ...mockApiActivities.activities[0],
+        id: "1",
+        title: "Ação Cancelada",
+        status: "CANCELLED",
+      },
+      {
+        ...mockApiActivities.activities[0],
+        id: "2",
+        title: "Ação Aberta",
+        status: "OPEN",
+      },
+    ];
+
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          const openOnly = mixedCatalogue.filter((a) => a.status === "OPEN");
+          return HttpResponse.json({
+            activities: openOnly,
+            total: openOnly.length,
+          });
+        }
+        return HttpResponse.json({
+          activities: mixedCatalogue,
+          total: mixedCatalogue.length,
+        });
+      }),
+    );
+
+    renderDashboard();
+
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Ação Aberta" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Ação Cancelada" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not re-fetch or change carousel when changing feed page or filters", async () => {
+    let carouselRequests = 0;
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          carouselRequests += 1;
+          return HttpResponse.json(mockApiActivities);
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    const { user } = renderDashboard();
+
+    await screen.findByRole("heading", { level: 2, name: "Oficina de React" });
+    const initialCarouselCount = carouselRequests;
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Tipos de ação" }),
+      "LECTURE",
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "Tipos de ação" }),
+      ).toHaveValue("LECTURE");
+    });
+
+    expect(carouselRequests).toBe(initialCarouselCount);
+  });
+
+  it("does not display carousel or gray pulse block when there are no OPEN actions", async () => {
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json({ activities: [], total: 0 });
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    renderDashboard();
+
+    await screen.findAllByRole("heading", { name: "Oficina de React" });
+
+    expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  });
+
+  it("keeps the feed working when carousel request fails", async () => {
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return new HttpResponse(null, { status: 500 });
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    renderDashboard();
+
+    const actionTitles = await screen.findAllByRole("heading", {
+      name: "Oficina de React",
+    });
+    expect(actionTitles[0]).toBeInTheDocument();
+    expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
   });
 });

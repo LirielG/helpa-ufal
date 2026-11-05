@@ -1,5 +1,8 @@
 import { api } from "../../services/api";
-import type { ListActivitiesResponse } from "../../services/contracts/activity";
+import type {
+  ListActivitiesResponse,
+  ActivityListItem,
+} from "../../services/contracts/activity";
 import type { ActionsPage, FilterOptions } from "./types";
 
 export async function fetchActions(
@@ -49,4 +52,17 @@ export async function fetchAreaSuggestions(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+export async function fetchFeaturedActions(): Promise<ActivityListItem[]> {
+  const response = await api.get<ListActivitiesResponse>("/activities", {
+    params: {
+      status: "OPEN",
+      orderBy: "start_date",
+      order: "asc",
+      limit: 4,
+    },
+  });
+
+  return response.activities ?? [];
 }

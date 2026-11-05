@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
 import type { ActivityListItem } from "@/services/contracts/activity";
+import { fetchFeaturedActions } from "../services";
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=500&fit=crop",
@@ -12,13 +13,39 @@ const FALLBACK_IMAGES = [
 ];
 
 interface HeroBannerProps {
-  actions: ActivityListItem[];
+  refreshKey?: number;
 }
 
-export function HeroBanner({ actions }: HeroBannerProps) {
+export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [featuredActions, setFeaturedActions] = useState<ActivityListItem[]>(
+    [],
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  const featuredActions = actions.slice(0, 4);
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchFeaturedActions()
+      .then((data) => {
+        if (!isMounted) return;
+        setFeaturedActions(data ?? []);
+        setCurrentSlide(0);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setHasError(true);
+        setFeaturedActions([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshKey]);
 
   useEffect(() => {
     if (featuredActions.length <= 1) return;
@@ -42,10 +69,14 @@ export function HeroBanner({ actions }: HeroBannerProps) {
     setCurrentSlide((prev) => (prev + 1) % featuredActions.length);
   };
 
-  if (featuredActions.length === 0) {
+  if (isLoading) {
     return (
       <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />
     );
+  }
+
+  if (hasError || featuredActions.length === 0) {
+    return null;
   }
 
   return (

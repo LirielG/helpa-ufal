@@ -289,8 +289,11 @@ describe("DashboardShell", () => {
     let getActivitiesCount = 0;
 
     server.use(
-      http.get("*/activities", () => {
-        getActivitiesCount++;
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") !== "4") {
+          getActivitiesCount += 1;
+        }
         return HttpResponse.json({ activities: [], total: 0 });
       }),
       http.post("*/activities", () => {
