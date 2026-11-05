@@ -183,7 +183,7 @@ examples:
         type: json
         data: |-
           {
-            "activities": [
+            "items": [
               {
                 "id": "a1b2c3d4-0000-4000-8000-000000000001",
                 "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
@@ -211,7 +211,10 @@ examples:
                 "availableSlots": 27
               }
             ],
-            "total": 1
+            "total": 1,
+            "page": 1,
+            "limit": 20,
+            "totalPages": 1
           }
   - name: 200 Area with no matches
     description: Unknown area answers 200 with an empty page — never 404.
@@ -232,8 +235,11 @@ examples:
         type: json
         data: |-
           {
-            "activities": [],
-            "total": 0
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "limit": 20,
+            "totalPages": 1
           }
   - name: 400 Validation error
     description: Invalid pagination or enum filter value.
@@ -288,10 +294,10 @@ docs: |-
   **Authentication:** public.
 
   ## Response envelope
-  This route does not use the conventional envelope yet: it answers
-  `{ "activities": [...], "total": <number> }`. `total` reflects all applied
-  filters; `activities` carries the current page. Items embed the `details`
-  relation (including `details.area`) and the computed `availableSlots`.
+  Standard `Paginated<T>` envelope: `{ "items": [...], "total": <number>, "page": <number>, "limit": <number>, "totalPages": <number> }`.
+  `total` and `totalPages` reflect all applied filters; `items` carries the
+  current page. Items embed the `details` relation (including `details.area`)
+  and the computed `availableSlots`.
 
   ## Filters (all optional; all combine with AND)
   | Param | Match | Notes |
