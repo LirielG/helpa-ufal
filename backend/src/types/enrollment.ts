@@ -3,6 +3,7 @@ import type {
   ActivityType,
   CampusLocation,
 } from "./activity.js";
+import type { PaginatedList } from "./pagination.js";
 
 export type EnrollmentStatus =
   "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
@@ -66,15 +67,11 @@ export type EnrollmentParticipantResponse = EnrollmentResponse & {
 export type ConfirmAttendanceInput =
   { attended: false } | { attended: true; workloadHours: number };
 
-export type ParticipantsListResponse = {
-  items: EnrollmentParticipantResponse[];
-  /** Global count of APPROVED enrollments — never affected by the current page. */
-  total: number;
-  page: number;
-  limit: number;
-  /** Count of attendanceConfirmed = true across ALL enrollments of the activity. */
-  totalPresent: number;
-};
+export type ParticipantsListResponse =
+  PaginatedList<EnrollmentParticipantResponse> & {
+    /** Count of attendanceConfirmed = true across ALL enrollments of the activity. */
+    totalPresent: number;
+  };
 
 // ---------------------------------------------------------------------------
 // Epic 3 ("Registered Actions" tab) — PROVISIONAL
@@ -99,9 +96,5 @@ export type EnrollmentWithActivityResponse = {
   activity: EnrollmentActivitySummary;
 };
 
-export type EnrollmentListResponse = {
-  items: EnrollmentWithActivityResponse[];
-  total: number;
-  page: number;
-  limit: number;
-};
+export type EnrollmentListResponse =
+  PaginatedList<EnrollmentWithActivityResponse>;
