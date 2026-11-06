@@ -25,7 +25,7 @@ export const API = config.apiUrl;
  */
 export const handlers = [
   http.post(`${API}/auth/login`, () =>
-    HttpResponse.json({ token: "test-token", user: makeUser() }),
+    HttpResponse.json({ user: makeUser() }),
   ),
 
   http.post(`${API}/auth/register`, () =>
