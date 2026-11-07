@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
@@ -42,6 +42,20 @@ export function ActionDetail() {
   // Stable references: the modal's effect depends on onClose.
   const closeReportModal = useCallback(() => setShowReportModal(false), []);
   const markReported = useCallback(() => setIsReported(true), []);
+
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const getFallbackFocus = useCallback(() => {
+    const canFocus = (el: HTMLElement | null): el is HTMLElement =>
+      !!el &&
+      !el.matches(":disabled") &&
+      getComputedStyle(el).display !== "none";
+
+    return canFocus(cancelButtonRef.current)
+      ? cancelButtonRef.current
+      : titleRef.current;
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -143,6 +157,7 @@ export function ActionDetail() {
       {!isLoading && action && (
         <>
           <ActionHero
+            titleRef={titleRef}
             bannerUrl="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200"
             category={action.details?.area || action.type}
             title={action.title}
@@ -175,6 +190,7 @@ export function ActionDetail() {
                   {isAuthenticated ? (
                     <EnrollmentActions
                       action={action}
+                      cancelButtonRef={cancelButtonRef}
                       onEnroll={() => setShowModal(true)}
                       onCancel={() => setShowCancelModal(true)}
                     />
@@ -215,6 +231,7 @@ export function ActionDetail() {
               action={action}
               onClose={() => setShowModal(false)}
               onSuccess={refreshAction}
+              getFallbackFocus={getFallbackFocus}
             />
           )}
 

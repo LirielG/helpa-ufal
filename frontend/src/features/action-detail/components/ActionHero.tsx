@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import type { RefObject } from "react";
 
 interface ActionHeroProps {
   bannerUrl: string;
@@ -6,6 +7,7 @@ interface ActionHeroProps {
   title: string;
   shortDescription: string;
   onBack: () => void;
+  titleRef?: RefObject<HTMLHeadingElement | null>;
 }
 
 export function ActionHero({
@@ -13,6 +15,7 @@ export function ActionHero({
   category,
   title,
   onBack,
+  titleRef,
 }: ActionHeroProps) {
   return (
     <div
@@ -40,6 +43,7 @@ export function ActionHero({
         </span>
 
         <h1
+          ref={titleRef}
           tabIndex={-1}
           className="text-3xl md:text-4xl font-bold text-white mb-2"
         >

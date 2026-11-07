@@ -143,7 +143,7 @@ describe("ActionDetail enrollments button", () => {
   });
 });
 
-describe("ActionDetail focus restoration after enrollment modal closure (#401)", () => {
+describe("ActionDetail focus restoration after enrollment modal closure", () => {
   it("focuses Cancelar inscrição when closing success modal with Esc after APPROVED update", async () => {
     signIn({ id: "user-123", isManager: false });
 
@@ -291,6 +291,62 @@ describe("ActionDetail focus restoration after enrollment modal closure (#401)",
     await user.click(confirmButton);
 
     await screen.findByText("Oba! Você está dentro!");
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      const heading = screen.getByRole("heading", { level: 1 });
+      expect(document.activeElement).toBe(heading);
+    });
+  });
+
+  it("focuses the main title h1 when Cancelar inscrição is hidden with display: none", async () => {
+    signIn({ id: "user-123", isManager: false });
+
+    const initialAction = makeActionDetail({
+      id: ACTION_ID,
+      status: "OPEN",
+      enrollmentStatus: null,
+    });
+    const updatedAction = makeActionDetail({
+      id: ACTION_ID,
+      status: "OPEN",
+      enrollmentStatus: "APPROVED",
+    });
+
+    let getCallCount = 0;
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, () => {
+        getCallCount += 1;
+        return HttpResponse.json(
+          getCallCount === 1 ? initialAction : updatedAction,
+        );
+      }),
+      http.put(`${API}/activities/${ACTION_ID}/enrollments/me`, () =>
+        HttpResponse.json(makeEnrollment({ activityId: ACTION_ID }), {
+          status: 201,
+        }),
+      ),
+    );
+
+    const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
+
+    const enrollButton = await screen.findByRole("button", {
+      name: /Inscrever-se/i,
+    });
+    await user.click(enrollButton);
+
+    const confirmButton = await screen.findByRole("button", {
+      name: /✓ Confirmar/i,
+    });
+    await user.click(confirmButton);
+
+    await screen.findByText("Oba! Você está dentro!");
+
+    const cancelBtn = screen.getByRole("button", {
+      name: /Cancelar inscrição/i,
+    });
+    cancelBtn.style.display = "none";
 
     await user.keyboard("{Escape}");
 
