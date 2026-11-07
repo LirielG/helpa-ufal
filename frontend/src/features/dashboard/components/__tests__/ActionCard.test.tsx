@@ -142,27 +142,30 @@ describe("ActionCard", () => {
   });
 
   it("uses the same cover as the detail banner of the same action", () => {
-    const { unmount } = render(<ActionCard action={makeAction()} />);
+    const action = makeAction();
+    const { unmount } = render(<ActionCard action={action} />);
     const cardVariant = screen
-      .getByRole("img", { name: "Oficina de Robótica" })
+      .getByRole("img", { name: action.title })
       .getAttribute("data-cover-variant");
     unmount();
 
     render(
       <ActionHero
-        actionId="action-42"
-        type="COURSE"
+        actionId={action.id}
+        type={action.type}
         category="Robótica"
-        title="Oficina de Robótica"
-        shortDescription=""
+        title={action.title}
         onBack={() => {}}
       />,
     );
 
+    // The hero cover is decorative (the <h1> already carries the title), so
+    // it is only reachable with hidden: true.
     expect(
       screen
-        .getByRole("img", { name: "Oficina de Robótica" })
+        .getByRole("img", { hidden: true })
         .getAttribute("data-cover-variant"),
     ).toBe(cardVariant);
+    expect(screen.queryByRole("img")).toBeNull();
   });
 });

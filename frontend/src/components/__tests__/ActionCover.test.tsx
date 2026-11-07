@@ -52,3 +52,15 @@ describe("ActionCover", () => {
     expect(variants.size).toBeGreaterThan(1);
   });
 });
+
+describe("ActionCover without a title", () => {
+  it("is hidden from assistive technology as a decorative cover", () => {
+    render(<ActionCover id="action-42" type="COURSE" />);
+
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByRole("img", { hidden: true })).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+});

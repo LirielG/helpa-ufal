@@ -7,7 +7,6 @@ interface ActionHeroProps {
   type: ActivityType;
   category: string;
   title: string;
-  shortDescription: string;
   onBack: () => void;
 }
 
@@ -20,13 +19,16 @@ export function ActionHero({
 }: ActionHeroProps) {
   return (
     <div className="relative w-full h-[55vh] min-h-80 flex flex-col justify-end">
-      <ActionCover
-        id={actionId}
-        type={type}
-        title={title}
-        className="absolute inset-0"
-        iconClassName="size-32"
-      />
+      {/* No title: the <h1> below already names the action. */}
+      <div className="absolute inset-0">
+        <ActionCover
+          id={actionId}
+          type={type}
+          className="w-full h-full"
+          iconClassName="size-24"
+          iconPlacement="top-right"
+        />
+      </div>
 
       <div className="absolute inset-0 bg-linear-to-b from-black/20 via-black/30 to-black/70" />
 

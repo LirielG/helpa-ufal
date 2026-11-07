@@ -147,7 +147,6 @@ export function ActionDetail() {
             type={action.type}
             category={action.details?.area || action.type}
             title={action.title}
-            shortDescription={action.details?.description ?? ""}
             onBack={() => navigate(-1)}
           />
 

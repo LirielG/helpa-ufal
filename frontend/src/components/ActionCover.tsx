@@ -1,3 +1,4 @@
+import { useId } from "react";
 import {
   CalendarDays,
   GraduationCap,
@@ -21,6 +22,11 @@ const TYPE_ICONS: Record<ActivityType, LucideIcon> = {
 };
 
 function CoverShapeLayer({ shape }: { shape: ActionCoverShape }) {
+  // A page can hold many covers, so repeated marks use an SVG <pattern>
+  // (one node) instead of one element per mark; useId keeps each pattern id
+  // unique on the page.
+  const patternId = useId();
+
   return (
     <svg
       aria-hidden="true"
@@ -43,34 +49,51 @@ function CoverShapeLayer({ shape }: { shape: ActionCoverShape }) {
         </g>
       )}
       {shape === "stripes" && (
-        <g stroke="white" strokeOpacity="0.12" strokeWidth="18">
-          {Array.from({ length: 10 }, (_, i) => (
-            <line key={i} x1={i * 60 - 200} y1="200" x2={i * 60} y2="0" />
-          ))}
-        </g>
+        <>
+          <pattern
+            id={patternId}
+            width="60"
+            height="60"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(45)"
+          >
+            <rect width="18" height="60" fillOpacity="0.12" />
+          </pattern>
+          <rect width="400" height="200" fill={`url(#${patternId})`} />
+        </>
       )}
       {shape === "dots" && (
-        <g fillOpacity="0.15">
-          {Array.from({ length: 60 }, (_, i) => (
-            <circle
-              key={i}
-              cx={(i % 12) * 36 + 10}
-              cy={Math.floor(i / 12) * 44 + 12}
-              r="4"
-            />
-          ))}
-        </g>
+        <>
+          <pattern
+            id={patternId}
+            width="36"
+            height="44"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle cx="10" cy="12" r="4" fillOpacity="0.15" />
+          </pattern>
+          <rect width="400" height="200" fill={`url(#${patternId})`} />
+        </>
       )}
     </svg>
   );
 }
 
+const ICON_PLACEMENT = {
+  center: "items-center justify-center",
+  // Keeps the icon clear of content laid over the bottom of the cover.
+  "top-right": "items-start justify-end p-8",
+} as const;
+
 interface ActionCoverProps {
   id: string;
   type: ActivityType;
-  title: string;
+  /** Accessible name. Omit it when the title is already shown next to the
+   * cover, which makes the cover decorative and hidden from screen readers. */
+  title?: string;
   className?: string;
   iconClassName?: string;
+  iconPlacement?: keyof typeof ICON_PLACEMENT;
 }
 
 export function ActionCover({
@@ -79,17 +102,21 @@ export function ActionCover({
   title,
   className = "",
   iconClassName = "size-14",
+  iconPlacement = "center",
 }: ActionCoverProps) {
   const { key, gradient, shape } = getActionCoverVariant(id);
   const [from, to] = gradient;
   const Icon = TYPE_ICONS[type] ?? Sparkles;
+  const accessibility = title
+    ? { "aria-label": title }
+    : { "aria-hidden": true as const };
 
   return (
     <div
       role="img"
-      aria-label={title}
+      {...accessibility}
       data-cover-variant={key}
-      className={`relative overflow-hidden flex items-center justify-center ${className}`}
+      className={`relative overflow-hidden flex ${ICON_PLACEMENT[iconPlacement]} ${className}`}
       style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})` }}
     >
       <CoverShapeLayer shape={shape} />
