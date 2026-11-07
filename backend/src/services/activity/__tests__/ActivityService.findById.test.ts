@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import { expectCustomError } from "@/utils/tests.js";
 
@@ -33,8 +32,6 @@ function buildService(
     ...overrides.activity,
   } as unknown as IActivityRepository;
 
-  const userRepository = {} as IUserRepository;
-
   const enrollmentRepository = {
     findByUserAndActivity: vi.fn().mockResolvedValue(null),
     ...overrides.enrollment,
@@ -42,7 +39,7 @@ function buildService(
 
   const service = new ActivityService({
     activityRepository,
-    userRepository,
+
     enrollmentRepository,
   });
 

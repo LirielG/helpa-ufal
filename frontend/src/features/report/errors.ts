@@ -1,4 +1,8 @@
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
+import {
+  ApiError,
+  CONNECTION_ERROR_MESSAGE,
+  isConnectionFailure,
+} from "@/services/apiError";
 
 /**
  * Maps report API errors to messages in Portuguese.
@@ -7,11 +11,11 @@ import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
  * login screen, so the modal has nothing to show.
  */
 export function getReportErrorMessage(error: ApiError): string | null {
+  if (isConnectionFailure(error)) return CONNECTION_ERROR_MESSAGE;
+
   switch (error.status) {
     case 401:
       return null;
-    case NETWORK_ERROR_STATUS:
-      return "Falha de comunicação com o servidor. Tente novamente.";
     case 403:
       return "Você não pode denunciar uma ação que você criou.";
     case 404:

@@ -1,5 +1,5 @@
 // src/repositories/enrollment/EnrollmentRepository.ts
-import { Prisma, type Enrollment, type PrismaClient } from "@prisma/client";
+import type { Prisma, Enrollment, PrismaClient } from "@prisma/client";
 import type {
   EnrollmentWithActivity,
   EnrollmentWithParticipant,
@@ -12,6 +12,7 @@ import {
 import {
   ACTIVE_ENROLLMENT_STATUS,
   ENROLLMENT_INITIAL_STATUS,
+  type EnrollResult,
 } from "@/types/enrollment.js";
 import CertificateRepository from "@/repositories/certificate/CertificateRepository.js";
 import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
@@ -94,7 +95,10 @@ class EnrollmentRepository implements IEnrollmentRepository {
     });
   }
 
-  public async enroll(userId: string, activityId: string): Promise<Enrollment> {
+  public async enroll(
+    userId: string,
+    activityId: string,
+  ): Promise<EnrollResult<Enrollment>> {
     return this._prisma.$transaction(async (tx) => {
       // Lock BEFORE any read, and `slots` read UNDER the lock.
       const activity = await lockActivityForCapacity(tx, activityId);
@@ -120,13 +124,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
       });
 
       if (existing && existing.status !== "CANCELLED") {
-        throw new CustomError(
-          409,
-          "User is already enrolled in this activity.",
-          {
-            code: "ALREADY_ENROLLED",
-          },
-        );
+        return { enrollment: existing, created: false };
       }
 
       const approvedCount = await tx.enrollment.count({
@@ -140,7 +138,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
       }
 
       if (existing) {
-        return tx.enrollment.update({
+        const enrollment = await tx.enrollment.update({
           where: { id: existing.id },
           data: {
             status: ENROLLMENT_INITIAL_STATUS,
@@ -154,33 +152,17 @@ class EnrollmentRepository implements IEnrollmentRepository {
             confirmedWorkloadHours: 0,
           },
         });
+        return { enrollment, created: true };
       }
 
-      try {
-        return await tx.enrollment.create({
-          data: {
-            userId,
-            activityId,
-            status: ENROLLMENT_INITIAL_STATUS,
-          },
-        });
-      } catch (error) {
-        // Defense-in-depth against execution outside of the lock
-        // (e.g., another transaction that did not go through lockActivityForCapacity).
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
-          throw new CustomError(
-            409,
-            "User is already enrolled in this activity.",
-            {
-              code: "ALREADY_ENROLLED",
-            },
-          );
-        }
-        throw error;
-      }
+      const enrollment = await tx.enrollment.create({
+        data: {
+          userId,
+          activityId,
+          status: ENROLLMENT_INITIAL_STATUS,
+        },
+      });
+      return { enrollment, created: true };
     });
   }
 

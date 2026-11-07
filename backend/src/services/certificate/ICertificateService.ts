@@ -1,3 +1,4 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 export type CertificateFile = {
   fileName: string;
   content: Uint8Array;
@@ -15,6 +16,9 @@ export type CertificateValidation = {
 };
 
 export interface ICertificateService {
-  getFile(userId: string, certificateId: string): Promise<CertificateFile>;
+  getFile(
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
+    certificateId: string,
+  ): Promise<CertificateFile>;
   validate(input: string): Promise<CertificateValidation>;
 }

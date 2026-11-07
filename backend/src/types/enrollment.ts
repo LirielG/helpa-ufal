@@ -17,11 +17,9 @@ export const ACTIVE_ENROLLMENT_STATUS: EnrollmentStatus = "APPROVED";
 // switch to "PENDING" (though the vacancy count remains based on "APPROVED").
 export const ENROLLMENT_INITIAL_STATUS: EnrollmentStatus = "APPROVED";
 
-export type EnrollResponse = {
-  id: string;
-  activityId: string;
-  userId: string;
-  createdAt: Date;
+export type EnrollResult<T> = {
+  enrollment: T;
+  created: boolean;
 };
 
 export type EnrollmentResponse = {

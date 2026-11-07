@@ -4,8 +4,12 @@ import cookieParser from "cookie-parser";
 import Router from "@/routers/index.js";
 import errorHandler from "@/controllers/error/ErrorHandler.js";
 import { env } from "@/config/env.js";
+import { createGeneralRateLimiters } from "@/middlewares/rateLimit/generalRateLimiters.js";
 
 const app = express();
+const { globalRateLimiter, clientRateLimiter } = createGeneralRateLimiters();
+
+app.set("trust proxy", env.TRUST_PROXY);
 
 app.use(
   cors({
@@ -13,11 +17,14 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["Retry-After", "RateLimit", "RateLimit-Policy"],
   }),
 );
 
-app.use(express.json());
+app.use(globalRateLimiter);
 app.use(cookieParser());
+app.use(clientRateLimiter);
+app.use(express.json());
 
 app.use(Router);
 

@@ -27,7 +27,7 @@ class AuthController implements IAuthController {
       maxAge: authCookieMaxAge,
     });
 
-    res.status(200).json(result);
+    res.status(200).json({ user: result.user });
   }
 
   public async register(req: Request, res: Response): Promise<void> {

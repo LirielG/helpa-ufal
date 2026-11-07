@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import { Route, Routes } from "react-router";
 import { render, screen, waitFor, within } from "@/test/render";
 import { API, delay, http, HttpResponse, server } from "@/test/http";
@@ -78,7 +79,53 @@ const descriptionField = () =>
 
 const submitButton = () => screen.getByRole("button", { name: /Denunciar/ });
 
+function ReportDialogExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Denunciar ação</button>
+      <ReportActionModal
+        open={open}
+        actionId={ACTION_ID}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 describe("ReportActionModal", () => {
+  it.each(["", "scroll"])(
+    "keeps dialog focus, Escape dismissal and previous overflow %j",
+    async (overflow) => {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = overflow;
+      const view = render(<ReportDialogExample />);
+
+      try {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(document.body.style.overflow).toBe(overflow);
+        const opener = screen.getByRole("button", { name: "Denunciar ação" });
+        await view.user.click(opener);
+
+        expect(
+          screen.getByRole("dialog", { name: "Denúncia de Ação" }),
+        ).toHaveAttribute("aria-modal", "true");
+        expect(document.body.style.overflow).toBe("hidden");
+        await waitFor(() =>
+          expect(screen.getByRole("button", { name: "Fechar" })).toHaveFocus(),
+        );
+        await view.user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(opener).toHaveFocus();
+        expect(document.body.style.overflow).toBe(overflow);
+      } finally {
+        view.unmount();
+        document.body.style.overflow = previousOverflow;
+      }
+    },
+  );
+
   describe("reasons", () => {
     it("offers exactly the five ReportReason categories, with no placeholder labels", async () => {
       await renderModal();
@@ -257,33 +304,42 @@ describe("ReportActionModal", () => {
       expect(onReported).toHaveBeenCalledOnce();
     });
 
-    it("shows a pt-BR message on a network error and lets the user retry", async () => {
-      let attempts = 0;
-      captureReports((body) => {
-        attempts += 1;
-        return attempts === 1 ? HttpResponse.error() : reportCreated(body);
-      });
-      const { user } = await renderModal();
+    it.each([0, 500])(
+      "shows the connection error (%i) and lets the user retry",
+      async (status) => {
+        let attempts = 0;
+        captureReports((body) => {
+          attempts += 1;
+          return attempts === 1
+            ? status === 0
+              ? HttpResponse.error()
+              : new HttpResponse(null, { status })
+            : reportCreated(body);
+        });
+        const { user } = await renderModal();
 
-      await user.click(screen.getByRole("radio", { name: "Outro motivo" }));
-      await user.click(submitButton());
+        await user.click(screen.getByRole("radio", { name: "Outro motivo" }));
+        await user.click(submitButton());
 
-      expect(
-        await screen.findByText(
-          "Falha de comunicação com o servidor. Tente novamente.",
-        ),
-      ).toBeInTheDocument();
-      expect(screen.getByRole("radio", { name: "Outro motivo" })).toBeChecked();
+        expect(
+          await screen.findByText(
+            "Não foi possível conectar ao servidor. Tente novamente.",
+          ),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("radio", { name: "Outro motivo" }),
+        ).toBeChecked();
 
-      await user.click(
-        screen.getByRole("button", { name: "Tentar novamente" }),
-      );
+        await user.click(
+          screen.getByRole("button", { name: "Tentar novamente" }),
+        );
 
-      expect(
-        await screen.findByText("Denúncia registrada"),
-      ).toBeInTheDocument();
-      expect(attempts).toBe(2);
-    });
+        expect(
+          await screen.findByText("Denúncia registrada"),
+        ).toBeInTheDocument();
+        expect(attempts).toBe(2);
+      },
+    );
 
     it("sends the user to the login screen on 401 without showing an error", async () => {
       signIn();

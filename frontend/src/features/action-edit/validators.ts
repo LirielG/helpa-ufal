@@ -1,9 +1,9 @@
 import { z } from "zod";
 import {
-  ACTIVITY_TITLE_MAX_LENGTH,
-  ACTIVITY_TITLE_TOO_LONG_MESSAGE,
-} from "../../validators/limits";
-import { activityDescriptionSchema } from "../../validators/activity";
+  activityDescriptionSchema,
+  activityTitleSchema,
+  activityTitleSchemaFor,
+} from "../../validators/activity";
 
 /** Same list the API validates `address.state` against. */
 const BRAZILIAN_STATES = [
@@ -49,11 +49,7 @@ const REQUIRED_ADDRESS_FIELDS = [
 
 const actionEditBaseSchema = z
   .object({
-    title: z
-      .string()
-      .min(1, "O título é obrigatório")
-      .min(3, "O título deve ter no mínimo 3 caracteres")
-      .max(ACTIVITY_TITLE_MAX_LENGTH, ACTIVITY_TITLE_TOO_LONG_MESSAGE),
+    title: activityTitleSchema,
     description: z.string().trim(),
     startDate: z.string().min(1, "A data de início é obrigatória"),
     endDate: z.string().min(1, "A data de encerramento é obrigatória"),
@@ -166,19 +162,26 @@ const actionEditBaseSchema = z
  * created while the description was optional may hold a shorter one, and that
  * must not block an unrelated edit.
  */
-export function actionEditSchemaFor(savedDescription: string) {
-  return actionEditBaseSchema.superRefine(({ description }, ctx) => {
-    if (description === savedDescription.trim()) return;
+export function actionEditSchemaFor(
+  savedDescription: string,
+  savedTitle: string,
+) {
+  return actionEditBaseSchema
+    .safeExtend({
+      title: activityTitleSchemaFor(savedTitle),
+    })
+    .superRefine(({ description }, ctx) => {
+      if (description === savedDescription.trim()) return;
 
-    const result = activityDescriptionSchema.safeParse(description);
-    if (!result.success) {
-      ctx.addIssue({
-        code: "custom",
-        message: result.error.issues[0].message,
-        path: ["description"],
-      });
-    }
-  });
+      const result = activityDescriptionSchema.safeParse(description);
+      if (!result.success) {
+        ctx.addIssue({
+          code: "custom",
+          message: result.error.issues[0].message,
+          path: ["description"],
+        });
+      }
+    });
 }
 
 export type ActionEditSchemaType = z.infer<typeof actionEditBaseSchema>;

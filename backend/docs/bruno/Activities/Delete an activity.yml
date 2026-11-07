@@ -39,7 +39,7 @@ examples:
         type: text
         data: ""
   - name: 400 Response
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
@@ -59,10 +59,18 @@ examples:
         data: |-
           {
             "status": 400,
-            "message": "Invalid UUID format."
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "code": "INVALID_UUID",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
           }
   - name: 401 Response
-    description: Missing, invalid or expired session cookie.
+    description: No session cookie was sent; invalid or expired cookies also return 401.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: DELETE
@@ -82,7 +90,8 @@ examples:
         data: |-
           {
             "status": 401,
-            "message": "Unauthenticated."
+            "code": "UNAUTHENTICATED",
+            "message": "No token provided."
           }
   - name: 403 Response
     description: Requester is not the author or a manager.
@@ -157,6 +166,8 @@ examples:
 docs: |-
   Soft-deletes an activity: it stops showing up in listings and in `GET /activities/:activityId`. Deleting it a second time answers 404.
 
-  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can delete.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can delete.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

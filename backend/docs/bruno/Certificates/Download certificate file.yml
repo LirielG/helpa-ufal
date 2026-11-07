@@ -74,7 +74,7 @@ docs: |-
   every request from the current data.
 
   ## Authentication
-  - `requireAuth` (`auth({ userTypes: "all" })`), through the httpOnly `token` cookie. Any
+  - `requireAuth()`, through the httpOnly `token` cookie. Any
     user type.
 
   ## Path params

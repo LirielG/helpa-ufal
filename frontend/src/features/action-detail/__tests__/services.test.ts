@@ -6,11 +6,11 @@ const API = process.env.VITE_API_URL || "http://localhost:3333/api";
 
 describe("enrollInAction", () => {
   describe("success", () => {
-    it("makes a POST request to /activities/:id/enroll", async () => {
+    it("makes a PUT request to /activities/:id/enrollments/me", async () => {
       const actionId = "act-123";
       server.use(
-        http.post(
-          `${API}/activities/${actionId}/enroll`,
+        http.put(
+          `${API}/activities/${actionId}/enrollments/me`,
           () => new HttpResponse(null, { status: 201 }),
         ),
       );
@@ -18,31 +18,38 @@ describe("enrollInAction", () => {
       await expect(enrollInAction(actionId)).resolves.toBeUndefined();
     });
 
-    it("resolves with 201 response", async () => {
-      const actionId = "act-456";
-      server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
-          HttpResponse.json(
-            {
-              id: "enr-1",
-              activityId: actionId,
-              userId: "user-1",
-              createdAt: "2026-09-11T00:00:00Z",
-            },
-            { status: 201 },
+    it.each([201, 200])(
+      "resolves with a canonical %i response",
+      async (status) => {
+        const actionId = "act-456";
+        server.use(
+          http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
+            HttpResponse.json(
+              {
+                id: "enr-1",
+                activityId: actionId,
+                userId: "user-1",
+                status: "APPROVED",
+                attendanceConfirmed: null,
+                confirmedWorkloadHours: 0,
+                createdAt: "2026-09-11T00:00:00.000Z",
+                updatedAt: "2026-09-11T00:00:00.000Z",
+              },
+              { status },
+            ),
           ),
-        ),
-      );
+        );
 
-      await expect(enrollInAction(actionId)).resolves.toBeUndefined();
-    });
+        await expect(enrollInAction(actionId)).resolves.toBeUndefined();
+      },
+    );
   });
 
   describe("error handling", () => {
     it("rejects with ApiError on 409 conflict", async () => {
       const actionId = "act-789";
       server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
+        http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
           HttpResponse.json(
             { message: "No available slots for this activity." },
             { status: 409 },
@@ -59,7 +66,7 @@ describe("enrollInAction", () => {
     it("rejects with ApiError on 404 activity not found", async () => {
       const actionId = "act-invalid";
       server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
+        http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
           HttpResponse.json(
             { message: "Activity not found." },
             { status: 404 },
@@ -75,7 +82,7 @@ describe("enrollInAction", () => {
     it("rejects with ApiError on 401 unauthorized", async () => {
       const actionId = "act-401";
       server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
+        http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
           HttpResponse.json({ message: "No token provided." }, { status: 401 }),
         ),
       );
@@ -88,7 +95,7 @@ describe("enrollInAction", () => {
     it("rejects with ApiError on network error", async () => {
       const actionId = "act-network";
       server.use(
-        http.post(`${API}/activities/${actionId}/enroll`, () =>
+        http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
           HttpResponse.error(),
         ),
       );
@@ -101,11 +108,11 @@ describe("enrollInAction", () => {
 });
 
 describe("cancelEnrollment", () => {
-  it("sends DELETE /activities/:id/enroll and resolves on 204", async () => {
+  it("sends DELETE /activities/:id/enrollments/me and resolves on 204", async () => {
     const actionId = "act-cancel";
     let calls = 0;
     server.use(
-      http.delete(`${API}/activities/${actionId}/enroll`, () => {
+      http.delete(`${API}/activities/${actionId}/enrollments/me`, () => {
         calls += 1;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -118,7 +125,7 @@ describe("cancelEnrollment", () => {
   it("rejects with ApiError carrying the status and message", async () => {
     const actionId = "act-cancel-409";
     server.use(
-      http.delete(`${API}/activities/${actionId}/enroll`, () =>
+      http.delete(`${API}/activities/${actionId}/enrollments/me`, () =>
         HttpResponse.json(
           { message: "Activity is not open for cancellation." },
           { status: 409 },

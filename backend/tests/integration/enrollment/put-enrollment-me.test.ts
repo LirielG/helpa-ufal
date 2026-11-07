@@ -1,4 +1,3 @@
-// tests/integration/enrollment/post-enroll.test.ts
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import request from "supertest";
@@ -10,11 +9,10 @@ import {
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
-import { authHeader, invalidToken } from "../../helpers/auth.js";
+import { authCookie, invalidToken } from "../../helpers/auth.js";
 
-// Route contract: docs/bruno/Enrollments/Enroll-in-an-activity.yml.
-// If the team flattens the route (POST /enroll), this helper is the only line to change.
-const enrollUrl = (activityId: string) => `/activities/${activityId}/enroll`;
+const enrollUrl = (activityId: string) =>
+  `/activities/${activityId}/enrollments/me`;
 
 async function anOpenActivity(slots = 30) {
   const author = await createTeacher();
@@ -22,7 +20,7 @@ async function anOpenActivity(slots = 30) {
   return { author, activity };
 }
 
-describe("POST /activities/:activityId/enroll", () => {
+describe("PUT /activities/:activityId/enrollments/me", () => {
   // ---------- 201 - Created ----------
 
   it("creates an APPROVED enrollment for the authenticated user", async () => {
@@ -30,15 +28,19 @@ describe("POST /activities/:activityId/enroll", () => {
     const student = await createStudent();
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(201);
     expect(response.body).toEqual({
       id: expect.any(String),
       activityId: activity.id,
       userId: student.user.id,
-      createdAt: expect.any(String), // dates cross HTTP as ISO strings
+      status: "APPROVED",
+      attendanceConfirmed: null,
+      confirmedWorkloadHours: 0,
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String),
     });
 
     const stored = await prisma.enrollment.findUniqueOrThrow({
@@ -56,12 +58,12 @@ describe("POST /activities/:activityId/enroll", () => {
       status: "CANCELLED",
       enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
       attendanceConfirmed: true,
-      confirmedWorkloadHours: 8, // novo
+      confirmedWorkloadHours: 8,
     });
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(201);
     expect(response.body.id).toBe(canceled.id);
@@ -72,8 +74,8 @@ describe("POST /activities/:activityId/enroll", () => {
       where: { id: canceled.id },
     });
     expect(stored.status).toBe("APPROVED");
-    expect(stored.attendanceConfirmed).toBeNull(); // era: toBe(false)
-    expect(stored.confirmedWorkloadHours).toBe(0); // novo
+    expect(stored.attendanceConfirmed).toBeNull();
+    expect(stored.confirmedWorkloadHours).toBe(0);
     expect(stored.enrolledAt.getTime()).toBeGreaterThan(
       new Date("2026-01-01T00:00:00.000Z").getTime(),
     );
@@ -82,6 +84,11 @@ describe("POST /activities/:activityId/enroll", () => {
       where: { userId: student.user.id, activityId: activity.id },
     });
     expect(rows).toBe(1);
+    const repeated = await request(app)
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
+    expect(repeated.status).toBe(200);
+    expect(repeated.body).toEqual(response.body);
   });
 
   it("immediately consumes a slot in the activity detail", async () => {
@@ -89,13 +96,13 @@ describe("POST /activities/:activityId/enroll", () => {
     const student = await createStudent();
 
     await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token))
       .expect(201);
 
     const detail = await request(app)
       .get(`/activities/${activity.id}`)
-      .set(...authHeader(author.token));
+      .set(...authCookie(author.token));
 
     expect(detail.status).toBe(200);
     expect(detail.body.availableSlots).toBe(1);
@@ -107,8 +114,8 @@ describe("POST /activities/:activityId/enroll", () => {
     const other = await createStudent();
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token))
       .send({ userId: other.user.id });
 
     expect(response.status).toBe(201);
@@ -120,7 +127,7 @@ describe("POST /activities/:activityId/enroll", () => {
   it("rejects requests without a token", async () => {
     const { activity } = await anOpenActivity();
 
-    const response = await request(app).post(enrollUrl(activity.id));
+    const response = await request(app).put(enrollUrl(activity.id));
 
     expect(response.status).toBe(401);
     // Message is owned by AuthMiddleware ("No token provided.") and predates
@@ -132,28 +139,26 @@ describe("POST /activities/:activityId/enroll", () => {
     const { activity } = await anOpenActivity();
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(invalidToken()));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(invalidToken()));
 
     expect(response.status).toBe(401);
   });
 
   it("rejects a valid token whose user no longer exists", async () => {
-    // Ghost user: the JWT is valid, but the account is gone. The service
-    // checks the database (light hybrid authentication, per contract).
     const { activity } = await anOpenActivity();
     const ghost = await createStudent();
     await prisma.user.delete({ where: { id: ghost.user.id } });
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(ghost.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(ghost.token));
 
     expect(response.status).toBe(401);
     expect(response.body).toEqual({
       status: 401,
-      code: "UNAUTHENTICATED",
-      message: "User account not found or inactive.",
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
   });
 
@@ -163,8 +168,8 @@ describe("POST /activities/:activityId/enroll", () => {
     const student = await createStudent();
 
     const response = await request(app)
-      .post(enrollUrl(randomUUID()))
-      .set(...authHeader(student.token));
+      .put(enrollUrl(randomUUID()))
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -185,8 +190,8 @@ describe("POST /activities/:activityId/enroll", () => {
     });
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
 
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
@@ -206,8 +211,8 @@ describe("POST /activities/:activityId/enroll", () => {
       const student = await createStudent();
 
       const response = await request(app)
-        .post(enrollUrl(activity.id))
-        .set(...authHeader(student.token));
+        .put(enrollUrl(activity.id))
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(409);
       expect(response.body).toEqual({
@@ -218,29 +223,32 @@ describe("POST /activities/:activityId/enroll", () => {
     },
   );
 
-  it("returns 409 when the user is already enrolled, keeping a single row", async () => {
-    const { activity } = await anOpenActivity();
+  it("returns the same enrollment without writing when it already occupies the last slot", async () => {
+    const { activity } = await anOpenActivity(1);
     const student = await createStudent();
-    await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token))
+    const first = await request(app)
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token))
       .expect(201);
+    const before = await prisma.enrollment.findUniqueOrThrow({
+      where: { id: first.body.id },
+    });
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(student.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
 
-    expect(response.status).toBe(409);
-    expect(response.body).toEqual({
-      status: 409,
-      code: "ALREADY_ENROLLED",
-      message: "User is already enrolled in this activity.",
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(first.body);
+    const after = await prisma.enrollment.findUniqueOrThrow({
+      where: { id: first.body.id },
     });
-
-    const rows = await prisma.enrollment.count({
-      where: { userId: student.user.id, activityId: activity.id },
-    });
-    expect(rows).toBe(1);
+    expect(after).toEqual(before);
+    expect(
+      await prisma.enrollment.count({
+        where: { userId: student.user.id, activityId: activity.id },
+      }),
+    ).toBe(1);
   });
 
   it("returns 409 when the activity has no available slots", async () => {
@@ -248,13 +256,13 @@ describe("POST /activities/:activityId/enroll", () => {
     const first = await createStudent();
     const second = await createStudent();
     await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(first.token))
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(first.token))
       .expect(201);
 
     const response = await request(app)
-      .post(enrollUrl(activity.id))
-      .set(...authHeader(second.token));
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(second.token));
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
@@ -262,6 +270,136 @@ describe("POST /activities/:activityId/enroll", () => {
       code: "NO_AVAILABLE_SLOTS",
       message: "No available slots for this activity.",
     });
+  });
+
+  it.each(["PENDING", "REJECTED", "APPROVED"] as const)(
+    "preserves every field of an existing %s enrollment",
+    async (status) => {
+      const { activity } = await anOpenActivity(1);
+      const student = await createStudent();
+      const before = await createEnrollment(student.user.id, activity.id, {
+        status,
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+        isModerator: true,
+        enrolledAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+
+      const response = await request(app)
+        .put(enrollUrl(activity.id))
+        .set(...authCookie(student.token));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: before.id,
+        activityId: activity.id,
+        userId: student.user.id,
+        status,
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+        createdAt: before.createdAt.toISOString(),
+        updatedAt: before.updatedAt.toISOString(),
+      });
+      expect(
+        await prisma.enrollment.findUniqueOrThrow({
+          where: { id: before.id },
+        }),
+      ).toEqual(before);
+    },
+  );
+
+  it("keeps a cancelled enrollment unchanged when reactivation has no slot", async () => {
+    const { activity } = await anOpenActivity(1);
+    const student = await createStudent();
+    const cancelled = await createEnrollment(student.user.id, activity.id, {
+      status: "CANCELLED",
+    });
+    const other = await createStudent();
+    await createEnrollment(other.user.id, activity.id);
+
+    const response = await request(app)
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("NO_AVAILABLE_SLOTS");
+    expect(
+      await prisma.enrollment.findUniqueOrThrow({
+        where: { id: cancelled.id },
+      }),
+    ).toEqual(cancelled);
+  });
+
+  it("rejects an existing enrollment when the activity is closed", async () => {
+    const { activity } = await anOpenActivity();
+    const student = await createStudent();
+    const before = await createEnrollment(student.user.id, activity.id);
+    await prisma.activity.update({
+      where: { id: activity.id },
+      data: { status: "IN_PROGRESS" },
+    });
+
+    const response = await request(app)
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("ACTIVITY_NOT_OPEN_FOR_ENROLLMENT");
+    expect(
+      await prisma.enrollment.findUniqueOrThrow({
+        where: { id: before.id },
+      }),
+    ).toEqual(before);
+  });
+
+  it("rejects a malformed activity id after authentication", async () => {
+    const student = await createStudent();
+    const response = await request(app)
+      .put(enrollUrl("not-a-uuid"))
+      .set(...authCookie(student.token));
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("VALIDATION_ERROR");
+    expect(response.body.errors).toContainEqual({
+      field: "activityId",
+      code: "INVALID_UUID",
+      message: "activityId must be a valid UUID.",
+    });
+  });
+
+  it.each(["post", "delete"] as const)(
+    "returns 404 for the removed %s enrollment route",
+    async (method) => {
+      const { activity } = await anOpenActivity();
+      const student = await createStudent();
+      await request(app)
+        [method](`/activities/${activity.id}/enroll`)
+        .set(...authCookie(student.token))
+        .expect(404);
+    },
+  );
+
+  it("creates once and returns the same body to concurrent requests from one user", async () => {
+    const { activity } = await anOpenActivity(1);
+    const student = await createStudent();
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        request(app)
+          .put(enrollUrl(activity.id))
+          .set(...authCookie(student.token)),
+      ),
+    );
+
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 200, 200, 200, 201,
+    ]);
+    const created = responses.find((response) => response.status === 201)!;
+    for (const response of responses)
+      expect(response.body).toEqual(created.body);
+    expect(
+      await prisma.enrollment.count({
+        where: { userId: student.user.id, activityId: activity.id },
+      }),
+    ).toBe(1);
   });
 
   // ---------- Concurrency ----------
@@ -281,8 +419,8 @@ describe("POST /activities/:activityId/enroll", () => {
     const results = await Promise.allSettled(
       students.map((s) =>
         request(app)
-          .post(enrollUrl(activity.id))
-          .set(...authHeader(s.token)),
+          .put(enrollUrl(activity.id))
+          .set(...authCookie(s.token)),
       ),
     );
 

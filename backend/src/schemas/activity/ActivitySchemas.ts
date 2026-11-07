@@ -47,7 +47,9 @@ const AddressSchema = z.object({
   }),
 });
 
-const UtcDateTimeSchema = z.iso.datetime().transform((value) => new Date(value));
+const UtcDateTimeSchema = z.iso
+  .datetime()
+  .transform((value) => new Date(value));
 
 const BaseActivitySchema = z.object({
   title: z.string().min(1).max(ACTIVITY_TITLE_MAX_LENGTH),
@@ -78,10 +80,10 @@ export const CreateActivitySchema = z
       address: AddressSchema,
     }),
   ])
-  .refine(
-    (data) => data.startDate < data.endDate,
-    { message: "startDate must be before endDate.", path: ["startDate"] },
-  );
+  .refine((data) => data.startDate < data.endDate, {
+    message: "startDate must be before endDate.",
+    path: ["startDate"],
+  });
 
 export type CreateActivityInput = z.infer<typeof CreateActivitySchema>;
 

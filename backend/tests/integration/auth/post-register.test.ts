@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
-import { authHeader } from "../../helpers/auth.js";
+import { authCookie } from "../../helpers/auth.js";
 import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
 const REGISTER_URL = "/auth/register";
@@ -121,7 +121,7 @@ describe("POST /auth/register", () => {
 
     const probe = await request(app)
       .post(probeUrl())
-      .set(...authHeader(login.body.token))
+      .set("Cookie", login.headers["set-cookie"])
       .send(probeBody);
 
     expect(probe.status).toBe(404); // autenticado (não 401): conta funcional

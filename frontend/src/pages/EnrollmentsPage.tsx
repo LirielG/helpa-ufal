@@ -26,8 +26,15 @@ export function EnrollmentsPage() {
 
   // Two parallel requests: enrollments list + activity metadata (slots,
   // status and workload).
-  const { data, page, totalPages, isLoading, error, goToPage, applyAttendance } =
-    useEnrollments(id);
+  const {
+    data,
+    page,
+    totalPages,
+    isLoading,
+    error,
+    goToPage,
+    applyAttendance,
+  } = useEnrollments(id);
   const { activity, reload: reloadActivity } = useEnrollmentActivity(id);
   const [homologating, setHomologating] = useState<EnrollmentListItem | null>(
     null,
@@ -37,7 +44,9 @@ export function EnrollmentsPage() {
   // Without the activity there is no status to check nor workload to cap the
   // hours, so the control stays hidden until both are known.
   const workloadCeiling =
-    activity?.status === "COMPLETED" ? activity.details?.workloadHours : undefined;
+    activity?.status === "COMPLETED"
+      ? activity.details?.workloadHours
+      : undefined;
 
   const openHomologation = (enrollment: EnrollmentListItem) => {
     setNotice(null);
@@ -57,11 +66,7 @@ export function EnrollmentsPage() {
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="flex items-center gap-4">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate(-1)}
-          >
+          <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
             ← Voltar
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">Inscritos</h1>

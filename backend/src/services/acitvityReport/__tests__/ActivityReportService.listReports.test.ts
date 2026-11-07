@@ -1,12 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import ActivityReportService from "../ActivityReportService.js";
 import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { ListReportsQuery } from "@/schemas/activityReport/activityReportSchemas.js";
 import type { ReportResponse } from "@/types/activityReport.js";
-import { expectCustomError } from "@/utils/tests.js";
-
-const MANAGER_ID = "a1b2c3d4-0000-4000-8000-000000000001";
 
 function aReport(overrides: Partial<ReportResponse> = {}): ReportResponse {
   return {
@@ -29,25 +25,19 @@ function aReport(overrides: Partial<ReportResponse> = {}): ReportResponse {
 }
 
 function setup({
-  user = { isManager: true },
   page = { items: [aReport()], total: 1 },
 }: {
-  user?: { isManager: boolean } | null;
   page?: { items: ReportResponse[]; total: number };
 } = {}) {
   const reportRepository = {
     list: vi.fn().mockResolvedValue(page),
   } as unknown as IActivityReportRepository;
-  const userRepository = {
-    findById: vi.fn().mockResolvedValue(user),
-  } as unknown as IUserRepository;
 
   const service = new ActivityReportService({
     activityReportRepository: reportRepository,
-    userRepository,
   });
 
-  return { service, reportRepository, userRepository };
+  return { service, reportRepository };
 }
 
 const query: ListReportsQuery = { page: 1, limit: 20, resolved: false };
@@ -61,7 +51,7 @@ describe("ActivityReportService.listReports", () => {
       page: { items: [report], total: 1 },
     });
 
-    const response = await service.listReports(MANAGER_ID, query);
+    const response = await service.listReports(query);
 
     expect(reportRepository.list).toHaveBeenCalledTimes(1);
     expect(reportRepository.list).toHaveBeenCalledWith(query);
@@ -77,7 +67,7 @@ describe("ActivityReportService.listReports", () => {
   it("returns an empty page instead of failing when there are no reports", async () => {
     const { service } = setup({ page: { items: [], total: 0 } });
 
-    const response = await service.listReports(MANAGER_ID, query);
+    const response = await service.listReports(query);
 
     expect(response).toEqual({
       items: [],
@@ -91,7 +81,7 @@ describe("ActivityReportService.listReports", () => {
   it("computes totalPages from the filtered total, not from the page size", async () => {
     const { service } = setup({ page: { items: [], total: 41 } });
 
-    const response = await service.listReports(MANAGER_ID, {
+    const response = await service.listReports({
       page: 5,
       limit: 10,
       resolved: true,
@@ -103,30 +93,5 @@ describe("ActivityReportService.listReports", () => {
       limit: 10,
       totalPages: 5,
     });
-  });
-
-  // ---------- Authorization ----------
-
-  it("returns 401 when the token's user no longer exists, without listing", async () => {
-    const { service, reportRepository, userRepository } = setup({
-      user: null,
-    });
-
-    await expectCustomError(service.listReports(MANAGER_ID, query), 401);
-    expect(userRepository.findById).toHaveBeenCalledWith(MANAGER_ID);
-    expect(reportRepository.list).not.toHaveBeenCalled();
-  });
-
-  it("returns 403 when the user is no longer a manager in the database, without listing", async () => {
-    const { service, reportRepository } = setup({
-      user: { isManager: false },
-    });
-
-    await expectCustomError(
-      service.listReports(MANAGER_ID, query),
-      403,
-      "User is not a manager.",
-    );
-    expect(reportRepository.list).not.toHaveBeenCalled();
   });
 });
