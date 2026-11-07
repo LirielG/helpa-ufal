@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test";
 import { ActionCard } from "../ActionCard";
+import { ActionHero } from "@/features/action-detail/components/ActionHero";
 import type {
   ActivityListItem,
   ActivityStatus,
@@ -129,5 +130,39 @@ describe("ActionCard", () => {
     );
 
     expect(screen.getByText("UNKNOWN_STATUS")).toBeInTheDocument();
+  });
+
+  it("shows a cover named after the action, without any remote image", () => {
+    render(<ActionCard action={makeAction()} />);
+
+    const [cover, ...others] = screen.getAllByRole("img");
+    expect(cover).toHaveAccessibleName("Oficina de Robótica");
+    expect(cover.tagName).not.toBe("IMG");
+    expect(others).toHaveLength(0);
+  });
+
+  it("uses the same cover as the detail banner of the same action", () => {
+    const { unmount } = render(<ActionCard action={makeAction()} />);
+    const cardVariant = screen
+      .getByRole("img", { name: "Oficina de Robótica" })
+      .getAttribute("data-cover-variant");
+    unmount();
+
+    render(
+      <ActionHero
+        actionId="action-42"
+        type="COURSE"
+        category="Robótica"
+        title="Oficina de Robótica"
+        shortDescription=""
+        onBack={() => {}}
+      />,
+    );
+
+    expect(
+      screen
+        .getByRole("img", { name: "Oficina de Robótica" })
+        .getAttribute("data-cover-variant"),
+    ).toBe(cardVariant);
   });
 });

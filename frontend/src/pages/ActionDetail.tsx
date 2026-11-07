@@ -143,7 +143,8 @@ export function ActionDetail() {
       {!isLoading && action && (
         <>
           <ActionHero
-            bannerUrl="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200"
+            actionId={action.id}
+            type={action.type}
             category={action.details?.area || action.type}
             title={action.title}
             shortDescription={action.details?.description ?? ""}

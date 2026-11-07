@@ -1,7 +1,10 @@
 import { ArrowLeft } from "lucide-react";
+import { ActionCover } from "@/components/ActionCover";
+import type { ActivityType } from "@/services/contracts/activity";
 
 interface ActionHeroProps {
-  bannerUrl: string;
+  actionId: string;
+  type: ActivityType;
   category: string;
   title: string;
   shortDescription: string;
@@ -9,20 +12,22 @@ interface ActionHeroProps {
 }
 
 export function ActionHero({
-  bannerUrl,
+  actionId,
+  type,
   category,
   title,
   onBack,
 }: ActionHeroProps) {
   return (
-    <div
-      className="relative w-full h-[55vh] min-h-80 flex flex-col justify-end"
-      style={{
-        backgroundImage: `url(${bannerUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
+    <div className="relative w-full h-[55vh] min-h-80 flex flex-col justify-end">
+      <ActionCover
+        id={actionId}
+        type={type}
+        title={title}
+        className="absolute inset-0"
+        iconClassName="size-32"
+      />
+
       <div className="absolute inset-0 bg-linear-to-b from-black/20 via-black/30 to-black/70" />
 
       <div className="relative z-10 px-6 pb-8 max-w-4xl">
