@@ -48,7 +48,7 @@ function spyOnLoginRequest() {
   server.use(
     http.post(`${API}/auth/login`, () => {
       onRequest();
-      return HttpResponse.json({ token: "test-token", user: makeUser() });
+      return HttpResponse.json({ user: makeUser() });
     }),
   );
 
