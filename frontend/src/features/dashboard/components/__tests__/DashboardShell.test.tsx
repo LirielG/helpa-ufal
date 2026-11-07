@@ -13,6 +13,7 @@ import {
   futureDateInput,
   http,
   HttpResponse,
+  makePage,
   server,
   signIn,
 } from "@/test";
@@ -118,7 +119,7 @@ describe("DashboardShell", () => {
     signIn();
     server.use(
       http.get("*/activities", () => {
-        return HttpResponse.json({ activities: [], total: 0 });
+        return HttpResponse.json(makePage([]));
       }),
     );
     act(() => {
@@ -291,7 +292,7 @@ describe("DashboardShell", () => {
     server.use(
       http.get("*/activities", () => {
         getActivitiesCount++;
-        return HttpResponse.json({ activities: [], total: 0 });
+        return HttpResponse.json(makePage([]));
       }),
       http.post("*/activities", () => {
         return HttpResponse.json({ id: "nova-acao-123" }, { status: 201 });

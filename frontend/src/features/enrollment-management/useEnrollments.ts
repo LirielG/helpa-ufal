@@ -114,7 +114,7 @@ export function useEnrollments(activityId: string) {
     });
   }, []);
 
-  const totalPages = data ? Math.ceil(data.total / PAGE_LIMIT) : 0;
+  const totalPages = data?.totalPages ?? 0;
 
   return {
     data,

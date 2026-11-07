@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { API, http, HttpResponse, makeAction, server } from "@/test";
+import { API, http, HttpResponse, makeAction, makePage, server } from "@/test";
 import { fetchActions } from "../services";
 import type { FilterOptions } from "../types";
 
@@ -9,14 +9,11 @@ const NO_FILTERS: FilterOptions = {
   status: "all",
 };
 
-/** GET /activities answers with the slice and the overall count, nothing else. */
-function serveTotal(total: number): void {
+/** Serves one action under the page metadata given. */
+function serveEnvelope(metadata: Parameters<typeof makePage>[1]): void {
   server.use(
     http.get(`${API}/activities`, () =>
-      HttpResponse.json({
-        activities: total > 0 ? [makeAction()] : [],
-        total,
-      }),
+      HttpResponse.json(makePage([makeAction()], metadata)),
     ),
   );
 }
@@ -28,7 +25,7 @@ function captureParams(): URLSearchParams[] {
   server.use(
     http.get(`${API}/activities`, ({ request }) => {
       requests.push(new URL(request.url).searchParams);
-      return HttpResponse.json({ activities: [], total: 0 });
+      return HttpResponse.json(makePage([]));
     }),
   );
 
@@ -68,37 +65,26 @@ describe("fetchActions", () => {
     expect(requests[0].has("type")).toBe(false);
   });
 
-  it("derives totalPages from the total and the limit it sent", async () => {
-    serveTotal(25);
+  it("passes on the items and the page count the API answered", async () => {
+    serveEnvelope({ total: 25, page: 1, limit: 20, totalPages: 2 });
 
-    await expect(fetchActions(NO_FILTERS, 1, 20)).resolves.toMatchObject({
+    const result = await fetchActions(NO_FILTERS, 1, 20);
+
+    expect(result.items).toHaveLength(1);
+    expect(result).toMatchObject({
       total: 25,
+      page: 1,
+      limit: 20,
       totalPages: 2,
     });
   });
 
-  it("follows the limit the caller chose, not a fixed one", async () => {
-    serveTotal(25);
-
-    await expect(fetchActions(NO_FILTERS, 1, 10)).resolves.toMatchObject({
-      totalPages: 3,
-    });
-  });
-
-  it("adds no trailing page when the total fills the last one exactly", async () => {
-    serveTotal(40);
+  it("takes totalPages from the API instead of computing it", async () => {
+    // 25 / 20 would give 2 pages; a client-side count cannot produce 7.
+    serveEnvelope({ total: 25, page: 1, limit: 20, totalPages: 7 });
 
     await expect(fetchActions(NO_FILTERS, 1, 20)).resolves.toMatchObject({
-      totalPages: 2,
-    });
-  });
-
-  it("keeps one page when the API returns no actions", async () => {
-    serveTotal(0);
-
-    await expect(fetchActions(NO_FILTERS, 1, 20)).resolves.toMatchObject({
-      total: 0,
-      totalPages: 1,
+      totalPages: 7,
     });
   });
 });
