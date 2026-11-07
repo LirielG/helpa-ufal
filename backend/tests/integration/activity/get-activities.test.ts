@@ -27,8 +27,13 @@ describe("GET /activities", () => {
     const response = await request(app).get("/activities");
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("activities");
-    expect(response.body).toHaveProperty("total");
+    expect(response.body).toEqual({
+      items: [expect.objectContaining({ status: "OPEN" })],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
   });
 
   it("paginates: limit=2 returns 2 items and total reflects the whole matching set", async () => {
@@ -42,8 +47,31 @@ describe("GET /activities", () => {
       .query({ limit: 2, page: 1 });
 
     expect(response.status).toBe(200);
-    expect(response.body.activities).toHaveLength(2);
+    expect(response.body.items).toHaveLength(2);
     expect(response.body.total).toBe(5);
+    expect(response.body.page).toBe(1);
+    expect(response.body.limit).toBe(2);
+    expect(response.body.totalPages).toBe(3);
+  });
+
+  it("echoes normalized page=2 and limit=5 in the envelope, including when page is past the end", async () => {
+    const author = await createTeacher();
+    for (let i = 0; i < 3; i++) {
+      await createActivity(author.user.id, { status: "OPEN" });
+    }
+
+    const response = await request(app)
+      .get("/activities")
+      .query({ page: 2, limit: 5 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      items: [],
+      total: 3,
+      page: 2,
+      limit: 5,
+      totalPages: 1,
+    });
   });
 
   it("returns 400 when limit exceeds the real maximum of 100", async () => {
@@ -86,7 +114,7 @@ describe("GET /activities", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("filters by format", async () => {
@@ -100,7 +128,7 @@ describe("GET /activities", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("filters by status", async () => {
@@ -114,7 +142,7 @@ describe("GET /activities", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("filters by campus", async () => {
@@ -130,7 +158,7 @@ describe("GET /activities", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("computes availableSlots from APPROVED enrollments only", async () => {
@@ -157,7 +185,7 @@ describe("GET /activities", () => {
     const response = await request(app).get("/activities");
 
     expect(response.status).toBe(200);
-    expect(response.body.activities[0].availableSlots).toBe(8);
+    expect(response.body.items[0].availableSlots).toBe(8);
   });
 
   it("does not list a soft-deleted activity", async () => {
@@ -170,7 +198,7 @@ describe("GET /activities", () => {
 
     const response = await request(app).get("/activities");
 
-    const ids = response.body.activities.map((a: { id: string }) => a.id);
+    const ids = response.body.items.map((a: { id: string }) => a.id);
     expect(ids).toContain(visible.id);
     expect(ids).not.toContain(deleted.id);
   });
@@ -298,7 +326,7 @@ describe("GET /activities — strict query validation", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("reports an invalid campus and an invalid type in a single ValidationError with two items", async () => {

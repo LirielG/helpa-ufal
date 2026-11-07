@@ -41,7 +41,7 @@ describe("DELETE /activities/:activityId", () => {
     await request(app).get(`/activities/${activity.id}`).expect(404);
 
     const list = await request(app).get("/activities").expect(200);
-    const ids = list.body.activities.map((a: { id: string }) => a.id);
+    const ids = list.body.items.map((a: { id: string }) => a.id);
     expect(ids).not.toContain(activity.id);
   });
 
@@ -240,7 +240,7 @@ describe("DELETE /activities/:activityId", () => {
       .expect(204);
 
     const list = await request(app).get("/activities").expect(200);
-    const ids = list.body.activities.map((a: { id: string }) => a.id);
+    const ids = list.body.items.map((a: { id: string }) => a.id);
     expect(ids).toContain(survivor.id);
     expect(ids).not.toContain(target.id);
   });

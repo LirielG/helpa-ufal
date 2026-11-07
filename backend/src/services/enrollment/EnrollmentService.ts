@@ -23,6 +23,7 @@ import {
   type ParticipantsListResponse,
   toEnrollmentResponse,
 } from "@/types/enrollment.js";
+import { toPaginated } from "@/types/pagination.js";
 
 /**
  * The single place where the 1-based page/limit of the service becomes the
@@ -115,12 +116,12 @@ class EnrollmentService implements IEnrollmentService {
     const { items, total } =
       await this._enrollmentRepository.findActiveByUserId(userId, skip, limit);
 
-    return {
-      items: items.map((item) => this.toEnrollmentWithActivityResponse(item)),
+    return toPaginated(
+      items.map((item) => this.toEnrollmentWithActivityResponse(item)),
       total,
       page,
       limit,
-    };
+    );
   }
 
   public async listParticipants(
@@ -154,10 +155,12 @@ class EnrollmentService implements IEnrollmentService {
     // totalPresent comes from the repository as-is: the service forwards the
     // authoritative count instead of re-deriving it from confirmedWorkloadHours.
     return {
-      items: items.map((item) => this.toParticipantResponse(item)),
-      total,
-      page,
-      limit,
+      ...toPaginated(
+        items.map((item) => this.toParticipantResponse(item)),
+        total,
+        page,
+        limit,
+      ),
       totalPresent,
     };
   }
