@@ -12,12 +12,10 @@ import CustomError from "@/models/error/CustomError.js";
 import ValidationError, {
   type ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
-import { isValidUUID } from "@/utils/uuid.js";
-import type { Enrollment } from "@prisma/client";
 import {
   ACTIVE_ENROLLMENT_STATUS,
   type ConfirmAttendanceInput,
-  type EnrollResponse,
+  type EnrollResult,
   type EnrollmentListResponse,
   type EnrollmentParticipantResponse,
   type EnrollmentResponse,
@@ -71,13 +69,7 @@ class EnrollmentService implements IEnrollmentService {
   public async enroll(
     userId: string,
     activityId: string,
-  ): Promise<EnrollResponse> {
-    if (!isValidUUID(activityId)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
+  ): Promise<EnrollResult<EnrollmentResponse>> {
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.", {
@@ -91,21 +83,15 @@ class EnrollmentService implements IEnrollmentService {
       });
     }
 
-    const enrollment = await this._enrollmentRepository.enroll(
+    const { enrollment, created } = await this._enrollmentRepository.enroll(
       userId,
       activityId,
     );
 
-    return this.toEnrollResponse(enrollment);
+    return { enrollment: toEnrollmentResponse(enrollment), created };
   }
 
   public async cancel(userId: string, activityId: string): Promise<void> {
-    if (!isValidUUID(activityId)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.", {
@@ -145,10 +131,6 @@ class EnrollmentService implements IEnrollmentService {
   ): Promise<ParticipantsListResponse> {
     const userId = user.id;
 
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(404, "Activity not found.");
-    }
-
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
@@ -186,13 +168,6 @@ class EnrollmentService implements IEnrollmentService {
     input: ConfirmAttendanceInput,
   ): Promise<EnrollmentResponse> {
     const userId = user.id;
-
-    // A malformed id is a lookup that finds nothing, never operator input: it
-    // answers the same 404 as a nonexistent or soft-deleted row, so the route
-    // never reveals which ids are merely badly shaped.
-    if (!isValidUUID(enrollmentId)) {
-      throw new CustomError(404, "Enrollment not found.");
-    }
 
     const enrollment = await this._enrollmentRepository.findById(enrollmentId);
     if (!enrollment) {
@@ -275,15 +250,6 @@ class EnrollmentService implements IEnrollmentService {
     }
 
     return input.workloadHours;
-  }
-
-  private toEnrollResponse(enrollment: Enrollment): EnrollResponse {
-    return {
-      id: enrollment.id,
-      activityId: enrollment.activityId,
-      userId: enrollment.userId,
-      createdAt: enrollment.createdAt,
-    };
   }
 
   private toEnrollmentWithActivityResponse(

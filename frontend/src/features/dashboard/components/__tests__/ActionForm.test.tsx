@@ -37,10 +37,14 @@ function spyOnCreate() {
   return onRequest;
 }
 
-async function fillStep1(user: UserEvent, area = "Educação") {
+async function fillStep1(
+  user: UserEvent,
+  area = "Educação",
+  title = "Mutirão de Saúde",
+) {
   await user.type(
     screen.getByPlaceholderText("Digite o título da sua ação"),
-    "Mutirão de Saúde",
+    title,
   );
   await user.type(
     screen.getByLabelText("Descrição completa"),
@@ -82,6 +86,58 @@ async function fillStep2(user: UserEvent) {
 }
 
 describe("ActionRegister", () => {
+  it.each([
+    ["", "O título é obrigatório"],
+    ["   ", "O título é obrigatório"],
+    ["Ab", "O título deve ter no mínimo 3 caracteres"],
+    ["  Ab  ", "O título deve ter no mínimo 3 caracteres"],
+  ])("blocks an invalid title %j on step 1", async (title, message) => {
+    const onCreate = spyOnCreate();
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    if (title) {
+      await user.type(screen.getByLabelText("Título da ação"), title);
+    }
+    await user.type(
+      screen.getByLabelText("Descrição completa"),
+      "Atendimento gratuito à comunidade.",
+    );
+    await user.type(getAreaField(), "Educação");
+    await user.selectOptions(
+      screen.getByLabelText("Tipo da ação"),
+      "EXTENSION",
+    );
+    await user.click(screen.getByRole("button", { name: /Próximo/i }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Conte-nos onde e quando será" }),
+    ).not.toBeInTheDocument();
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates an action with a trimmed three-character title", async () => {
+    const onCreate = spyOnCreate();
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user, "Educação", "  Abc  ");
+    await fillStep2(user);
+    await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Abc" }),
+      ),
+    );
+    expect(
+      await screen.findByText("Sua ação foi registrada com sucesso!"),
+    ).toBeInTheDocument();
+  });
+
   it("closes the modal directly without confirmation if the form is untouched", async () => {
     const onCloseMock = vi.fn();
     const { user } = render(

@@ -7,11 +7,11 @@ import type {
 import type { IActivityController } from "@/controllers/activity/IActivityController.js";
 import {
   CreateActivitySchema,
-  UpdateActivitySchema,
-  UpdateActivityStatusSchema,
+  type UpdateActivityInput,
+  type UpdateActivityStatusInput,
 } from "@/schemas/activity/ActivitySchemas.js";
-import CustomError from "@/models/error/CustomError.js";
-import { isValidUUID } from "@/utils/uuid.js";
+import type { AuthenticatedUser } from "@/types/auth.js";
+import type { ActivityPathParams } from "@/schemas/common/PathParamsSchemas.js";
 
 type Props = {
   activityService?: IActivityService;
@@ -25,10 +25,10 @@ class ActivityController implements IActivityController {
   }
 
   public async create(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
     const data = CreateActivitySchema.parse(req.body);
-    const activity = await this._activityService.create(req.user.id, data);
+    const activity = await this._activityService.create(user.id, data);
 
     res.status(201).json(activity);
   }
@@ -47,11 +47,7 @@ class ActivityController implements IActivityController {
   }
 
   public async findById(req: Request, res: Response): Promise<void> {
-    const { activityId } = req.params;
-
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
 
     const activity = await this._activityService.findById(
       activityId,
@@ -61,28 +57,14 @@ class ActivityController implements IActivityController {
   }
 
   public async update(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!activityId || !uuidRegex.test(activityId)) {
-      throw new CustomError(
-        400,
-        "Invalid activityId parameter. Must be a valid UUID.",
-      );
-    }
-
-    const data = UpdateActivitySchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as UpdateActivityInput;
 
     const updatedActivity = await this._activityService.update(
       activityId,
-      req.user,
+      user,
       data,
     );
 
@@ -90,43 +72,26 @@ class ActivityController implements IActivityController {
   }
 
   public async updateStatus(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-
-    if (Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(400, "Invalid UUID format.");
-    }
-
-    const data = UpdateActivityStatusSchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as UpdateActivityStatusInput;
 
     const updatedActivity = await this._activityService.updateStatus(
       activityId,
       data.status,
-      req.user,
+      user,
     );
 
     res.status(200).json(updatedActivity);
   }
 
   public async delete(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
 
-    if (!activityId || Array.isArray(activityId)) {
-      throw new CustomError(400, "Invalid activityId parameter.");
-    }
-
-    if (!isValidUUID(activityId)) {
-      throw new CustomError(400, "Invalid UUID format.");
-    }
-
-    await this._activityService.delete(activityId, req.user);
+    await this._activityService.delete(activityId, user);
 
     res.status(204).send();
   }

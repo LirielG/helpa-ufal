@@ -69,10 +69,7 @@ class AuthService implements IAuthService {
       });
     }
 
-    const passwordHash = await bcryptjs.hash(
-      data.password,
-      BCRYPT_SALT_ROUNDS,
-    );
+    const passwordHash = await bcryptjs.hash(data.password, BCRYPT_SALT_ROUNDS);
 
     const newUser = await this._userRepository.createWithSubtype({
       ...data,

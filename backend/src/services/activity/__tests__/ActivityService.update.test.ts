@@ -420,6 +420,10 @@ describe("ActivityService.update", () => {
     );
 
     expect(error).toBeInstanceOf(ValidationError);
+    expect((error as ValidationError).statusCode).toBe(422);
+    expect((error as ValidationError).code).toBe(
+      "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+    );
     expect((error as ValidationError).errors).toEqual([
       {
         field: "slots",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { updateProfileSchemaFor } from "@/schemas/user/UserSchemas.js";
 import { Prisma } from "@prisma/client";
-import registrationPolicyMessage from "@/../tests/helpers/password-policy.js"
+import registrationPolicyMessage from "@/../tests/helpers/password-policy.js";
 import { UserType } from "@/types/auth.js";
 import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 
@@ -23,7 +23,6 @@ function toErrors(result: ReturnType<typeof parse>) {
     message: issue.message,
   }));
 }
-
 
 // Every persisted column that is not editable here. Derived from the Prisma
 // model, so a new column (e.g. tokenVersion) is covered automatically.
@@ -61,9 +60,7 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
     ])("rejects a fullName that is %s", (_label, fullName) => {
       const errors = toErrors(parse(userType, { fullName }));
 
-      expect(errors).toEqual([
-        expect.objectContaining({ field: "fullName" }),
-      ]);
+      expect(errors).toEqual([expect.objectContaining({ field: "fullName" })]);
     });
 
     it("accepts a fullName at the length limit", () => {
@@ -77,9 +74,7 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
         parse(userType, { fullName: "a".repeat(FULL_NAME_MAX_LENGTH + 1) }),
       );
 
-      expect(errors).toEqual([
-        expect.objectContaining({ field: "fullName" }),
-      ]);
+      expect(errors).toEqual([expect.objectContaining({ field: "fullName" })]);
     });
 
     it("accepts a password change with the current password", () => {
@@ -122,15 +117,18 @@ describe.each<UserType>(["STUDENT", "TEACHER"])(
       ["without a number", "Senha@abcd"],
       ["without a special character", "Senha12345"],
       ["with a non-ASCII character", "Senha@12é4"],
-    ])("rejects a newPassword %s with the registration message", (_l, newPassword) => {
-      const errors = toErrors(
-        parse(userType, { currentPassword: CURRENT_PASSWORD, newPassword }),
-      );
+    ])(
+      "rejects a newPassword %s with the registration message",
+      (_l, newPassword) => {
+        const errors = toErrors(
+          parse(userType, { currentPassword: CURRENT_PASSWORD, newPassword }),
+        );
 
-      expect(errors).toEqual([
-        { field: "newPassword", message: POLICY_MESSAGE },
-      ]);
-    });
+        expect(errors).toEqual([
+          { field: "newPassword", message: POLICY_MESSAGE },
+        ]);
+      },
+    );
 
     it("requires currentPassword when newPassword is present", () => {
       const errors = toErrors(

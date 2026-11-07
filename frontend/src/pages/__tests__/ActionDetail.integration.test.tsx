@@ -13,6 +13,30 @@ describe("ActionDetail Integration", () => {
     signIn(); // Ensure user is authenticated
   });
 
+  it("displays workload hours in singular when workload is 1 hour", async () => {
+    const actionId = "act-singular-workload";
+    const action = makeActionDetail({
+      id: actionId,
+      details: {
+        ...makeActionDetail().details!,
+        workloadHours: 1,
+      },
+    });
+
+    server.use(
+      http.get(`${API}/activities/${actionId}`, () =>
+        HttpResponse.json(action),
+      ),
+    );
+
+    render(<ActionDetail />, {
+      route: `/activity/${actionId}`,
+      path: "/activity/:id",
+    });
+
+    expect(await screen.findByText("1 hora")).toBeInTheDocument();
+  });
+
   it.each([0, 500, 404])(
     "keeps the action and enrollment success when refresh fails with %s",
     async (status) => {
@@ -31,8 +55,8 @@ describe("ActionDetail Integration", () => {
             ? HttpResponse.error()
             : new HttpResponse(null, { status });
         }),
-        http.post(
-          `${API}/activities/${actionId}/enroll`,
+        http.put(
+          `${API}/activities/${actionId}/enrollments/me`,
           () => new HttpResponse(null, { status: 201 }),
         ),
       );
@@ -63,83 +87,101 @@ describe("ActionDetail Integration", () => {
     },
   );
 
-  it("updates available slots after successful enrollment", async () => {
-    const actionId = "act-integration-test";
-    let getCallCount = 0;
+  it.each([201, 200])(
+    "refreshes the action after enrollment returns %i",
+    async (status) => {
+      const actionId = "act-integration-test";
+      let getCallCount = 0;
 
-    // Initial action with 5 available slots
-    const initialAction = makeActionDetail({
-      id: actionId,
-      availableSlots: 5,
-      slots: 20,
-    });
+      // Initial action with 5 available slots
+      const initialAction = makeActionDetail({
+        id: actionId,
+        availableSlots: 5,
+        slots: 20,
+      });
 
-    // Updated action with 4 available slots (after enrollment)
-    const updatedAction = makeActionDetail({
-      id: actionId,
-      availableSlots: 4,
-      slots: 20,
-    });
+      // Updated action with 4 available slots (after enrollment)
+      const updatedAction = makeActionDetail({
+        id: actionId,
+        availableSlots: 4,
+        slots: 20,
+      });
 
-    server.use(
-      http.get(`${API}/activities/${actionId}`, () => {
-        getCallCount += 1;
-        // First call returns 5 slots, second call returns 4 slots
-        if (getCallCount === 1) {
-          return HttpResponse.json(initialAction);
-        } else {
-          return HttpResponse.json(updatedAction);
-        }
-      }),
-      http.post(
-        `${API}/activities/${actionId}/enroll`,
-        () => new HttpResponse(null, { status: 201 }),
-      ),
-    );
+      server.use(
+        http.get(`${API}/activities/${actionId}`, () => {
+          getCallCount += 1;
+          // First call returns 5 slots, second call returns 4 slots
+          if (getCallCount === 1) {
+            return HttpResponse.json(initialAction);
+          } else {
+            return HttpResponse.json(updatedAction);
+          }
+        }),
+        http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
+          HttpResponse.json(
+            {
+              id: "enrollment-1",
+              activityId: actionId,
+              userId: "user-1",
+              status: "APPROVED",
+              attendanceConfirmed: null,
+              confirmedWorkloadHours: 0,
+              createdAt: "2026-09-11T00:00:00.000Z",
+              updatedAt: "2026-09-11T00:00:00.000Z",
+            },
+            { status },
+          ),
+        ),
+      );
 
-    const { user } = render(<ActionDetail />, {
-      route: `/activity/${actionId}`,
-      path: "/activity/:id",
-    });
+      const { user } = render(<ActionDetail />, {
+        route: `/activity/${actionId}`,
+        path: "/activity/:id",
+      });
 
-    // Wait for initial load
-    await waitFor(() => {
+      // Wait for initial load
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /Inscrever-se/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Verify initial slot count is displayed
       expect(
-        screen.getByRole("button", { name: /Inscrever-se/i }),
+        screen.getByText("5 disponíveis / 20 no total"),
       ).toBeInTheDocument();
-    });
 
-    // Verify initial slot count is displayed
-    expect(screen.getByText("5 disponíveis / 20 no total")).toBeInTheDocument();
+      // Click "Inscrever-se" button
+      const enrollButton = screen.getByRole("button", {
+        name: /Inscrever-se/i,
+      });
+      await user.click(enrollButton);
 
-    // Click "Inscrever-se" button
-    const enrollButton = screen.getByRole("button", { name: /Inscrever-se/i });
-    await user.click(enrollButton);
+      // Wait for modal to appear
+      await waitFor(() => {
+        expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+      });
 
-    // Wait for modal to appear
-    await waitFor(() => {
-      expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
-    });
+      // Click confirm in modal
+      const buttons = screen.getAllByRole("button");
+      const confirmButton = buttons.find(
+        (btn) =>
+          btn.textContent?.includes("✓") ||
+          btn.textContent?.includes("Confirmar"),
+      );
+      if (confirmButton) {
+        await user.click(confirmButton);
+      }
 
-    // Click confirm in modal
-    const buttons = screen.getAllByRole("button");
-    const confirmButton = buttons.find(
-      (btn) =>
-        btn.textContent?.includes("✓") ||
-        btn.textContent?.includes("Confirmar"),
-    );
-    if (confirmButton) {
-      await user.click(confirmButton);
-    }
+      // Wait for success message
+      await waitFor(() => {
+        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
+      });
 
-    // Wait for success message
-    await waitFor(() => {
-      expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
-    });
-
-    // Verify GET was called twice (initial load + refetch after enrollment)
-    expect(getCallCount).toBe(2);
-  });
+      // Verify GET was called twice (initial load + refetch after enrollment)
+      expect(getCallCount).toBe(2);
+    },
+  );
 
   it("shows enrollment modal with action details", async () => {
     const actionId = "act-modal-details";

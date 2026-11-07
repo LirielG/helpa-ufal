@@ -11,7 +11,7 @@ import {
   ACTION_FORMAT_LABELS,
 } from "../../dashboard/constants";
 import type { Activity } from "@/services/contracts/activity";
-import { formatDate, formatTime } from "../../../utils";
+import { formatDate, formatTime, formatWorkloadHours } from "../../../utils";
 
 interface ActionInfoCardProps {
   action: Activity;
@@ -95,7 +95,7 @@ export function ActionInfoCard({ action }: ActionInfoCardProps) {
           label="Carga Horária"
         >
           <span className="font-medium text-gray-900">
-            {action.details?.workloadHours || 0} horas
+            {formatWorkloadHours(action.details?.workloadHours || 0)}
           </span>
         </InfoRow>
 

@@ -60,6 +60,15 @@ describe("AppRoutes", () => {
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
+    it("sends a guest from /moderation to the login screen without rendering moderation", async () => {
+      render(<AppRoutes />, { route: "/moderation" });
+
+      expect(
+        await screen.findByRole("button", { name: "Entrar" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Moderação de denúncias")).toBeNull();
+    });
+
     it("returns the user to the route they tried to reach after logging in", async () => {
       const { user } = render(<AppRoutes />, { route: "/profile" });
 
@@ -203,7 +212,10 @@ describe("AppRoutes", () => {
       signIn();
       const { user } = render(<AppRoutes />, { route: "/profile" });
 
-      await user.click(await screen.findByRole("button", { name: "Ações" }));
+      await screen.findByText("Dados Pessoais");
+
+      const actionButtons = screen.getAllByRole("button", { name: "Ações" });
+      await user.click(actionButtons[actionButtons.length - 1]);
 
       expect(
         await screen.findByRole("button", { name: "Entrar" }),

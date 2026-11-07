@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { describe, it, expect, vi } from "vitest";
 import SigaaScraperService from "../SigaaScraperService.js";
 
 describe("SigaaScraperService", () => {
@@ -98,5 +100,21 @@ describe("SigaaScraperService", () => {
     expect(results[0].sigaaId).toBeDefined();
     expect(results[0].sigaaId.length).toBeGreaterThan(0);
     expect(results[0].normalizedType).toBe("EXTENSION");
+  });
+
+  it("loads the SIGAA CA bundle from assets/certs/sigaa-ca-bundle.pem when initializing the TLS agent", async () => {
+    const expectedCertPath = path.resolve(
+      import.meta.dirname,
+      "../../../../assets/certs/sigaa-ca-bundle.pem",
+    );
+    const readFileSyncSpy = vi.spyOn(fs, "readFileSync");
+    const offlineScraper = new SigaaScraperService("http://127.0.0.1:1", 50);
+
+    await expect(
+      offlineScraper.scrapeCurrentYearActivities(),
+    ).rejects.toThrow();
+
+    expect(readFileSyncSpy).toHaveBeenCalledWith(expectedCertPath, "utf8");
+    readFileSyncSpy.mockRestore();
   });
 });

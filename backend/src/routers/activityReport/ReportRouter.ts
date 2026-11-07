@@ -6,6 +6,8 @@ import type { IAuthMiddleware } from "@/middlewares/auth/IAuthMiddleware.js";
 import { validateQuery } from "@/middlewares/validation/validateQuery.js";
 import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
 import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
+import { validateParams } from "@/middlewares/validation/validateParams.js";
+import { ReportPathParamsSchema } from "@/schemas/common/PathParamsSchemas.js";
 
 const router = express.Router();
 const activityReportController: IActivityReportController =
@@ -16,17 +18,16 @@ const authMiddleware: IAuthMiddleware = new AuthMiddleware();
 // middleware checks the current role before the request reaches the service.
 router.get(
   "/reports",
-  authMiddleware.auth({ manager: true }),
+  authMiddleware.requireAuth({ manager: true }),
   validateQuery(ListReportsQuerySchema, INVALID_QUERY_MESSAGE),
-  (req, res, next) =>
-    activityReportController.listReports(req, res).catch(next),
+  (req, res) => activityReportController.listReports(req, res),
 );
 
 router.put(
   "/reports/:reportId/resolution",
-  authMiddleware.auth({ manager: true }),
-  (req, res, next) =>
-    activityReportController.resolveReport(req, res).catch(next),
+  authMiddleware.requireAuth({ manager: true }),
+  validateParams(ReportPathParamsSchema),
+  (req, res) => activityReportController.resolveReport(req, res),
 );
 
 export default router;

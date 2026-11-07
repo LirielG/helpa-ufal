@@ -317,7 +317,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     }
   });
 
-  // ---------- 400 - Bad Request (query validated before auth) ----------
+  // ---------- 400 - Bad Request ----------
 
   it.each([
     ["page=abc", "page", "page must be a positive integer."],
@@ -344,12 +344,41 @@ describe("GET /activities/:activityId/enrollments", () => {
     },
   );
 
-  it("returns 400 for an invalid query even without credentials (validation precedes auth)", async () => {
+  it("returns 401 for an invalid query without credentials (auth precedes validation)", async () => {
     const { activity } = await anActivityWithAuthor();
 
-    const response = await request(app).get(`${listUrl(activity.id)}?page=abc`);
+    const response = await request(app).get(
+      `${listUrl(activity.id)}?limit=abc`,
+    );
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(401);
+    expect(response.body.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("returns 401 for an invalid cookie before validating the query", async () => {
+    const { activity } = await anActivityWithAuthor();
+
+    const response = await request(app)
+      .get(`${listUrl(activity.id)}?limit=abc`)
+      .set(...authCookie(invalidToken()));
+
+    expect(response.status).toBe(401);
+    expect(response.body.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("rejects a revoked session before validating the query", async () => {
+    const { author, activity } = await anActivityWithAuthor();
+    await prisma.user.update({
+      where: { id: author.user.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+
+    const response = await request(app)
+      .get(`${listUrl(activity.id)}?limit=abc`)
+      .set(...authCookie(author.token));
+
+    expect(response.status).toBe(401);
+    expect(response.body.code).toBe("SESSION_INVALID");
   });
 
   // ---------- 401 - Unauthorized ----------
@@ -437,21 +466,25 @@ describe("GET /activities/:activityId/enrollments", () => {
     });
   });
 
-  it("returns 404 — not 400 — for a non-UUID activity id", async () => {
-    // Contract decision for THIS route: identifiers in the path are resource
-    // lookups, never operator input. NOTE: DELETE /activities/:activityId/enroll
-    // returns 400 for the same input today; the team must reconcile the two.
+  it("returns 400 INVALID_UUID for a non-UUID activity id", async () => {
     const user = await createStudent();
 
     const response = await request(app)
       .get(listUrl("not-a-uuid"))
       .set(...authCookie(user.token));
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "Activity not found.",
+      status: 400,
+      code: "VALIDATION_ERROR",
+      message: "Validation error.",
+      errors: [
+        {
+          field: "activityId",
+          code: "INVALID_UUID",
+          message: "activityId must be a valid UUID.",
+        },
+      ],
     });
   });
 

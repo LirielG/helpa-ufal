@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { UserProfile } from "../types";
 import { getInitials } from "../../../utils/helpers";
+import { getWorkloadLabel } from "../../../utils";
 
 type ProfileCardProps = {
   user: UserProfile;
@@ -44,7 +45,7 @@ export function ProfileCard({ user }: ProfileCardProps) {
             {hours}
           </span>
           <span className="block text-[11px] font-medium text-[#002147] mt-1">
-            {hours === 1 ? "hora" : "horas"}
+            {getWorkloadLabel(hours)}
           </span>
         </div>
         <p id={counterCaptionId} className="text-xs text-gray-500 mt-2">

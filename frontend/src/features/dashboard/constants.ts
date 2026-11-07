@@ -66,3 +66,34 @@ export const FILTER_OPTIONS = {
   ],
   status: ACTION_STATUS_OPTIONS,
 };
+
+export const HEADER_NAV_ITEMS = [
+  { id: "sobre", label: "Sobre o Projeto", path: "/" },
+  { id: "como-funciona", label: "Como Funciona", path: "/#como-funciona" },
+  { id: "acoes", label: "Ações", path: "/dashboard" },
+] as const;
+
+export const HEADER_LABELS = {
+  homeAriaLabel: "Ir para a página inicial",
+  openProfileAriaLabel: "Abrir perfil",
+  openSidebarAriaLabel: "Abrir menu lateral",
+  login: "Entrar",
+  register: "Cadastrar-se",
+} as const;
+
+export const SIDEBAR_LABELS = {
+  totalContributed: "Total contribuído",
+  mainNav: "NAVEGAÇÃO PRINCIPAL",
+  home: "Home",
+  actions: "Ações",
+  enrolledActivities: "Atividades Inscritas",
+  completedActivities: "Atividades Concluídas",
+  managedActivities: "Atividades Gerenciadas",
+  personalData: "Dados Pessoais",
+  certificates: "Certificados",
+  reports: "Denúncias",
+  help: "Ajuda",
+  logout: "Sair da conta",
+  retry: "Tentar novamente",
+  profileError: "Não foi possível carregar os dados do perfil.",
+} as const;

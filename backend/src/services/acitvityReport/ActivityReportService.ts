@@ -13,8 +13,6 @@ import { type Paginated, toPaginated } from "@/types/pagination.js";
 import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
-import ValidationError from "@/models/error/ValidationError.js";
-import { isValidUUID } from "@/utils/uuid.js";
 
 type Props = {
   activityReportRepository?: IActivityReportRepository;
@@ -37,12 +35,6 @@ class ActivityReportService implements IActivityReportService {
     requesterId: string,
     data: CreateActivityReportInput,
   ): Promise<ActivityReportResponse> {
-    if (!isValidUUID(activityId)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
     const activity = await this._activityRepository.findById(activityId);
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
@@ -78,16 +70,6 @@ class ActivityReportService implements IActivityReportService {
     reportId: string,
     requesterId: string,
   ): Promise<ReportResponse> {
-    if (!isValidUUID(reportId)) {
-      throw new ValidationError([
-        {
-          field: "reportId",
-          code: "INVALID_UUID",
-          message: "reportId must be a valid UUID.",
-        },
-      ]);
-    }
-
     const report = await this._reportRepository.findById(reportId);
     if (!report) {
       throw new CustomError(404, "Report not found.");

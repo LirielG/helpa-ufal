@@ -1,6 +1,6 @@
 /**
  * Wire types for `GET /activities/:activityId/enrollments` and
- * `PUT /enrollments/:enrollmentId/attendance`.
+ * `PUT /activities/:activityId/enrollments/me` and `PUT /enrollments/:enrollmentId/attendance`.
  *
  * Written from the Bruno examples (`backend/docs/bruno/Enrollments/*`), not from
  * the backend code (§8).
@@ -9,7 +9,7 @@
 export type EnrollmentStatus =
   "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
-/** The canonical enrollment, returned as is by `PUT /enrollments/:enrollmentId/attendance`. */
+/** The canonical enrollment returned by self-enrollment and attendance updates. */
 export interface Enrollment {
   id: string;
   activityId: string;
@@ -59,5 +59,4 @@ export interface ListEnrollmentsResponse {
  * one pair: hours are required with a presence and forbidden with an absence.
  */
 export type ConfirmAttendanceRequest =
-  | { attended: true; workloadHours: number }
-  | { attended: false };
+  { attended: true; workloadHours: number } | { attended: false };

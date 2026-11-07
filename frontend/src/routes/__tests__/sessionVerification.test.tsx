@@ -219,8 +219,8 @@ describe("session verification on load", () => {
     render(<AppRoutes />, { route: "/dashboard" });
 
     expect(
-      await screen.findByRole("button", { name: "Abrir perfil" }),
-    ).toHaveTextContent("Servidor");
+      await screen.findByRole("heading", { name: "Servidor Atual" }),
+    ).toBeInTheDocument();
 
     expect(useAuthStore.getState().user).toEqual({
       id: user.id,

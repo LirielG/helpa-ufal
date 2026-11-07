@@ -203,7 +203,7 @@ examples:
             ]
           }
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
@@ -230,10 +230,17 @@ examples:
           {
             "status": 400,
             "code": "VALIDATION_ERROR",
-            "message": "Invalid activityId parameter. Must be a valid UUID."
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "code": "INVALID_UUID",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
           }
-  - name: 400 - Slots below approved enrollments
-    description: slots is lower than the number of APPROVED enrollments. The count is in details.approvedEnrollments and in the message. Status stays 400 for now (a change to 422 is planned, see api-conventions section 4).
+  - name: 422 - Slots below approved enrollments
+    description: slots is lower than the number of APPROVED enrollments. The count is in details.approvedEnrollments and in the message. The request is well formed, but the rule depends on stored data, so the status is 422 (see api-conventions section 4).
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
@@ -249,8 +256,8 @@ examples:
             "slots": 2
           }
     response:
-      status: 400
-      statusText: Bad Request
+      status: 422
+      statusText: Unprocessable Entity
       headers:
         - name: Content-Type
           value: application/json
@@ -258,9 +265,9 @@ examples:
         type: json
         data: |-
           {
-            "status": 400,
-            "code": "VALIDATION_ERROR",
-            "message": "Validation error.",
+            "status": 422,
+            "code": "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+            "message": "slots cannot be reduced below the current number of approved enrollments (12).",
             "errors": [
               {
                 "field": "slots",
@@ -273,7 +280,7 @@ examples:
             }
           }
   - name: 401 Response
-    description: Missing, invalid or expired session cookie.
+    description: No session cookie was sent; invalid or expired cookies also return 401.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: PATCH
@@ -300,7 +307,7 @@ examples:
           {
             "code": "UNAUTHENTICATED",
             "status": 401,
-            "message": "Unauthenticated."
+            "message": "No token provided."
           }
   - name: 403 Response
     description: Requester is not the author or a manager.
@@ -426,8 +433,11 @@ examples:
 docs: |-
   Partially updates an activity. At least one field must be provided.
 
-  **Authentication:** `requireAuth`. Today the router uses `auth()` without options, which only decodes the cookie, and the controller rejects the request when there is no user. A missing, invalid or expired `token` cookie therefore answers the same 401 `Unauthenticated.`. Only the author or a manager can update.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can update.
 
   - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
   - The 200 body has the same shape as `GET /activities/:activityId`, including `availableSlots` (slots minus the approved enrollments, never below zero). It carries no internal columns such as `createdAt`, `updatedAt` or `deletedAt`.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
+
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

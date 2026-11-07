@@ -18,6 +18,6 @@ export type UserResponse = {
 };
 
 export type AuthorizeOptions = {
-  userTypes?: UserType[] | "all";
+  userTypes?: UserType[];
   manager?: boolean;
 };

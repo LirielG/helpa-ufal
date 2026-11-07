@@ -51,7 +51,6 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-12 h-16 md:h-[80px] flex items-center justify-between gap-4">
-        
         <button
           type="button"
           onClick={() => handleTabClick("about")}
@@ -113,7 +112,11 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-navigation-menu"
-          aria-label={isMobileMenuOpen ? "Fechar menu de navegação" : "Abrir menu de navegação"}
+          aria-label={
+            isMobileMenuOpen
+              ? "Fechar menu de navegação"
+              : "Abrir menu de navegação"
+          }
           className="md:hidden p-2.5 rounded-lg text-[#000A1E] hover:bg-gray-100 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
         >
           {isMobileMenuOpen ? (

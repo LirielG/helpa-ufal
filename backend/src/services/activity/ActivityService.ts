@@ -23,13 +23,11 @@ import {
 import CustomError from "@/models/error/CustomError.js";
 import {
   ActivityFullResponse,
-  ActivityResponse,
   ActivityFilterOptions,
 } from "@/types/activity.js";
 import ValidationError, {
   ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
-import { isValidUUID } from "@/utils/uuid.js";
 
 const MAX_ACTIVITY_DURATION_DAYS = 365; // 1 years
 const MAX_SLOTS = 10_000;
@@ -292,12 +290,6 @@ class ActivityService implements IActivityService {
     id: string,
     userId?: string,
   ): Promise<ActivityFullResponse> {
-    if (!isValidUUID(id)) {
-      throw new ValidationError([
-        { field: "activityId", message: "activityId must be a valid UUID." },
-      ]);
-    }
-
     const activity = await this._activityRepository.findById(id);
 
     if (!activity) {
@@ -429,16 +421,21 @@ class ActivityService implements IActivityService {
       const approvedEnrollments =
         await this._activityRepository.countApprovedEnrollments(activity.id);
       if (data.slots < approvedEnrollments) {
+        const message = `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`;
         throw new ValidationError(
           [
             {
               field: "slots",
               code: "BELOW_APPROVED_ENROLLMENTS",
-              message: `slots cannot be reduced below the current number of approved enrollments (${approvedEnrollments}).`,
+              message,
             },
           ],
-          undefined,
-          { details: { approvedEnrollments } },
+          message,
+          {
+            status: 422,
+            code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+            details: { approvedEnrollments },
+          },
         );
       }
     }
@@ -482,7 +479,7 @@ class ActivityService implements IActivityService {
     activityId: string,
     newStatus: ActivityStatus,
     user: Pick<AuthenticatedUser, "id" | "isManager">,
-  ): Promise<ActivityResponse> {
+  ): Promise<ActivityFullResponse> {
     const userId = user.id;
     const activity = await this._activityRepository.findById(activityId);
 
@@ -516,28 +513,9 @@ class ActivityService implements IActivityService {
       );
     }
 
-    const updated = await this._activityRepository.updateStatus(
-      activityId,
-      newStatus as any,
-    );
+    await this._activityRepository.updateStatus(activityId, newStatus as any);
 
-    const approvedCount =
-      await this._activityRepository.countApprovedEnrollments(activityId);
-
-    const activityResponse: ActivityResponse = {
-      id: updated.id,
-      authorId: updated.authorId,
-      title: updated.title,
-      type: updated.type,
-      campus: updated.campus,
-      startDate: updated.startDate,
-      endDate: updated.endDate,
-      slots: updated.slots,
-      availableSlots: Math.max(0, updated.slots - approvedCount),
-      status: updated.status,
-    };
-
-    return activityResponse;
+    return this.findById(activityId, user.id);
   }
 
   public async delete(

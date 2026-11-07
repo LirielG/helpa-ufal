@@ -32,10 +32,6 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
 
   // 409: Enrollment conflict — differentiate by code
   if (error.status === 409) {
-    if (error.code === "ALREADY_ENROLLED") {
-      return "Você já está inscrito nesta ação.";
-    }
-
     if (error.code === "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT") {
       return "As inscrições para esta ação não estão abertas.";
     }
@@ -63,12 +59,7 @@ export type CancellationErrorResolution =
 const GENERIC_CANCELLATION_MESSAGE =
   "Não foi possível cancelar a inscrição. Tente novamente.";
 
-/**
- * Decides what the screen does when `DELETE /activities/:id/enroll` fails.
- *
- * The two 404s differ only by `message` until the API exposes error codes;
- * keep that comparison here so the switch to codes stays local.
- */
+/** Resolves failures of `DELETE /activities/:id/enrollments/me` for the screen. */
 export function resolveCancellationError(
   error: unknown,
 ): CancellationErrorResolution {

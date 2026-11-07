@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { randomUUID } from "crypto";
-import { authCookie } from "../../helpers/auth.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 import { app } from "@/app.js";
 import {
   createTeacher,
@@ -93,7 +93,7 @@ describe("GET /activities/:activityId", () => {
     expect(response.body.errors).toEqual([
       {
         field: "activityId",
-        code: "VALIDATION_ERROR",
+        code: "INVALID_UUID",
         message: "activityId must be a valid UUID.",
       },
     ]);
@@ -138,20 +138,29 @@ describe("GET /activities/:activityId", () => {
       expect(response.body).not.toHaveProperty("enrollmentStatus");
     });
 
-    // Interim behavior: auth() without options treats an invalid token as
-    // anonymous. Moving the route to optionalAuth() makes it answer 401
-    // (api-conventions.md, section 5); this test must change with it.
-    it("treats an invalid token as anonymous and omits the key", async () => {
-      const author = await createTeacher();
-      const activity = await createActivity(author.user.id, { status: "OPEN" });
+    it.each(["malformed", "tampered", "expired", "empty"] as const)(
+      "returns 401 for a present %s token",
+      async (kind) => {
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id, {
+          status: "OPEN",
+        });
+        const tokens = {
+          malformed: "invalid-token",
+          tampered: invalidToken(),
+          expired: signToken(author.user, "-1s"),
+          empty: "",
+        };
 
-      const response = await request(app)
-        .get(`/activities/${activity.id}`)
-        .set("Cookie", "token=invalid-token");
+        const response = await request(app)
+          .get(`/activities/${activity.id}`)
+          .set(...authCookie(tokens[kind]));
 
-      expect(response.status).toBe(200);
-      expect(response.body).not.toHaveProperty("enrollmentStatus");
-    });
+        expect(response.status).toBe(401);
+        expect(response.body.code).toBe("UNAUTHENTICATED");
+        expect(response.body).not.toHaveProperty("enrollmentStatus");
+      },
+    );
 
     it("returns null for an authenticated user who never enrolled", async () => {
       const author = await createTeacher();

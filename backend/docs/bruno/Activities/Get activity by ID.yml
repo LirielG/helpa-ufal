@@ -209,7 +209,7 @@ examples:
             "enrollmentStatus": "CANCELLED"
           }
   - name: 400 Response
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: GET
@@ -229,13 +229,42 @@ examples:
         data: |-
           {
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
                 "field": "activityId",
+                "code": "INVALID_UUID",
                 "message": "activityId must be a valid UUID."
               }
             ]
+          }
+  - name: 401 - Invalid token
+    description: A present but malformed, expired or invalid cookie is rejected before loading the activity.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      headers:
+        - name: Cookie
+          value: token=invalid-token
+      params:
+        - name: activityId
+          value: "a1b2c3d4-0000-4000-8000-000000000001"
+          type: path
+          description: Activity UUID
+    response:
+      status: 401
+      statusText: Unauthorized
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 401,
+            "code": "UNAUTHENTICATED",
+            "message": "Token malformatted, expired or invalid."
           }
   - name: 404 Response
     description: Activity not found or deleted.
@@ -244,7 +273,7 @@ examples:
       method: GET
       params:
         - name: activityId
-          value: ""
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
     response:
@@ -287,15 +316,15 @@ examples:
 docs: |-
   Returns the full data of an activity, including details and address if available.
 
-  **Authentication:** `optionalAuth`. Today the router uses `auth()` without
-  options, which decodes the cookie when present and never answers 401. When the
-  request carries a valid session, the response also includes `enrollmentStatus`,
+  **Authentication:** `optionalAuth()` on the router. Only requests without a
+  `token` cookie are anonymous. A present but empty, malformed, expired or invalid
+  cookie answers 401. When the request carries a valid session, the response also includes `enrollmentStatus`,
   the requester's enrollment in this activity:
 
   | Request | `enrollmentStatus` |
   |---|---|
   | no token | absent |
-  | malformed, expired or invalid token | absent (the request is treated as anonymous) |
+  | empty, malformed, expired or invalid token | 401, no activity data |
   | valid token, user never enrolled | `null` |
   | valid token, with an enrollment | the enrollment `status`: `PENDING`, `APPROVED`, `REJECTED` or `CANCELLED` |
 
@@ -303,8 +332,9 @@ docs: |-
   no session; `null` means authenticated with no enrollment.
 
   - The user is resolved exclusively from the JWT token (never from params, query or body).
-  - Invalid tokens are treated as anonymous for now. Once the route moves to
-    `optionalAuth()`, a present but invalid or expired token will answer 401
-    (see `docs/api-conventions.md`, section 5).
+  - Removed users and revoked sessions answer 401 with code `SESSION_INVALID`.
+  - Database failures propagate as server errors rather than anonymous access.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

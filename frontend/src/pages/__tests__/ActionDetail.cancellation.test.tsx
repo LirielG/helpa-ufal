@@ -73,7 +73,7 @@ function serveSnapshots(...snapshots: Activity[]) {
 
 function failCancellation(status: number, message?: string, code?: string) {
   server.use(
-    http.delete(`${API}/activities/${ACTION_ID}/enroll`, () =>
+    http.delete(`${API}/activities/${ACTION_ID}/enrollments/me`, () =>
       status === 0
         ? HttpResponse.error()
         : HttpResponse.json({ message, code }, { status }),
@@ -84,7 +84,7 @@ function failCancellation(status: number, message?: string, code?: string) {
 function succeedCancellation() {
   server.use(
     http.delete(
-      `${API}/activities/${ACTION_ID}/enroll`,
+      `${API}/activities/${ACTION_ID}/enrollments/me`,
       () => new HttpResponse(null, { status: 204 }),
     ),
   );
@@ -298,7 +298,7 @@ describe("ActionDetail enrollment cancellation", () => {
     serveSnapshots(enrolledAction());
     let requests = 0;
     server.use(
-      http.delete(`${API}/activities/${ACTION_ID}/enroll`, () => {
+      http.delete(`${API}/activities/${ACTION_ID}/enrollments/me`, () => {
         requests += 1;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -487,8 +487,8 @@ describe("ActionDetail enrollment cancellation", () => {
     );
     succeedCancellation();
     server.use(
-      http.post(
-        `${API}/activities/${ACTION_ID}/enroll`,
+      http.put(
+        `${API}/activities/${ACTION_ID}/enrollments/me`,
         () => new HttpResponse(null, { status: 201 }),
       ),
     );
@@ -515,7 +515,7 @@ describe("ActionDetail enrollment cancellation", () => {
     );
     succeedCancellation();
     server.use(
-      http.post(`${API}/activities/${ACTION_ID}/enroll`, () =>
+      http.put(`${API}/activities/${ACTION_ID}/enrollments/me`, () =>
         HttpResponse.json(
           {
             message: "No available slots for this activity.",
