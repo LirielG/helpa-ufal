@@ -6,6 +6,7 @@
  * enums are the Prisma unions. Optional-by-absence becomes `T | null` (§6).
  */
 
+import type { Paginated } from "./common";
 import type { EnrollmentStatus } from "./enrollment";
 
 export type ActivityType =
@@ -91,14 +92,5 @@ export interface ActivityListItem extends ActivityHeader {
   details: ActivityListItemDetails | null;
 }
 
-/**
- * Response of `GET /activities`.
- *
- * Deviates from §3 (the envelope should be `Paginated<ActivityListItem>` keyed
- * by `items`), but this is what the route and the Bruno examples return today.
- * Migrate to `Paginated<ActivityListItem>` once the backend aligns. Never `meta`.
- */
-export interface ListActivitiesResponse {
-  activities: ActivityListItem[];
-  total: number;
-}
+/** Response of `GET /activities`. */
+export type ListActivitiesResponse = Paginated<ActivityListItem>;

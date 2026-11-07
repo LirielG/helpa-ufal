@@ -42,6 +42,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [enrollment],
             total: 1,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -65,6 +66,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [makeEnrollment(), makeEnrollment()],
             total: 2,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -98,6 +100,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [enrollment],
             total: 1,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -131,6 +134,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [teacher],
             total: 1,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -156,6 +160,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [],
             total: 0,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -255,6 +260,7 @@ describe("EnrollmentsPage", () => {
           return HttpResponse.json({
             items: [makeEnrollment({ user: { fullName: "Ana Lima" } })],
             total: 1,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -291,6 +297,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: Array.from({ length: 20 }, () => makeEnrollment()),
             total: 25,
+            totalPages: 2,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -313,6 +320,7 @@ describe("EnrollmentsPage", () => {
           HttpResponse.json({
             items: [makeEnrollment()],
             total: 1,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,
@@ -354,6 +362,7 @@ describe("EnrollmentsPage", () => {
               }),
             ],
             total: 25,
+            totalPages: 2,
             page: Number(page),
             limit: 20,
             totalPresent: 0,
@@ -383,6 +392,7 @@ describe("EnrollmentsPage", () => {
       HttpResponse.json({
         items: [makeEnrollment({ user: { fullName: "Maria Silva" } })],
         total: 3,
+        totalPages: 1,
         page: 1,
         limit: 20,
         totalPresent: 0,
@@ -431,6 +441,7 @@ describe("EnrollmentsPage", () => {
           return HttpResponse.json({
             items: [],
             total: 0,
+            totalPages: 1,
             page: 1,
             limit: 20,
             totalPresent: 0,

@@ -6,6 +6,7 @@ import type {
 } from "@/services/contracts/enrollment";
 import type { UserActivityItem } from "@/services/contracts/user";
 import type { CertificateValidation } from "@/services/contracts/certificate";
+import type { Paginated } from "@/services/contracts/common";
 import type {
   Report,
   ReportActivity,
@@ -308,4 +309,25 @@ export function futureDateInput(daysAhead = 30): string {
   const date = new Date();
   date.setDate(date.getDate() + daysAhead);
   return date.toISOString().split("T")[0];
+}
+
+/**
+ * A paginated body (§3) around `items`, counting pages the way the backend's
+ * `toPaginated` does. Pass `totalPages` to serve a count the client could not
+ * have computed, which proves it reads the field instead of deriving it.
+ */
+export function makePage<T>(
+  items: T[],
+  overrides: Partial<Omit<Paginated<T>, "items">> = {},
+): Paginated<T> {
+  const total = overrides.total ?? items.length;
+  const limit = overrides.limit ?? 20;
+
+  return {
+    items,
+    total,
+    page: overrides.page ?? 1,
+    limit,
+    totalPages: overrides.totalPages ?? Math.max(1, Math.ceil(total / limit)),
+  };
 }

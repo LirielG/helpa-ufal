@@ -1,3 +1,5 @@
+import type { Paginated } from "../../services/contracts/common";
+
 /** Mirrors SigaaActivityResponse in backend/src/types/sigaa.ts. */
 export interface SigaaActivity {
   id: string;
@@ -10,12 +12,7 @@ export interface SigaaActivity {
   lastSeenAt: string;
 }
 
-export interface SigaaListResponse {
-  items: SigaaActivity[];
-  total: number;
-  page: number;
-  limit: number;
-}
+export type SigaaListResponse = Paginated<SigaaActivity>;
 
 export interface SigaaFilterOptions {
   types: string[];
