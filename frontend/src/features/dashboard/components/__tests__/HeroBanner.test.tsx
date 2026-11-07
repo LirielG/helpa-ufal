@@ -129,6 +129,61 @@ describe("HeroBanner", () => {
     });
   });
 
+  it("sends the correct query parameters (status=OPEN, orderBy=start_date, order=asc, limit=4)", async () => {
+    let params: URLSearchParams | null = null;
+    server.use(
+      http.get(`${API}/activities`, ({ request }) => {
+        params = new URL(request.url).searchParams;
+        return HttpResponse.json({
+          activities: mockActions,
+          total: mockActions.length,
+        });
+      }),
+    );
+
+    render(<HeroBanner />);
+
+    await waitFor(() => {
+      expect(params?.get("status")).toBe("OPEN");
+      expect(params?.get("orderBy")).toBe("start_date");
+      expect(params?.get("order")).toBe("asc");
+      expect(params?.get("limit")).toBe("4");
+    });
+  });
+
+  it("recovers and shows carousel if a refresh succeeds after a failure", async () => {
+    let attempts = 0;
+    server.use(
+      http.get(`${API}/activities`, ({ request }) => {
+        const url = new URL(request.url);
+        if (
+          url.searchParams.get("status") === "OPEN" &&
+          url.searchParams.get("limit") === "4"
+        ) {
+          attempts += 1;
+          if (attempts === 1) {
+            return new HttpResponse(null, { status: 500 });
+          }
+          return HttpResponse.json({
+            activities: mockActions,
+            total: mockActions.length,
+          });
+        }
+        return HttpResponse.json({ activities: [], total: 0 });
+      }),
+    );
+
+    const { rerender } = render(<HeroBanner refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+    });
+
+    rerender(<HeroBanner refreshKey={1} />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+  });
+
   describe("automatic rotation", () => {
     beforeEach(() => {
       vi.useFakeTimers();

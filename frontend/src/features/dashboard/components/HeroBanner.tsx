@@ -30,7 +30,8 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
     fetchFeaturedActions()
       .then((data) => {
         if (!isMounted) return;
-        setFeaturedActions(data ?? []);
+        setHasError(false);
+        setFeaturedActions(data);
         setCurrentSlide(0);
       })
       .catch(() => {

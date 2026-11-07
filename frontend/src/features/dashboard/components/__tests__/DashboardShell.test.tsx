@@ -287,11 +287,14 @@ describe("DashboardShell", () => {
 
   it("reloads feed without navigating when creating an action from /dashboard", async () => {
     let getActivitiesCount = 0;
+    let carouselRequestsCount = 0;
 
     server.use(
       http.get("*/activities", ({ request }) => {
         const params = new URL(request.url).searchParams;
         if (params.get("limit") !== "4") {
+          carouselRequestsCount += 1;
+        } else {
           getActivitiesCount += 1;
         }
         return HttpResponse.json({ activities: [], total: 0 });
@@ -307,6 +310,7 @@ describe("DashboardShell", () => {
     });
 
     await waitFor(() => expect(getActivitiesCount).toBe(1));
+    await waitFor(() => expect(carouselRequestsCount).toBe(1));
     const locationKey = screen.getByTestId("current-location-key").textContent;
 
     const createButton = screen.getByRole("button", {
@@ -325,6 +329,7 @@ describe("DashboardShell", () => {
       ).toBeInTheDocument();
     });
     await waitFor(() => expect(getActivitiesCount).toBe(2));
+    await waitFor(() => expect(carouselRequestsCount).toBe(2));
 
     await user.click(
       screen.getByRole("button", { name: /Visualizar no feed/i }),

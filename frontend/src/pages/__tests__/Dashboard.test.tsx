@@ -877,7 +877,7 @@ describe("Dashboard", () => {
   });
 });
 
-describe("HeroBanner carousel (#358)", () => {
+describe("HeroBanner carousel", () => {
   it("does not show CANCELLED or COMPLETED actions in the carousel", async () => {
     const mixedCatalogue = [
       {
