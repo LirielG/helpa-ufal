@@ -23,9 +23,7 @@ describe("authStore", () => {
     it("stores the user from the response and returns true on success", async () => {
       const user = makeUser();
       server.use(
-        http.post(`${API}/auth/login`, () =>
-          HttpResponse.json({ user }),
-        ),
+        http.post(`${API}/auth/login`, () => HttpResponse.json({ user })),
       );
 
       const result = await store().login(makeLoginRequest());

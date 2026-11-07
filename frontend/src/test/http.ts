@@ -24,9 +24,7 @@ export const API = config.apiUrl;
  * after each test via `server.resetHandlers()`.
  */
 export const handlers = [
-  http.post(`${API}/auth/login`, () =>
-    HttpResponse.json({ user: makeUser() }),
-  ),
+  http.post(`${API}/auth/login`, () => HttpResponse.json({ user: makeUser() })),
 
   http.post(`${API}/auth/register`, () =>
     HttpResponse.json(makeUser(), { status: 201 }),
