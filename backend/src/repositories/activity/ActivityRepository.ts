@@ -345,14 +345,14 @@ class ActivityRepository implements IActivityRepository {
       this._prisma.activity.count({ where: whereClause }),
     ]);
 
-    const activities = rawActivities.map((a) => ({
+    const items = rawActivities.map((a) => ({
       ...a,
       availableSlots: Math.max(0, a.slots - a._count.enrollments),
       _count: undefined,
     }));
 
     return {
-      activities,
+      items,
       total,
     };
   }

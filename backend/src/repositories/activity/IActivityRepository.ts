@@ -55,6 +55,6 @@ export interface IRepositoryListActivitiesFilters {
 }
 
 export interface IRepositoryListActivitiesResponse {
-  activities: ActivityResponse[];
+  items: ActivityResponse[];
   total: number;
 }

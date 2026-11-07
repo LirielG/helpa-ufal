@@ -1,4 +1,5 @@
 import type { ActivityType } from "./activity.js";
+import type { Paginated } from "./pagination.js";
 
 export type ScrapedSigaaActivity = {
   sigaaId: string;
@@ -18,12 +19,7 @@ export type SigaaActivityResponse = {
   lastSeenAt: Date;
 };
 
-export type SigaaListResponse = {
-  items: SigaaActivityResponse[];
-  total: number;
-  page: number;
-  limit: number;
-};
+export type SigaaListResponse = Paginated<SigaaActivityResponse>;
 
 export type SigaaFilterOptions = {
   types: string[];

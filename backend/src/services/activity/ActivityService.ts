@@ -25,6 +25,7 @@ import {
   ActivityFullResponse,
   ActivityFilterOptions,
 } from "@/types/activity.js";
+import { toPaginated } from "@/types/pagination.js";
 import ValidationError, {
   ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
@@ -278,7 +279,7 @@ class ActivityService implements IActivityService {
       order: (filters.order ?? "desc") as "asc" | "desc",
     });
 
-    return result;
+    return toPaginated(result.items, result.total, pageNum, limitNum);
   }
 
   public async listFilterOptions(): Promise<ActivityFilterOptions> {

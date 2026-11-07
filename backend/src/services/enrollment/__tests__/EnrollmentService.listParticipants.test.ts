@@ -116,6 +116,7 @@ describe("EnrollmentService.listParticipants", () => {
       total: 1,
       page: 1,
       limit: 10,
+      totalPages: 1,
       totalPresent: 0,
     });
     expect(result.items[0].user).not.toHaveProperty("passwordHash");
@@ -261,6 +262,7 @@ describe("EnrollmentService.listParticipants", () => {
       total: 0,
       page: 1,
       limit: 10,
+      totalPages: 1,
       totalPresent: 0,
     });
   });
