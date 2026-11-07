@@ -625,9 +625,7 @@ describe("ActivityService.list", () => {
 
   it("returns the paginated envelope with default page 1, limit 20, and computed totalPages", async () => {
     const repoResult = {
-      items: [
-        { id: "act-1", title: "Oficina de Introdução à Programação" },
-      ],
+      items: [{ id: "act-1", title: "Oficina de Introdução à Programação" }],
       total: 1,
     };
     const repository = mockRepository({

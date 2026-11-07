@@ -20,7 +20,7 @@ describe("ActivityController.list", () => {
     "lists activities using only filters for an $session request",
     async ({ user }) => {
       const filters = { area: "Saúde", page: "2", limit: "5" };
-      const result = { activities: [], total: 0 };
+      const result = { items: [], total: 0, page: 2, limit: 5, totalPages: 1 };
       const list = vi.fn().mockResolvedValue(result);
       const activityService = { list } as unknown as IActivityService;
       const controller = new ActivityController({ activityService });

@@ -239,8 +239,8 @@ describe("GET /activities — area filter", () => {
 
       expect(anonymous.status).toBe(200);
       expect(anonymous.body.total).toBe(1);
-      expect(anonymous.body.activities).toHaveLength(1);
-      expect(anonymous.body.activities[0].id).toBe(activity.id);
+      expect(anonymous.body.items).toHaveLength(1);
+      expect(anonymous.body.items[0].id).toBe(activity.id);
       expect(authenticated.status).toBe(anonymous.status);
       expect(authenticated.body).toEqual(anonymous.body);
     },

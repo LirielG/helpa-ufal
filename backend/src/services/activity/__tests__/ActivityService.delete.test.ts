@@ -150,7 +150,7 @@ describe("ActivityService.list", () => {
   it("maps start_date to startDate and passes it to repository.list", async () => {
     const { activityRepository } = mockRepositories({
       activity: {
-        list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+        list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       },
     });
     const service = new ActivityService({ activityRepository });
@@ -167,7 +167,7 @@ describe("ActivityService.list", () => {
   it("maps created_at to createdAt and passes it to repository.list", async () => {
     const { activityRepository } = mockRepositories({
       activity: {
-        list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+        list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       },
     });
     const service = new ActivityService({ activityRepository });

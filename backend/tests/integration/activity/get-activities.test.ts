@@ -60,7 +60,9 @@ describe("GET /activities", () => {
       await createActivity(author.user.id, { status: "OPEN" });
     }
 
-    const response = await request(app).get("/activities").query({ page: 2, limit: 5 });
+    const response = await request(app)
+      .get("/activities")
+      .query({ page: 2, limit: 5 });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
