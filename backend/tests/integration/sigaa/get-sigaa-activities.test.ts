@@ -50,6 +50,7 @@ describe("GET /sigaa-activities", () => {
     expect(response.body.page).toBe(2);
     expect(response.body.limit).toBe(2);
     expect(response.body.total).toBe(3);
+    expect(response.body.totalPages).toBe(2);
     expect(response.body.items).toHaveLength(1);
   });
 

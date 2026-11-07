@@ -111,6 +111,7 @@ examples:
             "total": 3,
             "page": 1,
             "limit": 10,
+            "totalPages": 1,
             "totalPresent": 1
           }
 
@@ -138,6 +139,7 @@ examples:
             "total": 0,
             "page": 1,
             "limit": 10,
+            "totalPages": 1,
             "totalPresent": 0
           }
 
@@ -367,7 +369,7 @@ docs: |-
   - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
-  - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
+  - Standard paginated envelope plus the route-specific totalPresent aggregate. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
   - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:activityId.
   - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.

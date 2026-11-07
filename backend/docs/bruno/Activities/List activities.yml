@@ -294,8 +294,7 @@ docs: |-
   **Authentication:** public.
 
   ## Response envelope
-  Standard `Paginated<T>` envelope: `{ "items": [...], "total": <number>, "page": <number>, "limit": <number>, "totalPages": <number> }`.
-  `total` and `totalPages` reflect all applied filters; `items` carries the
+  Standard paginated envelope (see api-conventions.md). `total` and `totalPages` reflect all applied filters; `items` carries the
   current page. Items embed the `details` relation (including `details.area`)
   and the computed `availableSlots`.
 

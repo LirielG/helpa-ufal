@@ -3,7 +3,7 @@ import type {
   ActivityType,
   CampusLocation,
 } from "./activity.js";
-import type { PaginatedList } from "./pagination.js";
+import type { Paginated } from "./pagination.js";
 
 export type EnrollmentStatus =
   "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
@@ -65,8 +65,10 @@ export type EnrollmentParticipantResponse = EnrollmentResponse & {
 export type ConfirmAttendanceInput =
   { attended: false } | { attended: true; workloadHours: number };
 
+// `total` is the global count of APPROVED enrollments, never affected by the
+// current page.
 export type ParticipantsListResponse =
-  PaginatedList<EnrollmentParticipantResponse> & {
+  Paginated<EnrollmentParticipantResponse> & {
     /** Count of attendanceConfirmed = true across ALL enrollments of the activity. */
     totalPresent: number;
   };
@@ -94,5 +96,4 @@ export type EnrollmentWithActivityResponse = {
   activity: EnrollmentActivitySummary;
 };
 
-export type EnrollmentListResponse =
-  PaginatedList<EnrollmentWithActivityResponse>;
+export type EnrollmentListResponse = Paginated<EnrollmentWithActivityResponse>;
