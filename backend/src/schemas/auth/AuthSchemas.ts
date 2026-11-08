@@ -2,8 +2,9 @@ import { z } from "zod";
 import { FULL_NAME_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
 import { isPasswordValid } from "@/utils/password.js";
 
+export const emailField = z.string().trim().toLowerCase().pipe(z.email());
 export const LoginSchema = z.object({
-  email: z.email(),
+  email: emailField,
   password: z.string().min(1),
 });
 
@@ -16,7 +17,7 @@ export const RegisterSchema = z.discriminatedUnion("userType", [
   z.object({
     userType: z.literal("STUDENT"),
     fullName: z.string().min(1).max(FULL_NAME_MAX_LENGTH),
-    email: z.email(),
+    email: emailField,
     password: passwordField,
     course: z.string().min(1),
     registrationCode: z.string().min(1),
@@ -25,7 +26,7 @@ export const RegisterSchema = z.discriminatedUnion("userType", [
   z.object({
     userType: z.literal("TEACHER"),
     fullName: z.string().min(1).max(FULL_NAME_MAX_LENGTH),
-    email: z.email(),
+    email: emailField,
     password: passwordField,
     course: z.string().optional(),
     registrationCode: z.string().min(1),
