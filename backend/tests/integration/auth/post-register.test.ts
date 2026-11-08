@@ -376,4 +376,20 @@ describe("POST /auth/register", () => {
     expect(response.body.code).toBe("ALREADY_IN_USE");
     expect(await prisma.user.count({ where: { email: base } })).toBe(1);
   });
+  it("the database refuses an email that is not trimmed and lowercase", async () => {
+    await expect(
+      prisma.user.create({
+        data: {
+          fullName: "Ana Direta",
+          email: "Ana.Direta@ufal.br",
+          passwordHash: "x",
+          userType: "STUDENT",
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(
+      await prisma.user.count({ where: { email: "Ana.Direta@ufal.br" } }),
+    ).toBe(0);
+  });
 });
