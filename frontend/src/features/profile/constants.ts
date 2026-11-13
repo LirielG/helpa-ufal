@@ -33,14 +33,17 @@ export const PROFILE_SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
   { id: "managed", label: "Atividades Gerenciadas" },
 ];
 
-export const PROFILE_TABS: ProfileTab[] = ["personal", "actions"];
+export const PROFILE_TABS: Array<{ id: ProfileTab; label: string }> = [
+  { id: "personal", label: "Dados Pessoais" },
+  { id: "actions", label: "Ações" },
+];
 
 export const DEFAULT_PROFILE_TAB: ProfileTab = "personal";
 
 export const DEFAULT_ACTIVITY_STATUS: ActivityStatus = "enrolled";
 
 export const isProfileTab = (value: string | null): value is ProfileTab =>
-  PROFILE_TABS.includes(value as ProfileTab);
+  PROFILE_TABS.some((tab) => tab.id === value);
 
 export const isActivityStatus = (
   value: string | null,
