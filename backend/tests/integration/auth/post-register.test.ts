@@ -345,4 +345,48 @@ describe("POST /auth/register", () => {
     expect(raw).not.toMatch(/select |insert |constraint/i);
     expect(response.body.details).toEqual({ field: "registrationCode" });
   });
+
+  it("stores the email trimmed and in lowercase", async () => {
+    const email = `Ana.${unique("Silva")}@ufal.br`;
+
+    const response = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ email: `  ${email}  ` }));
+
+    expect(response.status).toBe(201);
+    expect(response.body.email).toBe(email.toLowerCase());
+    const stored = await prisma.user.findUniqueOrThrow({
+      where: { id: response.body.id },
+    });
+    expect(stored.email).toBe(email.toLowerCase());
+  });
+
+  it("returns 409 when the same email is registered again with different casing", async () => {
+    const base = `ana.${unique("silva")}@ufal.br`;
+    await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ email: base.toUpperCase() }))
+      .expect(201);
+
+    const response = await request(app)
+      .post(REGISTER_URL)
+      .send(aStudentPayload({ email: base }));
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("ALREADY_IN_USE");
+    expect(await prisma.user.count({ where: { email: base } })).toBe(1);
+  });
+
+  it("the database refuses an email that is not trimmed and lowercase", async () => {
+    await expect(
+      prisma.user.create({
+        data: {
+          fullName: "Ana Direta",
+          email: "Ana.Direta@ufal.br",
+          passwordHash: "x",
+          userType: "STUDENT",
+        },
+      }),
+    ).rejects.toThrow(/User_email_normalized_check/);
+  });
 });

@@ -39,6 +39,17 @@ describe("POST /auth/login", () => {
     expect(sessionCookie).toMatch(/HttpOnly/i);
   });
 
+  it("logs in ignoring the casing and the spaces around the email", async () => {
+    await createStudent({ email: "ana.login@ufal.br" });
+
+    const response = await request(app)
+      .post(LOGIN_URL)
+      .send({ email: "  ANA.Login@UFAL.br ", password: DEFAULT_PASSWORD });
+
+    expect(response.status).toBe(200);
+    expect(response.body.user.email).toBe("ana.login@ufal.br");
+  });
+
   it("sets Max-Age derived from JWT_EXPIRES_IN — cookie and token expire together", async () => {
     const email = "aluno-maxage@ufal.br";
     await createStudent({ email });

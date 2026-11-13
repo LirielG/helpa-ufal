@@ -20,7 +20,7 @@ export async function seedAdmin() {
     throw new Error(`Missing required env vars: ${missingVars.join(", ")}`);
   }
 
-  const adminEmail = env.ADMIN_EMAIL!;
+  const adminEmail = env.ADMIN_EMAIL!.trim().toLowerCase();
   const adminPassword = env.ADMIN_PASSWORD!;
   const adminFullName = env.ADMIN_FULL_NAME!;
   const adminRegistrationCode = env.ADMIN_REGISTRATION_CODE!;
