@@ -6,6 +6,7 @@ import type {
   SigaaFilterOptions,
   SigaaListResponse,
 } from "@/types/sigaa.js";
+import { toPaginated } from "@/types/pagination.js";
 import SigaaActivityRepository from "@/repositories/sigaa/SigaaActivityRepository.js";
 import SigaaSyncService from "./SigaaSyncService.js";
 import ValidationError, {
@@ -53,20 +54,17 @@ export class SigaaActivityService implements ISigaaActivityService {
       order,
     });
 
-    return {
-      items: result.activities.map((a) => ({
-        id: a.id,
-        sigaaId: a.sigaaId,
-        title: a.title,
-        type: a.type,
-        normalizedType: a.normalizedType,
-        department: a.department,
-        lastSeenAt: a.lastSeenAt,
-      })),
-      total: result.total,
-      page,
-      limit,
-    };
+    const items = result.activities.map((a) => ({
+      id: a.id,
+      sigaaId: a.sigaaId,
+      title: a.title,
+      type: a.type,
+      normalizedType: a.normalizedType,
+      department: a.department,
+      lastSeenAt: a.lastSeenAt,
+    }));
+
+    return toPaginated(items, result.total, page, limit);
   }
 
   public async listFilterOptions(): Promise<SigaaFilterOptions> {

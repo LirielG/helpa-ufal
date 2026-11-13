@@ -19,9 +19,9 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(2);
     // Ordering (createdAt desc) is not the filter's business: compare as a set.
-    const ids = response.body.activities.map((a: { id: string }) => a.id);
+    const ids = response.body.items.map((a: { id: string }) => a.id);
     expect([...ids].sort()).toEqual([first.id, second.id].sort());
-    for (const item of response.body.activities) {
+    for (const item of response.body.items) {
       expect(item.details.area).toBe("Saúde");
     }
   });
@@ -35,7 +35,7 @@ describe("GET /activities — area filter", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(1);
-      expect(response.body.activities[0].details.area).toBe("Saúde");
+      expect(response.body.items[0].details.area).toBe("Saúde");
     }
   });
 
@@ -48,7 +48,7 @@ describe("GET /activities — area filter", () => {
       .query({ area: "Astrobiologia" });
 
     expect(response.status).toBe(200);
-    expect(response.body.activities).toEqual([]);
+    expect(response.body.items).toEqual([]);
     expect(response.body.total).toBe(0);
   });
 
@@ -97,7 +97,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("combines area with search, type, status and campus", async () => {
@@ -141,7 +141,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("still lists CANCELLED activities when filtering by area", async () => {
@@ -156,7 +156,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].status).toBe("CANCELLED");
+    expect(response.body.items[0].status).toBe("CANCELLED");
   });
 
   // ---------- 200 - OK: pagination over the filtered subset ----------
@@ -176,7 +176,7 @@ describe("GET /activities — area filter", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(5);
-      for (const item of response.body.activities) {
+      for (const item of response.body.items) {
         expect(item.details.area).toBe("Saúde");
         expect(seen.has(item.id)).toBe(false); // no repeats across pages
         seen.add(item.id);
@@ -239,8 +239,8 @@ describe("GET /activities — area filter", () => {
 
       expect(anonymous.status).toBe(200);
       expect(anonymous.body.total).toBe(1);
-      expect(anonymous.body.activities).toHaveLength(1);
-      expect(anonymous.body.activities[0].id).toBe(activity.id);
+      expect(anonymous.body.items).toHaveLength(1);
+      expect(anonymous.body.items[0].id).toBe(activity.id);
       expect(authenticated.status).toBe(anonymous.status);
       expect(authenticated.body).toEqual(anonymous.body);
     },

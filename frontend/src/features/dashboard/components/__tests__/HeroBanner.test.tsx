@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@/test";
 import { HeroBanner } from "../HeroBanner";
+import { getActionCoverVariant } from "@/utils/actionCover";
 import type { ActivityListItem } from "@/services/contracts/activity";
 
 const mockActions = [
@@ -145,6 +146,22 @@ describe("HeroBanner", () => {
       expect(
         within(visible[0]).getByRole("link", { name: "Saiba mais" }),
       ).toHaveAttribute("href", "/activity/2");
+    });
+  });
+
+  it("draws each slide's cover from its action id, as the feed card does", () => {
+    render(<HeroBanner actions={mockActions} />);
+
+    const slides = screen.getAllByTestId("hero-slide");
+    slides.forEach((slide, index) => {
+      // Decorative: the slide heading already names the action.
+      const cover = within(slide).getByRole("img", { hidden: true });
+      expect(cover.tagName).not.toBe("IMG");
+      expect(cover).toHaveAttribute("aria-hidden", "true");
+      expect(cover).toHaveAttribute(
+        "data-cover-variant",
+        getActionCoverVariant(mockActions[index].id).key,
+      );
     });
   });
 });

@@ -1,6 +1,7 @@
 import { MapPin, Calendar, Users } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
+import { ActionCover } from "@/components/ActionCover";
 import type {
   ActivityListItem,
   ActivityStatus,
@@ -54,10 +55,11 @@ export function ActionCard({ action }: ActionCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
       <div className="relative h-48 overflow-hidden shrink-0">
-        <img
-          src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400"
-          alt={action.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        <ActionCover
+          id={action.id}
+          type={action.type}
+          title={action.title}
+          className="w-full h-full group-hover:scale-105 transition-transform duration-300"
         />
       </div>
 

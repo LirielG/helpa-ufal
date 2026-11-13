@@ -13,6 +13,7 @@ describe("fetchEnrollments", () => {
         return HttpResponse.json({
           items: [makeEnrollment()],
           total: 1,
+          totalPages: 1,
           page: 2,
           limit: 10,
           totalPresent: 0,

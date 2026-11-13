@@ -16,6 +16,7 @@ function listOf(name: string, page: number) {
   return HttpResponse.json({
     items: [makeEnrollment({ user: { fullName: name } })],
     total: 25,
+    totalPages: 2,
     page,
     limit: 20,
     totalPresent: 0,
@@ -105,6 +106,28 @@ describe("useEnrollments", () => {
   });
 });
 
+describe("useEnrollments page count", () => {
+  it("takes totalPages from the API instead of computing it", async () => {
+    // 25 over a limit of 20 would give 2 pages; only the field can say 9.
+    server.use(
+      http.get(`${API}/activities/:id/enrollments`, () =>
+        HttpResponse.json({
+          items: [makeEnrollment()],
+          total: 25,
+          totalPages: 9,
+          page: 1,
+          limit: 20,
+          totalPresent: 0,
+        }),
+      ),
+    );
+
+    const { result } = renderHook(() => useEnrollments("act-1"));
+
+    await waitFor(() => expect(result.current.totalPages).toBe(9));
+  });
+});
+
 describe("useEnrollments.applyAttendance", () => {
   function listWith(
     items: ReturnType<typeof makeEnrollment>[],
@@ -115,6 +138,7 @@ describe("useEnrollments.applyAttendance", () => {
         HttpResponse.json({
           items,
           total: items.length,
+          totalPages: 1,
           page: 1,
           limit: 20,
           totalPresent,

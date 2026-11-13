@@ -48,6 +48,7 @@ function serveList(items: EnrollmentListItem[], totalPresent = 0) {
       HttpResponse.json({
         items,
         total: items.length,
+        totalPages: 1,
         page: 1,
         limit: 20,
         totalPresent,
@@ -389,6 +390,7 @@ describe("EnrollmentsPage — attendance", () => {
         return HttpResponse.json({
           items: [maria],
           total: 1,
+          totalPages: 1,
           page: 1,
           limit: 20,
           totalPresent: 0,
@@ -444,6 +446,7 @@ describe("EnrollmentsPage — attendance", () => {
               ? [makeEnrollment({ user: { fullName: "Maria Silva" } })]
               : [],
           total: listCalls === 1 ? 1 : 0,
+          totalPages: 1,
           page: 1,
           limit: 20,
           totalPresent: 0,
