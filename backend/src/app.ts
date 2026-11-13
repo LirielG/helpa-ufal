@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import Router from "@/routers/index.js";
 import errorHandler from "@/controllers/error/ErrorHandler.js";
+import { requestLogger } from "@/middlewares/logging/requestLogger.js";
 import { env } from "@/config/env.js";
 import { createGeneralRateLimiters } from "@/middlewares/rateLimit/generalRateLimiters.js";
 
@@ -10,6 +11,10 @@ const app = express();
 const { globalRateLimiter, clientRateLimiter } = createGeneralRateLimiters();
 
 app.set("trust proxy", env.TRUST_PROXY);
+
+// First, so that CORS preflight responses and body-parse errors, which never
+// reach the routers, still get a log line.
+app.use(requestLogger);
 
 app.use(
   cors({
