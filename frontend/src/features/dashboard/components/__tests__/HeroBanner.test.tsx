@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@/test";
+import {
+  act,
+  render,
+  screen,
+  within,
+  API,
+  http,
+  HttpResponse,
+  makePage,
+  server,
+  waitFor,
+} from "@/test";
 import { HeroBanner } from "../HeroBanner";
 import { getActionCoverVariant } from "@/utils/actionCover";
 import type { ActivityListItem } from "@/services/contracts/activity";
@@ -11,48 +22,74 @@ const mockActions = [
   { id: "4", title: "Slide 4", startDate: "2026-05-12T12:00:00Z" },
 ] as unknown as ActivityListItem[];
 
-function getVisibleSlideTitle(): string {
-  return screen.getByRole("heading").textContent || "";
+function setupFeaturedServer(activities = mockActions) {
+  server.use(
+    http.get(`${API}/activities`, ({ request }) => {
+      const url = new URL(request.url);
+      const status = url.searchParams.get("status");
+      const limit = url.searchParams.get("limit");
+
+      if (status === "OPEN" && limit === "4") {
+        return HttpResponse.json(makePage(activities));
+      }
+
+      return HttpResponse.json(makePage([]));
+    }),
+  );
+}
+
+async function getVisibleSlideTitle(): Promise<string> {
+  const heading = await screen.findByRole("heading");
+  return heading.textContent || "";
 }
 
 describe("HeroBanner", () => {
-  it("shows the first slide on mount", () => {
-    render(<HeroBanner actions={mockActions} />);
-    expect(getVisibleSlideTitle()).toBe("Slide 1");
+  beforeEach(() => {
+    setupFeaturedServer();
+  });
+
+  it("shows the first slide on mount", async () => {
+    render(<HeroBanner />);
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
   });
 
   it("moves to the next slide", async () => {
-    const { user } = render(<HeroBanner actions={mockActions} />);
+    const { user } = render(<HeroBanner />);
+    await screen.findByRole("heading");
     await user.click(screen.getByRole("button", { name: "Próximo slide" }));
-    expect(getVisibleSlideTitle()).toBe("Slide 2");
+    expect(await getVisibleSlideTitle()).toBe("Slide 2");
   });
 
   it("wraps around to the last slide when going back from the first", async () => {
-    const { user } = render(<HeroBanner actions={mockActions} />);
+    const { user } = render(<HeroBanner />);
+    await screen.findByRole("heading");
     await user.click(screen.getByRole("button", { name: "Slide anterior" }));
-    expect(getVisibleSlideTitle()).toBe("Slide 4");
+    expect(await getVisibleSlideTitle()).toBe("Slide 4");
   });
 
   it("wraps around to the first slide when advancing past the last", async () => {
-    const { user } = render(<HeroBanner actions={mockActions} />);
+    const { user } = render(<HeroBanner />);
+    await screen.findByRole("heading");
     for (let click = 0; click < 4; click += 1) {
       await user.click(screen.getByRole("button", { name: "Próximo slide" }));
     }
-    expect(getVisibleSlideTitle()).toBe("Slide 1");
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
   });
 
   it("jumps to the slide picked from the dots and marks it as current", async () => {
-    const { user } = render(<HeroBanner actions={mockActions} />);
+    const { user } = render(<HeroBanner />);
+    await screen.findByRole("heading");
     await user.click(screen.getByRole("button", { name: "Ir para slide 3" }));
 
-    expect(getVisibleSlideTitle()).toBe("Slide 3");
+    expect(await getVisibleSlideTitle()).toBe("Slide 3");
     expect(
       screen.getByRole("button", { name: "Ir para slide 3" }),
     ).toHaveAttribute("aria-current", "true");
   });
 
   it("links 'Saiba mais' to the detail screen of the slide currently visible", async () => {
-    const { user } = render(<HeroBanner actions={mockActions} />);
+    const { user } = render(<HeroBanner />);
+    await screen.findByRole("heading");
 
     expect(screen.getByRole("link", { name: "Saiba mais" })).toHaveAttribute(
       "href",
@@ -66,6 +103,79 @@ describe("HeroBanner", () => {
       "/activity/2",
     );
   });
+  it("does not render when there are no OPEN actions available", async () => {
+    setupFeaturedServer([]);
+    render(<HeroBanner />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    });
+  });
+
+  it("does not render when the request fails with error", async () => {
+    server.use(
+      http.get(
+        `${API}/activities`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    render(<HeroBanner />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    });
+  });
+
+  it("sends the correct query parameters (status=OPEN, orderBy=start_date, order=asc, limit=4)", async () => {
+    let params: URLSearchParams | null = null;
+    server.use(
+      http.get(`${API}/activities`, ({ request }) => {
+        params = new URL(request.url).searchParams;
+        return HttpResponse.json(makePage(mockActions));
+      }),
+    );
+
+    render(<HeroBanner />);
+
+    await waitFor(() => {
+      expect(params?.get("status")).toBe("OPEN");
+      expect(params?.get("orderBy")).toBe("start_date");
+      expect(params?.get("order")).toBe("asc");
+      expect(params?.get("limit")).toBe("4");
+    });
+  });
+
+  it("recovers and shows carousel if a refresh succeeds after a failure", async () => {
+    let attempts = 0;
+    server.use(
+      http.get(`${API}/activities`, ({ request }) => {
+        const url = new URL(request.url);
+        if (
+          url.searchParams.get("status") === "OPEN" &&
+          url.searchParams.get("limit") === "4"
+        ) {
+          attempts += 1;
+          if (attempts === 1) {
+            return new HttpResponse(null, { status: 500 });
+          }
+          return HttpResponse.json(makePage(mockActions));
+        }
+        return HttpResponse.json(makePage([]));
+      }),
+    );
+
+    const { rerender } = render(<HeroBanner refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+    });
+
+    rerender(<HeroBanner refreshKey={1} />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+  });
 
   describe("automatic rotation", () => {
     beforeEach(() => {
@@ -76,22 +186,29 @@ describe("HeroBanner", () => {
       vi.useRealTimers();
     });
 
-    it("advances on its own every five seconds", () => {
-      render(<HeroBanner actions={mockActions} />);
+    it("advances on its own every five seconds", async () => {
+      render(<HeroBanner />);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
 
       act(() => {
         vi.advanceTimersByTime(5000);
       });
-      expect(getVisibleSlideTitle()).toBe("Slide 2");
+      expect(screen.getByRole("heading").textContent).toBe("Slide 2");
 
       act(() => {
         vi.advanceTimersByTime(5000);
       });
-      expect(getVisibleSlideTitle()).toBe("Slide 3");
+      expect(screen.getByRole("heading").textContent).toBe("Slide 3");
     });
 
-    it("stops rotating once it leaves the screen", () => {
-      const { unmount } = render(<HeroBanner actions={mockActions} />);
+    it("stops rotating once it leaves the screen", async () => {
+      const { unmount } = render(<HeroBanner />);
+      await act(async () => {
+        await Promise.resolve();
+      });
       unmount();
       expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
       expect(vi.getTimerCount()).toBe(0);
@@ -101,8 +218,9 @@ describe("HeroBanner", () => {
   // jsdom does not implement `inert` behaviour, so these tests only assert the
   // attribute; tab order and click targeting must be checked in a real browser.
   describe("hidden slides leave the tab order and the click area", () => {
-    it("puts inert on the hidden slides only", () => {
-      render(<HeroBanner actions={mockActions} />);
+    it("puts inert on the hidden slides only", async () => {
+      render(<HeroBanner />);
+      await screen.findByRole("heading");
 
       const slides = screen.getAllByTestId("hero-slide");
       expect(slides).toHaveLength(4);
@@ -118,8 +236,9 @@ describe("HeroBanner", () => {
       ).toHaveAttribute("href", "/activity/1");
     });
 
-    it("keeps the control of every hidden slide inside an inert container", () => {
-      render(<HeroBanner actions={mockActions} />);
+    it("keeps the control of every hidden slide inside an inert container", async () => {
+      render(<HeroBanner />);
+      await screen.findByRole("heading");
 
       const links = screen.getAllByRole("link", {
         name: "Saiba mais",
@@ -133,7 +252,8 @@ describe("HeroBanner", () => {
     });
 
     it("moves inert to the slide that becomes visible when advancing", async () => {
-      const { user } = render(<HeroBanner actions={mockActions} />);
+      const { user } = render(<HeroBanner />);
+      await screen.findByRole("heading");
       await user.click(screen.getByRole("button", { name: "Próximo slide" }));
 
       const slides = screen.getAllByTestId("hero-slide");
@@ -149,10 +269,11 @@ describe("HeroBanner", () => {
     });
   });
 
-  it("draws each slide's cover from its action id, as the feed card does", () => {
-    render(<HeroBanner actions={mockActions} />);
+  it("draws each slide's cover from its action id, as the feed card does", async () => {
+    setupFeaturedServer();
+    render(<HeroBanner />);
 
-    const slides = screen.getAllByTestId("hero-slide");
+    const slides = await screen.findAllByTestId("hero-slide");
     slides.forEach((slide, index) => {
       // Decorative: the slide heading already names the action.
       const cover = within(slide).getByRole("img", { hidden: true });

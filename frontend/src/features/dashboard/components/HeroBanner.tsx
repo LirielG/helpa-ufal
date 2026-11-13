@@ -4,15 +4,43 @@ import { Link } from "react-router";
 import { formatDate } from "../../../utils";
 import type { ActivityListItem } from "@/services/contracts/activity";
 import { ActionCover } from "@/components/ActionCover";
+import { fetchFeaturedActions } from "../services";
 
 interface HeroBannerProps {
-  actions: ActivityListItem[];
+  refreshKey?: number;
 }
 
-export function HeroBanner({ actions }: HeroBannerProps) {
+export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [featuredActions, setFeaturedActions] = useState<ActivityListItem[]>(
+    [],
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  const featuredActions = actions.slice(0, 4);
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchFeaturedActions()
+      .then((data) => {
+        if (!isMounted) return;
+        setHasError(false);
+        setFeaturedActions(data);
+        setCurrentSlide(0);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setHasError(true);
+        setFeaturedActions([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshKey]);
 
   useEffect(() => {
     if (featuredActions.length <= 1) return;
@@ -36,10 +64,14 @@ export function HeroBanner({ actions }: HeroBannerProps) {
     setCurrentSlide((prev) => (prev + 1) % featuredActions.length);
   };
 
-  if (featuredActions.length === 0) {
+  if (isLoading) {
     return (
       <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />
     );
+  }
+
+  if (hasError || featuredActions.length === 0) {
+    return null;
   }
 
   return (

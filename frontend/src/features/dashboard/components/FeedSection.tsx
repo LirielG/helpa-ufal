@@ -41,6 +41,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [helpaHasError, setHelpaHasError] = useState(false);
   const [sigaaHasError, setSigaaHasError] = useState(false);
+  const [heroRefreshKey, setHeroRefreshKey] = useState(0);
 
   const [filters, setFilters] = useState<FilterOptions>(INITIAL_FILTERS);
 
@@ -106,13 +107,18 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
       });
   }, [requestFilters, page]);
 
+  const reloadAll = useCallback(() => {
+    loadActions();
+    setHeroRefreshKey((prev) => prev + 1);
+  }, [loadActions]);
+
   const { setOnSuccessCallback } = useActionRegister();
 
   useEffect(() => {
-    setOnSuccessCallback(loadActions);
+    setOnSuccessCallback(reloadAll);
 
     return () => setOnSuccessCallback(undefined);
-  }, [loadActions, setOnSuccessCallback]);
+  }, [reloadAll, setOnSuccessCallback]);
 
   useEffect(() => {
     let mounted = true;
@@ -132,7 +138,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
 
   return (
     <div className="w-full flex flex-col">
-      <HeroBanner actions={actions} />
+      <HeroBanner refreshKey={heroRefreshKey} />
 
       <div
         className="w-full min-h-[50vh] bg-white"
