@@ -45,9 +45,17 @@ export function maskDate(raw: string): string {
 
 /**
  * Keeps only digits and places the colon after the hour, so typing "0830"
- * reads "08:30". The result is at most five characters.
+ * reads "08:30". A colon typed after a single digit ends the hour, so "8:30"
+ * reads "08:30" instead of "83:0". The result is at most five characters.
  */
 export function maskTime(raw: string): string {
+  const [hourPart, ...rest] = raw.split(":");
+  if (rest.length > 0 && /^\d$/.test(hourPart)) {
+    const minutes = rest.join("").replace(/\D/g, "").slice(0, 2);
+    return `0${hourPart}:${minutes}`;
+  }
   const digits = raw.replace(/\D/g, "").slice(0, 4);
-  return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
+  return digits.length > 2
+    ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+    : digits;
 }

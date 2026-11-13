@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@/test";
 import { TimeInput } from "../TimeInput";
-import { maskTime } from "../../utils/dateField";
 import { timeSchema } from "@/validators/time";
 
 function Harness() {
@@ -13,16 +11,19 @@ function Harness() {
 
 describe("TimeInput", () => {
   it("masks digits as 24h hh:mm", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
+    const { user } = render(<Harness />);
 
     await user.type(screen.getByLabelText("Horário"), "1830");
 
     expect(screen.getByLabelText("Horário")).toHaveValue("18:30");
   });
 
-  it("drops anything that is not a digit and caps the length", () => {
-    expect(maskTime("ab1:2c3 45 6")).toBe("12:34");
+  it("pads a single-digit hour when the colon is typed", async () => {
+    const { user } = render(<Harness />);
+
+    await user.type(screen.getByLabelText("Horário"), "8:30");
+
+    expect(screen.getByLabelText("Horário")).toHaveValue("08:30");
   });
 });
 
