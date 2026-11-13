@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import type { RefObject } from "react";
 import { ActionCover } from "@/components/ActionCover";
 import type { ActivityType } from "@/services/contracts/activity";
 
@@ -8,6 +9,7 @@ interface ActionHeroProps {
   category: string;
   title: string;
   onBack: () => void;
+  titleRef?: RefObject<HTMLHeadingElement | null>;
 }
 
 export function ActionHero({
@@ -16,6 +18,7 @@ export function ActionHero({
   category,
   title,
   onBack,
+  titleRef,
 }: ActionHeroProps) {
   return (
     <div className="relative w-full h-[55vh] min-h-80 flex flex-col justify-end">
@@ -46,7 +49,11 @@ export function ActionHero({
           {category}
         </span>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+        <h1
+          ref={titleRef}
+          tabIndex={-1}
+          className="text-3xl md:text-4xl font-bold text-white mb-2"
+        >
           {title}
         </h1>
       </div>
