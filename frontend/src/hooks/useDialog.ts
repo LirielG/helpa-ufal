@@ -52,7 +52,7 @@ export function useDialog({
       window.removeEventListener("keydown", handleKeyDown);
       restoreFocus(previousActiveElement);
     };
-  }, [getFallbackFocus]);
+  }, []);
 
   return dialogRef;
 }

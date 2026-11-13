@@ -32,7 +32,7 @@ export function EnrollmentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const dialogRef = useDialog({
     onClose,
-    closeDisabled: step === "loading" || isSubmitting,
+    closeDisabled: isSubmitting,
     getFallbackFocus,
   });
 
