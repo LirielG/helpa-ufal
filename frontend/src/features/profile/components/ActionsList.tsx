@@ -135,6 +135,7 @@ export function ActionsList() {
               key={tab.id}
               type="button"
               onClick={() => selectSubTab(tab.id)}
+              aria-current={isActive ? "page" : undefined}
               className={`flex-1 whitespace-nowrap px-4 py-3 -mb-px border-b-2 text-sm transition cursor-pointer ${
                 isActive
                   ? "border-[#1B75BB] text-[#1B75BB] font-bold"
