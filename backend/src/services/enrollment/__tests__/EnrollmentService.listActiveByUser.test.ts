@@ -36,7 +36,13 @@ describe("EnrollmentService.listActiveByUser — pagination boundary", () => {
       0,
       10,
     );
-    expect(result).toEqual({ items: [], total: 0, page: 1, limit: 10 });
+    expect(result).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+    });
   });
 
   it.each([

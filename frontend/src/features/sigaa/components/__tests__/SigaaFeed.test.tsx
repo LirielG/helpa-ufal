@@ -3,6 +3,7 @@ import {
   API,
   HttpResponse,
   http,
+  makePage,
   makeSigaaActivity,
   render,
   screen,
@@ -14,14 +15,9 @@ import { SigaaFeed } from "../SigaaFeed";
 
 function listResponse(
   items: ReturnType<typeof makeSigaaActivity>[],
-  overrides: { total?: number; page?: number; limit?: number } = {},
+  overrides: Parameters<typeof makePage>[1] = {},
 ) {
-  return HttpResponse.json({
-    items,
-    total: overrides.total ?? items.length,
-    page: overrides.page ?? 1,
-    limit: overrides.limit ?? 10,
-  });
+  return HttpResponse.json(makePage(items, { limit: 10, ...overrides }));
 }
 
 function renderFeed(onExploreHelpa = vi.fn()) {
@@ -72,6 +68,21 @@ describe("SigaaFeed", () => {
     expect(
       screen.queryByRole("button", { name: "Tentar de novo" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("pages by the count the API answered", async () => {
+    // 5 items over a limit of 10 fit one page; only the field can ask for 3.
+    server.use(
+      http.get(`${API}/sigaa-activities`, () =>
+        listResponse([makeSigaaActivity()], { total: 5, totalPages: 3 }),
+      ),
+    );
+
+    renderFeed();
+
+    expect(
+      await screen.findByRole("button", { name: "Página 3" }),
+    ).toBeInTheDocument();
   });
 
   it("offers a retry on failure and refetches when it is used", async () => {

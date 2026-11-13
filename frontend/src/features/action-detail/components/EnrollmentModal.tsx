@@ -16,19 +16,25 @@ interface EnrollmentModalProps {
   action: Activity;
   onClose: () => void;
   onSuccess?: () => void;
+  getFallbackFocus?: () => HTMLElement | null;
 }
 
 export function EnrollmentModal({
   action,
   onClose,
   onSuccess,
+  getFallbackFocus,
 }: EnrollmentModalProps) {
   const navigate = useNavigate();
   const titleId = useId();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dialogRef = useDialog({ onClose, closeDisabled: isSubmitting });
+  const dialogRef = useDialog({
+    onClose,
+    closeDisabled: isSubmitting,
+    getFallbackFocus,
+  });
 
   const handleConfirm = async () => {
     if (isSubmitting) return; // Prevent double-click

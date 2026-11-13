@@ -3,14 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
 import { formatDate } from "../../../utils";
 import type { ActivityListItem } from "@/services/contracts/activity";
+import { ActionCover } from "@/components/ActionCover";
 import { fetchFeaturedActions } from "../services";
-
-const FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=1200&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=1200&h=500&fit=crop",
-];
 
 interface HeroBannerProps {
   refreshKey?: number;
@@ -85,7 +79,6 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
       <div className="relative h-[400px] md:h-[500px]">
         {featuredActions.map((action, index) => {
           const formattedDate = formatDate(action.startDate);
-          const imageUrl = FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 
           return (
             <div
@@ -98,10 +91,13 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
               }`}
             >
               <div className="absolute inset-0">
-                <img
-                  src={imageUrl}
-                  alt={action.title}
-                  className="w-full h-full object-cover"
+                {/* No title: the slide heading already names the action. */}
+                <ActionCover
+                  id={action.id}
+                  type={action.type}
+                  className="w-full h-full"
+                  iconClassName="size-24"
+                  iconPlacement="top-right"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
               </div>

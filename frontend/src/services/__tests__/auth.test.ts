@@ -20,15 +20,17 @@ function captureRequest(endpoint: string, response: () => Response) {
 describe("authService", () => {
   describe("endpoints", () => {
     it("login hits POST /auth/login", async () => {
+      const user = makeUser();
       const requests = captureRequest("/auth/login", () =>
-        HttpResponse.json({ token: "test-token", user: makeUser() }),
+        HttpResponse.json({ user }),
       );
 
-      await authService.login(makeLoginRequest());
+      const response = await authService.login(makeLoginRequest());
 
       expect(requests).toHaveLength(1);
       expect(requests[0].method).toBe("POST");
       expect(requests[0].url).toBe(`${API}/auth/login`);
+      expect(response).toEqual({ user });
     });
 
     it("register hits POST /auth/register", async () => {

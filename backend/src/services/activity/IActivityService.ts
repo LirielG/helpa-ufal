@@ -10,6 +10,7 @@ import {
   ActivityResponse,
   ActivityStatus,
 } from "@/types/activity.js";
+import type { Paginated } from "@/types/pagination.js";
 
 export interface IActivityService {
   create(
@@ -48,7 +49,4 @@ export interface IListActivitiesFilters {
   area?: string;
 }
 
-export interface IListActivitiesResponse {
-  activities: ActivityResponse[];
-  total: number;
-}
+export type IListActivitiesResponse = Paginated<ActivityResponse>;

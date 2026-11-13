@@ -93,7 +93,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
       .then((res) => {
         if (!isCurrent()) return;
 
-        setActions(res.activities);
+        setActions(res.items);
         setTotalPages(res.totalPages);
       })
       .catch((err) => {

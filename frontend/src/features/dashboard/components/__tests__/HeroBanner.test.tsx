@@ -7,10 +7,12 @@ import {
   API,
   http,
   HttpResponse,
+  makePage,
   server,
   waitFor,
 } from "@/test";
 import { HeroBanner } from "../HeroBanner";
+import { getActionCoverVariant } from "@/utils/actionCover";
 import type { ActivityListItem } from "@/services/contracts/activity";
 
 const mockActions = [
@@ -28,13 +30,10 @@ function setupFeaturedServer(activities = mockActions) {
       const limit = url.searchParams.get("limit");
 
       if (status === "OPEN" && limit === "4") {
-        return HttpResponse.json({
-          activities,
-          total: activities.length,
-        });
+        return HttpResponse.json(makePage(activities));
       }
 
-      return HttpResponse.json({ activities: [], total: 0 });
+      return HttpResponse.json(makePage([]));
     }),
   );
 }
@@ -134,10 +133,7 @@ describe("HeroBanner", () => {
     server.use(
       http.get(`${API}/activities`, ({ request }) => {
         params = new URL(request.url).searchParams;
-        return HttpResponse.json({
-          activities: mockActions,
-          total: mockActions.length,
-        });
+        return HttpResponse.json(makePage(mockActions));
       }),
     );
 
@@ -164,12 +160,9 @@ describe("HeroBanner", () => {
           if (attempts === 1) {
             return new HttpResponse(null, { status: 500 });
           }
-          return HttpResponse.json({
-            activities: mockActions,
-            total: mockActions.length,
-          });
+          return HttpResponse.json(makePage(mockActions));
         }
-        return HttpResponse.json({ activities: [], total: 0 });
+        return HttpResponse.json(makePage([]));
       }),
     );
 
@@ -273,6 +266,23 @@ describe("HeroBanner", () => {
       expect(
         within(visible[0]).getByRole("link", { name: "Saiba mais" }),
       ).toHaveAttribute("href", "/activity/2");
+    });
+  });
+
+  it("draws each slide's cover from its action id, as the feed card does", async () => {
+    setupFeaturedServer();
+    render(<HeroBanner />);
+
+    const slides = await screen.findAllByTestId("hero-slide");
+    slides.forEach((slide, index) => {
+      // Decorative: the slide heading already names the action.
+      const cover = within(slide).getByRole("img", { hidden: true });
+      expect(cover.tagName).not.toBe("IMG");
+      expect(cover).toHaveAttribute("aria-hidden", "true");
+      expect(cover).toHaveAttribute(
+        "data-cover-variant",
+        getActionCoverVariant(mockActions[index].id).key,
+      );
     });
   });
 });

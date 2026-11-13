@@ -23,20 +23,22 @@ describe("authStore", () => {
     it("stores the user from the response and returns true on success", async () => {
       const user = makeUser();
       server.use(
-        http.post(`${API}/auth/login`, () =>
-          HttpResponse.json({ token: "test-token", user }),
-        ),
+        http.post(`${API}/auth/login`, () => HttpResponse.json({ user })),
       );
 
       const result = await store().login(makeLoginRequest());
 
       expect(result).toBe(true);
       expect(store().user).toEqual(user);
+      expect(store().isSessionVerified).toBe(true);
       expect(store().error).toBeNull();
       expect(store().isLoading).toBe(false);
     });
 
     it("returns false, keeps user null and stores the translated message on failure", async () => {
+      const onExpired = vi.fn();
+      const unsubscribe = setSessionExpiredHandler(onExpired);
+
       server.use(
         http.post(`${API}/auth/login`, () =>
           HttpResponse.json(
@@ -51,11 +53,13 @@ describe("authStore", () => {
       );
 
       const result = await store().login(makeLoginRequest());
+      unsubscribe();
 
       expect(result).toBe(false);
       expect(store().user).toBeNull();
       expect(store().error).toBe("E-mail ou senha incorretos.");
       expect(store().isLoading).toBe(false);
+      expect(onExpired).not.toHaveBeenCalled();
     });
   });
 

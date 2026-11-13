@@ -73,6 +73,7 @@ describe("GET /activities/:activityId/enrollments", () => {
       total: 1,
       page: 1, // default
       limit: 10, // default
+      totalPages: 1,
       totalPresent: 0,
     });
   });
@@ -224,6 +225,7 @@ describe("GET /activities/:activityId/enrollments", () => {
       total: 0,
       page: 1,
       limit: 10,
+      totalPages: 1,
       totalPresent: 0,
     });
   });

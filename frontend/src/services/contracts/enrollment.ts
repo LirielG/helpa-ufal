@@ -6,6 +6,8 @@
  * the backend code (§8).
  */
 
+import type { Paginated } from "./common";
+
 export type EnrollmentStatus =
   "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
@@ -43,16 +45,12 @@ export interface EnrollmentListItem extends Enrollment {
 /**
  * Response of `GET /activities/:activityId/enrollments`.
  *
- * Deviates from §3: there is no `totalPages` yet. `totalPresent` counts the
- * enrollments with attendanceConfirmed = true across every page.
+ * `totalPresent` counts the enrollments with attendanceConfirmed = true across
+ * every page.
  */
-export interface ListEnrollmentsResponse {
-  items: EnrollmentListItem[];
-  total: number;
-  page: number;
-  limit: number;
+export type ListEnrollmentsResponse = Paginated<EnrollmentListItem> & {
   totalPresent: number;
-}
+};
 
 /**
  * Body of `PUT /enrollments/:enrollmentId/attendance`. Presence and hours are
