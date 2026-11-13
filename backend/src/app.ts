@@ -8,6 +8,10 @@ import { env } from "@/config/env.js";
 
 const app = express();
 
+// First, so that CORS preflight responses and body-parse errors, which never
+// reach the routers, still get a log line.
+app.use(requestLogger);
+
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
@@ -19,7 +23,6 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(requestLogger);
 
 app.use(Router);
 

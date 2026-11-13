@@ -57,6 +57,35 @@ describe("Request logging middleware (integration)", () => {
     expect(allLogs).not.toContain("token=");
   });
 
+  it("logs CORS preflight requests answered by the cors middleware", async () => {
+    env.NODE_ENV = "development";
+
+    const response = await request(app)
+      .options("/activities")
+      .set("Origin", env.CORS_ORIGIN)
+      .set("Access-Control-Request-Method", "POST");
+
+    expect(response.status).toBe(204);
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(String(logSpy.mock.calls[0]?.[0])).toMatch(
+      /^OPTIONS \/activities 204 \d+ms$/,
+    );
+  });
+
+  it("logs requests whose JSON body fails to parse", async () => {
+    env.NODE_ENV = "development";
+
+    const response = await request(app)
+      .post("/auth/login")
+      .set("Content-Type", "application/json")
+      .send('{"email": ');
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(String(logSpy.mock.calls[0]?.[0])).toMatch(
+      new RegExp(`^POST /auth/login ${response.status} \\d+ms$`),
+    );
+  });
+
   it("does not emit request log lines when NODE_ENV is test", async () => {
     expect(env.NODE_ENV).toBe("test");
 
