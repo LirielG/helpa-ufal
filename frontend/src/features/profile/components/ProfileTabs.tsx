@@ -1,3 +1,4 @@
+import { PROFILE_TABS } from "../constants";
 import type { ProfileTab } from "../types";
 
 type ProfileTabsProps = {
@@ -5,15 +6,10 @@ type ProfileTabsProps = {
   onChange: (tab: ProfileTab) => void;
 };
 
-const TABS: Array<{ id: ProfileTab; label: string }> = [
-  { id: "personal", label: "Dados Pessoais" },
-  { id: "actions", label: "Ações" },
-];
-
 export function ProfileTabs({ activeTab, onChange }: ProfileTabsProps) {
   return (
     <nav className="bg-white rounded-2xl shadow-sm p-2 flex flex-col gap-1">
-      {TABS.map((tab) => {
+      {PROFILE_TABS.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
           <button

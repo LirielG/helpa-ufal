@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { ActivityStatus, UserActivity } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
-import { PROFILE_SUB_TABS } from "../constants";
+import {
+  DEFAULT_ACTIVITY_STATUS,
+  PROFILE_SUB_TABS,
+  isActivityStatus,
+} from "../constants";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
@@ -13,13 +17,28 @@ import { Pagination } from "../../../components/Pagination";
 export function ActionsList() {
   const navigate = useNavigate();
   const { openRegisterModal, setOnSuccessCallback } = useActionRegister();
-  const [activeSubTab, setActiveSubTab] = useState<ActivityStatus>("enrolled");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
+  const activeSubTab: ActivityStatus = isActivityStatus(filterParam)
+    ? filterParam
+    : DEFAULT_ACTIVITY_STATUS;
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
+
+  // The sub-tab lives in the URL, so it changes one render after the click
+  // (or with no click at all, on browser Back). Resetting the page while
+  // rendering, not in the click handler, keeps the old sub-tab from being
+  // fetched again at page one before the new one arrives.
+  if (pagedSubTab !== activeSubTab) {
+    setPagedSubTab(activeSubTab);
+    setPage(1);
+    setTotalPages(1);
+  }
 
   const reloadActivities = useCallback(() => {
     setIsLoading(true);
@@ -84,9 +103,15 @@ export function ActionsList() {
     setActivities([]);
     setError(null);
     setIsLoading(true);
-    setPage(1);
-    setTotalPages(1);
-    setActiveSubTab(tab);
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (tab === DEFAULT_ACTIVITY_STATUS) next.delete("filter");
+        else next.set("filter", tab);
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const selectPage = (nextPage: number) => {
@@ -110,6 +135,7 @@ export function ActionsList() {
               key={tab.id}
               type="button"
               onClick={() => selectSubTab(tab.id)}
+              aria-current={isActive ? "page" : undefined}
               className={`flex-1 whitespace-nowrap px-4 py-3 -mb-px border-b-2 text-sm transition cursor-pointer ${
                 isActive
                   ? "border-[#1B75BB] text-[#1B75BB] font-bold"
