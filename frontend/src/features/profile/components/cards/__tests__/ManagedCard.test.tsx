@@ -3,7 +3,6 @@ import { useLocation } from "react-router";
 import { render, screen, waitFor, within } from "@/test/render";
 import { API, http, HttpResponse, server } from "@/test/http";
 import {
-  makeAction,
   makeActionDetail,
   makeManagedActivity,
   makeManager,
@@ -28,6 +27,8 @@ const RELOAD_FAILED_MESSAGE =
   "Não foi possível carregar o status atual. Recarregue a página.";
 const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
+const STATUS_HINT_MESSAGE =
+  "Para concluir, primeiro marque a ação como Em andamento.";
 
 function managed(activityStatus: ActivityStatus): UserActivity {
   return makeManagedActivity({
@@ -71,13 +72,11 @@ function optionLabels() {
     .map((option) => option.textContent);
 }
 
-/** Answers every PATCH with `respond` and records each body it received. */
-function recordPatches(
-  respond: (body: unknown) => Response | Promise<Response>,
-) {
+/** Records PUT bodies to verify that confirmation sends each transition once. */
+function recordPuts(respond: (body: unknown) => Response | Promise<Response>) {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API}/activities/${ACTION_ID}/status`, async ({ request }) => {
+    http.put(`${API}/activities/${ACTION_ID}/status`, async ({ request }) => {
       const body = await request.json();
       bodies.push(body);
       return respond(body);
@@ -101,7 +100,7 @@ function recordDeletes(
 }
 
 function respondWithStatus(status: ActivityStatus) {
-  return () => HttpResponse.json(makeAction({ id: ACTION_ID, status }));
+  return () => HttpResponse.json(makeActionDetail({ id: ACTION_ID, status }));
 }
 
 function respondWithError(status: number, message: string) {
@@ -116,6 +115,11 @@ describe("ManagedCard status control", () => {
       expect(statusSelect()).toBeEnabled();
       expect(statusSelect()).toHaveDisplayValue("Aberta");
       expect(optionLabels()).toEqual(["Aberta", "Em andamento", "Cancelada"]);
+      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
+      expect(statusSelect()).toHaveAttribute(
+        "aria-describedby",
+        `status-hint-${ACTION_ID}`,
+      );
     });
 
     it("offers completing and cancelling an IN_PROGRESS action", () => {
@@ -128,6 +132,8 @@ describe("ManagedCard status control", () => {
         "Concluída",
         "Cancelada",
       ]);
+      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
     });
 
     it.each([
@@ -141,14 +147,18 @@ describe("ManagedCard status control", () => {
         expect(statusSelect()).toBeDisabled();
         expect(statusSelect()).toHaveDisplayValue(label);
         expect(optionLabels()).toEqual([label]);
+        expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+        expect(statusSelect()).not.toHaveAttribute("aria-describedby");
       },
     );
   });
 
   describe("starting an action", () => {
     it("applies IN_PROGRESS right away and shows it without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("IN_PROGRESS"));
+      const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
       const { user } = renderCard(managed("OPEN"));
+
+      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
 
       await user.selectOptions(statusSelect(), "Em andamento");
 
@@ -161,13 +171,15 @@ describe("ManagedCard status control", () => {
         "Concluída",
         "Cancelada",
       ]);
+      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
+      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
       expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
     });
   });
 
   describe("completing an action", () => {
     it("asks for confirmation, then shows the new status without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("COMPLETED"));
+      const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
       await user.selectOptions(statusSelect(), "Concluída");
@@ -186,7 +198,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends nothing and keeps the current status when the user backs out", async () => {
-      const bodies = recordPatches(respondWithStatus("COMPLETED"));
+      const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
       await user.selectOptions(statusSelect(), "Concluída");
@@ -253,11 +265,27 @@ describe("ManagedCard status control", () => {
         within(screen.getByRole("dialog")).queryByText(/horas/),
       ).not.toBeInTheDocument();
     });
+    it("displays workload in singular inside the confirmation modal when action has 1 hour", async () => {
+      const activity = makeManagedActivity({
+        action: {
+          id: ACTION_ID,
+          status: "IN_PROGRESS",
+          details: { ...makeActionDetail().details!, workloadHours: 1 },
+        },
+      });
+
+      const { user } = renderCard(activity);
+
+      await user.selectOptions(statusSelect(), "Concluída");
+
+      const dialog = screen.getByRole("dialog", { name: "Concluir ação" });
+      expect(within(dialog).getByText("1 hora")).toBeInTheDocument();
+    });
   });
 
   describe("cancelling an action", () => {
     it("asks for confirmation in a modal titled 'Cancelar ação'", async () => {
-      recordPatches(respondWithStatus("CANCELLED"));
+      recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -275,7 +303,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("cancels after confirmation and shows the new status without reloading", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -291,7 +319,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends nothing and keeps the current status when the user backs out", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -309,7 +337,7 @@ describe("ManagedCard status control", () => {
 
   it("lets a manager who is not the author change the status", async () => {
     signIn(makeManager());
-    const bodies = recordPatches(respondWithStatus("IN_PROGRESS"));
+    const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
     const { user } = renderCard(managed("OPEN"));
 
     await user.selectOptions(statusSelect(), "Em andamento");
@@ -326,10 +354,10 @@ describe("ManagedCard status control", () => {
       const pending = new Promise<void>((resolve) => {
         release = resolve;
       });
-      const bodies = recordPatches(async () => {
+      const bodies = recordPuts(async () => {
         await pending;
         return HttpResponse.json(
-          makeAction({ id: ACTION_ID, status: "IN_PROGRESS" }),
+          makeActionDetail({ id: ACTION_ID, status: "IN_PROGRESS" }),
         );
       });
       const { user } = renderCard(managed("OPEN"));
@@ -346,7 +374,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends a single request when the confirm button is double-clicked", async () => {
-      const bodies = recordPatches(respondWithStatus("CANCELLED"));
+      const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Cancelada");
@@ -365,7 +393,7 @@ describe("ManagedCard status control", () => {
 
   describe("errors", () => {
     it("shows a permission message on 403 and keeps the previous status", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           403,
           "Forbidden. Requester is not the author or a manager.",
@@ -382,7 +410,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("shows a not-found message on 404 and stops offering transitions", async () => {
-      recordPatches(respondWithError(404, "Activity not found."));
+      recordPuts(respondWithError(404, "Activity not found."));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Em andamento");
@@ -394,7 +422,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("reloads the real status on 409 so no stale option stays on screen", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -423,7 +451,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("shows the not-found message when the reload after a 409 finds the action removed", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -449,7 +477,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("stops offering transitions when the reload after a 409 fails", async () => {
-      recordPatches(
+      recordPuts(
         respondWithError(
           409,
           "Activity is already CANCELLED and cannot be transitioned.",
@@ -473,7 +501,7 @@ describe("ManagedCard status control", () => {
     });
 
     it("sends the user to the login screen on 401", async () => {
-      recordPatches(respondWithError(401, "No token provided."));
+      recordPuts(respondWithError(401, "No token provided."));
       const { user } = renderCard(managed("OPEN"));
 
       await user.selectOptions(statusSelect(), "Em andamento");
@@ -489,7 +517,7 @@ describe("ManagedCard status control", () => {
     ])(
       "shows a retryable message on %s without changing the displayed status",
       async (_case, respond) => {
-        recordPatches(respond);
+        recordPuts(respond);
         const { user } = renderCard(managed("OPEN"));
 
         await user.selectOptions(statusSelect(), "Em andamento");
@@ -506,12 +534,12 @@ describe("ManagedCard status control", () => {
 
     it("retries the same transition without asking for confirmation again", async () => {
       let attempts = 0;
-      const bodies = recordPatches(() => {
+      const bodies = recordPuts(() => {
         attempts += 1;
         return attempts === 1
           ? HttpResponse.error()
           : HttpResponse.json(
-              makeAction({ id: ACTION_ID, status: "CANCELLED" }),
+              makeActionDetail({ id: ACTION_ID, status: "CANCELLED" }),
             );
       });
       const { user } = renderCard(managed("OPEN"));

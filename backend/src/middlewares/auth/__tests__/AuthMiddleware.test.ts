@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import AuthMiddleware from "../AuthMiddleware.js";
 import CustomError from "@/models/error/CustomError.js";
 import { signJwt } from "@/utils/jwt.js";
-import type { AuthenticatedUser } from "@/types/auth.js";
+import type { AuthenticatedUser, AuthorizeOptions } from "@/types/auth.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -29,13 +29,15 @@ function aTokenWithoutVersion(): string {
   return jwt.sign(claims, process.env.JWT_SECRET!);
 }
 
-function mockRepository(
-  stored: { tokenVersion: number } | null = { tokenVersion: 0 },
-) {
+function mockRepository(stored: Partial<AuthenticatedUser> | null = {}) {
   return {
-    findTokenVersionById: vi.fn().mockResolvedValue(stored),
+    findSessionById: vi
+      .fn()
+      .mockResolvedValue(
+        stored === null ? null : { ...anAuthenticatedUser(), ...stored },
+      ),
   } as unknown as IUserRepository & {
-    findTokenVersionById: ReturnType<typeof vi.fn>;
+    findSessionById: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -53,19 +55,16 @@ function aTokenWithInvalidSignature(
 
 function mockRequest(
   options: {
-    bearerToken?: string;
     cookieToken?: string;
     rawAuthorization?: string;
   } = {},
 ): Request {
   const headers: Record<string, string> = {};
-  if (options.bearerToken)
-    headers.authorization = `Bearer ${options.bearerToken}`;
   if (options.rawAuthorization)
     headers.authorization = options.rawAuthorization;
 
   const cookies: Record<string, string> = {};
-  if (options.cookieToken) cookies.token = options.cookieToken;
+  if (options.cookieToken !== undefined) cookies.token = options.cookieToken;
 
   return { headers, cookies } as unknown as Request;
 }
@@ -95,9 +94,42 @@ async function expectAuthError(
 describe("AuthMiddleware", () => {
   const middleware = new AuthMiddleware({ userRepository: mockRepository() });
 
-  describe("required authentication — auth({ userTypes: 'all' })", () => {
+  it.each<AuthorizeOptions | undefined>([
+    undefined,
+    {},
+    { manager: true },
+    { userTypes: ["TEACHER"] },
+  ])("requires a token with requireAuth(%j)", async (options) => {
+    const handler = middleware.requireAuth(options);
+    const next = mockNext();
+
+    await expectAuthError(() => handler(mockRequest(), RES, next), 401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["empty", ""],
+    ["malformed", MALFORMED_TOKEN],
+    ["expired", anExpiredToken()],
+    ["tampered", aTokenWithInvalidSignature()],
+  ])(
+    "rejects a present %s cookie with optionalAuth()",
+    async (_label, token) => {
+      const userRepository = mockRepository();
+      const handler = new AuthMiddleware({ userRepository }).optionalAuth();
+      const req = mockRequest({ cookieToken: token });
+      const next = mockNext();
+
+      await expectAuthError(() => handler(req, RES, next), 401);
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+      expect(userRepository.findSessionById).not.toHaveBeenCalled();
+    },
+  );
+
+  describe("required authentication — requireAuth()", () => {
     it("throws 401 and does not call next when no token is provided", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
+      const handler = middleware.requireAuth();
       const req = mockRequest();
       const next = mockNext();
 
@@ -105,25 +137,20 @@ describe("AuthMiddleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("calls next and populates req.user with a valid Bearer token", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
-      const user = anAuthenticatedUser();
-      const req = mockRequest({ bearerToken: signJwt(user) });
+    it("rejects a valid token sent only in the authorization header", async () => {
+      const handler = middleware.requireAuth();
+      const req = mockRequest({
+        rawAuthorization: `${["Bear", "er"].join("")} ${signJwt(anAuthenticatedUser())}`,
+      });
       const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith();
-      expect(req.user).toMatchObject({
-        id: user.id,
-        userType: "STUDENT",
-        isManager: false,
-      });
+      await expectAuthError(() => handler(req, RES, next), 401);
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
     });
 
     it("calls next and populates req.user with a valid cookie token", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
+      const handler = middleware.requireAuth();
       const user = anAuthenticatedUser();
       const req = mockRequest({ cookieToken: signJwt(user) });
       const next = mockNext();
@@ -140,8 +167,8 @@ describe("AuthMiddleware", () => {
     });
 
     it("throws 401 for a malformed token", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: MALFORMED_TOKEN });
+      const handler = middleware.requireAuth();
+      const req = mockRequest({ cookieToken: MALFORMED_TOKEN });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -150,8 +177,8 @@ describe("AuthMiddleware", () => {
     });
 
     it("throws 401 for a token with an invalid signature", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithInvalidSignature() });
+      const handler = middleware.requireAuth();
+      const req = mockRequest({ cookieToken: aTokenWithInvalidSignature() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -160,8 +187,8 @@ describe("AuthMiddleware", () => {
     });
 
     it("throws 401 for an expired token", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: anExpiredToken() });
+      const handler = middleware.requireAuth();
+      const req = mockRequest({ cookieToken: anExpiredToken() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
@@ -169,8 +196,8 @@ describe("AuthMiddleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("throws 401 when the Authorization header lacks the Bearer scheme", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
+    it("throws 401 when the authorization header contains an unprefixed token", async () => {
+      const handler = middleware.requireAuth();
       const req = mockRequest({
         rawAuthorization: signJwt(anAuthenticatedUser()),
       });
@@ -181,8 +208,8 @@ describe("AuthMiddleware", () => {
     });
 
     it("clears a pre-existing req.user when validation fails", async () => {
-      const handler = middleware.auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: MALFORMED_TOKEN });
+      const handler = middleware.requireAuth();
+      const req = mockRequest({ cookieToken: MALFORMED_TOKEN });
       req.user = anAuthenticatedUser({ id: "pre-existing-user" });
       const next = mockNext();
 
@@ -192,9 +219,9 @@ describe("AuthMiddleware", () => {
     });
   });
 
-  describe("optional authentication — auth()", () => {
+  describe("optional authentication — optionalAuth()", () => {
     it("calls next anonymously when no token is provided", async () => {
-      const handler = middleware.auth();
+      const handler = middleware.optionalAuth();
       const req = mockRequest();
       const next = mockNext();
 
@@ -206,9 +233,9 @@ describe("AuthMiddleware", () => {
     });
 
     it("calls next and populates req.user with a valid token", async () => {
-      const handler = middleware.auth();
+      const handler = middleware.optionalAuth();
       const user = anAuthenticatedUser();
-      const req = mockRequest({ bearerToken: signJwt(user) });
+      const req = mockRequest({ cookieToken: signJwt(user) });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -221,46 +248,51 @@ describe("AuthMiddleware", () => {
         isManager: false,
       });
     });
+  });
 
-    it.each([
-      ["invalid", MALFORMED_TOKEN],
-      ["expired", anExpiredToken()],
-    ])(
-      "ignores an %s token and proceeds anonymously",
-      async (_label, token) => {
-        const handler = middleware.auth();
-        const req = mockRequest({ bearerToken: token });
-        const next = mockNext();
+  it("uses current roles from the database instead of token claims", async () => {
+    const stored = anAuthenticatedUser({
+      userType: "TEACHER",
+      isManager: true,
+    });
+    const handler = new AuthMiddleware({
+      userRepository: mockRepository(stored),
+    }).requireAuth({ manager: true, userTypes: ["TEACHER"] });
+    const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
+    const next = mockNext();
 
-        await handler(req, RES, next);
+    await handler(req, RES, next);
 
-        expect(next).toHaveBeenCalledTimes(1);
-        expect(next).toHaveBeenCalledWith();
-        expect(req.user).toBeUndefined();
-      },
-    );
+    expect(next).toHaveBeenCalledExactlyOnceWith();
+    expect(req.user).toEqual(stored);
   });
 
   describe("authorization", () => {
-    it.each(["STUDENT", "TEACHER"] as const)(
-      'userTypes "all" allows %s',
-      async (userType) => {
-        const handler = middleware.auth({ userTypes: "all" });
-        const req = mockRequest({
-          bearerToken: signJwt(anAuthenticatedUser({ userType })),
-        });
-        const next = mockNext();
+    it.each([
+      ["STUDENT", undefined],
+      ["TEACHER", undefined],
+      ["STUDENT", {}],
+      ["TEACHER", {}],
+    ] as const)("allows %s with requireAuth(%j)", async (userType, options) => {
+      const handler = new AuthMiddleware({
+        userRepository: mockRepository({ userType }),
+      }).requireAuth(options);
+      const req = mockRequest({
+        cookieToken: signJwt(anAuthenticatedUser({ userType })),
+      });
+      const next = mockNext();
 
-        await handler(req, RES, next);
+      await handler(req, RES, next);
 
-        expect(next).toHaveBeenCalledTimes(1);
-      },
-    );
+      expect(next).toHaveBeenCalledTimes(1);
+    });
 
     it("calls next when the userType is explicitly allowed", async () => {
-      const handler = middleware.auth({ userTypes: ["TEACHER"] });
+      const handler = new AuthMiddleware({
+        userRepository: mockRepository({ userType: "TEACHER" }),
+      }).requireAuth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ userType: "TEACHER" })),
+        cookieToken: signJwt(anAuthenticatedUser({ userType: "TEACHER" })),
       });
       const next = mockNext();
 
@@ -270,9 +302,9 @@ describe("AuthMiddleware", () => {
     });
 
     it("throws 403 when the userType is not allowed", async () => {
-      const handler = middleware.auth({ userTypes: ["TEACHER"] });
+      const handler = middleware.requireAuth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ userType: "STUDENT" })),
+        cookieToken: signJwt(anAuthenticatedUser({ userType: "STUDENT" })),
       });
       const next = mockNext();
 
@@ -281,9 +313,11 @@ describe("AuthMiddleware", () => {
     });
 
     it("calls next for a manager when manager: true", async () => {
-      const handler = middleware.auth({ manager: true });
+      const handler = new AuthMiddleware({
+        userRepository: mockRepository({ isManager: true }),
+      }).requireAuth({ manager: true });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ isManager: true })),
+        cookieToken: signJwt(anAuthenticatedUser({ isManager: true })),
       });
       const next = mockNext();
 
@@ -293,9 +327,9 @@ describe("AuthMiddleware", () => {
     });
 
     it("throws 403 for a non-manager when manager: true", async () => {
-      const handler = middleware.auth({ manager: true });
+      const handler = middleware.requireAuth({ manager: true });
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ isManager: false })),
+        cookieToken: signJwt(anAuthenticatedUser({ isManager: false })),
       });
       const next = mockNext();
 
@@ -304,9 +338,9 @@ describe("AuthMiddleware", () => {
     });
 
     it("does not let a manager bypass userTypes restrictions", async () => {
-      const handler = middleware.auth({ userTypes: ["TEACHER"] });
+      const handler = middleware.requireAuth({ userTypes: ["TEACHER"] });
       const req = mockRequest({
-        bearerToken: signJwt(
+        cookieToken: signJwt(
           anAuthenticatedUser({ userType: "STUDENT", isManager: true }),
         ),
       });
@@ -320,11 +354,9 @@ describe("AuthMiddleware", () => {
   describe("token version", () => {
     it("calls next when the token version matches the stored one", async () => {
       const userRepository = mockRepository({ tokenVersion: 3 });
-      const handler = new AuthMiddleware({ userRepository }).auth({
-        userTypes: "all",
-      });
+      const handler = new AuthMiddleware({ userRepository }).requireAuth();
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 3 })),
+        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 3 })),
       });
       const next = mockNext();
 
@@ -332,16 +364,14 @@ describe("AuthMiddleware", () => {
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user).toMatchObject({ id: USER_ID, tokenVersion: 3 });
-      expect(userRepository.findTokenVersionById).toHaveBeenCalledWith(USER_ID);
+      expect(userRepository.findSessionById).toHaveBeenCalledWith(USER_ID);
     });
 
     it("throws 401 when the stored version moved past the token's", async () => {
       const userRepository = mockRepository({ tokenVersion: 1 });
-      const handler = new AuthMiddleware({ userRepository }).auth({
-        userTypes: "all",
-      });
+      const handler = new AuthMiddleware({ userRepository }).requireAuth();
       const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
+        cookieToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
       });
       const next = mockNext();
 
@@ -350,26 +380,35 @@ describe("AuthMiddleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("proceeds anonymously on optional auth when the version is stale", async () => {
-      const userRepository = mockRepository({ tokenVersion: 1 });
-      const handler = new AuthMiddleware({ userRepository }).auth();
-      const req = mockRequest({
-        bearerToken: signJwt(anAuthenticatedUser({ tokenVersion: 0 })),
-      });
-      const next = mockNext();
+    it.each(["required", "optional"] as const)(
+      "rejects a revoked session with SESSION_INVALID for %s auth",
+      async (mode) => {
+        const middleware = new AuthMiddleware({
+          userRepository: mockRepository({ tokenVersion: 1 }),
+        });
+        const handler =
+          mode === "required"
+            ? middleware.requireAuth()
+            : middleware.optionalAuth();
+        const req = mockRequest({
+          cookieToken: signJwt(anAuthenticatedUser()),
+        });
+        const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith();
-      expect(req.user).toBeUndefined();
-    });
+        await expect(handler(req, RES, next)).rejects.toMatchObject({
+          statusCode: 401,
+          code: "SESSION_INVALID",
+        });
+        expect(next).not.toHaveBeenCalled();
+        expect(req.user).toBeUndefined();
+      },
+    );
 
     it("treats a token without the claim as version 0", async () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository({ tokenVersion: 0 }),
-      }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithoutVersion() });
+      }).requireAuth();
+      const req = mockRequest({ cookieToken: aTokenWithoutVersion() });
       const next = mockNext();
 
       await handler(req, RES, next);
@@ -381,26 +420,37 @@ describe("AuthMiddleware", () => {
     it("throws 401 for a token without the claim once the user is past version 0", async () => {
       const handler = new AuthMiddleware({
         userRepository: mockRepository({ tokenVersion: 1 }),
-      }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: aTokenWithoutVersion() });
+      }).requireAuth();
+      const req = mockRequest({ cookieToken: aTokenWithoutVersion() });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("lets the request through when the user no longer exists", async () => {
-      const handler = new AuthMiddleware({
-        userRepository: mockRepository(null),
-      }).auth({ userTypes: "all" });
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
-      const next = mockNext();
+    it.each(["required", "optional"] as const)(
+      "rejects a removed user with SESSION_INVALID on %s auth",
+      async (mode) => {
+        const middleware = new AuthMiddleware({
+          userRepository: mockRepository(null),
+        });
+        const handler =
+          mode === "required"
+            ? middleware.requireAuth()
+            : middleware.optionalAuth();
+        const req = mockRequest({
+          cookieToken: signJwt(anAuthenticatedUser()),
+        });
+        const next = mockNext();
 
-      await handler(req, RES, next);
-
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(req.user).toMatchObject({ id: USER_ID });
-    });
+        await expect(handler(req, RES, next)).rejects.toMatchObject({
+          statusCode: 401,
+          code: "SESSION_INVALID",
+        });
+        expect(next).not.toHaveBeenCalled();
+        expect(req.user).toBeUndefined();
+      },
+    );
 
     it.each([
       ["no token", undefined],
@@ -409,39 +459,36 @@ describe("AuthMiddleware", () => {
       "does not query the database when there is %s",
       async (_label, token) => {
         const userRepository = mockRepository();
-        const handler = new AuthMiddleware({ userRepository }).auth();
-        const req = mockRequest({ bearerToken: token });
+        const handler = new AuthMiddleware({ userRepository }).optionalAuth();
+        const req = mockRequest({ cookieToken: token });
 
-        await handler(req, RES, mockNext());
+        if (token === undefined) await handler(req, RES, mockNext());
+        else await expectAuthError(() => handler(req, RES, mockNext()), 401);
 
-        expect(userRepository.findTokenVersionById).not.toHaveBeenCalled();
+        expect(userRepository.findSessionById).not.toHaveBeenCalled();
       },
     );
 
-    it("proceeds anonymously on optional auth when the version lookup fails", async () => {
+    it("propagates a failed lookup on optional auth", async () => {
       const userRepository = mockRepository();
-      userRepository.findTokenVersionById.mockRejectedValue(
-        new Error("connection lost"),
-      );
-      const handler = new AuthMiddleware({ userRepository }).auth();
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      const failure = new Error("connection lost");
+      userRepository.findSessionById.mockRejectedValue(failure);
+      const handler = new AuthMiddleware({ userRepository }).optionalAuth();
+      const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
-      await handler(req, RES, next);
+      await expect(handler(req, RES, next)).rejects.toBe(failure);
 
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(next).toHaveBeenCalledWith();
+      expect(next).not.toHaveBeenCalled();
       expect(req.user).toBeUndefined();
     });
 
     it("propagates a failed version lookup on required auth instead of answering 401", async () => {
       const failure = new Error("connection lost");
       const userRepository = mockRepository();
-      userRepository.findTokenVersionById.mockRejectedValue(failure);
-      const handler = new AuthMiddleware({ userRepository }).auth({
-        userTypes: "all",
-      });
-      const req = mockRequest({ bearerToken: signJwt(anAuthenticatedUser()) });
+      userRepository.findSessionById.mockRejectedValue(failure);
+      const handler = new AuthMiddleware({ userRepository }).requireAuth();
+      const req = mockRequest({ cookieToken: signJwt(anAuthenticatedUser()) });
       const next = mockNext();
 
       await expect(handler(req, RES, next)).rejects.toBe(failure);

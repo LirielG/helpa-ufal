@@ -1,13 +1,13 @@
 info:
-  name: Enroll in an activity
+  name: Put my enrollment
   type: http
   seq: 8
   tags:
     - Enroll
 
 http:
-  method: POST
-  url: "{{baseUrl}}/activities/:activityId/enroll"
+  method: PUT
+  url: "{{baseUrl}}/activities/:activityId/enrollments/me"
   params:
     - name: activityId
       value: f26559ac-d672-4252-a9a4-d6fe6583d8ec
@@ -25,8 +25,8 @@ examples:
   - name: 201 - Successful
     description: Enrollment created successfully. Also returned when a previously canceled enrollment is reactivated — in that case createdAt keeps the record's original creation date and enrolledAt is refreshed to the reactivation moment.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -45,14 +45,48 @@ examples:
             "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
             "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
             "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-            "createdAt": "2026-08-22T21:00:00.000Z"
+            "status": "APPROVED",
+            "attendanceConfirmed": null,
+            "confirmedWorkloadHours": 0,
+            "createdAt": "2026-08-22T21:00:00.000Z",
+            "updatedAt": "2026-08-22T21:00:00.000Z"
+          }
+
+  - name: 200 - Already exists
+    description: An existing non-CANCELLED enrollment is returned unchanged, even when no slots remain.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "activityId": "f26559ac-d672-4252-a9a4-d6fe6583d8ec",
+            "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "status": "APPROVED",
+            "attendanceConfirmed": null,
+            "confirmedWorkloadHours": 0,
+            "createdAt": "2026-08-22T21:00:00.000Z",
+            "updatedAt": "2026-08-22T21:00:00.000Z"
           }
 
   - name: 400 - Invalid id
-    description: The activityId in the path is not a UUID.
+    description: The activityId in the path must be a UUID v4.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: "not-a-uuid"
@@ -68,13 +102,13 @@ examples:
         type: json
         data: |-
           {
-            "code": "VALIDATION_ERROR",
             "status": 400,
+            "code": "VALIDATION_ERROR",
             "message": "Validation error.",
             "errors": [
               {
                 "field": "activityId",
-                "code": "VALIDATION_ERROR",
+                "code": "INVALID_UUID",
                 "message": "activityId must be a valid UUID."
               }
             ]
@@ -82,8 +116,8 @@ examples:
   - name: 401 - Unauthenticated
     description: No session cookie was sent.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -107,8 +141,8 @@ examples:
   - name: 401 - Unauthenticated (Invalid token)
     description: The session cookie is invalid or expired.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -129,11 +163,11 @@ examples:
             "message": "Token malformatted, expired or invalid."
           }
 
-  - name: 401 - User not found
-    description: Token is valid, but the user it identifies no longer exists or is inactive.
+  - name: 401 - Invalid session
+    description: The token identifies a removed user or has been revoked.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -149,19 +183,19 @@ examples:
         type: json
         data: |-
           {
-            "code": "UNAUTHENTICATED",
+            "code": "SESSION_INVALID",
             "status": 401,
-            "message": "User account not found or inactive."
+            "message": "Session is no longer valid."
           }
 
   - name: 404 - Activity not found
-    description: Activity not found, soft-deleted, or id is not a valid UUID. A malformed id is indistinguishable from a nonexistent activity by design (D1).
+    description: Activity not found or soft-deleted.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
-          value: ""
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
     response:
@@ -179,36 +213,11 @@ examples:
             "message": "Activity not found."
           }
 
-  - name: 409 - Already enrolled
-    description: User already has an active enrollment in this activity.
-    request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
-      params:
-        - name: activityId
-          value: ""
-          type: path
-          description: Activity UUID
-    response:
-      status: 409
-      statusText: Conflict
-      headers:
-        - name: Content-Type
-          value: application/json
-      body:
-        type: json
-        data: |-
-          {
-            "code": "ALREADY_ENROLLED",
-            "status": 409,
-            "message": "User is already enrolled in this activity."
-          }
-
   - name: 409 - No available slots
-    description: Activity has no available slots left (availableSlots = 0).
+    description: A new or reactivated enrollment requires a slot, but all slots are occupied.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -232,8 +241,8 @@ examples:
   - name: 409 - Not open
     description: Activity status is not OPEN.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -257,8 +266,8 @@ examples:
   - name: 500 - Internal error
     description: Internal server error.
     request:
-      url: "{{baseUrl}}/activities/:activityId/enroll"
-      method: POST
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
       params:
         - name: activityId
           value: ""
@@ -280,17 +289,24 @@ examples:
           }
 
 docs: |-
-  Creates an enrollment in the activity for the authenticated user.
+  Creates or returns the authenticated user's enrollment in the activity.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()`. Use `Auth/Login` to populate the cookie jar with the httpOnly `token` cookie. Missing, invalid or expired cookies return 401 `UNAUTHENTICATED`; removed users and revoked sessions return 401 `SESSION_INVALID`.
 
-  - Route: POST /activities/:activityId/enroll — the activity is identified by the activityId path param. No request body.
-  - The user is resolved exclusively from the JWT token (never from params, query or body).
-  - The token must be valid AND the user must still exist and be active in the database (light hybrid authentication).
-  - Validation order: authentication (401) → id format (400) → activity existence (404) → business rules (409). A non-UUID id answers 400 on `activityId`.
-  - Only activities with status OPEN and availableSlots > 0 accept enrollments.
-  - Only active enrollments count as duplicates and consume slots.
-  - A previously canceled enrollment (soft-deleted) is reactivated by this endpoint, returning 201 instead of 409. Reactivation reuses the (userId, activityId) record, keeps the original createdAt, refreshes enrolledAt to the reactivation moment and clears any attendance confirmation.
-  - Slot check and enrollment creation run in the same transaction (row lock on the activity) to prevent overbooking under concurrency.
+  **Route:** `PUT /activities/:activityId/enrollments/me`. No request body. The session selects the user; params, query and body cannot select another user.
 
-  Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).
+  | Query parameter | Accepted values | Default |
+  | --- | --- | --- |
+  | None | — | — |
+
+  - Validation order: authentication (401) → id format (400) → activity existence (404) → activity status (409) → existing enrollment → available slots (409).
+  - Only OPEN activities accept this operation. A closed activity returns 409 `ACTIVITY_NOT_OPEN_FOR_ENROLLMENT`, including for a user with an existing enrollment.
+  - Creation returns 201. Repeating PUT for a non-CANCELLED enrollment returns 200 with the same canonical representation, without changing status, attendance, hours, enrolledAt, createdAt or updatedAt. This succeeds even if the existing enrollment occupies the last slot.
+  - A CANCELLED enrollment is reactivated in the same record with 201: status becomes APPROVED, createdAt stays original, enrolledAt is refreshed, attendanceConfirmed becomes null and confirmedWorkloadHours becomes 0. It requires an available slot. A subsequent PUT returns 200 unchanged.
+  - Creation, reactivation and the decision between 201 and 200 run under the activity row lock. Concurrent PUTs from the same user create one row: one 201 and the remaining responses 200. APPROVED enrollments consume slots.
+  - Responses contain only the eight canonical fields shown in the examples; the internal creation indicator and enrolledAt are not exposed.
+  - The former POST enrollment route has been removed. Backend and frontend must be deployed together.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
+
+  Error format follows [api-conventions.md](../../api-conventions.md).

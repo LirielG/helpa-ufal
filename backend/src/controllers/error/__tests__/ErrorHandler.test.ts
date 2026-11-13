@@ -243,6 +243,7 @@ describe("ErrorHandler.defaultHandler", () => {
     [404, "NOT_FOUND"],
     [409, "CONFLICT"],
     [422, "UNPROCESSABLE"],
+    [429, "TOO_MANY_REQUESTS"],
     [500, "INTERNAL_ERROR"],
   ] as const)("answers CustomError(%i) with the generic %s", (status, code) => {
     const res = aResponse();

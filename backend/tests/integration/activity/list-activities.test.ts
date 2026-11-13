@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"; // globals are disabled: explicit
 import request from "supertest";
 import { app } from "@/app.js";
 import { createTeacher, createActivity } from "../../helpers/factories.js";
+import { authCookie } from "../../helpers/auth.js";
 
 describe("GET /activities — area filter", () => {
   // ---------- 200 - OK ----------
@@ -18,9 +19,9 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(2);
     // Ordering (createdAt desc) is not the filter's business: compare as a set.
-    const ids = response.body.activities.map((a: { id: string }) => a.id);
+    const ids = response.body.items.map((a: { id: string }) => a.id);
     expect([...ids].sort()).toEqual([first.id, second.id].sort());
-    for (const item of response.body.activities) {
+    for (const item of response.body.items) {
       expect(item.details.area).toBe("Saúde");
     }
   });
@@ -34,7 +35,7 @@ describe("GET /activities — area filter", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(1);
-      expect(response.body.activities[0].details.area).toBe("Saúde");
+      expect(response.body.items[0].details.area).toBe("Saúde");
     }
   });
 
@@ -47,7 +48,7 @@ describe("GET /activities — area filter", () => {
       .query({ area: "Astrobiologia" });
 
     expect(response.status).toBe(200);
-    expect(response.body.activities).toEqual([]);
+    expect(response.body.items).toEqual([]);
     expect(response.body.total).toBe(0);
   });
 
@@ -96,7 +97,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("combines area with search, type, status and campus", async () => {
@@ -140,7 +141,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].id).toBe(target.id);
+    expect(response.body.items[0].id).toBe(target.id);
   });
 
   it("still lists CANCELLED activities when filtering by area", async () => {
@@ -155,7 +156,7 @@ describe("GET /activities — area filter", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
-    expect(response.body.activities[0].status).toBe("CANCELLED");
+    expect(response.body.items[0].status).toBe("CANCELLED");
   });
 
   // ---------- 200 - OK: pagination over the filtered subset ----------
@@ -175,7 +176,7 @@ describe("GET /activities — area filter", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.total).toBe(5);
-      for (const item of response.body.activities) {
+      for (const item of response.body.items) {
         expect(item.details.area).toBe("Saúde");
         expect(seen.has(item.id)).toBe(false); // no repeats across pages
         seen.add(item.id);
@@ -210,10 +211,6 @@ describe("GET /activities — area filter", () => {
 
   // ---------- 401 - Unauthorized (guard) ----------
   it("is public: answers without any token (and breaks if auth ever becomes required)", async () => {
-    // The listing registers no auth middleware on purpose. Note: a bare
-    // `auth()` without options does NOT require a token in this project —
-    // this guard catches the change that would actually make the route
-    // private: `auth({ userTypes: ... })` or `auth({ manager: ... })`.
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
 
@@ -222,6 +219,32 @@ describe("GET /activities — area filter", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
   });
+
+  it.each([
+    { credentials: "a valid session cookie", token: undefined },
+    { credentials: "an invalid session cookie", token: "invalid-token" },
+  ])(
+    "returns the same listing with $credentials and anonymously",
+    async ({ token: cookieToken }) => {
+      const { user: author, token } = await createTeacher();
+      const activity = await createActivity(author.id, { area: "Saúde" });
+      await createActivity(author.id, { area: "Educação" });
+      const filters = { area: "Saúde", page: 1, limit: 1 };
+
+      const anonymous = await request(app).get("/activities").query(filters);
+      const authenticated = await request(app)
+        .get("/activities")
+        .query(filters)
+        .set(...authCookie(cookieToken ?? token));
+
+      expect(anonymous.status).toBe(200);
+      expect(anonymous.body.total).toBe(1);
+      expect(anonymous.body.items).toHaveLength(1);
+      expect(anonymous.body.items[0].id).toBe(activity.id);
+      expect(authenticated.status).toBe(anonymous.status);
+      expect(authenticated.body).toEqual(anonymous.body);
+    },
+  );
 
   // ---------- 404: intentionally absent ----------
   // An unknown area answers 200 with an empty page (see CA3 above); the

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, waitFor } from "@/test";
 import { http, HttpResponse } from "msw";
-import { API, server, signIn } from "@/test";
+import { API, makePage, server, signIn } from "@/test";
 import { Dashboard } from "../Dashboard";
 
 const SEARCH_FIELD = "Buscar ações pelo título";
@@ -27,43 +27,38 @@ async function search(
   await user.paste(term);
 }
 
-const mockApiActivities = {
-  activities: [
-    {
-      id: "1",
-      title: "Oficina de React",
-      type: "COURSE",
-      status: "OPEN",
-      availableSlots: 10,
-      slots: 30,
-      startDate: new Date().toISOString(),
-      endDate: new Date().toISOString(),
-      details: {
-        description: "Aprenda React na prática.",
-        workloadHours: 4,
-        format: "Presencial",
-      },
+const mockApiActivities = makePage([
+  {
+    id: "1",
+    title: "Oficina de React",
+    type: "COURSE",
+    status: "OPEN",
+    availableSlots: 10,
+    slots: 30,
+    startDate: new Date().toISOString(),
+    endDate: new Date().toISOString(),
+    details: {
+      description: "Aprenda React na prática.",
+      workloadHours: 4,
+      format: "Presencial",
     },
-  ],
-  total: 1,
-};
+  },
+]);
 
-/** The limit `fetchActions` sends, and what the page count is derived from. */
+/** The limit `fetchActions` sends. */
 const PAGE_LIMIT = 20;
 
 /** Long enough to span three pages, so a narrower cut still spans two. */
 const catalogue = Array.from({ length: 45 }, (_, index) => ({
-  ...mockApiActivities.activities[0],
+  ...mockApiActivities.items[0],
   id: `action-${index + 1}`,
   title: `Ação ${index + 1}`,
 }));
 
 /**
  * Stands in for GET /activities: `select` decides which actions the filters
- * matched, and the handler slices that by the page and limit it was asked for.
- * The body carries only what the real route returns, so a reader of
- * `totalPages` off the response would see `undefined` and fall back to a
- * single page.
+ * matched, and the handler slices that by the page and limit it was asked for,
+ * counting the pages of the whole match as the real route does.
  */
 function serveActivities(
   select: (params: URLSearchParams) => typeof catalogue,
@@ -80,10 +75,13 @@ function serveActivities(
       const limit = Number(params.get("limit") ?? PAGE_LIMIT);
       const start = (page - 1) * limit;
 
-      return HttpResponse.json({
-        activities: matched.slice(start, start + limit),
-        total: matched.length,
-      });
+      return HttpResponse.json(
+        makePage(matched.slice(start, start + limit), {
+          total: matched.length,
+          page,
+          limit,
+        }),
+      );
     }),
   );
 
@@ -111,10 +109,7 @@ describe("Dashboard", () => {
   it("shows the empty state when the API returns no actions", async () => {
     server.use(
       http.get("*/activities", () => {
-        return HttpResponse.json({
-          activities: [],
-          total: 0,
-        });
+        return HttpResponse.json(makePage([]));
       }),
     );
 
@@ -130,7 +125,11 @@ describe("Dashboard", () => {
 
   it("shows the error state when the request fails", async () => {
     server.use(
-      http.get("*/activities", () => {
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json(mockApiActivities);
+        }
         return new HttpResponse(null, { status: 500 });
       }),
     );
@@ -149,7 +148,11 @@ describe("Dashboard", () => {
     let attempts = 0;
 
     server.use(
-      http.get("*/activities", () => {
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json(mockApiActivities);
+        }
         attempts += 1;
 
         return attempts === 1
@@ -259,9 +262,9 @@ describe("Dashboard", () => {
   it("sends the term as `search` and lists only the titles it matched", async () => {
     const searches: (string | null)[] = [];
     const catalogue = [
-      mockApiActivities.activities[0],
+      mockApiActivities.items[0],
       {
-        ...mockApiActivities.activities[0],
+        ...mockApiActivities.items[0],
         id: "2",
         title: "Palestra de Dados",
       },
@@ -279,11 +282,7 @@ describe("Dashboard", () => {
             )
           : catalogue;
 
-        return HttpResponse.json({
-          ...mockApiActivities,
-          activities: matched,
-          total: matched.length,
-        });
+        return HttpResponse.json(makePage(matched));
       }),
     );
 
@@ -294,17 +293,15 @@ describe("Dashboard", () => {
     // Upper case on purpose: the term travels verbatim and the API folds case.
     await search(user, "REACT");
 
-    // "Oficina de React" is on screen before the search too, so the unmatched
-    // action leaving is what marks the filtered response as rendered.
+    // Both cards disappear while loading, so wait for the filtered result too.
     await waitFor(() => {
+      expect(
+        screen.getAllByRole("heading", { name: "Oficina de React" })[0],
+      ).toBeInTheDocument();
       expect(
         screen.queryByRole("heading", { name: "Palestra de Dados" }),
       ).not.toBeInTheDocument();
     });
-
-    expect(
-      screen.getAllByRole("heading", { name: "Oficina de React" })[0],
-    ).toBeInTheDocument();
     expect(searches.at(-1)).toBe("REACT");
   });
 
@@ -398,9 +395,11 @@ describe("Dashboard", () => {
     server.use(
       http.get("*/activities", ({ request }) => {
         pages.push(new URL(request.url).searchParams.get("page"));
-        // The page count comes from `total` over the limit of 20, so this is
-        // what puts more than one page on screen and keeps "next" enabled.
-        return HttpResponse.json({ ...mockApiActivities, total: 60 });
+        // Three pages is what puts more than one page on screen and keeps
+        // "next" enabled.
+        return HttpResponse.json(
+          makePage(mockApiActivities.items, { total: 60 }),
+        );
       }),
     );
 
@@ -425,7 +424,7 @@ describe("Dashboard", () => {
         const term = new URL(request.url).searchParams.get("search");
 
         return term
-          ? HttpResponse.json({ activities: [], total: 0 })
+          ? HttpResponse.json(makePage([]))
           : HttpResponse.json(mockApiActivities);
       }),
     );
@@ -726,7 +725,7 @@ describe("Dashboard", () => {
     const actionsByStatus = (
       ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const
     ).map((status) => ({
-      ...mockApiActivities.activities[0],
+      ...mockApiActivities.items[0],
       id: `action-${status}`,
       title: `Ação ${status}`,
       status,
@@ -868,5 +867,115 @@ describe("Dashboard", () => {
         screen.getByRole("button", { name: "Tentar de novo" }),
       ).toBeInTheDocument();
     });
+  });
+});
+
+describe("HeroBanner carousel", () => {
+  it("does not show CANCELLED or COMPLETED actions in the carousel", async () => {
+    const mixedCatalogue = [
+      {
+        ...mockApiActivities.items[0],
+        id: "1",
+        title: "Ação Cancelada",
+        status: "CANCELLED",
+      },
+      {
+        ...mockApiActivities.items[0],
+        id: "2",
+        title: "Ação Aberta",
+        status: "OPEN",
+      },
+    ];
+
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          const openOnly = mixedCatalogue.filter((a) => a.status === "OPEN");
+          return HttpResponse.json(makePage(openOnly));
+        }
+        return HttpResponse.json(makePage(mixedCatalogue));
+      }),
+    );
+
+    renderDashboard();
+
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Ação Aberta" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Ação Cancelada" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not re-fetch or change carousel when changing feed page or filters", async () => {
+    let carouselRequests = 0;
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          carouselRequests += 1;
+          return HttpResponse.json(mockApiActivities);
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    const { user } = renderDashboard();
+
+    await screen.findByRole("heading", { level: 2, name: "Oficina de React" });
+    const initialCarouselCount = carouselRequests;
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Tipos de ação" }),
+      "LECTURE",
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "Tipos de ação" }),
+      ).toHaveValue("LECTURE");
+    });
+
+    expect(carouselRequests).toBe(initialCarouselCount);
+  });
+
+  it("does not display carousel or gray pulse block when there are no OPEN actions", async () => {
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return HttpResponse.json(makePage([]));
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    renderDashboard();
+
+    await screen.findAllByRole("heading", { name: "Oficina de React" });
+
+    expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  });
+
+  it("keeps the feed working when carousel request fails", async () => {
+    server.use(
+      http.get("*/activities", ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get("limit") === "4") {
+          return new HttpResponse(null, { status: 500 });
+        }
+        return HttpResponse.json(mockApiActivities);
+      }),
+    );
+
+    renderDashboard();
+
+    const actionTitles = await screen.findAllByRole("heading", {
+      name: "Oficina de React",
+    });
+    expect(actionTitles[0]).toBeInTheDocument();
+    expect(screen.queryByTestId("hero-slide")).not.toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "../constants";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
+import { Pagination } from "../../../components/Pagination";
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -25,6 +26,19 @@ export function ActionsList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
+
+  // The sub-tab lives in the URL, so it changes one render after the click
+  // (or with no click at all, on browser Back). Resetting the page while
+  // rendering, not in the click handler, keeps the old sub-tab from being
+  // fetched again at page one before the new one arrives.
+  if (pagedSubTab !== activeSubTab) {
+    setPagedSubTab(activeSubTab);
+    setPage(1);
+    setTotalPages(1);
+  }
 
   const reloadActivities = useCallback(() => {
     setIsLoading(true);
@@ -33,23 +47,27 @@ export function ActionsList() {
   }, []);
 
   useEffect(() => {
-    // A slower answer of the sub-tab the user just left must not overwrite
-    // the one now on screen.
+    // Abandoned requests must not change the current page, error, or loading.
     let isCurrent = true;
 
     const load = async () => {
       try {
-        const list = await fetchUserActivities(activeSubTab);
+        const list = await fetchUserActivities(activeSubTab, page);
+
         if (isCurrent) {
-          setActivities(list);
+          if (list.items.length === 0 && page > 1) {
+            setPage(page - 1);
+            return;
+          }
+
+          setActivities(list.items);
+          setTotalPages(list.totalPages);
           setError(null);
+          setIsLoading(false);
         }
       } catch {
         if (isCurrent) {
           setError("Não foi possível carregar as atividades. Tente novamente.");
-        }
-      } finally {
-        if (isCurrent) {
           setIsLoading(false);
         }
       }
@@ -60,11 +78,12 @@ export function ActionsList() {
     return () => {
       isCurrent = false;
     };
-  }, [activeSubTab, reloadCount]);
+  }, [activeSubTab, page, reloadCount]);
 
   useEffect(() => {
     if (activeSubTab === "managed") {
       setOnSuccessCallback(reloadActivities);
+
       return () => {
         setOnSuccessCallback(undefined);
       };
@@ -80,6 +99,7 @@ export function ActionsList() {
   // rendering for one frame with the new tab's cards and controls.
   const selectSubTab = (tab: ActivityStatus) => {
     if (tab === activeSubTab) return;
+
     setActivities([]);
     setError(null);
     setIsLoading(true);
@@ -94,8 +114,13 @@ export function ActionsList() {
     );
   };
 
-  const removeActivity = (id: string) =>
-    setActivities((current) => current.filter((item) => item.action.id !== id));
+  const selectPage = (nextPage: number) => {
+    if (nextPage === page) return;
+
+    setError(null);
+    setIsLoading(true);
+    setPage(nextPage);
+  };
 
   const isManaged = activeSubTab === "managed";
 
@@ -104,6 +129,7 @@ export function ActionsList() {
       <nav className="flex items-center gap-2 border-b border-gray-200">
         {PROFILE_SUB_TABS.map((tab) => {
           const isActive = tab.id === activeSubTab;
+
           return (
             <button
               key={tab.id}
@@ -128,7 +154,19 @@ export function ActionsList() {
       )}
 
       {!isLoading && error && (
-        <p className="text-red-500 text-center py-8">{error}</p>
+        <div className="text-center py-8 space-y-4">
+          <p role="alert" className="text-red-600">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={reloadActivities}
+            className="px-4 py-2 rounded-lg bg-[#1B75BB] text-white text-sm font-medium hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B75BB] transition-colors cursor-pointer"
+          >
+            Tentar novamente
+          </button>
+        </div>
       )}
 
       {!isLoading && !error && (
@@ -156,6 +194,7 @@ export function ActionsList() {
                     />
                   );
                 }
+
                 if (activeSubTab === "managed") {
                   return (
                     <ManagedCard
@@ -163,20 +202,27 @@ export function ActionsList() {
                       activity={activity}
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
-                      onDelete={removeActivity}
+                      onDelete={reloadActivities}
                     />
                   );
                 }
+
                 return (
                   <EnrolledCard
                     key={activity.action.id}
                     activity={activity}
-                    onCancelled={removeActivity}
+                    onCancelled={reloadActivities}
                   />
                 );
               })}
             </div>
           )}
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={selectPage}
+          />
         </>
       )}
     </div>

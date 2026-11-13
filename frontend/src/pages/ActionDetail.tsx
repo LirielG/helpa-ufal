@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
+import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -18,6 +19,7 @@ import { ReportActionModal } from "../features/report/ReportActionModal";
 import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
 import type { Activity } from "@/services/contracts/activity";
+import { ApiError } from "@/services/apiError";
 
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +29,8 @@ export function ActionDetail() {
   const [action, setAction] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -39,28 +43,65 @@ export function ActionDetail() {
   const closeReportModal = useCallback(() => setShowReportModal(false), []);
   const markReported = useCallback(() => setIsReported(true), []);
 
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const getFallbackFocus = useCallback(() => {
+    const canFocus = (el: HTMLElement | null): el is HTMLElement =>
+      !!el &&
+      !el.matches(":disabled") &&
+      getComputedStyle(el).display !== "none";
+
+    return canFocus(cancelButtonRef.current)
+      ? cancelButtonRef.current
+      : titleRef.current;
+  }, []);
+
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
 
     getActionById(id)
       .then((data) => {
-        if (!data) {
-          setError("Ação não encontrada.");
-        } else {
-          setAction(data);
-        }
+        if (isMounted) setAction(data);
       })
-      .catch(() => setError("Erro ao carregar a ação. Tente novamente."))
-      .finally(() => setIsLoading(false));
-  }, [id]);
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+        if (error instanceof ApiError && error.status === 401) return;
+
+        const notFound = error instanceof ApiError && error.status === 404;
+        setCanRetry(!notFound);
+        setError(
+          notFound
+            ? "Ação não encontrada."
+            : "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.",
+        );
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, loadAttempt]);
+
+  const retryLoad = () => {
+    setError(null);
+    setCanRetry(false);
+    setIsLoading(true);
+    setLoadAttempt((attempt) => attempt + 1);
+  };
 
   // The server is the source of the slots and of enrollmentStatus, so both
   // enrolling and cancelling refetch instead of patching the local copy.
   const refreshAction = async () => {
     if (!id) return;
-    const updatedAction = await getActionById(id);
-    if (updatedAction) {
+    try {
+      const updatedAction = await getActionById(id);
       setAction(updatedAction);
+    } catch {
+      // A failed refresh must not erase the action after a completed enrollment change.
     }
   };
 
@@ -75,6 +116,12 @@ export function ActionDetail() {
     setError("Esta ação não existe mais.");
   };
 
+  // Convenience only: GET /activities/:id/enrollments still enforces this on
+  // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
+  const canViewEnrollments = Boolean(
+    action && user && (user.id === action.authorId || user.isManager),
+  );
+
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       {isLoading && (
@@ -86,6 +133,16 @@ export function ActionDetail() {
       {!isLoading && error && (
         <div className="max-w-2xl mx-auto px-4 py-12">
           <Alert type="error" message={error} />
+          {canRetry && (
+            <Button
+              variant="primary"
+              size="md"
+              className="mt-4 mr-3"
+              onClick={retryLoad}
+            >
+              Tentar novamente
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="md"
@@ -100,10 +157,11 @@ export function ActionDetail() {
       {!isLoading && action && (
         <>
           <ActionHero
-            bannerUrl="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200"
+            titleRef={titleRef}
+            actionId={action.id}
+            type={action.type}
             category={action.details?.area || action.type}
             title={action.title}
-            shortDescription={action.details?.description ?? ""}
             onBack={() => navigate(-1)}
           />
 
@@ -132,11 +190,27 @@ export function ActionDetail() {
                   {isAuthenticated ? (
                     <EnrollmentActions
                       action={action}
+                      cancelButtonRef={cancelButtonRef}
                       onEnroll={() => setShowModal(true)}
                       onCancel={() => setShowCancelModal(true)}
                     />
                   ) : (
                     <GuestEnrollmentActions action={action} />
+                  )}
+
+                  {canViewEnrollments && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="lg"
+                      onClick={() =>
+                        navigate(`/activity/${action.id}/enrollments`)
+                      }
+                      className="flex items-center justify-center gap-3 rounded-xl"
+                    >
+                      <Users className="size-6" />
+                      Ver inscritos
+                    </Button>
                   )}
 
                   {/* The API answers 401 to visitors and 403 to the author. */}
@@ -157,6 +231,7 @@ export function ActionDetail() {
               action={action}
               onClose={() => setShowModal(false)}
               onSuccess={refreshAction}
+              getFallbackFocus={getFallbackFocus}
             />
           )}
 

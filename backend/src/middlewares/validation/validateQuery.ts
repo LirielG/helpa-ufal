@@ -7,9 +7,8 @@ import type { ValidationErrorItem } from "@/models/error/ValidationError.js";
  * Validates req.query against a Zod schema and stores the parsed (typed)
  * result in res.locals.validatedQuery.
  *
- * Register this BEFORE auth() on routes whose contract puts query format
- * first in the validation chain (400 -> 401 -> 404 -> 403): the response
- * carries no business information, only the offending field and message.
+ * Protected routes authenticate before validating the query so expired
+ * sessions reach the client's 401 handling even when the query is invalid.
  *
  * The message passed in becomes the body's `message` via the (now
  * configurable) ValidationError — keep it as a constant next to the schema,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { randomUUID } from "crypto";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 import { app } from "@/app.js";
 import {
   createTeacher,
@@ -60,15 +61,24 @@ describe("GET /activities/:activityId", () => {
 
   it("computes availableSlots correctly with APPROVED enrollments", async () => {
     const author = await createTeacher();
-    const activity = await createActivity(author.user.id, { slots: 10, status: "OPEN" });
+    const activity = await createActivity(author.user.id, {
+      slots: 10,
+      status: "OPEN",
+    });
 
     const student1 = await createStudent();
     const student2 = await createStudent();
     const student3 = await createStudent();
 
-    await createEnrollment(student1.user.id, activity.id, { status: "APPROVED" });
-    await createEnrollment(student2.user.id, activity.id, { status: "APPROVED" });
-    await createEnrollment(student3.user.id, activity.id, { status: "REJECTED" });
+    await createEnrollment(student1.user.id, activity.id, {
+      status: "APPROVED",
+    });
+    await createEnrollment(student2.user.id, activity.id, {
+      status: "APPROVED",
+    });
+    await createEnrollment(student3.user.id, activity.id, {
+      status: "REJECTED",
+    });
 
     const response = await request(app).get(`/activities/${activity.id}`);
 
@@ -81,7 +91,11 @@ describe("GET /activities/:activityId", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "activityId", code: "VALIDATION_ERROR", message: "activityId must be a valid UUID." },
+      {
+        field: "activityId",
+        code: "INVALID_UUID",
+        message: "activityId must be a valid UUID.",
+      },
     ]);
   });
 
@@ -89,7 +103,11 @@ describe("GET /activities/:activityId", () => {
     const response = await request(app).get(`/activities/${randomUUID()}`);
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
 
   it("returns 404 for a soft-deleted activity", async () => {
@@ -102,7 +120,11 @@ describe("GET /activities/:activityId", () => {
     const response = await request(app).get(`/activities/${activity.id}`);
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ status: 404, code: "NOT_FOUND", message: "Activity not found." });
+    expect(response.body).toEqual({
+      status: 404,
+      code: "NOT_FOUND",
+      message: "Activity not found.",
+    });
   });
 
   describe("enrollmentStatus", () => {
@@ -116,20 +138,29 @@ describe("GET /activities/:activityId", () => {
       expect(response.body).not.toHaveProperty("enrollmentStatus");
     });
 
-    // Interim behavior: auth() without options treats an invalid token as
-    // anonymous. Moving the route to optionalAuth() makes it answer 401
-    // (api-conventions.md, section 5); this test must change with it.
-    it("treats an invalid token as anonymous and omits the key", async () => {
-      const author = await createTeacher();
-      const activity = await createActivity(author.user.id, { status: "OPEN" });
+    it.each(["malformed", "tampered", "expired", "empty"] as const)(
+      "returns 401 for a present %s token",
+      async (kind) => {
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id, {
+          status: "OPEN",
+        });
+        const tokens = {
+          malformed: "invalid-token",
+          tampered: invalidToken(),
+          expired: signToken(author.user, "-1s"),
+          empty: "",
+        };
 
-      const response = await request(app)
-        .get(`/activities/${activity.id}`)
-        .set("Authorization", "Bearer invalid-token");
+        const response = await request(app)
+          .get(`/activities/${activity.id}`)
+          .set(...authCookie(tokens[kind]));
 
-      expect(response.status).toBe(200);
-      expect(response.body).not.toHaveProperty("enrollmentStatus");
-    });
+        expect(response.status).toBe(401);
+        expect(response.body.code).toBe("UNAUTHENTICATED");
+        expect(response.body).not.toHaveProperty("enrollmentStatus");
+      },
+    );
 
     it("returns null for an authenticated user who never enrolled", async () => {
       const author = await createTeacher();
@@ -138,7 +169,7 @@ describe("GET /activities/:activityId", () => {
 
       const response = await request(app)
         .get(`/activities/${activity.id}`)
-        .set("Authorization", `Bearer ${student.token}`);
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty("enrollmentStatus", null);
@@ -154,7 +185,7 @@ describe("GET /activities/:activityId", () => {
 
       const response = await request(app)
         .get(`/activities/${activity.id}`)
-        .set("Authorization", `Bearer ${student.token}`);
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(200);
       expect(response.body.enrollmentStatus).toBe("APPROVED");
@@ -170,7 +201,7 @@ describe("GET /activities/:activityId", () => {
 
       const response = await request(app)
         .get(`/activities/${activity.id}`)
-        .set("Authorization", `Bearer ${student.token}`);
+        .set(...authCookie(student.token));
 
       expect(response.status).toBe(200);
       expect(response.body.enrollmentStatus).toBe("CANCELLED");
@@ -187,7 +218,7 @@ describe("GET /activities/:activityId", () => {
 
       const response = await request(app)
         .get(`/activities/${activity.id}`)
-        .set("Authorization", `Bearer ${requester.token}`);
+        .set(...authCookie(requester.token));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty("enrollmentStatus", null);

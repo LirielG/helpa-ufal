@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pagination } from "../../../components/Pagination";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { ALL_OPTION, DEFAULT_SIGAA_ORDER, SIGAA_PAGE_SIZE } from "../constants";
+import { ALL_OPTION, DEFAULT_SIGAA_ORDER } from "../constants";
 import { fetchSigaaActivities, fetchSigaaFilterOptions } from "../services";
 import type {
   SigaaActivity,
@@ -48,8 +48,7 @@ const NO_OPTIONS: SigaaFilterOptions = { types: [], departments: [] };
 type LoadedPage = {
   key: string;
   items: SigaaActivity[];
-  total: number;
-  limit: number;
+  totalPages: number;
 };
 
 export function SigaaFeed({
@@ -125,8 +124,7 @@ export function SigaaFeed({
         setLoaded({
           key: queryKey,
           items: result.items,
-          total: result.total,
-          limit: result.limit || SIGAA_PAGE_SIZE,
+          totalPages: result.totalPages,
         });
         onErrorChange?.(false);
       })
@@ -142,10 +140,7 @@ export function SigaaFeed({
   }, [queryKey, search, type, department, order, page, onErrorChange]);
 
   const activities = loaded?.key === queryKey ? loaded.items : [];
-  // Neither feed's route returns a page count; both derive it from the limit.
-  const totalPages = loaded
-    ? Math.max(1, Math.ceil(loaded.total / loaded.limit))
-    : 1;
+  const totalPages = loaded?.totalPages ?? 1;
 
   return (
     <div className="flex flex-col gap-8">

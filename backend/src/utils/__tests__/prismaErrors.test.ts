@@ -21,6 +21,21 @@ describe("uniqueViolationFields", () => {
     expect(uniqueViolationFields(error)).toEqual(["validationCode"]);
   });
 
+  it("reads the fields from the default index name reported by the pg driver adapter", () => {
+    const indexError = (index: string) =>
+      knownError("P2002", {
+        driverAdapterError: { cause: { constraint: { index } } },
+      });
+
+    expect(
+      uniqueViolationFields(indexError("Student_registrationCode_key")),
+    ).toEqual(["registrationCode"]);
+    expect(
+      uniqueViolationFields(indexError("Enrollment_userId_activityId_key")),
+    ).toEqual(["userId", "activityId"]);
+    expect(uniqueViolationFields(indexError("custom_unique_name"))).toEqual([]);
+  });
+
   it("reads the legacy meta.target, as an array or a single name", () => {
     expect(
       uniqueViolationFields(knownError("P2002", { target: ["email"] })),

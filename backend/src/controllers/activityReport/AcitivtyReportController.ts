@@ -1,12 +1,16 @@
 import type { Request, Response } from "express";
+import type { AuthenticatedUser } from "@/types/auth.js";
 import { IActivityReportService } from "@/services/acitvityReport/IActivityReportService.js";
 import { IActivityReportController } from "./IActivityReportController.js";
 import ActivityReportService from "@/services/acitvityReport/ActivityReportService.js";
-import {
-  CreateActivityReportSchema,
-  type ListReportsQuery,
+import type {
+  CreateActivityReportInput,
+  ListReportsQuery,
 } from "@/schemas/activityReport/activityReportSchemas.js";
-import CustomError from "@/models/error/CustomError.js";
+import type {
+  ActivityPathParams,
+  ReportPathParams,
+} from "@/schemas/common/PathParamsSchemas.js";
 
 type Props = {
   activityReportService?: IActivityReportService;
@@ -21,16 +25,13 @@ class ActivityReportController implements IActivityReportController {
   }
 
   public async createReport(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
 
-    const { activityId } = req.params;
-    if (!activityId || Array.isArray(activityId))
-      throw new CustomError(400, "Invalid activityId parameter.");
-
-    const data = CreateActivityReportSchema.parse(req.body);
+    const { activityId } = res.locals.validatedParams as ActivityPathParams;
+    const data = res.locals.validatedBody as CreateActivityReportInput;
     const report = await this._activityReportService.createReport(
       activityId,
-      req.user.id,
+      user.id,
       data,
     );
 
@@ -38,25 +39,21 @@ class ActivityReportController implements IActivityReportController {
   }
 
   public async listReports(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
-
     // Parsed and defaulted by validateQuery(ListReportsQuerySchema) on the route.
     const query = res.locals.validatedQuery as ListReportsQuery;
-    const result = await this._activityReportService.listReports(
-      req.user.id,
-      query,
-    );
+    const result = await this._activityReportService.listReports(query);
 
     // 200 even when there is nothing to moderate — never 404 for an empty list.
     res.status(200).json(result);
   }
 
   public async resolveReport(req: Request, res: Response): Promise<void> {
-    if (!req.user) throw new CustomError(401, "Unauthenticated.");
+    const user = req.user as AuthenticatedUser;
+    const { reportId } = res.locals.validatedParams as ReportPathParams;
 
     const report = await this._activityReportService.resolveReport(
-      req.params.reportId as string,
-      req.user.id,
+      reportId,
+      user.id,
     );
 
     res.status(200).json(report);

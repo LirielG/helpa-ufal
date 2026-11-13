@@ -153,7 +153,7 @@ class ActivityRepository implements IActivityRepository {
       if (data.format !== "ONLINE" && data.address) {
         const address = await tx.address.create({ data: data.address });
         addressId = address.id;
-        
+
         createdAddress = {
           id: address.id,
           addressLine: address.addressLine,
@@ -345,14 +345,14 @@ class ActivityRepository implements IActivityRepository {
       this._prisma.activity.count({ where: whereClause }),
     ]);
 
-    const activities = rawActivities.map((a) => ({
+    const items = rawActivities.map((a) => ({
       ...a,
       availableSlots: Math.max(0, a.slots - a._count.enrollments),
       _count: undefined,
     }));
 
     return {
-      activities,
+      items,
       total,
     };
   }
@@ -463,8 +463,12 @@ class ActivityRepository implements IActivityRepository {
         },
       });
 
-      return updated as unknown as ActivityFullResponse;
-    });
+      const approvedCount = await tx.enrollment.count({
+        where: { activityId: id, status: ACTIVE_ENROLLMENT_STATUS },
+      });
+
+      return toFullResponse(updated, approvedCount);
+      });
   }
 
   public async updateStatus(

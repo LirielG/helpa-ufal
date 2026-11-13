@@ -9,7 +9,7 @@ function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
   return {
-    list: vi.fn().mockResolvedValue({ activities: [], total: 0 }),
+    list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     ...overrides,
   } as unknown as IActivityRepository;
 }
@@ -393,7 +393,9 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ type: ["COURSE", "EVENT"] } as unknown as IListActivitiesFilters),
+      service.list({
+        type: ["COURSE", "EVENT"],
+      } as unknown as IListActivitiesFilters),
     );
 
     expect(error.errors).toHaveLength(1);
@@ -520,7 +522,14 @@ describe("ActivityService.list", () => {
     },
   );
 
-  it.each(["INVALIDO", "maceio", "MACEIÓ", "Arapiraca", " ARAPIRACA", "NAO_E_UM_CAMPUS"])(
+  it.each([
+    "INVALIDO",
+    "maceio",
+    "MACEIÓ",
+    "Arapiraca",
+    " ARAPIRACA",
+    "NAO_E_UM_CAMPUS",
+  ])(
     "rejects the campus %j with an error in the 'campus' field (never reaches the repository)",
     async (campus) => {
       const repository = mockRepository();
@@ -614,36 +623,71 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("returns the result from the repository without changes", async () => {
+  it("returns the paginated envelope with default page 1, limit 20, and computed totalPages", async () => {
     const repoResult = {
-      activities: [
-        { id: "act-1", title: "Oficina de Introdução à Programação" },
-      ],
+      items: [{ id: "act-1", title: "Oficina de Introdução à Programação" }],
       total: 1,
     };
     const repository = mockRepository({
       list: vi.fn().mockResolvedValue(repoResult),
     });
     const service = new ActivityService({ activityRepository: repository });
-    await expect(service.list({})).resolves.toBe(repoResult);
-  });
 
-  it("ignores the userId parameter (currently unused)", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({}, "user-1");
-
-    expect(repository.list).toHaveBeenCalledWith({
-      type: undefined,
-      format: undefined,
-      status: undefined,
-      search: undefined,
-      campus: undefined,
+    await expect(service.list({})).resolves.toEqual({
+      items: repoResult.items,
+      total: 1,
       page: 1,
       limit: 20,
-      orderBy: "createdAt",
-      order: "desc",
+      totalPages: 1,
+    });
+  });
+
+  it("returns the normalized page, limit, and totalPages for custom pagination", async () => {
+    const repoResult = {
+      items: [{ id: "act-6", title: "Curso de Extensão" }],
+      total: 12,
+    };
+    const repository = mockRepository({
+      list: vi.fn().mockResolvedValue(repoResult),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expect(service.list({ page: "2", limit: "5" })).resolves.toEqual({
+      items: repoResult.items,
+      total: 12,
+      page: 2,
+      limit: 5,
+      totalPages: 3,
+    });
+  });
+
+  it("returns totalPages: 1 when the matching set is empty (total: 0)", async () => {
+    const repository = mockRepository({
+      list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expect(service.list({})).resolves.toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
+  });
+
+  it("echoes normalized numeric page and limit when query has leading zeros", async () => {
+    const repository = mockRepository({
+      list: vi.fn().mockResolvedValue({ items: [], total: 3 }),
+    });
+    const service = new ActivityService({ activityRepository: repository });
+
+    await expect(service.list({ page: "02", limit: "05" })).resolves.toEqual({
+      items: [],
+      total: 3,
+      page: 2,
+      limit: 5,
+      totalPages: 1,
     });
   });
 });

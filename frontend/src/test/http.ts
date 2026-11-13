@@ -7,6 +7,8 @@ import {
   makeActionDetail,
   makeCertificateValidation,
   makeEnrollment,
+  makePage,
+  makeReport,
   makeSigaaActivity,
   makeUser,
   makeUserActivityItem,
@@ -23,9 +25,7 @@ export const API = config.apiUrl;
  * after each test via `server.resetHandlers()`.
  */
 export const handlers = [
-  http.post(`${API}/auth/login`, () =>
-    HttpResponse.json({ token: "test-token", user: makeUser() }),
-  ),
+  http.post(`${API}/auth/login`, () => HttpResponse.json({ user: makeUser() })),
 
   http.post(`${API}/auth/register`, () =>
     HttpResponse.json(makeUser(), { status: 201 }),
@@ -56,16 +56,13 @@ export const handlers = [
       items: [makeUserActivityItem()],
       total: 1,
       page: 1,
-      limit: 100,
+      limit: 20,
       totalPages: 1,
     }),
   ),
 
   http.get(`${API}/activities`, () =>
-    HttpResponse.json({
-      activities: [makeAction()],
-      total: 1,
-    }),
+    HttpResponse.json(makePage([makeAction()])),
   ),
 
   // Declared before /activities/:id so the literal path wins over the id.
@@ -86,28 +83,43 @@ export const handlers = [
   ),
 
   http.get(`${API}/sigaa-activities`, () =>
-    HttpResponse.json({
-      items: [makeSigaaActivity()],
-      total: 1,
-      page: 1,
-      limit: 10,
-    }),
+    HttpResponse.json(makePage([makeSigaaActivity()], { limit: 10 })),
   ),
 
   // Default happy-path handler for the enrollment list endpoint.
   // Tests that need error scenarios override this with server.use(...).
   http.get(`${API}/activities/:id/enrollments`, () =>
-    HttpResponse.json({
-      items: [makeEnrollment()],
-      total: 1,
-      page: 1,
-      limit: 20,
-      totalPresent: 0,
-    }),
+    HttpResponse.json({ ...makePage([makeEnrollment()]), totalPresent: 0 }),
   ),
 
   http.get(`${API}/certificate-validations/:validationCode`, () =>
     HttpResponse.json(makeCertificateValidation()),
+  ),
+
+  http.get(`${API}/reports`, ({ request }) => {
+    const resolved =
+      new URL(request.url).searchParams.get("resolved") === "true";
+
+    return HttpResponse.json({
+      items: [
+        makeReport({
+          resolvedAt: resolved ? "2026-06-10T12:00:00.000Z" : null,
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
+  }),
+
+  http.put(`${API}/reports/:reportId/resolution`, ({ params }) =>
+    HttpResponse.json(
+      makeReport({
+        id: String(params.reportId),
+        resolvedAt: "2026-06-10T12:00:00.000Z",
+      }),
+    ),
   ),
 ];
 

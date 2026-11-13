@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -166,6 +166,86 @@ function serveAreas(areas: string[]) {
 }
 
 describe("EditAction", () => {
+  it.each([0, 500])(
+    "retries a loading failure (%s) and fills the form with the loaded action",
+    async (status) => {
+      const action = editableAction();
+      let calls = 0;
+      server.use(
+        http.get(`${API}/activities/${ACTION_ID}`, () => {
+          calls += 1;
+          if (calls > 1) return HttpResponse.json(action);
+          return status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status });
+        }),
+      );
+      const { user } = renderEditAction();
+      const message =
+        "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.";
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(
+        screen.queryByText("Ação não encontrada."),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: "Tentar novamente" }),
+      );
+
+      expect(await findTitleField()).toHaveValue(action.title);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(calls).toBe(2);
+    },
+  );
+
+  it("lets the session handler redirect to login when loading answers 401", async () => {
+    server.use(
+      http.get(
+        `${API}/activities/${ACTION_ID}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    );
+    renderEditAction();
+    expect(
+      await screen.findByRole("heading", { name: "Entrar" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows loading during a retry and not found if the action was removed", async () => {
+    let calls = 0;
+    let release!: () => void;
+    const responseReady = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, async () => {
+        calls += 1;
+        if (calls === 1) return HttpResponse.error();
+        await responseReady;
+        return new HttpResponse(null, { status: 404 });
+      }),
+    );
+    const { user } = renderEditAction();
+    await user.click(
+      await screen.findByRole("button", { name: "Tentar novamente" }),
+    );
+    expect(screen.getByText("Carregando...")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByText("Ação não encontrada.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
+
   it("loads the action from the API into the form", async () => {
     const action = mockAction();
 
@@ -460,6 +540,136 @@ describe("EditAction", () => {
       await screen.findByText("O título deve ter no máximo 150 caracteres."),
     ).toBeInTheDocument();
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it.each(["A", "Ab", "  Ab  "])(
+    "saves slots while leaving the saved short title %j unchanged",
+    async (title) => {
+      mockAction(editableAction({}, { title }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const slots = await screen.findByLabelText("Número de vagas");
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+      expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    ["", "O título é obrigatório"],
+    ["   ", "O título é obrigatório"],
+    ["Ab", "O título deve ter no mínimo 3 caracteres"],
+    ["  Ab  ", "O título deve ter no mínimo 3 caracteres"],
+  ])("blocks an invalid changed title %j", async (value, message) => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    if (value) await user.type(title, value);
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("sends a changed three-character title without surrounding spaces", async () => {
+    mockAction();
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    const title = await findTitleField();
+    await user.clear(title);
+    await user.type(title, "  Abc  ");
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({ title: "Abc" }),
+    );
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+  });
+
+  it.each(["B", "Bc", "  Bc  "])(
+    "blocks replacing a saved short title with another short title %j",
+    async (value) => {
+      mockAction(editableAction({}, { title: "Ab" }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, value);
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("O título deve ter no mínimo 3 caracteres"),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["   ", "O título é obrigatório"],
+    ["a".repeat(151), "O título deve ter no máximo 150 caracteres."],
+  ])(
+    "blocks an invalid saved title %j even when unchanged",
+    async (title, message) => {
+      mockAction(editableAction({}, { title }));
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const slots = await screen.findByLabelText("Número de vagas");
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses the saved title of the newly loaded action after the route changes", async () => {
+    mockAction(editableAction({}, { title: "Ab" }));
+    server.use(
+      http.get(`${API}/activities/action-2`, () =>
+        HttpResponse.json(editableAction({}, { id: "action-2", title: "Cd" })),
+      ),
+    );
+    const onUpdate = spyOnUpdate();
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/activity/:id/edit"
+          element={
+            <>
+              <Link to="/activity/action-2/edit">Editar outra ação</Link>
+              <EditAction />
+            </>
+          }
+        />
+        <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+      </Routes>,
+      { route: `/activity/${ACTION_ID}/edit` },
+    );
+
+    expect(await findTitleField()).toHaveValue("Ab");
+    await user.click(screen.getByRole("link", { name: "Editar outra ação" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Título")).toHaveValue("Cd"),
+    );
+
+    const slots = screen.getByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ slots: 45 }));
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
   });
 
   describe("description saved before the length rule", () => {
@@ -837,6 +1047,37 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
+  it("translates the slots error when the API answers 422", async () => {
+    mockAction();
+    failUpdate(422, {
+      status: 422,
+      message:
+        "slots cannot be reduced below the current number of approved enrollments (15).",
+      code: "SLOTS_BELOW_APPROVED_ENROLLMENTS",
+      errors: [
+        {
+          field: "slots",
+          message:
+            "slots cannot be reduced below the current number of approved enrollments (15).",
+          code: "BELOW_APPROVED_ENROLLMENTS",
+        },
+      ],
+      details: { approvedEnrollments: 15 },
+    });
+    const { user } = renderEditAction();
+
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "5");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "A quantidade de vagas não pode ser menor que o número atual de inscrições aprovadas (15).",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows a pt-BR message when the API rejects the zip code", async () => {
     mockAction();
     failUpdate(400, {
@@ -912,11 +1153,38 @@ describe("EditAction", () => {
     ).toBeInTheDocument();
   });
 
-  it("goes to the login screen on 401", async () => {
+  it("replaces the edit screen with login on 401 without adding another login entry", async () => {
     mockAction();
     failUpdate(401);
-    const { user } = renderEditAction();
 
+    function LoginScreen() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <h1>Entrar</h1>
+          <button type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </>
+      );
+    }
+
+    const { user } = render(
+      <>
+        <SessionExpiry />
+        <Routes>
+          <Route
+            path="/profile"
+            element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+          />
+          <Route path="/activity/:id/edit" element={<EditAction />} />
+          <Route path="/login" element={<LoginScreen />} />
+        </Routes>
+      </>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
     const title = await findTitleField();
     await user.clear(title);
     await user.type(title, "Título com sessão expirada");
@@ -925,27 +1193,41 @@ describe("EditAction", () => {
     expect(
       await screen.findByRole("heading", { name: "Entrar" }),
     ).toBeInTheDocument();
-  });
-
-  it("keeps what was typed when the update fails with a server error", async () => {
-    mockAction();
-    failUpdate(500, { message: "Internal server error." });
-    const { user } = renderEditAction();
-
-    const title = await findTitleField();
-    await user.clear(title);
-    await user.type(title, "Título preservado após o erro");
-    await user.click(getSaveButton());
-
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Voltar" }));
     expect(
-      await screen.findByText(
-        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
-      ),
+      await screen.findByRole("link", { name: "Editar" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Título")).toHaveValue(
-      "Título preservado após o erro",
-    );
   });
+
+  it.each([0, 500])(
+    "shows a connection failure (%i) and keeps what was typed",
+    async (status) => {
+      mockAction();
+      server.use(
+        http.patch(`${API}/activities/:id`, () =>
+          status === 0
+            ? HttpResponse.error()
+            : new HttpResponse(null, { status }),
+        ),
+      );
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Título preservado após o erro");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "Não foi possível conectar ao servidor. Tente novamente.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Título")).toHaveValue(
+        "Título preservado após o erro",
+      );
+    },
+  );
 
   it("shows the not-found screen when the action does not exist", async () => {
     server.use(
@@ -974,6 +1256,43 @@ describe("EditAction", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it("goes back to the screen that opened the edit after saving", async () => {
+    mockAction();
+    spyOnUpdate();
+
+    function BackButton() {
+      const navigate = useNavigate();
+      return (
+        <button type="button" onClick={() => navigate(-1)}>
+          Voltar
+        </button>
+      );
+    }
+
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/profile"
+          element={<Link to={`/activity/${ACTION_ID}/edit`}>Editar</Link>}
+        />
+        <Route path="/activity/:id/edit" element={<EditAction />} />
+        <Route path="/activity/:id" element={<BackButton />} />
+      </Routes>,
+      { route: "/profile" },
+    );
+
+    await user.click(screen.getByRole("link", { name: "Editar" }));
+    const slots = await screen.findByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+    await user.click(await screen.findByRole("button", { name: "Voltar" }));
+
+    expect(
+      await screen.findByRole("link", { name: "Editar" }),
+    ).toBeInTheDocument();
   });
 });
 

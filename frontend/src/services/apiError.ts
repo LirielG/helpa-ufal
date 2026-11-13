@@ -32,3 +32,14 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
+
+export const CONNECTION_ERROR_MESSAGE =
+  "Não foi possível conectar ao servidor. Tente novamente.";
+
+export function isConnectionFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === NETWORK_ERROR_STATUS ||
+      (error.status >= 500 && error.status < 600))
+  );
+}

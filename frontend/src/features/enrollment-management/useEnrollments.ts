@@ -46,7 +46,11 @@ export function useEnrollments(activityId: string) {
       setError(null);
 
       try {
-        const result = await fetchEnrollments(activityId, targetPage, PAGE_LIMIT);
+        const result = await fetchEnrollments(
+          activityId,
+          targetPage,
+          PAGE_LIMIT,
+        );
         if (!isCurrent()) return;
 
         setData(result);
@@ -110,7 +114,7 @@ export function useEnrollments(activityId: string) {
     });
   }, []);
 
-  const totalPages = data ? Math.ceil(data.total / PAGE_LIMIT) : 0;
+  const totalPages = data?.totalPages ?? 0;
 
   return {
     data,
