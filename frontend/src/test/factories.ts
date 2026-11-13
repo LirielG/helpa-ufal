@@ -311,6 +311,12 @@ export function futureDateInput(daysAhead = 30): string {
   return date.toISOString().split("T")[0];
 }
 
+/** The same date as `futureDateInput`, as the date field shows it (`dd/mm/aaaa`). */
+export function futureDateDisplay(daysAhead = 30): string {
+  const [y, m, d] = futureDateInput(daysAhead).split("-");
+  return `${d}/${m}/${y}`;
+}
+
 /**
  * A paginated body (§3) around `items`, counting pages the way the backend's
  * `toPaginated` does. Pass `totalPages` to serve a count the client could not

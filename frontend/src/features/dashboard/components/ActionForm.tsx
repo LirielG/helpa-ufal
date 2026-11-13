@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
@@ -30,6 +30,9 @@ import type {
   CampusLocation,
 } from "@/services/contracts/activity";
 import { fetchAreaSuggestions } from "../services";
+import { DatePicker, TimeInput } from "../../../components";
+import { timeSchema } from "../../../validators/time";
+import { formatISODate } from "../../../utils/dateField";
 
 const addressSchema = z.object({
   addressLine: z.string().min(1, "Informe o logradouro."),
@@ -61,13 +64,13 @@ const baseSchema = z.object({
   startDate: z
     .string()
     .min(1, "A data de início é obrigatória.")
-    .refine(
-      (v) => new Date(v) >= new Date(new Date().toISOString().split("T")[0]),
-      { message: "A data de início deve ser futura." },
-    ),
-  startTime: z.string().min(1, "Informe o horário de início."),
+    // aaaa-mm-dd strings sort chronologically, and both sides use the local day.
+    .refine((v) => v >= formatISODate(new Date()), {
+      message: "A data de início deve ser futura.",
+    }),
+  startTime: timeSchema("Informe o horário de início."),
   endDate: z.string().min(1, "A data de encerramento é obrigatória."),
-  endTime: z.string().min(1, "Informe o horário de encerramento."),
+  endTime: timeSchema("Informe o horário de encerramento."),
   workloadHours: z.coerce
     .number({ error: "Informe a carga horária." })
     .int()
@@ -225,6 +228,7 @@ export function ActionRegister({
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     setError,
@@ -243,7 +247,7 @@ export function ActionRegister({
   });
   // eslint-disable-next-line react-hooks/incompatible-library
   const format = watch("format");
-   
+
   const startDate = watch("startDate");
 
   const needsUrl = format === "ONLINE" || format === "HYBRID";
@@ -343,7 +347,7 @@ export function ActionRegister({
 
   if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatISODate(new Date());
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm p-4">
@@ -609,12 +613,22 @@ export function ActionRegister({
                           >
                             Início
                           </label>
-                          <input
-                            id="startTime"
-                            type="time"
-                            aria-label="Horário de início"
-                            className={inputCls(!!errors.startTime)}
-                            {...register("startTime")}
+                          <Controller
+                            name="startTime"
+                            control={control}
+                            render={({ field }) => (
+                              <TimeInput
+                                id="startTime"
+                                aria-label="Horário de início"
+                                aria-invalid={
+                                  errors.startTime ? true : undefined
+                                }
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                ref={field.ref}
+                                error={errors.startTime?.message}
+                              />
+                            )}
                           />
                         </div>
                         <div>
@@ -624,12 +638,20 @@ export function ActionRegister({
                           >
                             Fim
                           </label>
-                          <input
-                            id="endTime"
-                            type="time"
-                            aria-label="Horário de encerramento"
-                            className={inputCls(!!errors.endTime)}
-                            {...register("endTime")}
+                          <Controller
+                            name="endTime"
+                            control={control}
+                            render={({ field }) => (
+                              <TimeInput
+                                id="endTime"
+                                aria-label="Horário de encerramento"
+                                aria-invalid={errors.endTime ? true : undefined}
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                ref={field.ref}
+                                error={errors.endTime?.message}
+                              />
+                            )}
                           />
                         </div>
                       </div>
@@ -647,13 +669,20 @@ export function ActionRegister({
                           >
                             Início
                           </label>
-                          <input
-                            id="startDate"
-                            type="date"
-                            min={today}
-                            aria-label="Data de início"
-                            className={inputCls(!!errors.startDate)}
-                            {...register("startDate")}
+                          <Controller
+                            name="startDate"
+                            control={control}
+                            render={({ field }) => (
+                              <DatePicker
+                                id="startDate"
+                                aria-label="Data de início"
+                                min={today}
+                                invalid={!!errors.startDate}
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                ref={field.ref}
+                              />
+                            )}
                           />
                         </div>
                         <div>
@@ -663,13 +692,20 @@ export function ActionRegister({
                           >
                             Fim
                           </label>
-                          <input
-                            id="endDate"
-                            type="date"
-                            aria-label="Data de encerramento"
-                            min={startDate || today}
-                            className={inputCls(!!errors.endDate)}
-                            {...register("endDate")}
+                          <Controller
+                            name="endDate"
+                            control={control}
+                            render={({ field }) => (
+                              <DatePicker
+                                id="endDate"
+                                aria-label="Data de encerramento"
+                                min={startDate || today}
+                                invalid={!!errors.endDate}
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                                ref={field.ref}
+                              />
+                            )}
                           />
                         </div>
                       </div>
