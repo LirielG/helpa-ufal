@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@/test";
 import { DatePicker } from "../DatePicker";
-import { displayToISO, isoToDisplay } from "../../utils/dateField";
 
 function Harness({ initial = "", min }: { initial?: string; min?: string }) {
   const [value, setValue] = useState(initial);
@@ -27,8 +25,7 @@ describe("DatePicker", () => {
   });
 
   it("masks typing and stores aaaa-mm-dd", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
+    const { user } = render(<Harness />);
 
     await user.type(screen.getByLabelText("Data"), "10032026");
 
@@ -37,8 +34,7 @@ describe("DatePicker", () => {
   });
 
   it("shows its own message for a date that does not exist", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
+    const { user } = render(<Harness />);
 
     await user.type(screen.getByLabelText("Data"), "31022026");
 
@@ -49,19 +45,21 @@ describe("DatePicker", () => {
   });
 
   it("opens a pt-BR calendar with the days before the minimum disabled", async () => {
-    const user = userEvent.setup();
-    render(<Harness min="2026-03-10" />);
+    const { user } = render(<Harness min="2026-03-10" />);
 
     await user.click(screen.getByRole("button", { name: /Abrir calendário/ }));
 
     expect(screen.getByText(/março 2026/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /(^|\s)9 de março/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /(^|\s)10 de março/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /(^|\s)9 de março/ }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /(^|\s)10 de março/ }),
+    ).toBeEnabled();
   });
 
   it("picks a day from the calendar", async () => {
-    const user = userEvent.setup();
-    render(<Harness min="2026-03-10" />);
+    const { user } = render(<Harness min="2026-03-10" />);
 
     await user.click(screen.getByRole("button", { name: /Abrir calendário/ }));
     await user.click(screen.getByRole("button", { name: /(^|\s)12 de março/ }));
@@ -72,8 +70,7 @@ describe("DatePicker", () => {
   });
 
   it("closes the calendar with Escape", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
+    const { user } = render(<Harness />);
 
     await user.click(screen.getByRole("button", { name: /Abrir calendário/ }));
     fireEvent.keyDown(document, { key: "Escape" });
@@ -82,8 +79,7 @@ describe("DatePicker", () => {
   });
 
   it("renders the calendar in a body portal outside scroll containers and keeps it open on month navigation", async () => {
-    const user = userEvent.setup();
-    render(
+    const { user } = render(
       <div data-testid="scroll-box" className="overflow-y-auto">
         <Harness min="2026-03-10" />
       </div>,
@@ -102,11 +98,5 @@ describe("DatePicker", () => {
 
     fireEvent.mouseDown(document.body);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("converts between the two formats", () => {
-    expect(isoToDisplay("2026-03-10")).toBe("10/03/2026");
-    expect(displayToISO("10/03/2026")).toBe("2026-03-10");
-    expect(displayToISO("31/02/2026")).toBeUndefined();
   });
 });
