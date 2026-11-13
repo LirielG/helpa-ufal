@@ -33,6 +33,7 @@ import type {
 import { fetchAreaSuggestions } from "../services";
 import { DatePicker, TimeInput } from "../../../components";
 import { timeSchema } from "../../../validators/time";
+import { formatISODate } from "../../../utils/dateField";
 
 const addressSchema = z.object({
   addressLine: z.string().min(1, "Informe o logradouro."),
@@ -67,10 +68,10 @@ const baseSchema = z.object({
   startDate: z
     .string()
     .min(1, "A data de início é obrigatória.")
-    .refine(
-      (v) => new Date(v) >= new Date(new Date().toISOString().split("T")[0]),
-      { message: "A data de início deve ser futura." },
-    ),
+    // aaaa-mm-dd strings sort chronologically, and both sides use the local day.
+    .refine((v) => v >= formatISODate(new Date()), {
+      message: "A data de início deve ser futura.",
+    }),
   startTime: timeSchema("Informe o horário de início."),
   endDate: z.string().min(1, "A data de encerramento é obrigatória."),
   endTime: timeSchema("Informe o horário de encerramento."),
@@ -348,8 +349,7 @@ export function ActionRegister({
 
   if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
 
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const today = formatISODate(new Date());
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm p-4">
@@ -622,7 +622,9 @@ export function ActionRegister({
                               <TimeInput
                                 id="startTime"
                                 aria-label="Horário de início"
-                                aria-invalid={errors.startTime ? true : undefined}
+                                aria-invalid={
+                                  errors.startTime ? true : undefined
+                                }
                                 value={field.value ?? ""}
                                 onChange={field.onChange}
                                 ref={field.ref}
