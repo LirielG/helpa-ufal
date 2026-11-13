@@ -204,7 +204,7 @@ describe("GET /activities/filters", () => {
       expect(listed.body.total).toBe(expectedTotalByArea[area.toLowerCase()]);
 
       // The listing includes the raw `details` relation; area is nested.
-      for (const item of listed.body.activities) {
+      for (const item of listed.body.items) {
         expect(item.details.area.toLowerCase()).toBe(area.toLowerCase());
       }
     }

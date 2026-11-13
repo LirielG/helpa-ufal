@@ -1,15 +1,17 @@
 /**
  * Wire types for `GET /activities/:activityId/enrollments` and
- * `PUT /enrollments/:enrollmentId/attendance`.
+ * `PUT /activities/:activityId/enrollments/me` and `PUT /enrollments/:enrollmentId/attendance`.
  *
  * Written from the Bruno examples (`backend/docs/bruno/Enrollments/*`), not from
  * the backend code (§8).
  */
 
+import type { Paginated } from "./common";
+
 export type EnrollmentStatus =
   "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
-/** The canonical enrollment, returned as is by `PUT /enrollments/:enrollmentId/attendance`. */
+/** The canonical enrollment returned by self-enrollment and attendance updates. */
 export interface Enrollment {
   id: string;
   activityId: string;
@@ -43,21 +45,16 @@ export interface EnrollmentListItem extends Enrollment {
 /**
  * Response of `GET /activities/:activityId/enrollments`.
  *
- * Deviates from §3: there is no `totalPages` yet. `totalPresent` counts the
- * enrollments with attendanceConfirmed = true across every page.
+ * `totalPresent` counts the enrollments with attendanceConfirmed = true across
+ * every page.
  */
-export interface ListEnrollmentsResponse {
-  items: EnrollmentListItem[];
-  total: number;
-  page: number;
-  limit: number;
+export type ListEnrollmentsResponse = Paginated<EnrollmentListItem> & {
   totalPresent: number;
-}
+};
 
 /**
  * Body of `PUT /enrollments/:enrollmentId/attendance`. Presence and hours are
  * one pair: hours are required with a presence and forbidden with an absence.
  */
 export type ConfirmAttendanceRequest =
-  | { attended: true; workloadHours: number }
-  | { attended: false };
+  { attended: true; workloadHours: number } | { attended: false };

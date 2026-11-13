@@ -1,7 +1,6 @@
+import type { AuthenticatedUser } from "@/types/auth.js";
 import CertificateRepository from "@/repositories/certificate/CertificateRepository.js";
-import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
-import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import { CertificatePdfRenderer } from "@/services/certificate/CertificatePdfRenderer.js";
 import type { ICertificatePdfRenderer } from "@/services/certificate/ICertificatePdfRenderer.js";
 import type {
@@ -16,32 +15,23 @@ import { normalizeValidationCode } from "@/utils/validationCode.js";
 
 type Props = {
   certificateRepository?: ICertificateRepository;
-  userRepository?: IUserRepository;
   renderer?: ICertificatePdfRenderer;
 };
 
 class CertificateService implements ICertificateService {
   private _certificateRepository: ICertificateRepository;
-  private _userRepository: IUserRepository;
   private _renderer: ICertificatePdfRenderer;
 
   constructor(props?: Props) {
     this._certificateRepository =
       props?.certificateRepository ?? new CertificateRepository();
-    this._userRepository = props?.userRepository ?? new UserRepository();
     this._renderer = props?.renderer ?? new CertificatePdfRenderer();
   }
 
   public async getFile(
-    userId: string,
+    user: Pick<AuthenticatedUser, "id" | "isManager">,
     certificateId: string,
   ): Promise<CertificateFile> {
-    // isManager comes from the database: the token claims only identify the user.
-    const user = await this._userRepository.findById(userId);
-    if (!user) {
-      throw new CustomError(401, "User account not found or inactive.");
-    }
-
     // A malformed id, an unknown one and someone else's certificate share one
     // answer, so the route never confirms that a certificate exists. The
     // activity author is deliberately left out: the homologation screen
@@ -55,7 +45,7 @@ class CertificateService implements ICertificateService {
     if (!certificate) throw notFound;
 
     const { enrollment } = certificate;
-    if (enrollment.userId !== userId && !user.isManager) throw notFound;
+    if (enrollment.userId !== user.id && !user.isManager) throw notFound;
 
     // Attendance homologation deletes the certificate when presence stops
     // holding, but the PDF attests presence, so it is not handed out on that

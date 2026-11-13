@@ -76,14 +76,6 @@ describe("getEnrollmentErrorMessage", () => {
       expect(message).toBe("As inscrições para esta ação não estão abertas.");
     });
 
-    it("returns pt-BR message for user already enrolled using code", () => {
-      const error = new ApiError(409, "Arbitrary backend text", [], {
-        code: "ALREADY_ENROLLED",
-      });
-      const message = getEnrollmentErrorMessage(error);
-      expect(message).toBe("Você já está inscrito nesta ação.");
-    });
-
     it("returns pt-BR message for no available slots", () => {
       const error = new ApiError(409, "Arbitrary backend text", [], {
         code: "NO_AVAILABLE_SLOTS",
@@ -111,14 +103,14 @@ describe("getEnrollmentErrorMessage", () => {
       );
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe(
-        "Falha de comunicação com o servidor. Tente novamente.",
+        "Não foi possível conectar ao servidor. Tente novamente.",
       );
     });
   });
 
   describe("Unknown status", () => {
     it("returns generic pt-BR message for unexpected status", () => {
-      const error = new ApiError(500, "Internal server error");
+      const error = new ApiError(418, "Unexpected error");
       const message = getEnrollmentErrorMessage(error);
       expect(message).toBe("Erro ao realizar inscrição. Tente novamente.");
     });
@@ -161,7 +153,7 @@ describe("resolveCancellationError", () => {
     const error = new ApiError(NETWORK_ERROR_STATUS, "Network request failed");
     expect(resolveCancellationError(error)).toEqual({
       kind: "message",
-      text: "Falha de comunicação com o servidor. Tente novamente.",
+      text: "Não foi possível conectar ao servidor. Tente novamente.",
     });
   });
 
@@ -174,7 +166,7 @@ describe("resolveCancellationError", () => {
   });
 
   it("falls back to a generic message on an unknown status", () => {
-    const error = new ApiError(500, "Erro na comunicação com o servidor");
+    const error = new ApiError(418, "Unexpected error");
     expect(resolveCancellationError(error)).toEqual({
       kind: "message",
       text: "Não foi possível cancelar a inscrição. Tente novamente.",

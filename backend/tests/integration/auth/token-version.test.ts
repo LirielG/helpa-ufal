@@ -4,7 +4,7 @@ import type { User } from "@prisma/client";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
-import { authHeader, signToken } from "../../helpers/auth.js";
+import { authCookie, signToken } from "../../helpers/auth.js";
 
 // Session revocation: a token signed before the user's tokenVersion moved
 // on answers 401. GET /users/me is the probe because it reads the user.
@@ -13,14 +13,14 @@ const meUrl = "/users/me";
 const loginUrl = "/auth/login";
 const REVOKED_TOKEN_BODY = {
   status: 401,
-  code: "UNAUTHENTICATED",
-  message: "Token malformatted, expired or invalid.",
+  code: "SESSION_INVALID",
+  message: "Session is no longer valid.",
 };
 
 function getMe(token: string) {
   return request(app)
     .get(meUrl)
-    .set(...authHeader(token));
+    .set(...authCookie(token));
 }
 
 function tokenAtVersion(user: User, tokenVersion: number): string {
@@ -73,7 +73,10 @@ describe("token version", () => {
       .send({ email: user.email, password: DEFAULT_PASSWORD });
     expect(login.status).toBe(200);
 
-    expect((await getMe(login.body.token)).status).toBe(200);
+    expect(
+      (await request(app).get(meUrl).set("Cookie", login.headers["set-cookie"]))
+        .status,
+    ).toBe(200);
   });
 
   it("does not affect other users' tokens", async () => {
@@ -85,10 +88,10 @@ describe("token version", () => {
     expect((await getMe(other.token)).status).toBe(200);
   });
 
-  it("keeps answering 404 for a token whose user no longer exists", async () => {
+  it("returns 401 for a token whose user no longer exists", async () => {
     const student = await createStudent();
     await prisma.user.delete({ where: { id: student.user.id } });
 
-    expect((await getMe(student.token)).status).toBe(404);
+    expect((await getMe(student.token)).status).toBe(401);
   });
 });

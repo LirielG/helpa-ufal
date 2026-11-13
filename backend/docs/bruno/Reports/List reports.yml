@@ -220,7 +220,7 @@ examples:
 docs: |-
   Moderation queue: lists the reports filed against activities. General rules (pagination, envelope, error body) are in [api-conventions.md](../../api-conventions.md).
 
-  **Authentication:** manager only (`auth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
+  **Authentication:** manager only (`requireAuth({ manager: true })`). The service also checks the database, so a removed account answers 401 and a revoked manager role answers 403.
 
   **Query parameters**
 

@@ -3,7 +3,6 @@ import {
   formatCertificateDate,
   formatPeriod,
   formatValidationCode,
-  formatWorkloadHours,
 } from "../format";
 
 describe("formatValidationCode", () => {
@@ -45,15 +44,5 @@ describe("formatPeriod", () => {
     expect(
       formatPeriod("2026-06-12T22:00:00.000Z", "2026-06-13T01:00:00.000Z"),
     ).toBe("12/06/2026");
-  });
-});
-
-describe("formatWorkloadHours", () => {
-  it("uses the singular for one hour", () => {
-    expect(formatWorkloadHours(1)).toBe("1 hora");
-  });
-
-  it("uses the plural for more than one hour", () => {
-    expect(formatWorkloadHours(8)).toBe("8 horas");
   });
 });

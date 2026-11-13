@@ -41,13 +41,6 @@ class UserService implements IUserService {
   public async getProfile(userId: string): Promise<UserProfileResponse> {
     const user = await this._userRepository.findProfileById(userId);
 
-    // 404, not the 401 the enrollment routes return for the same situation
-    // (EnrollmentService.requireUser): there the status hides whether someone
-    // else's resource exists, while here the resource IS the token owner —
-    // there is nothing to conceal, and "valid credential, resource gone" is
-    // exactly what 404 means.
-    if (!user) throw new CustomError(404, "User not found.");
-
     const totalWorkloadHours =
       await this._enrollmentRepository.sumConfirmedHoursByUserId(userId);
 
@@ -58,13 +51,10 @@ class UserService implements IUserService {
     userId: string,
     input: UpdateProfileInput,
   ): Promise<UserProfileResponse> {
-    const user = await this._userRepository.findById(userId);
-
-    if (!user) throw new CustomError(404, "User not found.");
-
     let newHash: string | undefined;
 
     if (input.newPassword !== undefined) {
+      const user = await this._userRepository.findById(userId);
       const isCurrentValid = await bcryptjs.compare(
         input.currentPassword ?? "",
         user.passwordHash,
@@ -103,11 +93,6 @@ class UserService implements IUserService {
     userId: string,
     { filter, page, limit }: ListUserActivitiesQuery,
   ): Promise<Paginated<UserActivityResponse>> {
-    // Same 404 as getProfile, and for the same reason: the history belongs to
-    // the token owner, so a missing user is a missing resource, not a secret.
-    const user = await this._userRepository.findById(userId);
-    if (!user) throw new CustomError(404, "User not found.");
-
     const { items, total } = await this._activityRepository.listByUser(
       userId,
       filter,

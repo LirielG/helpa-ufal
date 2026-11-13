@@ -14,9 +14,6 @@ export interface IActivityReportService {
     requesterId: string,
     data: CreateActivityReportInput,
   ): Promise<ActivityReportResponse>;
-  listReports(
-    requesterId: string,
-    query: ListReportsQuery,
-  ): Promise<Paginated<ReportResponse>>;
+  listReports(query: ListReportsQuery): Promise<Paginated<ReportResponse>>;
   resolveReport(reportId: string, requesterId: string): Promise<ReportResponse>;
 }

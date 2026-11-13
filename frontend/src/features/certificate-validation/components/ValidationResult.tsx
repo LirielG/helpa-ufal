@@ -6,8 +6,8 @@ import {
   formatCertificateDate,
   formatPeriod,
   formatValidationCode,
-  formatWorkloadHours,
 } from "../format";
+import { formatWorkloadHours } from "@/utils";
 
 interface ValidationResultProps {
   state: ValidationState;

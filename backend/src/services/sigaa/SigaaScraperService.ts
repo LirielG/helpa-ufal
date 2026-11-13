@@ -21,7 +21,7 @@ const USER_AGENT =
 // serves, this whole CA agent can be dropped in favour of the default fetch.
 const CA_BUNDLE_PATH = path.resolve(
   import.meta.dirname,
-  "../../config/certs/sigaa-ca-bundle.pem",
+  "../../../assets/certs/sigaa-ca-bundle.pem",
 );
 
 function loadCaAgent(): Agent {

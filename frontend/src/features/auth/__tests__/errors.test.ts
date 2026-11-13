@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, NETWORK_ERROR_STATUS } from "@/services/apiError";
 import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
   CONNECTION_ERROR_MESSAGE,
+} from "@/services/apiError";
+import {
   INVALID_CREDENTIALS_MESSAGE,
   LOGIN_GENERIC_ERROR_MESSAGE,
   REGISTER_ALREADY_IN_USE_MESSAGE,

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { UserMinus } from "lucide-react";
 import { Button } from "../../../components/Button";
@@ -6,6 +6,7 @@ import { ActionSummary } from "./ActionSummary";
 import { cancelEnrollment } from "../services";
 import { resolveCancellationError } from "../errors";
 import type { Activity } from "@/services/contracts/activity";
+import { useDialog } from "../../../hooks/useDialog";
 
 interface CancelEnrollmentModalProps {
   action: Activity;
@@ -23,7 +24,9 @@ export function CancelEnrollmentModal({
   onActivityRemoved,
   onActivityClosed,
 }: CancelEnrollmentModalProps) {
+  const titleId = useId();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const dialogRef = useDialog({ onClose, closeDisabled: isSubmitting });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // State alone lets a second click of a double click through before the
   // re-render disables the button.
@@ -79,13 +82,19 @@ export function CancelEnrollmentModal({
         onClick={isSubmitting ? undefined : onClose}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+      >
         <div className="px-8 py-8 flex flex-col items-center gap-5 text-center">
           <div className="size-14 rounded-full bg-red-100 flex items-center justify-center">
             <UserMinus className="size-7 text-red-700" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 id={titleId} className="text-xl font-bold text-gray-900">
               Cancelar inscrição
             </h2>
             <p className="text-sm text-gray-500 mt-1">

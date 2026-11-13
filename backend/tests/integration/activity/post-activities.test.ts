@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
-import { anAddress, createTeacher, createStudent } from "../../helpers/factories.js";
-import { authHeader, invalidToken, signToken } from "../../helpers/auth.js";
+import {
+  anAddress,
+  createTeacher,
+  createStudent,
+} from "../../helpers/factories.js";
+import { authCookie, invalidToken, signToken } from "../../helpers/auth.js";
 import { daysFromNow } from "../../helpers/dates.js";
 import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
-
 
 function validPayload(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,7 +42,7 @@ describe("POST /activities", () => {
 
         const response = await request(app)
           .post("/activities")
-          .set(...authHeader(author.token))
+          .set(...authCookie(author.token))
           .send(validPayload({ [field]: invalidDate }));
 
         expect(response.status).toBe(400);
@@ -57,7 +60,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ startDate, endDate }));
 
     expect(response.status).toBe(201);
@@ -71,7 +74,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(
         validPayload({
           format: "IN_PERSON",
@@ -90,7 +93,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(
         validPayload({
           format: "ONLINE",
@@ -104,14 +107,16 @@ describe("POST /activities", () => {
   });
 
   it("returns 401 without a token", async () => {
-    const response = await request(app).post("/activities").send(validPayload());
+    const response = await request(app)
+      .post("/activities")
+      .send(validPayload());
     expect(response.status).toBe(401);
   });
 
   it("returns 401 with an invalid token", async () => {
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(invalidToken()))
+      .set(...authCookie(invalidToken()))
       .send(validPayload());
     expect(response.status).toBe(401);
   });
@@ -125,7 +130,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(expiredToken))
+      .set(...authCookie(expiredToken))
       .send(validPayload());
     expect(response.status).toBe(401);
   });
@@ -138,14 +143,14 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(teacher.token))
+      .set(...authCookie(teacher.token))
       .send(validPayload());
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      status: 403,
-      code: "FORBIDDEN",
-      message: "You do not have permission to create an activity.",
+      status: 401,
+      code: "SESSION_INVALID",
+      message: "Session is no longer valid.",
     });
 
     const count = await prisma.activity.count({
@@ -160,13 +165,11 @@ describe("POST /activities", () => {
   ] as const)(
     "creates an activity for a %s and persists it with authorId from the token",
     async (_role, createUser) => {
-      // authMiddleware.auth() (no options) requires a valid token but does not
-      // restrict by userType/isManager: any authenticated user create an action.
       const author = await createUser();
 
       const response = await request(app)
         .post("/activities")
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send(validPayload());
 
       expect(response.status).toBe(201);
@@ -174,7 +177,9 @@ describe("POST /activities", () => {
       expect(response.body.status).toBe("OPEN");
       expect(response.body.availableSlots).toBe(response.body.slots);
 
-      const persisted = await request(app).get(`/activities/${response.body.id}`);
+      const persisted = await request(app).get(
+        `/activities/${response.body.id}`,
+      );
       expect(persisted.status).toBe(200);
       expect(persisted.body.authorId).toBe(author.user.id);
     },
@@ -188,7 +193,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ authorId: someoneElse.user.id }));
 
     expect(response.status).toBe(201);
@@ -200,16 +205,26 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
-      .send(validPayload({ format: "IN_PERSON", url: undefined, address: undefined }));
+      .set(...authCookie(author.token))
+      .send(
+        validPayload({
+          format: "IN_PERSON",
+          url: undefined,
+          address: undefined,
+        }),
+      );
 
-        expect(response.status).toBe(400);
+    expect(response.status).toBe(400);
     expect(response.body).toEqual({
       status: 400,
       code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "address", code: "VALIDATION_ERROR", message: "Invalid input: expected object, received undefined" },
+        {
+          field: "address",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected object, received undefined",
+        },
       ],
     });
   });
@@ -219,7 +234,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ format: "HYBRID", address: undefined }));
 
     expect(response.status).toBe(400);
@@ -228,7 +243,11 @@ describe("POST /activities", () => {
       code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "address", code: "VALIDATION_ERROR", message: "Invalid input: expected object, received undefined" },
+        {
+          field: "address",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected object, received undefined",
+        },
       ],
     });
   });
@@ -245,7 +264,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ format: "HYBRID", url: undefined, address }));
 
     expect(response.status).toBe(400);
@@ -254,7 +273,11 @@ describe("POST /activities", () => {
       code: "VALIDATION_ERROR",
       message: "Validation error.",
       errors: [
-        { field: "url", code: "VALIDATION_ERROR", message: "Invalid input: expected string, received undefined" },
+        {
+          field: "url",
+          code: "VALIDATION_ERROR",
+          message: "Invalid input: expected string, received undefined",
+        },
       ],
     });
   });
@@ -264,7 +287,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ format: "ONLINE", url: undefined }));
 
     expect(response.status).toBe(201);
@@ -279,11 +302,11 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ format: "ONLINE", address: anAddress() }));
 
     expect(response.status).toBe(201);
-    
+
     expect(response.body.details.format).toBe("ONLINE");
     expect(response.body.details.address).toBeNull();
 
@@ -300,17 +323,19 @@ describe("POST /activities", () => {
 
       const response = await request(app)
         .post("/activities")
-        .set(...authHeader(author.token))
+        .set(...authCookie(author.token))
         .send(validPayload({ format, address }));
 
       expect(response.status).toBe(201);
-      
+
       expect(response.body.details.address).toEqual({
         id: expect.any(String),
         ...address,
       });
 
-      const persisted = await request(app).get(`/activities/${response.body.id}`);
+      const persisted = await request(app).get(
+        `/activities/${response.body.id}`,
+      );
       expect(persisted.body.details.address).toEqual({
         id: expect.any(String),
         ...address,
@@ -323,7 +348,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ format: "ONLINE", url: "url-invalida" }));
 
     expect(response.status).toBe(400);
@@ -337,7 +362,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(
         validPayload({
           startDate: daysFromNow(44).toISOString(),
@@ -347,7 +372,11 @@ describe("POST /activities", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
-      { field: "startDate", code: "VALIDATION_ERROR", message: "startDate must be before endDate." },
+      {
+        field: "startDate",
+        code: "VALIDATION_ERROR",
+        message: "startDate must be before endDate.",
+      },
     ]);
   });
 
@@ -356,7 +385,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(
         validPayload({
           startDate: "2027-01-01T00:00:00.000Z",
@@ -367,7 +396,11 @@ describe("POST /activities", () => {
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual(
       expect.arrayContaining([
-        { field: "endDate", code: "VALIDATION_ERROR", message: "Activity duration cannot exceed 365 days." },
+        {
+          field: "endDate",
+          code: "VALIDATION_ERROR",
+          message: "Activity duration cannot exceed 365 days.",
+        },
       ]),
     );
   });
@@ -378,7 +411,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ title }));
 
     expect(response.status).toBe(201);
@@ -390,7 +423,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ title: "a".repeat(ACTIVITY_TITLE_MAX_LENGTH + 1) }));
 
     expect(response.status).toBe(400);
@@ -404,13 +437,17 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(validPayload({ slots: 10_001 }));
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual(
       expect.arrayContaining([
-        { field: "slots", code: "VALIDATION_ERROR", message: "slots cannot exceed 10000." },
+        {
+          field: "slots",
+          code: "VALIDATION_ERROR",
+          message: "slots cannot exceed 10000.",
+        },
       ]),
     );
   });
@@ -422,7 +459,7 @@ describe("POST /activities", () => {
 
     const response = await request(app)
       .post("/activities")
-      .set(...authHeader(author.token))
+      .set(...authCookie(author.token))
       .send(
         validPayload({
           startDate: start.toISOString(),
@@ -437,7 +474,8 @@ describe("POST /activities", () => {
         {
           field: "workloadHours",
           code: "VALIDATION_ERROR",
-          message: "workloadHours cannot exceed the total duration of the activity.",
+          message:
+            "workloadHours cannot exceed the total duration of the activity.",
         },
       ]),
     );

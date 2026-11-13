@@ -6,6 +6,12 @@ import type {
 } from "@/services/contracts/enrollment";
 import type { UserActivityItem } from "@/services/contracts/user";
 import type { CertificateValidation } from "@/services/contracts/certificate";
+import type { Paginated } from "@/services/contracts/common";
+import type {
+  Report,
+  ReportActivity,
+  ReportReporter,
+} from "@/services/contracts/report";
 import type { UserActivity } from "@/features/profile/types";
 import type { SigaaActivity } from "@/features/sigaa/types";
 
@@ -262,6 +268,39 @@ export function makeCertificateValidation(
   };
 }
 
+/** Item of GET /reports and response of PUT /reports/:reportId/resolution. */
+export function makeReport(
+  overrides: Partial<Omit<Report, "activity" | "reporter">> & {
+    activity?: Partial<ReportActivity>;
+    reporter?: Partial<ReportReporter> | null;
+  } = {},
+): Report {
+  const { activity, reporter, ...rest } = overrides;
+
+  return {
+    id: unique("report"),
+    category: "MISINFORMATION",
+    description: "O endereço informado na descrição não confere.",
+    createdAt: "2026-06-05T19:44:20.000Z",
+    resolvedAt: null,
+    ...rest,
+    activity: {
+      id: unique("activity"),
+      title: "Oficina de Introdução à Programação",
+      authorId: unique("author"),
+      ...activity,
+    },
+    reporter:
+      reporter === null
+        ? null
+        : {
+            id: unique("reporter"),
+            fullName: "Maria Clara Santos",
+            ...reporter,
+          },
+  };
+}
+
 /**
  * A `YYYY-MM-DD` value for date inputs, `daysAhead` days from now. Forms that
  * reject past dates need this instead of a fixed date, which expires.
@@ -276,4 +315,25 @@ export function futureDateInput(daysAhead = 30): string {
 export function futureDateDisplay(daysAhead = 30): string {
   const [y, m, d] = futureDateInput(daysAhead).split("-");
   return `${d}/${m}/${y}`;
+}
+
+/**
+ * A paginated body (§3) around `items`, counting pages the way the backend's
+ * `toPaginated` does. Pass `totalPages` to serve a count the client could not
+ * have computed, which proves it reads the field instead of deriving it.
+ */
+export function makePage<T>(
+  items: T[],
+  overrides: Partial<Omit<Paginated<T>, "items">> = {},
+): Paginated<T> {
+  const total = overrides.total ?? items.length;
+  const limit = overrides.limit ?? 20;
+
+  return {
+    items,
+    total,
+    page: overrides.page ?? 1,
+    limit,
+    totalPages: overrides.totalPages ?? Math.max(1, Math.ceil(total / limit)),
+  };
 }

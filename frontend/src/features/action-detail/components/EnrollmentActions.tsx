@@ -3,11 +3,13 @@ import { Button } from "../../../components/Button";
 import { getUnavailableEnrollmentLabel } from "../enrollment";
 import { UnavailableEnrollmentButton } from "./UnavailableEnrollmentButton";
 import type { Activity } from "@/services/contracts/activity";
+import type { RefObject } from "react";
 
 interface EnrollmentActionsProps {
   action: Activity;
   onEnroll: () => void;
   onCancel: () => void;
+  cancelButtonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 /**
@@ -22,6 +24,7 @@ export function EnrollmentActions({
   action,
   onEnroll,
   onCancel,
+  cancelButtonRef,
 }: EnrollmentActionsProps) {
   const isOpen = action.status === "OPEN";
   const isEnrolled =
@@ -37,6 +40,7 @@ export function EnrollmentActions({
         </div>
         {isOpen ? (
           <Button
+            ref={cancelButtonRef}
             variant="danger"
             size="lg"
             onClick={onCancel}

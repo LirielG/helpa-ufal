@@ -1,0 +1,171 @@
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router";
+import { formatDate } from "../../../utils";
+import type { ActivityListItem } from "@/services/contracts/activity";
+import { ActionCover } from "@/components/ActionCover";
+import { fetchFeaturedActions } from "../services";
+
+interface HeroBannerProps {
+  refreshKey?: number;
+}
+
+export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [featuredActions, setFeaturedActions] = useState<ActivityListItem[]>(
+    [],
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchFeaturedActions()
+      .then((data) => {
+        if (!isMounted) return;
+        setHasError(false);
+        setFeaturedActions(data);
+        setCurrentSlide(0);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setHasError(true);
+        setFeaturedActions([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshKey]);
+
+  useEffect(() => {
+    if (featuredActions.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredActions.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [featuredActions.length]);
+
+  const goToSlide = (index: number) => setCurrentSlide(index);
+
+  const goToPrevious = () => {
+    setCurrentSlide(
+      (prev) => (prev - 1 + featuredActions.length) % featuredActions.length,
+    );
+  };
+
+  const goToNext = () => {
+    setCurrentSlide((prev) => (prev + 1) % featuredActions.length);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-[400px] md:h-[500px] bg-gray-900 w-full animate-pulse" />
+    );
+  }
+
+  if (hasError || featuredActions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="relative bg-gray-900 overflow-hidden">
+      <div className="relative h-[400px] md:h-[500px]">
+        {featuredActions.map((action, index) => {
+          const formattedDate = formatDate(action.startDate);
+
+          return (
+            <div
+              key={action.id}
+              data-testid="hero-slide"
+              aria-hidden={index !== currentSlide}
+              inert={index !== currentSlide}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <div className="absolute inset-0">
+                {/* No title: the slide heading already names the action. */}
+                <ActionCover
+                  id={action.id}
+                  type={action.type}
+                  className="w-full h-full"
+                  iconClassName="size-24"
+                  iconPlacement="top-right"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
+              </div>
+
+              <div className="relative h-full flex items-center">
+                <div className="container mx-auto px-4">
+                  <div className="max-w-2xl text-white space-y-4">
+                    <h2 className="text-4xl md:text-5xl font-bold line-clamp-2">
+                      {action.title}
+                    </h2>
+                    <p className="text-lg md:text-xl text-gray-200 line-clamp-3">
+                      {action.details?.description ||
+                        "Descrição não informada."}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm bg-green-500 text-white px-4 py-2 rounded-full font-semibold">
+                        {formattedDate}
+                      </span>
+                      <Link
+                        to={`/activity/${action.id}`}
+                        className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                      >
+                        Saiba mais
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {featuredActions.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-4 top-1/2 -translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
+            aria-label="Slide anterior"
+          >
+            <ChevronLeft className="size-6" />
+          </button>
+
+          <button
+            onClick={goToNext}
+            className="absolute right-4 top-1/2 -translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
+            aria-label="Próximo slide"
+          >
+            <ChevronRight className="size-6" />
+          </button>
+
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            {featuredActions.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                aria-current={index === currentSlide}
+                className={`size-2.5 rounded-full transition-all ${
+                  index === currentSlide
+                    ? "bg-white w-8"
+                    : "bg-white/50 hover:bg-white/75"
+                }`}
+                aria-label={`Ir para slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

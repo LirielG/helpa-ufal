@@ -111,6 +111,7 @@ examples:
             "total": 3,
             "page": 1,
             "limit": 10,
+            "totalPages": 1,
             "totalPresent": 1
           }
 
@@ -138,17 +139,49 @@ examples:
             "total": 0,
             "page": 1,
             "limit": 10,
+            "totalPages": 1,
             "totalPresent": 0
           }
 
-  - name: 400 - Invalid query params
-    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs before authentication, so this response carries no business information — not even the existence of any activity.
+  - name: 400 - Invalid id
+    description: The activityId in the path must be a UUID v4.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
       params:
         - name: activityId
-          value: ""
+          value: "not-a-uuid"
+          type: path
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Validation error.",
+            "errors": [
+              {
+                "field": "activityId",
+                "code": "INVALID_UUID",
+                "message": "activityId must be a valid UUID."
+              }
+            ]
+          }
+
+  - name: 400 - Invalid query params
+    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs after authentication; missing, invalid or expired credentials return 401 even when the query is invalid.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: "f26559ac-d672-4252-a9a4-d6fe6583d8ec"
           type: path
           description: Activity UUID
         - name: page
@@ -180,7 +213,7 @@ examples:
       method: GET
       params:
         - name: activityId
-          value: ""
+          value: "f26559ac-d672-4252-a9a4-d6fe6583d8ec"
           type: path
           description: Activity UUID
         - name: limit
@@ -206,7 +239,7 @@ examples:
           }
 
   - name: 401 - Unauthenticated
-    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked after query format but before activity existence, so not even the existence of the activity is revealed.
+    description: Unauthenticated. No session cookie was sent (an invalid or expired one answers `Token malformatted, expired or invalid.`), or the user it identifies no longer exists in the database. Checked before query format and activity existence, so not even the existence of the activity is revealed.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -260,13 +293,13 @@ examples:
           }
 
   - name: 404 - Activity not found
-    description: Activity not found or soft-deleted. A non-UUID id also returns 404 (not 400) — resource identifiers in the path never produce 400; only operator input in the query does. This preserves the validation order query format (400) → authentication (401) → existence (404) → authorization (403). NOTE — intentional divergence, DELETE /activities/:activityId/enroll currently returns 400 for the same input (it predates this rule); reconciliation is tracked in a debt issue and will eventually remove this note. This route answers the generic NOT_FOUND code; ACTIVITY_NOT_FOUND is used only by the enroll and cancel routes.
+    description: Activity not found or soft-deleted. A valid UUID v4 is required. This route keeps the generic NOT_FOUND code.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
       params:
         - name: activityId
-          value: not-a-uuid
+          value: "00000000-0000-4000-8000-000000000000"
           type: path
           description: Activity UUID
         - name: page
@@ -316,7 +349,7 @@ examples:
 docs: |-
   Lists the active enrollments of an activity for its creator or a manager.
 
-  **Authentication:** `requireAuth` (`auth({ userTypes: "all" })`). A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
+  **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired one, 401 `Token malformatted, expired or invalid.`.
 
   ## Query params
   | Param | Rule | Default |
@@ -329,19 +362,20 @@ docs: |-
   - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
-  - Validation order: query format (400) → authentication (401) → activity existence (404) → authorization (403). Query validation carries no business information, so it runs before authentication; the rest of the chain ensures the existence of an activity is never leaked to unauthorized users.
-  - Intentional asymmetry: a resource identifier in the path never produces 400 — a non-UUID activityId returns 404. Operator input in the query (page, limit) produces 400. DELETE /activities/:activityId/enroll predates this rule and currently returns 400 for malformed ids; a debt issue tracks its alignment.
+  - Validation order: authentication (401) → path and query format (400, aggregated errors[]) → activity existence (404) → authorization (403).
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
   - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).
   - The mapping to the response is explicit field by field — never spread — because the user.student include carries passwordHash into the Prisma object. Integration tests assert passwordHash never appears.
   - attendanceConfirmed is tri-state: null = not yet homologated, true = present, false = registered absence. confirmedWorkloadHours is 0 in both null and false cases: consumers must always discriminate by attendanceConfirmed, never by the number.
   - On non-COMPLETED activities every item shows attendanceConfirmed: null and confirmedWorkloadHours: 0 — homologation only exists on COMPLETED activities (US 2.8.1), so this state is structural, not a code branch.
-  - Envelope: { items, total, page, limit, totalPresent }. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
+  - Standard paginated envelope plus the route-specific totalPresent aggregate. total is the count of APPROVED enrollments; totalPresent counts attendanceConfirmed = true.
   - availableSlots is NOT part of this envelope: the management screen reads it from GET /activities/:activityId.
   - The list is ordered by enrolledAt ascending (oldest enrollment first), tie-broken by id ascending — a stable ORDER BY is a prerequisite of deterministic pagination.
   - Success is always 200, even with zero active enrollments (empty list) — never 404 for lack of enrollees.
-  - A nonexistent, soft-deleted or non-UUID activity id returns 404.
+  - A nonexistent or soft-deleted activity with a valid UUID v4 returns 404.
   - Status filters and sorting are additive evolutions that do not break this contract; the enrolledAt ASC ordering is fixed.
+
+  The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
   Pagination, envelope and error format follow [api-conventions.md](../../api-conventions.md).

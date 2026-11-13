@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { FeedTabs, type FeedKey } from "./FeedTabs";
 import { HelpaFeed } from "./HelpaFeed";
 import { SigaaFeed } from "../../sigaa/components/SigaaFeed";
+import { HeroBanner } from "./HeroBanner";
 import bgFeed from "../../../assets/bg.svg";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { fetchActions } from "../services";
@@ -31,7 +32,8 @@ interface FeedSectionProps {
 
 export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const feed: FeedKey = searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
+  const feed: FeedKey =
+    searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
   const [actions, setActions] = useState<ActivityListItem[]>([]);
   const [page, setPage] = useState(1);
@@ -39,6 +41,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [helpaHasError, setHelpaHasError] = useState(false);
   const [sigaaHasError, setSigaaHasError] = useState(false);
+  const [heroRefreshKey, setHeroRefreshKey] = useState(0);
 
   const [filters, setFilters] = useState<FilterOptions>(INITIAL_FILTERS);
 
@@ -90,7 +93,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
       .then((res) => {
         if (!isCurrent()) return;
 
-        setActions(res.activities);
+        setActions(res.items);
         setTotalPages(res.totalPages);
       })
       .catch((err) => {
@@ -104,13 +107,18 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
       });
   }, [requestFilters, page]);
 
+  const reloadAll = useCallback(() => {
+    loadActions();
+    setHeroRefreshKey((prev) => prev + 1);
+  }, [loadActions]);
+
   const { setOnSuccessCallback } = useActionRegister();
 
   useEffect(() => {
-    setOnSuccessCallback(loadActions);
+    setOnSuccessCallback(reloadAll);
 
     return () => setOnSuccessCallback(undefined);
-  }, [loadActions, setOnSuccessCallback]);
+  }, [reloadAll, setOnSuccessCallback]);
 
   useEffect(() => {
     let mounted = true;
@@ -129,33 +137,40 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   }, [loadActions]);
 
   return (
-    <div className="w-full min-h-[50vh] bg-white" style={FEED_BACKGROUND_STYLE}>
-      <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        <FeedTabs
-          active={feed}
-          onChange={changeFeed}
-          sigaaHasError={sigaaHasError}
-        />
+    <div className="w-full flex flex-col">
+      <HeroBanner refreshKey={heroRefreshKey} />
 
-        {feed === "helpa" ? (
-          <HelpaFeed
-            actions={actions}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onResetFilters={handleResetFilters}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            isLoading={isLoading}
-            hasError={helpaHasError}
-            onRetry={loadActions}
+      <div
+        className="w-full min-h-[50vh] bg-white"
+        style={FEED_BACKGROUND_STYLE}
+      >
+        <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+          <FeedTabs
+            active={feed}
+            onChange={changeFeed}
+            sigaaHasError={sigaaHasError}
           />
-        ) : (
-          <SigaaFeed
-            onExploreHelpa={showHelpaFeed}
-            onErrorChange={setSigaaHasError}
-          />
-        )}
+
+          {feed === "helpa" ? (
+            <HelpaFeed
+              actions={actions}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              isLoading={isLoading}
+              hasError={helpaHasError}
+              onRetry={loadActions}
+            />
+          ) : (
+            <SigaaFeed
+              onExploreHelpa={showHelpaFeed}
+              onErrorChange={setSigaaHasError}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
