@@ -8,6 +8,7 @@ import {
   screen,
   server,
   signIn,
+  within,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { Profile } from "../Profile";
@@ -25,6 +26,9 @@ function LocationProbe() {
       </button>
       <button type="button" onClick={() => navigate("/other")}>
         go-other
+      </button>
+      <button type="button" onClick={() => navigate("/profile")}>
+        go-profile
       </button>
     </>
   );
@@ -74,8 +78,12 @@ function renderProfile(route: string) {
 
 const location = () => screen.getByTestId("location").textContent;
 const isOnPersonal = () => screen.findByLabelText("Nome completo");
-const isActive = (name: string) =>
-  screen.getByRole("button", { name }).className.includes("border-[#1B75BB]");
+// The dashboard sidebar repeats the tab labels, so the queries stay inside
+// the page content.
+const getTab = (name: string) =>
+  within(screen.getByRole("main")).getByRole("button", { name });
+const findTab = async (name: string) =>
+  within(await screen.findByRole("main")).findByRole("button", { name });
 
 describe("Profile tab in the URL", () => {
   it("shows Dados Pessoais without a parameter", async () => {
@@ -96,7 +104,10 @@ describe("Profile tab in the URL", () => {
     expect(
       await screen.findByText("Você ainda não concluiu nenhuma ação."),
     ).toBeInTheDocument();
-    expect(isActive("Atividades Concluídas")).toBe(true);
+    expect(getTab("Atividades Concluídas")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("falls back to enrolled for an invalid filter", async () => {
@@ -112,43 +123,48 @@ describe("Profile tab in the URL", () => {
     const { user } = renderProfile("/profile");
     await isOnPersonal();
 
-    await user.click(screen.getByRole("button", { name: "Ações" }));
+    await user.click(getTab("Ações"));
     expect(location()).toBe("/profile?tab=actions");
 
-    await user.click(
-      await screen.findByRole("button", { name: "Atividades Gerenciadas" }),
-    );
+    await user.click(await findTab("Atividades Gerenciadas"));
     expect(location()).toBe("/profile?tab=actions&filter=managed");
 
-    await user.click(
-      screen.getByRole("button", { name: "Atividades Inscritas" }),
-    );
+    await user.click(getTab("Atividades Inscritas"));
     expect(location()).toBe("/profile?tab=actions");
 
-    await user.click(
-      screen.getByRole("button", { name: "Atividades Gerenciadas" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Dados Pessoais" }));
+    await user.click(getTab("Atividades Gerenciadas"));
+    await user.click(getTab("Dados Pessoais"));
     expect(location()).toBe("/profile");
   });
 
-  it("replaces history entries: Back after leaving restores both selections", async () => {
+  it("does not stack the tab clicks in the history", async () => {
+    const { user } = renderProfile("/other");
+    await user.click(screen.getByRole("button", { name: "go-profile" }));
+    await isOnPersonal();
+
+    await user.click(getTab("Ações"));
+    await user.click(await findTab("Atividades Gerenciadas"));
+    await user.click(screen.getByRole("button", { name: "history-back" }));
+
+    expect(location()).toBe("/other");
+  });
+
+  it("restores both selections on Back after leaving the profile", async () => {
     const { user } = renderProfile("/profile");
     await isOnPersonal();
 
-    await user.click(screen.getByRole("button", { name: "Ações" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Atividades Gerenciadas" }),
-    );
+    await user.click(getTab("Ações"));
+    await user.click(await findTab("Atividades Gerenciadas"));
     await user.click(screen.getByRole("button", { name: "go-other" }));
     expect(await screen.findByText("outra página")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "history-back" }));
 
     expect(location()).toBe("/profile?tab=actions&filter=managed");
-    expect(
-      await screen.findByRole("button", { name: "Atividades Gerenciadas" }),
-    ).toBeInTheDocument();
-    expect(isActive("Atividades Gerenciadas")).toBe(true);
+    expect(await findTab("Atividades Gerenciadas")).toBeInTheDocument();
+    expect(getTab("Atividades Gerenciadas")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
