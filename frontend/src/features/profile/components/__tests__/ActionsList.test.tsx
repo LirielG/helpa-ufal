@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { useSearchParams } from "react-router";
 import { act, render, screen, waitFor, within } from "@/test/render";
 import { API, http, HttpResponse, server } from "@/test/http";
 import { makeUserActivityItem } from "@/test/factories";
@@ -27,12 +28,6 @@ const KEPT_TITLE = "Ação que permanece";
 
 const CANCELLED_TITLE = "Ação da qual saio";
 const CLOSED_TITLE = "Ação já em andamento";
-
-const SUB_TAB_LABELS: Record<UserActivityFilter, string> = {
-  enrolled: "Atividades Inscritas",
-  completed: "Atividades Concluídas",
-  managed: "Atividades Gerenciadas",
-};
 
 function page(items: UserActivityItem[], currentPage = 1, limit = 20) {
   return {
@@ -64,15 +59,7 @@ function serveByFilter(
 }
 
 async function openSubTab(filter: UserActivityFilter) {
-  const view = render(<ActionsList />, { route: "/profile" });
-
-  if (filter !== "enrolled") {
-    await view.user.click(
-      screen.getByRole("button", { name: SUB_TAB_LABELS[filter] }),
-    );
-  }
-
-  return view;
+  return render(<ActionsList />, { route: `/my-activities?filter=${filter}` });
 }
 
 function cardWithTitle(title: string) {
@@ -108,20 +95,39 @@ describe("ActionsList sub-tabs", () => {
       ],
     });
 
-    const { user } = render(<ActionsList />, { route: "/profile" });
+    function SubTabSwitcher() {
+      const [, setSearchParams] = useSearchParams();
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "completed" })}
+          >
+            ir-concluidas
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "managed" })}
+          >
+            ir-gerenciadas
+          </button>
+          <ActionsList />
+        </>
+      );
+    }
+
+    const { user } = render(<SubTabSwitcher />, {
+      route: "/my-activities?filter=enrolled",
+    });
 
     expect(await screen.findByText("Inscrita")).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Atividades Concluídas" }),
-    );
+    await user.click(screen.getByRole("button", { name: "ir-concluidas" }));
 
     expect(await screen.findByText("Concluída")).toBeInTheDocument();
     expect(screen.queryByText("Inscrita")).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Atividades Gerenciadas" }),
-    );
+    await user.click(screen.getByRole("button", { name: "ir-gerenciadas" }));
 
     expect(await screen.findByText("Gerenciada")).toBeInTheDocument();
     expect(screen.queryByText("Concluída")).not.toBeInTheDocument();
@@ -155,11 +161,26 @@ describe("ActionsList sub-tabs", () => {
       }),
     );
 
-    const { user } = render(<ActionsList />, { route: "/profile" });
+    function Switcher() {
+      const [, setSearchParams] = useSearchParams();
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "managed" })}
+          >
+            ir-gerenciadas
+          </button>
+          <ActionsList />
+        </>
+      );
+    }
 
-    await user.click(
-      screen.getByRole("button", { name: "Atividades Gerenciadas" }),
-    );
+    const { user } = render(<Switcher />, {
+      route: "/my-activities?filter=enrolled",
+    });
+
+    await user.click(screen.getByRole("button", { name: "ir-gerenciadas" }));
 
     expect(await screen.findByText("Rápida")).toBeInTheDocument();
 
@@ -209,7 +230,10 @@ describe("ActionsList sub-tabs", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Atividades Gerenciadas" }),
+      screen.getByRole("button", { name: "Tentar novamente" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Atividades Inscritas" }),
     ).toBeInTheDocument();
   });
 
@@ -323,23 +347,42 @@ describe("ActionsList pagination", () => {
         }),
       );
 
-      const { user } = await openSubTab("enrolled");
+      function PaginationSwitcher() {
+        const [, setSearchParams] = useSearchParams();
+        return (
+          <>
+            <button
+              type="button"
+              onClick={() => setSearchParams({ filter: "managed" })}
+            >
+              ir-gerenciadas
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchParams({ filter: "enrolled" })}
+            >
+              ir-inscritas
+            </button>
+            <ActionsList />
+          </>
+        );
+      }
+
+      const { user } = render(<PaginationSwitcher />, {
+        route: "/my-activities?filter=enrolled",
+      });
       await screen.findByText("Ação 1");
 
       await user.click(screen.getByRole("button", { name: "Página 2" }));
       await waitFor(() => expect(requests).toContain("enrolled:2"));
 
-      await user.click(
-        screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
-      );
+      await user.click(screen.getByRole("button", { name: "ir-gerenciadas" }));
 
       if (state === "loaded") {
         releaseCurrent();
         await screen.findByText("Atual");
 
-        await user.click(
-          screen.getByRole("button", { name: SUB_TAB_LABELS.enrolled }),
-        );
+        await user.click(screen.getByRole("button", { name: "ir-inscritas" }));
         await screen.findByText("Ação 1");
       }
 
@@ -409,20 +452,39 @@ describe("ActionsList pagination", () => {
       }),
     );
 
-    const { user } = await openSubTab("enrolled");
+    function SubTabResetter() {
+      const [, setSearchParams] = useSearchParams();
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "managed" })}
+          >
+            ir-gerenciadas
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "enrolled" })}
+          >
+            ir-inscritas
+          </button>
+          <ActionsList />
+        </>
+      );
+    }
+
+    const { user } = render(<SubTabResetter />, {
+      route: "/my-activities?filter=enrolled",
+    });
     await screen.findByText("Ação 1");
 
     await user.click(screen.getByRole("button", { name: "Página 2" }));
     await screen.findByText("Ação 21");
 
-    await user.click(
-      screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
-    );
+    await user.click(screen.getByRole("button", { name: "ir-gerenciadas" }));
     await screen.findByText("Ação 1");
 
-    await user.click(
-      screen.getByRole("button", { name: SUB_TAB_LABELS.enrolled }),
-    );
+    await user.click(screen.getByRole("button", { name: "ir-inscritas" }));
 
     expect(await screen.findByText("Ação 1")).toBeInTheDocument();
     expect(screen.queryByText("Ação 21")).not.toBeInTheDocument();
@@ -632,7 +694,7 @@ describe("ActionsList pagination", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: SUB_TAB_LABELS.managed }),
+      screen.getByRole("button", { name: "Tentar novamente" }),
     ).toBeEnabled();
 
     shouldFail = false;

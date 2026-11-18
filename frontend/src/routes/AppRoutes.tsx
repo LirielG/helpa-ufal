@@ -11,6 +11,7 @@ import {
   EnrollmentsPage,
   CertificateValidation,
   ModerationPage,
+  MyActivities,
 } from "../pages";
 
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
@@ -83,6 +84,14 @@ export function AppRoutes() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-activities"
+        element={
+          <ProtectedRoute>
+            <MyActivities />
           </ProtectedRoute>
         }
       />
