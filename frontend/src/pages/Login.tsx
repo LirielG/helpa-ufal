@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Mail } from "lucide-react";
 import { Button, Alert } from "../components";
 import { useAuth } from "../hooks";
@@ -23,7 +23,13 @@ type LoginRouteState = ReturnToState & {
 };
 
 export function Login() {
-  const { login, isLoading, error: authError, clearError } = useAuth();
+  const {
+    login,
+    isLoading,
+    error: authError,
+    clearError,
+    isAuthenticated,
+  } = useAuth();
   const { state } = useLocation();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -55,11 +61,17 @@ export function Login() {
       header={
         <div className="flex items-center gap-2">
           <div className="shrink-0">
-            <img
-              src={helpaBlueLogo}
-              alt="helpa"
-              className="h-8 md:h-10 w-auto"
-            />
+            <Link
+              to={isAuthenticated ? "/dashboard" : "/"}
+              aria-label="Ir para a página inicial do Helpa"
+              className="inline-flex shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+            >
+              <img
+                src={helpaBlueLogo}
+                alt="helpa"
+                className="h-8 md:h-10 w-auto"
+              />
+            </Link>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Bem vindo</h1>
         </div>

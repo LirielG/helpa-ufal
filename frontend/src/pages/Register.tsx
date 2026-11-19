@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Button, Alert, Tooltip } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { RegisterSchema, type RegisterFields } from "../validators/auth";
 import type { RegisterRequest } from "../types";
+import helpaBlueLogo from "../assets/helpa-logo-blue.svg";
 import { AuthField } from "../features/auth/components/AuthField";
 import { AuthFooterLink } from "../features/auth/components/AuthFooterLink";
 import { AuthShell } from "../features/auth/components/AuthShell";
@@ -29,7 +30,7 @@ const defaultFields = {
 };
 
 export function Register() {
-  const { register: registerUser, isLoading } = useAuth();
+  const { register: registerUser, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { state } = useLocation();
   // Handed back to the login so signing in after the sign-up still returns
@@ -99,6 +100,19 @@ export function Register() {
         maxWidthClassName="max-w-4xl"
         header={
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <Link
+                to={isAuthenticated ? "/dashboard" : "/"}
+                aria-label="Ir para a página inicial do Helpa"
+                className="inline-flex shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+              >
+                <img
+                  src={helpaBlueLogo}
+                  alt="helpa"
+                  className="h-8 md:h-10 w-auto"
+                />
+              </Link>
+            </div>
             <h1 className="text-4xl font-bold mb-4 text-gray-900">
               Criar conta no helpa
             </h1>
