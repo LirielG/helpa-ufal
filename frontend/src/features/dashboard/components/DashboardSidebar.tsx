@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   Clock,
   Home,
@@ -101,19 +101,24 @@ export function DashboardSidebar({
       <div className="flex flex-col">
         <div className="bg-[#F2F4F6] p-4 sm:p-5 lg:p-6 flex flex-col gap-3 lg:gap-4">
           <div className="flex items-center justify-between gap-2.5 pt-0.5 lg:pt-1">
-            <div className="flex items-center gap-3 min-w-0">
+            <Link
+              to="/profile"
+              aria-label="Abrir meu perfil"
+              onClick={() => onCloseMobile?.()}
+              className="group flex items-center gap-3 min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+            >
               <div className="size-11 sm:size-12 lg:size-[57px] rounded-full bg-[#002147] text-white border border-[#1D4ED8]/20 flex items-center justify-center text-sm sm:text-base lg:text-lg font-bold shrink-0 overflow-hidden">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm sm:text-[15px] lg:text-base leading-5 font-bold text-[#000A1E] truncate">
+                <h3 className="text-sm sm:text-[15px] lg:text-base leading-5 font-bold text-[#000A1E] truncate group-hover:underline">
                   {fullName}
                 </h3>
                 <p className="text-[11px] sm:text-xs leading-[17px] text-[#44474E] truncate">
                   {email}
                 </p>
               </div>
-            </div>
+            </Link>
 
             {isMobileDrawer && onCloseMobile && (
               <button
