@@ -147,4 +147,25 @@ describe("CreateModerationDecisionSchema", () => {
       expect(issues[0]!.path).toEqual(["verdict"]);
     },
   );
+
+  it("rejects unknown keys in the request body", () => {
+    const issues = bodyIssues({
+      verdict: "REJECTED",
+      justification: "Justificativa válida.",
+      extra: true,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.code).toBe("unrecognized_keys");
+  });
+
+  it.each([undefined, null, "text", []])(
+    "rejects non-object body (%j) with a clear message",
+    (body) => {
+      const issues = bodyIssues(body);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]!.message).toBe("Request body must be a JSON object.");
+    },
+  );
 });

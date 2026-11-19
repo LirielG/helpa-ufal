@@ -3,6 +3,8 @@ import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
+import ModerationRepository from "@/repositories/moderation/ModerationRepository.js";
+import { expectHttpError } from "@/utils/tests.js";
 import {
   createActivity,
   createCertificate,
@@ -447,5 +449,74 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     );
     expect(nonManager.status).toBe(403);
     expect(nonManager.body.code).toBe("FORBIDDEN");
+  });
+
+  it("rejects empty body and unknown body keys with 400", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+
+    const empty = await decide(activity.id, {}, manager.token);
+    expect(empty.status).toBe(400);
+    expect(empty.body.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "verdict" }),
+        expect.objectContaining({ field: "justification" }),
+      ]),
+    );
+
+    const extra = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Justificativa válida.",
+        unexpectedField: true,
+      },
+      manager.token,
+    );
+    expect(extra.status).toBe(400);
+    expect(extra.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("preserves the original removedByModerationAt timestamp if an already-removed activity receives another UPHELD", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const originalRemovedAt = new Date("2026-06-01T10:00:00.000Z");
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      removedByModerationAt: originalRemovedAt,
+    });
+    await createReport(activity.id, (await createStudent()).user.id);
+
+    const response = await decide(
+      activity.id,
+      { verdict: "UPHELD", justification: "Segunda análise procedente." },
+      manager.token,
+    );
+
+    expect(response.status).toBe(201);
+    const stored = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(stored.removedByModerationAt?.toISOString()).toBe(
+      originalRemovedAt.toISOString(),
+    );
+  });
+
+  it("maps a deleted manager FK violation during decision creation to 401 SESSION_INVALID instead of 500", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+    await createReport(activity.id, (await createStudent()).user.id);
+
+    const repository = new ModerationRepository();
+    await expectHttpError(
+      repository.createDecision(activity.id, randomUUID(), {
+        verdict: "REJECTED",
+        justification: "Gestor removido em voo.",
+      }),
+      401,
+      "Session is no longer valid.",
+      "SESSION_INVALID",
+    );
   });
 });

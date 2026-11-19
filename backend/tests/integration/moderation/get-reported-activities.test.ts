@@ -331,6 +331,53 @@ describe("GET /reported-activities", () => {
     });
   });
 
+  it("returns an empty page for a page too large to offset, and 400 when page overflows Number to Infinity", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+    await createReport(activity.id, (await createStudent()).user.id);
+
+    const huge = await request(app)
+      .get("/reported-activities?page=99999999999999999999")
+      .set(...authCookie(manager.token));
+    expect(huge.status).toBe(200);
+    expect(huge.body).toMatchObject({ items: [], total: 1, totalPages: 1 });
+
+    const overflow = await request(app)
+      .get(`/reported-activities?page=1${"0".repeat(310)}`)
+      .set(...authCookie(manager.token));
+    expect(overflow.status).toBe(400);
+    expect(overflow.body.errors).toContainEqual(
+      expect.objectContaining({ field: "page" }),
+    );
+  });
+
+  it("breaks exact createdAt ties deterministically by activity id ascending", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const tiedAt = new Date("2026-06-05T12:00:00.000Z");
+
+    const actA = await createActivity(author.user.id, { title: "Tie A" });
+    const actB = await createActivity(author.user.id, { title: "Tie B" });
+    await createReport(actA.id, (await createStudent()).user.id, {
+      createdAt: tiedAt,
+    });
+    await createReport(actB.id, (await createStudent()).user.id, {
+      createdAt: tiedAt,
+    });
+
+    const response = await request(app)
+      .get("/reported-activities?status=open")
+      .set(...authCookie(manager.token));
+
+    expect(response.status).toBe(200);
+    expect(
+      response.body.items.map(
+        (item: { activity: { id: string } }) => item.activity.id,
+      ),
+    ).toEqual([actA.id, actB.id].sort());
+  });
+
   // ---------- 400 ----------
 
   it.each([

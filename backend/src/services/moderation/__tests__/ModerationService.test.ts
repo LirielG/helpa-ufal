@@ -13,6 +13,7 @@ import type {
   ReportedActivityItem,
 } from "@/types/moderation.js";
 import { expectHttpError } from "@/utils/tests.js";
+import ValidationError from "@/models/error/ValidationError.js";
 
 const ACTIVITY_ID = "22ac40bd-e160-4c6e-8505-b63913d2482f";
 const AUTHOR_ID = "a1b2c3d4-0000-4000-8000-000000000099";
@@ -163,6 +164,35 @@ describe("ModerationService.listReportedActivities", () => {
       totalPages: 5,
     });
   });
+
+  it.each([
+    { page: 0, limit: 20, field: "page" },
+    { page: -1, limit: 20, field: "page" },
+    { page: 1.5, limit: 20, field: "page" },
+    { page: Number.POSITIVE_INFINITY, limit: 20, field: "page" },
+    { page: 1, limit: 0, field: "limit" },
+  ])(
+    "throws ValidationError for invalid pagination ($page, $limit) before touching repository",
+    async ({ page, limit, field }) => {
+      const { service, moderationRepository } = setup();
+
+      await expect(
+        service.listReportedActivities({ status: "open", page, limit }),
+      ).rejects.toBeInstanceOf(ValidationError);
+
+      try {
+        await service.listReportedActivities({ status: "open", page, limit });
+      } catch (err) {
+        expect((err as ValidationError).statusCode).toBe(400);
+        expect((err as ValidationError).errors).toContainEqual(
+          expect.objectContaining({ field }),
+        );
+      }
+      expect(
+        moderationRepository.listReportedActivities,
+      ).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("ModerationService.createDecision", () => {

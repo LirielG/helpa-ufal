@@ -17,14 +17,17 @@ export type ListReportedActivitiesQuery = z.output<
 
 export const MODERATION_VERDICTS = ["UPHELD", "REJECTED"] as const;
 
-export const CreateModerationDecisionSchema = z.object({
-  verdict: z.enum(MODERATION_VERDICTS),
-  justification: z
-    .string({ error: "justification must be a string." })
-    .trim()
-    .min(1, "justification must contain between 1 and 500 characters.")
-    .max(500, "justification must contain between 1 and 500 characters."),
-});
+export const CreateModerationDecisionSchema = z.strictObject(
+  {
+    verdict: z.enum(MODERATION_VERDICTS),
+    justification: z
+      .string({ error: "justification must be a string." })
+      .trim()
+      .min(1, "justification must contain between 1 and 500 characters.")
+      .max(500, "justification must contain between 1 and 500 characters."),
+  },
+  { error: "Request body must be a JSON object." },
+);
 
 export type CreateModerationDecisionInput = z.output<
   typeof CreateModerationDecisionSchema

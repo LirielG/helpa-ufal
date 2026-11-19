@@ -1,6 +1,7 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
+import { assertCanModerateActivity } from "@/models/moderation/moderationRules.js";
 import { lockActivityForModeration } from "@/repositories/enrollment/locks.js";
 import type {
   ActivityModerationState,
@@ -77,65 +78,71 @@ class ModerationRepository implements IModerationRepository {
       return { items: [], total };
     }
 
-    return this._prisma.$transaction(async (tx) => {
-      const total = await this.countReportedActivities(tx, status);
-      if (total === 0 || skip >= total) {
-        return { items: [], total };
-      }
+    // RepeatableRead keeps count, page IDs, and hydrated relations on the same
+    // MVCC snapshot so a concurrent decision never returns an "open" item with
+    // empty openReports or a mismatched total.
+    return this._prisma.$transaction(
+      async (tx) => {
+        const total = await this.countReportedActivities(tx, status);
+        if (total === 0 || skip >= total) {
+          return { items: [], total };
+        }
 
-      // Raw SQL handles ORDER BY MAX(createdAt) DESC with deterministic id
-      // tie-breaking, which Prisma's relational orderBy does not support.
-      const pageRows =
-        status === "open"
-          ? await tx.$queryRaw<{ id: string }[]>`
-              SELECT a."id"
-              FROM "Activity" a
-              INNER JOIN "ActivityReport" r
-                ON r."activityId" = a."id" AND r."decisionId" IS NULL
-              WHERE a."deletedAt" IS NULL
-              GROUP BY a."id"
-              ORDER BY MAX(r."createdAt") DESC, a."id" ASC
-              LIMIT ${limit} OFFSET ${skip}
-            `
-          : await tx.$queryRaw<{ id: string }[]>`
-              SELECT a."id"
-              FROM "Activity" a
-              INNER JOIN "ModerationDecision" d
-                ON d."activityId" = a."id"
-              WHERE NOT EXISTS (
-                SELECT 1
-                FROM "ActivityReport" r
-                WHERE r."activityId" = a."id"
-                  AND r."decisionId" IS NULL
-              )
-              GROUP BY a."id"
-              ORDER BY MAX(d."createdAt") DESC, a."id" ASC
-              LIMIT ${limit} OFFSET ${skip}
-            `;
+        // Raw SQL handles ORDER BY MAX(createdAt) DESC with deterministic id
+        // tie-breaking, which Prisma's relational orderBy does not support.
+        const pageRows =
+          status === "open"
+            ? await tx.$queryRaw<{ id: string }[]>`
+                SELECT a."id"
+                FROM "Activity" a
+                INNER JOIN "ActivityReport" r
+                  ON r."activityId" = a."id" AND r."decisionId" IS NULL
+                WHERE a."deletedAt" IS NULL
+                GROUP BY a."id"
+                ORDER BY MAX(r."createdAt") DESC, a."id" ASC
+                LIMIT ${limit} OFFSET ${skip}
+              `
+            : await tx.$queryRaw<{ id: string }[]>`
+                SELECT a."id"
+                FROM "Activity" a
+                INNER JOIN "ModerationDecision" d
+                  ON d."activityId" = a."id"
+                WHERE NOT EXISTS (
+                  SELECT 1
+                  FROM "ActivityReport" r
+                  WHERE r."activityId" = a."id"
+                    AND r."decisionId" IS NULL
+                )
+                GROUP BY a."id"
+                ORDER BY MAX(d."createdAt") DESC, a."id" ASC
+                LIMIT ${limit} OFFSET ${skip}
+              `;
 
-      if (pageRows.length === 0) {
-        return { items: [], total };
-      }
+        if (pageRows.length === 0) {
+          return { items: [], total };
+        }
 
-      const ids = pageRows.map((row) => row.id);
-      const activities = await tx.activity.findMany({
-        where: { id: { in: ids } },
-        select: REPORTED_ACTIVITY_SELECT,
-      });
+        const ids = pageRows.map((row) => row.id);
+        const activities = await tx.activity.findMany({
+          where: { id: { in: ids } },
+          select: REPORTED_ACTIVITY_SELECT,
+        });
 
-      // Preserve the SQL ordering (WHERE id IN (...) does not guarantee order).
-      const byId = new Map(
-        activities.map((activity) => [activity.id, activity]),
-      );
-      const items = ids
-        .map((id) => byId.get(id))
-        .filter((activity): activity is NonNullable<typeof activity> =>
-          Boolean(activity),
-        )
-        .map(toReportedActivityItem);
+        // Preserve the SQL ordering (WHERE id IN (...) does not guarantee order).
+        const byId = new Map(
+          activities.map((activity) => [activity.id, activity]),
+        );
+        const items = ids
+          .map((id) => byId.get(id))
+          .filter((activity): activity is NonNullable<typeof activity> =>
+            Boolean(activity),
+          )
+          .map(toReportedActivityItem);
 
-      return { items, total };
-    });
+        return { items, total };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   public async findActivityForModeration(
@@ -177,47 +184,42 @@ class ModerationRepository implements IModerationRepository {
       // business rules under the lock so concurrent decisions, enrollments,
       // and status transitions serialize cleanly.
       const activity = await lockActivityForModeration(tx, activityId);
-      if (!activity) {
-        throw new CustomError(404, "Activity not found.", {
-          code: "ACTIVITY_NOT_FOUND",
-        });
-      }
+      const openReportsCount =
+        activity && activity.authorId !== managerId
+          ? await tx.activityReport.count({
+              where: { activityId, decisionId: null },
+            })
+          : 0;
 
-      if (activity.authorId === managerId) {
-        throw new CustomError(
-          403,
-          "Activity authors cannot moderate their own activity.",
-        );
-      }
-
-      const openReportsCount = await tx.activityReport.count({
-        where: { activityId, decisionId: null },
-      });
-      if (openReportsCount === 0) {
-        throw new CustomError(409, "Activity has no open reports.", {
-          code: "NO_OPEN_REPORTS",
-        });
-      }
-
-      if (data.verdict === "UPHELD" && activity.status === "COMPLETED") {
-        throw new CustomError(
-          409,
-          "Completed activities cannot be removed by moderation.",
-          { code: "ACTIVITY_COMPLETED" },
-        );
-      }
+      const state = activity ? { ...activity, openReportsCount } : null;
+      assertCanModerateActivity(state, managerId, data.verdict);
 
       const decidedAt = new Date();
-      const created = await tx.moderationDecision.create({
-        data: {
-          activityId,
-          verdict: data.verdict,
-          justification: data.justification,
-          decidedById: managerId,
-          createdAt: decidedAt,
-        },
-        select: { id: true },
-      });
+      let created: { id: string };
+      try {
+        created = await tx.moderationDecision.create({
+          data: {
+            activityId,
+            verdict: data.verdict,
+            justification: data.justification,
+            decidedById: managerId,
+            createdAt: decidedAt,
+          },
+          select: { id: true },
+        });
+      } catch (err) {
+        // Activity is locked FOR UPDATE above, so the only FK that can fail on
+        // insert is decidedById if the manager account was deleted in flight.
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2003"
+        ) {
+          throw new CustomError(401, "Session is no longer valid.", {
+            code: "SESSION_INVALID",
+          });
+        }
+        throw err;
+      }
 
       await tx.activityReport.updateMany({
         where: { activityId, decisionId: null },
@@ -227,7 +229,7 @@ class ModerationRepository implements IModerationRepository {
       if (data.verdict === "UPHELD") {
         // Preserve the original removal timestamp if the activity was already
         // marked as removed before write-blocking lands in the follow-up issue.
-        if (activity.removedByModerationAt === null) {
+        if (state.removedByModerationAt === null) {
           await tx.activity.update({
             where: { id: activityId },
             data: { removedByModerationAt: decidedAt },
