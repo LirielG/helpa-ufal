@@ -3,15 +3,23 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/database/prisma.js";
 
-const MIGRATION_PATH = resolve(
-  import.meta.dirname,
-  "../../../prisma/migrations/20261119172600_add_moderation_decisions/migration.sql",
-);
+const MIGRATION_PATHS = [
+  resolve(
+    import.meta.dirname,
+    "../../../prisma/migrations/20261119172600_add_moderation_decisions/migration.sql",
+  ),
+  resolve(
+    import.meta.dirname,
+    "../../../prisma/migrations/20261119183500_add_moderation_partial_index_and_check/migration.sql",
+  ),
+];
 
-describe("20261119172600_add_moderation_decisions data migration", () => {
+describe("moderation migrations", () => {
   it("converts existing resolved reports into one REJECTED decision per activity while keeping open reports open", async () => {
     const schema = "moderation_migration_test";
-    const migrationSql = readFileSync(MIGRATION_PATH, "utf8");
+    const migrationSql = MIGRATION_PATHS.map((p) =>
+      readFileSync(p, "utf8"),
+    ).join("\n;\n");
 
     try {
       await prisma.$transaction(async (tx) => {
@@ -45,15 +53,18 @@ describe("20261119172600_add_moderation_decisions data migration", () => {
         // - act-1: 2 resolved reports (different managers/timestamps) + 1 open report
         // - act-2: 1 resolved report whose resolver user was deleted (resolvedById NULL)
         // - act-3: only open report (no decision should be created)
+        // - act-4: 2 resolved reports with an exact resolvedAt tie (id ASC breaks ties)
         await tx.$executeRawUnsafe(`
           INSERT INTO "User" ("id") VALUES ('manager-old'), ('manager-new');
-          INSERT INTO "Activity" ("id") VALUES ('act-1'), ('act-2'), ('act-3');
+          INSERT INTO "Activity" ("id") VALUES ('act-1'), ('act-2'), ('act-3'), ('act-4');
           INSERT INTO "ActivityReport" ("id", "activityId", "category", "resolvedAt", "resolvedById") VALUES
             ('rep-1a', 'act-1', 'SPAM', '2026-06-01 10:00:00', 'manager-old'),
             ('rep-1b', 'act-1', 'OTHER', '2026-06-05 15:30:00', 'manager-new'),
             ('rep-1-open', 'act-1', 'MISINFORMATION', NULL, NULL),
             ('rep-2a', 'act-2', 'SPAM', '2026-06-02 09:00:00', NULL),
-            ('rep-3-open', 'act-3', 'DUPLICATE', NULL, NULL);
+            ('rep-3-open', 'act-3', 'DUPLICATE', NULL, NULL),
+            ('rep-4a', 'act-4', 'SPAM', '2026-06-07 12:00:00', 'manager-old'),
+            ('rep-4b', 'act-4', 'OTHER', '2026-06-07 12:00:00', 'manager-new');
         `);
 
         // Execute the exact statements from the migration file.
@@ -80,7 +91,7 @@ describe("20261119172600_add_moderation_decisions data migration", () => {
            ORDER BY "activityId" ASC`,
         );
 
-        expect(decisions).toHaveLength(2);
+        expect(decisions).toHaveLength(3);
         expect(decisions[0]).toMatchObject({
           activityId: "act-1",
           verdict: "REJECTED",
@@ -101,6 +112,16 @@ describe("20261119172600_add_moderation_decisions data migration", () => {
           "2026-06-02T09:00:00.000Z",
         );
 
+        expect(decisions[2]).toMatchObject({
+          activityId: "act-4",
+          verdict: "REJECTED",
+          justification: "Resolvida antes do registro de veredito.",
+          decidedById: "manager-old",
+        });
+        expect(decisions[2]!.createdAt.toISOString()).toBe(
+          "2026-06-07T12:00:00.000Z",
+        );
+
         const reports = await tx.$queryRawUnsafe<
           { id: string; decisionId: string | null }[]
         >(
@@ -113,9 +134,12 @@ describe("20261119172600_add_moderation_decisions data migration", () => {
           { id: "rep-1b", decisionId: decisions[0]!.id },
           { id: "rep-2a", decisionId: decisions[1]!.id },
           { id: "rep-3-open", decisionId: null },
+          { id: "rep-4a", decisionId: decisions[2]!.id },
+          { id: "rep-4b", decisionId: decisions[2]!.id },
         ]);
 
-        // Confirm legacy columns were dropped.
+        // Confirm legacy columns were dropped, partial index exists, and DB
+        // check constraint rejects blank or >500-char justifications.
         const remainingLegacyCols = await tx.$queryRawUnsafe<
           { column_name: string }[]
         >(
@@ -126,6 +150,32 @@ describe("20261119172600_add_moderation_decisions data migration", () => {
              AND column_name IN ('resolvedAt', 'resolvedById')`,
         );
         expect(remainingLegacyCols).toEqual([]);
+
+        const partialIndex = await tx.$queryRawUnsafe<{ indexname: string }[]>(
+          `SELECT indexname
+           FROM pg_indexes
+           WHERE schemaname = '${schema}'
+             AND indexname = 'ActivityReport_open_activityId_createdAt_idx'`,
+        );
+        expect(partialIndex).toHaveLength(1);
+
+        await tx.$executeRawUnsafe(`SAVEPOINT check_blank`);
+        await expect(
+          tx.$executeRawUnsafe(
+            `INSERT INTO "ModerationDecision" ("id", "activityId", "verdict", "justification")
+             VALUES ('bad-1', 'act-3', 'REJECTED', '   ')`,
+          ),
+        ).rejects.toThrow();
+        await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT check_blank`);
+
+        await tx.$executeRawUnsafe(`SAVEPOINT check_long`);
+        await expect(
+          tx.$executeRawUnsafe(
+            `INSERT INTO "ModerationDecision" ("id", "activityId", "verdict", "justification")
+             VALUES ('bad-2', 'act-3', 'REJECTED', '${"x".repeat(501)}')`,
+          ),
+        ).rejects.toThrow();
+        await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT check_long`);
       });
     } finally {
       await prisma.$executeRawUnsafe(
