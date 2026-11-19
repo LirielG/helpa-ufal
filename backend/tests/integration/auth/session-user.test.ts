@@ -81,7 +81,7 @@ describe("current session roles", () => {
       .send({ email: user.email, password: DEFAULT_PASSWORD })
       .expect(200);
 
-    await agent.get("/reports").expect(403);
+    await agent.get("/reported-activities").expect(403);
     await agent
       .patch(`/activities/${activity.id}`)
       .send({ title: "Unauthorized edit" })
@@ -92,7 +92,7 @@ describe("current session roles", () => {
       data: { isManager: true },
     });
 
-    await agent.get("/reports").expect(200);
+    await agent.get("/reported-activities").expect(200);
     await agent
       .patch(`/activities/${activity.id}`)
       .send({ title: "Manager edit" })
@@ -103,7 +103,7 @@ describe("current session roles", () => {
       data: { isManager: false },
     });
 
-    await agent.get("/reports").expect(403);
+    await agent.get("/reported-activities").expect(403);
     await agent
       .patch(`/activities/${activity.id}`)
       .send({ title: "Unauthorized edit" })
