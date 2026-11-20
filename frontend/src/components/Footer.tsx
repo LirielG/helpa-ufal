@@ -21,7 +21,7 @@ export function Footer() {
   return (
     <footer className="bg-[#002147] text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between md:divide-x md:divide-slate-700/30 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between md:divide-x md:divide-white/20 mb-8">
           <div className="px-0 md:px-8 py-6 md:py-0 md:flex-1">
             <div className="flex items-start md:items-center gap-6">
               <img
