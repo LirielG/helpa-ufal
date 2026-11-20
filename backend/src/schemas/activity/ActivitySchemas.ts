@@ -51,6 +51,10 @@ const UtcDateTimeSchema = z.iso
   .datetime()
   .transform((value) => new Date(value));
 
+// The url becomes an href on the activity page, so schemes like `javascript:`
+// must not get through.
+const HttpUrlSchema = z.url({ protocol: /^https?$/ });
+
 const BaseActivitySchema = z.object({
   title: z.string().min(1).max(ACTIVITY_TITLE_MAX_LENGTH),
   type: z.enum(ActivityType),
@@ -61,7 +65,7 @@ const BaseActivitySchema = z.object({
   description: z.string().trim().min(1),
   area: z.string().trim().min(1),
   workloadHours: z.number().int().min(1),
-  url: z.url().nullable().optional(),
+  url: HttpUrlSchema.nullable().optional(),
   address: AddressSchema.nullable().optional(),
 });
 
@@ -76,7 +80,7 @@ export const CreateActivitySchema = z
     }),
     BaseActivitySchema.extend({
       format: z.literal("HYBRID"),
-      url: z.url(),
+      url: HttpUrlSchema,
       address: AddressSchema,
     }),
   ])
@@ -99,7 +103,7 @@ const UpdateActivityBaseSchema = z
     area: z.string().trim().min(1),
     workloadHours: z.number().int().min(1),
     format: z.enum(["IN_PERSON", "ONLINE", "HYBRID"]),
-    url: z.url().nullable().optional(),
+    url: HttpUrlSchema.nullable().optional(),
     address: AddressSchema.nullable().optional(),
   })
   .partial();

@@ -3,6 +3,8 @@ import {
   activityDescriptionSchema,
   activityTitleSchema,
   activityTitleSchemaFor,
+  isValidActionUrl,
+  normalizeActionUrl,
 } from "../activity";
 
 function errorOf(value: string) {
@@ -74,5 +76,41 @@ describe("activityDescriptionSchema", () => {
     expect(activityDescriptionSchema.parse("  Oficina de leitura  ")).toBe(
       "Oficina de leitura",
     );
+  });
+});
+
+describe("normalizeActionUrl", () => {
+  it.each([
+    ["meet.google.com/abc", "https://meet.google.com/abc"],
+    ["www.exemplo.com", "https://www.exemplo.com"],
+    ["  www.exemplo.com  ", "https://www.exemplo.com"],
+    ["http://exemplo.com", "http://exemplo.com"],
+    ["HTTPS://exemplo.com", "HTTPS://exemplo.com"],
+    ["ftp://x", "ftp://x"],
+    ["", ""],
+    ["   ", ""],
+  ])("turns %j into %j", (value, expected) => {
+    expect(normalizeActionUrl(value)).toBe(expected);
+  });
+});
+
+describe("isValidActionUrl", () => {
+  it.each([
+    "https://meet.google.com/abc-defg-hij",
+    "https://www.exemplo.com",
+    "http://exemplo.com",
+  ])("accepts %j", (value) => {
+    expect(isValidActionUrl(value)).toBe(true);
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "ftp://x",
+    "https://nao-e-um-link",
+    "https://exemplo com",
+    "https://www.google.com@evil.com",
+    normalizeActionUrl("mailto:contato@ufal.br"),
+  ])("rejects %j", (value) => {
+    expect(isValidActionUrl(value)).toBe(false);
   });
 });

@@ -529,6 +529,28 @@ describe("PATCH /activities/:activityId", () => {
     );
   });
 
+  it.each(["javascript:alert(1)", "ftp://x"])(
+    "returns 400 for a url with a scheme other than http or https (%s)",
+    async (url) => {
+      const author = await createTeacher();
+      const activity = await createActivity(author.user.id, {
+        format: "ONLINE",
+        url: "https://meet.google.com/exemplo",
+        address: null,
+      });
+
+      const response = await request(app)
+        .patch(`/activities/${activity.id}`)
+        .set(...authCookie(author.token))
+        .send({ url });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual([
+        expect.objectContaining({ field: "url", code: "VALIDATION_ERROR" }),
+      ]);
+    },
+  );
+
   it("returns 200 when editing an ONLINE activity that has no url saved", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, {

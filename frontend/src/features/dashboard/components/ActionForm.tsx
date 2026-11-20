@@ -20,8 +20,11 @@ import {
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import {
+  ACTION_URL_INVALID_MESSAGE,
   activityDescriptionSchema,
   activityTitleSchema,
+  isValidActionUrl,
+  normalizeActionUrl,
 } from "../../../validators/activity";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type {
@@ -84,7 +87,10 @@ const baseSchema = z.object({
   format: z.enum(["IN_PERSON", "ONLINE", "HYBRID"] as const, {
     error: "Selecione um formato de ação válido.",
   }),
-  url: z.string().optional(),
+  url: z
+    .string()
+    .optional()
+    .transform((url) => (url === undefined ? url : normalizeActionUrl(url))),
   address: addressSchema.optional(),
 });
 
@@ -107,6 +113,13 @@ const formSchema = baseSchema
         "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
       path: ["url"],
     },
+  )
+  .refine(
+    (d) =>
+      (d.format !== "ONLINE" && d.format !== "HYBRID") ||
+      !d.url ||
+      isValidActionUrl(d.url),
+    { message: ACTION_URL_INVALID_MESSAGE, path: ["url"] },
   )
   .refine(
     (d) =>
@@ -232,6 +245,7 @@ export function ActionRegister({
     handleSubmit,
     watch,
     setError,
+    setValue,
     reset,
     trigger,
     formState: { errors, isSubmitting, isDirty },
@@ -307,7 +321,7 @@ export function ActionRegister({
           slots: data.slots as number,
           workloadHours: data.workloadHours as number,
           format: data.format as ActivityFormat,
-          ...(needsUrl && data.url?.trim() ? { url: data.url.trim() } : {}),
+          ...(needsUrl && data.url ? { url: data.url } : {}),
           ...(needsAddress && data.address
             ? {
                 address: {
@@ -754,7 +768,10 @@ export function ActionRegister({
                         type="url"
                         placeholder="Ex: https://meet.google.com/abc-defg-hij"
                         className={inputCls(!!errors.url)}
-                        {...register("url")}
+                        {...register("url", {
+                          onBlur: (e) =>
+                            setValue("url", normalizeActionUrl(e.target.value)),
+                        })}
                       />
                       <FieldError message={errors.url?.message} />
                     </div>
