@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router";
-import { render, screen, signIn } from "@/test";
+import { render, screen, signIn, within } from "@/test";
 import { DashboardSidebar } from "../DashboardSidebar";
-import { within } from "@testing-library/react";
 
 function renderSidebarAt(
   route: string,

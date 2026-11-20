@@ -8,6 +8,7 @@ export { Alert } from "./Alert";
 export { Tooltip } from "./Tooltip";
 export { Pagination } from "./Pagination";
 export { Navbar } from "./Navbar";
+export { HomeLogoLink } from "./HomeLogoLink";
 export { Footer } from "./Footer";
 export { Layout } from "./Layout";
 export { DatePicker } from "./DatePicker";

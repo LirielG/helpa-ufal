@@ -1,11 +1,11 @@
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import helpaBlueLogoT from "../assets/helpa-logo-blue-text.svg";
-import { useAuth } from "../hooks";
+import { HomeLogoLink } from "./HomeLogoLink";
 
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+
 
   // Hide profile button on login and register pages
   const hideProfile =
@@ -22,17 +22,10 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center">
-          <Link
-            to={isAuthenticated ? "/dashboard" : "/"}
-            aria-label="Ir para a página inicial do Helpa"
-            className="shrink-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
-          >
-            <img
-              src={helpaBlueLogoT}
-              alt="helpa"
-              className="h-10 md:h-12 w-auto"
-            />
-          </Link>
+          <HomeLogoLink
+            src={helpaBlueLogoT}
+            imageClassName="h-10 md:h-12 w-auto"
+          />
         </div>
         {!hideProfile && (
           <button

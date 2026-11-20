@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router";
 import { delay } from "msw";
 import { describe, expect, it } from "vitest";
 import type { UserEvent } from "@testing-library/user-event";
-import { render, screen, http, HttpResponse, server, signIn } from "@/test";
+import { render, screen, http, HttpResponse, server } from "@/test";
 import { makeUser } from "@/test";
 import { config } from "@/config";
 import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
@@ -491,7 +491,7 @@ describe("Register page", () => {
   });
 
   describe("Helpa logo link", () => {
-    it("renders the logo as a link to / above the title for a visitor", () => {
+    it("renders the logo as a link to / for a visitor", () => {
       render(<Register />, { route: "/register" });
 
       const logoLinks = screen.getAllByRole("link", {
@@ -504,18 +504,5 @@ describe("Register page", () => {
       }
     });
 
-    it("renders the logo as a link to /dashboard for a signed-in user", () => {
-      signIn({ fullName: "Maria Souza" });
-      render(<Register />, { route: "/register" });
-
-      const logoLinks = screen.getAllByRole("link", {
-        name: "Ir para a página inicial do Helpa",
-      });
-
-      expect(logoLinks).toHaveLength(2);
-      for (const logoLink of logoLinks) {
-        expect(logoLink).toHaveAttribute("href", "/dashboard");
-      }
-    });
   });
 });

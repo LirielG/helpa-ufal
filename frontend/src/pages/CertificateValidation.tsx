@@ -1,8 +1,8 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { Footer } from "@/components/Footer";
+import { HomeLogoLink } from "@/components/HomeLogoLink";
 import helpaBlueLogo from "@/assets/helpa-logo-blue-text.svg";
 import { ValidationPanel } from "@/features/certificate-validation/components/ValidationPanel";
-import { useAuth } from "@/hooks";
 
 /**
  * Public page where whoever received a HELPA certificate checks it, reached
@@ -16,7 +16,6 @@ import { useAuth } from "@/hooks";
  */
 export function CertificateValidation() {
   const { validationCode = "" } = useParams<{ validationCode: string }>();
-  const { isAuthenticated } = useAuth();
   // Trimmed like a typed code, so a link copied with a stray space behaves
   // the same as typing it.
   const code = validationCode.trim();
@@ -25,17 +24,10 @@ export function CertificateValidation() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <Link
-            to={isAuthenticated ? "/dashboard" : "/"}
-            aria-label="Ir para a página inicial do Helpa"
-            className="inline-flex shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
-          >
-            <img
-              src={helpaBlueLogo}
-              alt="helpa"
-              className="h-10 md:h-12 w-auto"
-            />
-          </Link>
+          <HomeLogoLink
+            src={helpaBlueLogo}
+            imageClassName="h-10 md:h-12 w-auto"
+          />
         </div>
       </header>
 

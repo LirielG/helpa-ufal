@@ -41,7 +41,7 @@ describe("DashboardHeader", () => {
       renderHeaderAt("/activity/act-1");
 
       expect(
-        screen.getByRole("button", { name: "Ir para a página inicial" }),
+        screen.getByRole("button", { name: "Ir para a página inicial do Helpa" }),
       ).toBeInTheDocument();
 
       expect(
@@ -104,7 +104,7 @@ describe("DashboardHeader", () => {
       renderHeaderAt("/activity/act-1");
 
       expect(
-        screen.getByRole("button", { name: "Ir para a página inicial" }),
+        screen.getByRole("button", { name: "Ir para a página inicial do Helpa" }),
       ).toBeInTheDocument();
 
       // O dropdown de perfil antigo do Header não existe mais

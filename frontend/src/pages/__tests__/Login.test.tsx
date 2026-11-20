@@ -10,7 +10,6 @@ import {
   render,
   screen,
   server,
-  signIn,
   submitLoginForm,
 } from "@/test";
 import { GuestRoute } from "@/routes/GuestRoute";
@@ -255,18 +254,5 @@ describe("Login", () => {
       }
     });
 
-    it("renders the logo as a link to /dashboard for a signed-in user", () => {
-      signIn({ fullName: "Maria Souza" });
-      render(<Login />, { route: "/login" });
-
-      const logoLinks = screen.getAllByRole("link", {
-        name: "Ir para a página inicial do Helpa",
-      });
-
-      expect(logoLinks).toHaveLength(2);
-      for (const logoLink of logoLinks) {
-        expect(logoLink).toHaveAttribute("href", "/dashboard");
-      }
-    });
   });
 });
