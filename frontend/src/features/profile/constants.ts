@@ -1,4 +1,4 @@
-import type { ActivityStatus, ProfileTab } from "./types";
+import type { ActivityStatus } from "./types";
 
 export interface EmptyStateConfig {
   text: string;
@@ -27,24 +27,15 @@ export const EMPTY_STATE_CONFIGS: Record<ActivityStatus, EmptyStateConfig> = {
   },
 };
 
-export const PROFILE_SUB_TABS: Array<{ id: ActivityStatus; label: string }> = [
-  { id: "enrolled", label: "Atividades Inscritas" },
-  { id: "completed", label: "Atividades Concluídas" },
-  { id: "managed", label: "Atividades Gerenciadas" },
-];
-
-export const PROFILE_TABS: Array<{ id: ProfileTab; label: string }> = [
-  { id: "personal", label: "Dados Pessoais" },
-  { id: "actions", label: "Ações" },
-];
-
-export const DEFAULT_PROFILE_TAB: ProfileTab = "personal";
+export const ACTIVITY_LIST_TITLES: Record<ActivityStatus, string> = {
+  enrolled: "Atividades Inscritas",
+  completed: "Atividades Concluídas",
+  managed: "Atividades Gerenciadas",
+};
 
 export const DEFAULT_ACTIVITY_STATUS: ActivityStatus = "enrolled";
 
-export const isProfileTab = (value: string | null): value is ProfileTab =>
-  PROFILE_TABS.some((tab) => tab.id === value);
-
 export const isActivityStatus = (
   value: string | null,
-): value is ActivityStatus => PROFILE_SUB_TABS.some((tab) => tab.id === value);
+): value is ActivityStatus =>
+  value !== null && Object.hasOwn(ACTIVITY_LIST_TITLES, value);

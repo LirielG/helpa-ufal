@@ -3,11 +3,9 @@ import type { UserActivityCertificate } from "@/services/contracts/user";
 
 export type { UserProfile } from "@/types/profile";
 
-export type ProfileTab = "personal" | "actions";
-
 export type ActivityStatus = "enrolled" | "completed" | "managed";
 
-/** An action of the profile's "Ações" tab and the display text derived from it. */
+/** An action of the user's lists in /my-activities and the display text derived from it. */
 export interface UserActivity {
   /** The action as the enrollment modals of the detail page take it. */
   action: Activity;

@@ -63,8 +63,6 @@ export function DashboardSidebar({
       : "enrolled"
     : null;
 
-  const isActionSubRoute = isMyActivities;
-
   const isHomeActive = location.pathname === "/dashboard";
 
   const isPersonalDataActive = location.pathname === "/profile";
@@ -76,24 +74,11 @@ export function DashboardSidebar({
     navigate(path);
   };
 
+  // Switching lists inside /my-activities replaces the entry, so Back leaves
+  // the page instead of walking through every filter clicked.
   const handleActionSubNavigate = (tab: ActionSubTab) => {
     onCloseMobile?.();
-    const target = `/my-activities?filter=${tab}`;
-    if (isMyActivities) {
-      navigate(target, { replace: true });
-    } else {
-      navigate(target);
-    }
-  };
-
-  const handleCertificatesNavigate = () => {
-    onCloseMobile?.();
-    const target = "/my-activities?filter=completed";
-    if (isMyActivities) {
-      navigate(target, { replace: true });
-    } else {
-      navigate(target);
-    }
+    navigate(`/my-activities?filter=${tab}`, { replace: isMyActivities });
   };
 
   const handleLogout = async () => {
@@ -216,7 +201,7 @@ export function DashboardSidebar({
                 onClick={() => setActionsExpanded((prev) => !prev)}
                 aria-expanded={actionsExpanded}
                 className={`w-full flex items-center justify-between px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
-                  isActionSubRoute ? activeMainItemClass : inactiveMainItemClass
+                  isMyActivities ? activeMainItemClass : inactiveMainItemClass
                 }`}
               >
                 <span className="flex items-center gap-3">
@@ -278,7 +263,7 @@ export function DashboardSidebar({
 
             <button
               type="button"
-              onClick={handleCertificatesNavigate}
+              onClick={() => handleActionSubNavigate("completed")}
               className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${inactiveMainItemClass}`}
             >
               <BadgeCheck className="size-4 lg:size-5 shrink-0" />

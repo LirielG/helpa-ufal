@@ -5,16 +5,14 @@ import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
-import { DEFAULT_ACTIVITY_STATUS, isActivityStatus } from "../constants";
+import {
+  ACTIVITY_LIST_TITLES,
+  DEFAULT_ACTIVITY_STATUS,
+  isActivityStatus,
+} from "../constants";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
-
-const SUB_TAB_TITLES: Record<ActivityStatus, string> = {
-  enrolled: "Atividades Inscritas",
-  completed: "Atividades Concluídas",
-  managed: "Atividades Gerenciadas",
-};
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -123,7 +121,7 @@ export function ActionsList() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl sm:text-2xl font-bold text-[#000A1E]">
-        {SUB_TAB_TITLES[activeSubTab]}
+        {ACTIVITY_LIST_TITLES[activeSubTab]}
       </h1>
 
       {isLoading && (

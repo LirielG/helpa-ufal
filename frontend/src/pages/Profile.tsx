@@ -8,6 +8,10 @@ import { Alert } from "../components/Alert";
 import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
 import { getProfile, updateProfile } from "../features/profile/services";
+import {
+  DEFAULT_ACTIVITY_STATUS,
+  isActivityStatus,
+} from "../features/profile/constants";
 import type { UserProfile } from "../features/profile/types";
 import { useAuth } from "../hooks/useAuth";
 import { useAuthStore } from "../stores/authStore";
@@ -26,19 +30,22 @@ export function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // The lists used to live here, as ?tab=actions&filter=… or, from the
+  // sidebar, ?section=…; those links now move to /my-activities.
   const [searchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const filterParam = searchParams.get("filter") || searchParams.get("section");
+  const legacyFilter =
+    searchParams.get("filter") || searchParams.get("section");
+  const isLegacyActionsUrl =
+    searchParams.get("tab") === "actions" || Boolean(legacyFilter);
 
   useEffect(() => {
-    if (tabParam === "actions" || filterParam) {
-      const validFilter =
-        filterParam === "completed" || filterParam === "managed"
-          ? filterParam
-          : "enrolled";
-      navigate(`/my-activities?filter=${validFilter}`, { replace: true });
-    }
-  }, [tabParam, filterParam, navigate]);
+    if (!isLegacyActionsUrl) return;
+
+    const filter = isActivityStatus(legacyFilter)
+      ? legacyFilter
+      : DEFAULT_ACTIVITY_STATUS;
+    navigate(`/my-activities?filter=${filter}`, { replace: true });
+  }, [isLegacyActionsUrl, legacyFilter, navigate]);
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -57,13 +64,13 @@ export function Profile() {
   // ProtectedRoute keeps a signed-out visitor from ever reaching this screen,
   // so the guard below only exists to narrow `string | undefined`.
   useEffect(() => {
-    if (!userId || tabParam === "actions" || filterParam) return;
+    if (!userId || isLegacyActionsUrl) return;
 
     getProfile()
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
-  }, [userId, tabParam, filterParam]);
+  }, [userId, isLegacyActionsUrl]);
 
   const handleSave = async (data: UpdateProfileRequest) => {
     const updated = await updateProfile(data);
@@ -91,7 +98,7 @@ export function Profile() {
     await logout();
   };
 
-  if (tabParam === "actions" || filterParam) {
+  if (isLegacyActionsUrl) {
     return null;
   }
 

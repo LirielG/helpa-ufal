@@ -28,8 +28,11 @@ function LocationProbe() {
       <button type="button" onClick={() => navigate("/other")}>
         go-other
       </button>
-      <button type="button" onClick={() => navigate("/profile")}>
-        go-profile
+      <button
+        type="button"
+        onClick={() => navigate("/profile?tab=actions&filter=managed")}
+      >
+        go-legacy-actions
       </button>
     </>
   );
@@ -101,7 +104,7 @@ describe("Profile tab in the URL and legacy redirects", () => {
     },
   );
 
-  it("redirects legacy /profile?tab=actions to /my-activities?filter=enrolled with replace", async () => {
+  it("redirects legacy /profile?tab=actions to /my-activities?filter=enrolled", async () => {
     renderWithRoutes("/profile?tab=actions");
     expect(
       await screen.findByRole("heading", { name: "Atividades Inscritas" }),
@@ -109,7 +112,7 @@ describe("Profile tab in the URL and legacy redirects", () => {
     expect(location()).toBe("/my-activities?filter=enrolled");
   });
 
-  it("redirects legacy /profile?tab=actions&filter=completed to /my-activities?filter=completed with replace", async () => {
+  it("redirects legacy /profile?tab=actions&filter=completed to /my-activities?filter=completed", async () => {
     renderWithRoutes("/profile?tab=actions&filter=completed");
     expect(
       await screen.findByRole("heading", { name: "Atividades Concluídas" }),
@@ -117,7 +120,7 @@ describe("Profile tab in the URL and legacy redirects", () => {
     expect(location()).toBe("/my-activities?filter=completed");
   });
 
-  it("redirects legacy /profile?tab=actions&filter=managed to /my-activities?filter=managed with replace", async () => {
+  it("redirects legacy /profile?tab=actions&filter=managed to /my-activities?filter=managed", async () => {
     renderWithRoutes("/profile?tab=actions&filter=managed");
     expect(
       await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
@@ -133,10 +136,21 @@ describe("Profile tab in the URL and legacy redirects", () => {
     expect(location()).toBe("/my-activities?filter=enrolled");
   });
 
+  it("redirects the old sidebar link /profile?section=completed", async () => {
+    renderWithRoutes("/profile?section=completed&tab=actions");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Concluídas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=completed");
+  });
+
   it("does not stack the legacy redirect in the history", async () => {
     const { user } = renderWithRoutes("/other");
-    await user.click(screen.getByRole("button", { name: "go-profile" }));
-    await isOnPersonal();
+    await user.click(screen.getByRole("button", { name: "go-legacy-actions" }));
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=managed");
 
     await user.click(screen.getByRole("button", { name: "history-back" }));
     expect(location()).toBe("/other");
