@@ -21,6 +21,12 @@ const etherealAccount = {
   smtp: { host: "smtp.ethereal.email", port: 587, secure: false },
 };
 
+const timeouts = {
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
+};
+
 const smtpConfig = {
   host: "smtp-relay.brevo.com",
   port: 465,
@@ -78,6 +84,7 @@ describe("NodemailerTransport", () => {
         port: 587,
         secure: false,
         auth: { user: "ethereal-user", pass: "ethereal-pass" },
+        ...timeouts,
       });
       const logged = vi.mocked(console.info).mock.calls.flat().join(" ");
       expect(logged).toContain("ethereal-user");
@@ -153,6 +160,7 @@ describe("NodemailerTransport", () => {
         port: 465,
         secure: true,
         auth: { user: "login@smtp-brevo.com", pass: "smtp-password" },
+        ...timeouts,
       });
       expect(sendMail).toHaveBeenCalledWith({
         ...message,
@@ -172,6 +180,7 @@ describe("NodemailerTransport", () => {
         host: "localhost",
         port: 1025,
         secure: false,
+        ...timeouts,
       });
     });
 

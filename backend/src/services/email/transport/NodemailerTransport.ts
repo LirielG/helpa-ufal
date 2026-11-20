@@ -21,7 +21,16 @@ type Props = {
 };
 
 const DEFAULT_SMTP_PORT = 587;
-const ETHEREAL_DEFAULT_FROM = "Helpa <no-reply@helpa.local>";
+// Only reachable outside production, where MAIL_FROM is required.
+const DEVELOPMENT_DEFAULT_FROM = "Helpa <no-reply@helpa.local>";
+
+// Nodemailer waits up to 2 minutes to connect and 10 minutes on an idle
+// socket; a blocked SMTP port must fail fast instead of stalling callers.
+const TIMEOUTS = {
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
+};
 
 // One Ethereal account per process: every instance shares it, so developers
 // only need the credentials logged once.
@@ -68,7 +77,7 @@ class NodemailerTransport implements IEmailTransport {
     const transporter = await this._getTransporter();
     const info = await transporter.sendMail({
       ...message,
-      from: this._smtp.from ?? ETHEREAL_DEFAULT_FROM,
+      from: this._smtp.from ?? DEVELOPMENT_DEFAULT_FROM,
     });
 
     if (this._usesEthereal) {
@@ -101,6 +110,7 @@ class NodemailerTransport implements IEmailTransport {
         port: account.smtp.port,
         secure: account.smtp.secure,
         auth: { user: account.user, pass: account.pass },
+        ...TIMEOUTS,
       });
     }
 
@@ -111,6 +121,7 @@ class NodemailerTransport implements IEmailTransport {
       secure: secure ?? false,
       // Local catchers such as Mailpit accept mail without a login.
       ...(user !== undefined && { auth: { user, pass } }),
+      ...TIMEOUTS,
     });
   }
 }
