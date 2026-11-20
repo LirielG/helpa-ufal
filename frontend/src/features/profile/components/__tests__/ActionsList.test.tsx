@@ -243,6 +243,33 @@ describe("ActionsList sub-tabs", () => {
     expect(screen.getByText("Rápida")).toBeInTheDocument();
   });
 
+  it.each(["enrolled", "completed", "managed"] as const)(
+    "shows the feed's decorative cover on top of each %s card",
+    async (filter) => {
+      signIn();
+      serveByFilter({
+        [filter]: [
+          makeUserActivityItem({
+            title: "Com capa",
+            status: filter === "completed" ? "COMPLETED" : "OPEN",
+            ...(filter === "managed" ? { enrollment: null } : {}),
+          }),
+        ],
+      });
+
+      await openSubTab(filter);
+      await screen.findByRole("heading", { name: "Com capa" });
+
+      // The title is right below the cover, so the cover is hidden from
+      // screen readers, as in the feed card.
+      const cover = within(cardWithTitle("Com capa")).getByRole("img", {
+        hidden: true,
+      });
+      expect(cover).toHaveAttribute("data-cover-variant");
+      expect(cover).toHaveAttribute("aria-hidden", "true");
+    },
+  );
+
   it.each([
     [
       "enrolled",
