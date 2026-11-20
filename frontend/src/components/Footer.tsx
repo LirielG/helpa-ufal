@@ -1,7 +1,21 @@
 import { Link } from "react-router";
 import helpaWhiteLogo from "../assets/helpa-logo-white.svg";
+import { useAuth } from "../hooks/useAuth";
 
 export function Footer() {
+  const { isAuthenticated } = useAuth();
+
+  const quickLinks = isAuthenticated
+    ? [
+        { label: "Ações", to: "/dashboard" },
+        { label: "Meu perfil", to: "/profile" },
+      ]
+    : [
+        { label: "Sobre o projeto", to: "/" },
+        { label: "Entrar", to: "/login" },
+        { label: "Criar conta", to: "/register" },
+      ];
+
   return (
     <footer className="bg-[#002147] text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -24,34 +38,14 @@ export function Footer() {
             <div className="pl-0 md:pl-8">
               <h4 className="font-semibold mb-4 text-white">Links Rápidos</h4>
               <ul className="space-y-2 text-sm text-gray-300">
-                <li>
-                  <Link to="/" className="hover:text-white transition">
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/" className="hover:text-white transition">
-                    Sobre
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard" className="hover:text-white transition">
-                    Oportunidades
-                  </Link>
-                </li>
+                {quickLinks.map((link) => (
+                  <li key={link.to}>
+                    <Link to={link.to} className="hover:text-white transition">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
-            </div>
-          </div>
-
-          <div className="px-0 md:px-8 py-6 md:py-0 md:flex-1">
-            <div className="pl-0 md:pl-8">
-              <h4 className="font-semibold mb-4 text-white">Contato</h4>
-              <a
-                href="mailto:helpa@universidade.edu.br"
-                className="text-sm text-gray-300 hover:text-white transition cursor-pointer"
-              >
-                helpa@universidade.edu.br
-              </a>
             </div>
           </div>
         </div>
