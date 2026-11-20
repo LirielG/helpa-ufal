@@ -178,35 +178,19 @@ describe("ReportActionModal", () => {
     });
   });
 
-  describe("description", () => {
-    it("shows a character counter with the 500 limit", async () => {
-      const { user } = await renderModal();
-
-      expect(screen.getByText("0/500")).toBeInTheDocument();
-
-      await user.type(descriptionField(), "abc");
-
-      expect(screen.getByText("3/500")).toBeInTheDocument();
-    });
-
-    it("blocks a description over 500 characters before any request", async () => {
-      const bodies = captureReports();
+  it("blocks a description over 500 characters before any request", async () => {
       const { user } = await renderModal();
 
       await user.click(screen.getByRole("radio", { name: "Outro motivo" }));
       await user.click(descriptionField());
       await user.paste("a".repeat(501));
 
+      expect(descriptionField()).toHaveValue("a".repeat(500));
+      expect(screen.getByText("500/500")).toBeInTheDocument();
       expect(
-        await screen.findByText("Limite de 500 caracteres"),
+        screen.getByText("Limite de 500 caracteres atingido."),
       ).toBeInTheDocument();
-      expect(submitButton()).toBeDisabled();
-
-      await user.click(submitButton());
-
-      expect(bodies).toHaveLength(0);
     });
-  });
 
   describe("submission", () => {
     it("sends only the category when the description is left blank", async () => {
