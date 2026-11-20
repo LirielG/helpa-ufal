@@ -11,6 +11,7 @@ import {
   screen,
   server,
   submitLoginForm,
+  within,
 } from "@/test";
 import { GuestRoute } from "@/routes/GuestRoute";
 import { Login } from "../Login";
@@ -171,7 +172,11 @@ describe("Login", () => {
 
     await submitLoginForm(user, makeLoginRequest());
     await screen.findByText("E-mail ou senha incorretos.");
-    await user.click(screen.getByRole("link", { name: "Criar conta" }));
+    await user.click(
+      within(screen.getByRole("main")).getByRole("link", {
+        name: "Criar conta",
+      }),
+    );
     await user.click(screen.getByRole("link", { name: "Voltar" }));
 
     expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
