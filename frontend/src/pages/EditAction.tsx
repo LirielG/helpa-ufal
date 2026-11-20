@@ -26,6 +26,7 @@ import {
   actionEditSchemaFor,
   type ActionEditSchemaType,
 } from "../features/action-edit/validators";
+import { normalizeActionUrl } from "../validators/activity";
 import { getActionById } from "../features/action-detail/services";
 import { handleActionApiErrors } from "../features/action-edit/handleApiErrors";
 import { updateAction } from "../features/action-edit/services";
@@ -97,6 +98,7 @@ export function EditAction() {
     handleSubmit,
     reset,
     setError,
+    setValue,
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
@@ -547,7 +549,10 @@ export function EditAction() {
                     label="Link para o evento"
                     placeholder="Ex: https://meet.google.com/abc-defg-hij"
                     error={errors.url?.message}
-                    {...register("url")}
+                    {...register("url", {
+                      onBlur: (e) =>
+                        setValue("url", normalizeActionUrl(e.target.value)),
+                    })}
                   />
                 )}
               </div>
