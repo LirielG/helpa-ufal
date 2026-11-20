@@ -12,6 +12,7 @@ import {
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { Profile } from "../Profile";
+import { MyActivities } from "../MyActivities";
 
 function LocationProbe() {
   const location = useLocation();
@@ -27,14 +28,17 @@ function LocationProbe() {
       <button type="button" onClick={() => navigate("/other")}>
         go-other
       </button>
-      <button type="button" onClick={() => navigate("/profile")}>
-        go-profile
+      <button
+        type="button"
+        onClick={() => navigate("/profile?tab=actions&filter=managed")}
+      >
+        go-legacy-actions
       </button>
     </>
   );
 }
 
-function renderProfile(route: string) {
+function renderWithRoutes(route: string) {
   signIn();
   useAuthStore.setState({ isSessionVerified: true });
   const user = useAuthStore.getState().user!;
@@ -68,6 +72,7 @@ function renderProfile(route: string) {
     <>
       <Routes>
         <Route path="/profile" element={<Profile />} />
+        <Route path="/my-activities" element={<MyActivities />} />
         <Route path="/other" element={<p>outra página</p>} />
       </Routes>
       <LocationProbe />
@@ -78,93 +83,93 @@ function renderProfile(route: string) {
 
 const location = () => screen.getByTestId("location").textContent;
 const isOnPersonal = () => screen.findByLabelText("Nome completo");
-// The dashboard sidebar repeats the tab labels, so the queries stay inside
-// the page content.
-const getTab = (name: string) =>
-  within(screen.getByRole("main")).getByRole("button", { name });
-const findTab = async (name: string) =>
-  within(await screen.findByRole("main")).findByRole("button", { name });
 
-describe("Profile tab in the URL", () => {
-  it("shows Dados Pessoais without a parameter", async () => {
-    renderProfile("/profile");
+describe("Profile tab in the URL and legacy redirects", () => {
+  it("shows Dados Pessoais without a parameter and contains no tabs", async () => {
+    renderWithRoutes("/profile");
     expect(await isOnPersonal()).toBeInTheDocument();
+    // Profile should not contain any sub-tabs or actions tab inside main
+    const main = screen.getByRole("main");
+    expect(within(main).queryByRole("button", { name: "Ações" })).toBeNull();
+    expect(
+      within(main).queryByRole("button", { name: "Atividades Inscritas" }),
+    ).toBeNull();
   });
 
   it.each(["xyz", "certificates"])(
     "shows Dados Pessoais for the invalid tab %s, without error",
     async (tab) => {
-      renderProfile(`/profile?tab=${tab}`);
+      renderWithRoutes(`/profile?tab=${tab}`);
       expect(await isOnPersonal()).toBeInTheDocument();
     },
   );
 
-  it("reads tab and filter from the URL", async () => {
-    renderProfile("/profile?tab=actions&filter=completed");
+  it("redirects legacy /profile?tab=actions to /my-activities?filter=enrolled", async () => {
+    renderWithRoutes("/profile?tab=actions");
     expect(
-      await screen.findByText("Você ainda não concluiu nenhuma ação."),
+      await screen.findByRole("heading", { name: "Atividades Inscritas" }),
     ).toBeInTheDocument();
-    expect(getTab("Atividades Concluídas")).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(location()).toBe("/my-activities?filter=enrolled");
   });
 
-  it("falls back to enrolled for an invalid filter", async () => {
-    renderProfile("/profile?tab=actions&filter=xyz");
+  it("redirects legacy /profile?tab=actions&filter=completed to /my-activities?filter=completed", async () => {
+    renderWithRoutes("/profile?tab=actions&filter=completed");
     expect(
-      await screen.findByText(
-        "Você não está inscrito em nenhuma ação no momento.",
-      ),
+      await screen.findByRole("heading", { name: "Atividades Concluídas" }),
     ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=completed");
   });
 
-  it("writes the tab and the sub-tab, and drops the filter on leaving", async () => {
-    const { user } = renderProfile("/profile");
-    await isOnPersonal();
-
-    await user.click(getTab("Ações"));
-    expect(location()).toBe("/profile?tab=actions");
-
-    await user.click(await findTab("Atividades Gerenciadas"));
-    expect(location()).toBe("/profile?tab=actions&filter=managed");
-
-    await user.click(getTab("Atividades Inscritas"));
-    expect(location()).toBe("/profile?tab=actions");
-
-    await user.click(getTab("Atividades Gerenciadas"));
-    await user.click(getTab("Dados Pessoais"));
-    expect(location()).toBe("/profile");
+  it("redirects legacy /profile?tab=actions&filter=managed to /my-activities?filter=managed", async () => {
+    renderWithRoutes("/profile?tab=actions&filter=managed");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=managed");
   });
 
-  it("does not stack the tab clicks in the history", async () => {
-    const { user } = renderProfile("/other");
-    await user.click(screen.getByRole("button", { name: "go-profile" }));
-    await isOnPersonal();
+  it("normalizes an invalid filter on legacy redirect to enrolled", async () => {
+    renderWithRoutes("/profile?tab=actions&filter=xyz");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Inscritas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=enrolled");
+  });
 
-    await user.click(getTab("Ações"));
-    await user.click(await findTab("Atividades Gerenciadas"));
+  it("redirects the old sidebar link /profile?section=completed", async () => {
+    renderWithRoutes("/profile?section=completed&tab=actions");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Concluídas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=completed");
+  });
+
+  it("does not stack the legacy redirect in the history", async () => {
+    const { user } = renderWithRoutes("/other");
+    await user.click(screen.getByRole("button", { name: "go-legacy-actions" }));
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
+    ).toBeInTheDocument();
+    expect(location()).toBe("/my-activities?filter=managed");
+
     await user.click(screen.getByRole("button", { name: "history-back" }));
-
     expect(location()).toBe("/other");
   });
 
-  it("restores both selections on Back after leaving the profile", async () => {
-    const { user } = renderProfile("/profile");
-    await isOnPersonal();
+  it("restores filter on Back after leaving /my-activities", async () => {
+    const { user } = renderWithRoutes("/my-activities?filter=managed");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
+    ).toBeInTheDocument();
 
-    await user.click(getTab("Ações"));
-    await user.click(await findTab("Atividades Gerenciadas"));
     await user.click(screen.getByRole("button", { name: "go-other" }));
     expect(await screen.findByText("outra página")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "history-back" }));
 
-    expect(location()).toBe("/profile?tab=actions&filter=managed");
-    expect(await findTab("Atividades Gerenciadas")).toBeInTheDocument();
-    expect(getTab("Atividades Gerenciadas")).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(location()).toBe("/my-activities?filter=managed");
+    expect(
+      await screen.findByRole("heading", { name: "Atividades Gerenciadas" }),
+    ).toBeInTheDocument();
   });
 });

@@ -51,6 +51,14 @@ describe("AppRoutes", () => {
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
+    it("sends a guest from /my-activities to the login screen", async () => {
+      render(<AppRoutes />, { route: "/my-activities" });
+
+      expect(
+        await screen.findByRole("button", { name: "Entrar" }),
+      ).toBeInTheDocument();
+    });
+
     it("sends a guest from the action edit screen to the login screen", async () => {
       render(<AppRoutes />, { route: "/activity/1/edit" });
 
@@ -210,12 +218,7 @@ describe("AppRoutes", () => {
         ),
       );
       signIn();
-      const { user } = render(<AppRoutes />, { route: "/profile" });
-
-      await screen.findByText("Dados Pessoais");
-
-      const actionButtons = screen.getAllByRole("button", { name: "Ações" });
-      await user.click(actionButtons[actionButtons.length - 1]);
+      render(<AppRoutes />, { route: "/my-activities" });
 
       expect(
         await screen.findByRole("button", { name: "Entrar" }),
