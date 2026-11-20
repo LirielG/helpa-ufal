@@ -31,6 +31,8 @@ npm run start
 ```
 
 > **Nota sobre o seed:** `npx prisma db seed` cria exclusivamente a conta do gestor (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME`, `ADMIN_REGISTRATION_CODE`, `ADMIN_CNDB` e opcionalmente `ADMIN_COURSE`). O `upsert` do gestor **não sobrescreve a senha** (`passwordHash`) se o usuário com `ADMIN_EMAIL` já existir no banco (atualiza apenas nome, perfil de gestor e dados docentes); portanto, alterar `ADMIN_PASSWORD` e rodar o seed novamente não muda a senha de um gestor já criado. As atividades fictícias de demonstração ficam no script `npm run db:seed:demo`, que se recusa a rodar quando `NODE_ENV=production`.
+>
+> O seed valida o ambiente com o mesmo [`src/config/env.ts`](src/config/env.ts) do servidor. Por isso, com `NODE_ENV=production`, ele também exige `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` e `MAIL_FROM`, mesmo sem enviar e-mail: rode-o com as mesmas variáveis do servidor.
 
 ---
 
