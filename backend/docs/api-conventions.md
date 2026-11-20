@@ -11,13 +11,13 @@ fazer de certo jeito só desempata duas opções de mesmo valor para o consumido
 
 | Regra                                                                                                                                                                                            | Exemplo                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| O path só tem substantivos. Coleções vão no plural.                                                                                                                                              | `/activities`, `/reports`                                                                  |
+| O path só tem substantivos. Coleções vão no plural.                                                                                                                                              | `/activities`, `/reported-activities`                                                      |
 | Segmentos com mais de uma palavra usam kebab-case.                                                                                                                                               | `/sigaa-activities`, `/certificate-validations`                                            |
 | Parâmetros de path se chamam `:<recurso>Id`, nunca `:id`.                                                                                                                                        | `/activities/:activityId`                                                                  |
 | Algo do próprio usuário se acessa por `me` no path. Quem age vem sempre do token, nunca de params, query ou corpo.                                                                               | `/users/me`, `/activities/:activityId/enrollments/me`                                      |
 | `POST` em coleção fica reservado para quando o cliente escolhe o que criar.                                                                                                                      | `POST /activities`                                                                         |
-| Uma operação de estado é um sub-recurso no singular.                                                                                                                                             | `/activities/:activityId/status`, `/reports/:reportId/resolution`                          |
-| Uma representação diferente do mesmo dado ganha coleção própria.                                                                                                                                 | `/certificate-validations/:validationCode` (DTO público mínimo)                            |
+| Uma operação de estado é um sub-recurso no singular.                                                                                                                                             | `/activities/:activityId/status`, `/enrollments/:enrollmentId/attendance`                  |
+| Uma representação diferente do mesmo dado ganha coleção própria.                                                                                                                                 | `/certificate-validations/:validationCode`, `/reported-activities`                         |
 | Arquivos são um sub-recurso `file`.                                                                                                                                                              | `/certificates/:certificateId/file`                                                        |
 | Aninhamento tem no máximo um id ancestral, usado só para escopar uma coleção (listar ou criar dentro do pai) ou para `me`. Um item com id próprio tem uma única URL canônica, no primeiro nível. | `GET /activities/:activityId/enrollments`, mas `PUT /enrollments/:enrollmentId/attendance` |
 
@@ -37,7 +37,7 @@ continuam (ação fechada, sem vagas). Se um gestor precisar inscrever outra pes
 - **`PATCH`**: atualização parcial de um recurso com vários campos editáveis de forma
   independente. Campo ausente fica como está.
 - **`PUT`**: o cliente manda o estado inteiro do recurso, e repetir a requisição dá o mesmo
-  resultado. É o método dos sub-recursos de estado (`/status`, `/attendance`, `/resolution`) e
+  resultado. É o método dos sub-recursos de estado (`/status`, `/attendance`) e
   do `me`.
 - **Status:** `201` quando a requisição criou o item, `200` quando alterou ou leu, `204` quando
   não há corpo.
@@ -46,11 +46,11 @@ continuam (ação fechada, sem vagas). Se um gestor precisar inscrever outra pes
 
 - `POST`, `PUT` e `PATCH` devolvem a **representação canônica do item afetado**, idêntica ao
   `GET` desse item. O item é o recurso com id mais próximo. Quando não existe `GET` do item,
-  vale o formato dele na listagem.
+  vale o formato dele na listagem (por exemplo, `POST /activities/:activityId/moderation-decisions`
+  devolve a decisão no formato de item de `decisions[]` em `GET /reported-activities`).
 - Num sub-recurso de estado, o item afetado é o **pai**:
   - `PUT /activities/:activityId/status` devolve a atividade, como `GET /activities/:activityId`.
   - `PUT /enrollments/:enrollmentId/attendance` devolve a inscrição.
-  - `PUT /reports/:reportId/resolution` devolve a denúncia, no formato de item de `GET /reports`.
 - `DELETE` devolve `204` sem corpo.
 
 ## 3. Paginação

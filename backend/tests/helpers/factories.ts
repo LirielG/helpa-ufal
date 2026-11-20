@@ -9,7 +9,10 @@ import type {
   ActivityType,
   Address,
   CampusLocation,
+  Certificate,
   Enrollment,
+  ModerationDecision,
+  ModerationVerdict,
   SigaaActivity,
   User,
 } from "@prisma/client";
@@ -17,6 +20,7 @@ import { prisma } from "@/database/prisma.js";
 import { signToken } from "./auth.js";
 import { daysFromNow } from "./dates.js";
 import { EnrollmentStatus } from "@/types/enrollment.js";
+import { generateValidationCode } from "@/utils/validationCode.js";
 
 export const DEFAULT_PASSWORD = "Senha@123";
 
@@ -131,6 +135,7 @@ type ActivityOverrides = Partial<{
   slots: number;
   status: ActivityStatus;
   deletedAt: Date | null;
+  removedByModerationAt: Date | null;
   description: string;
   area: string;
   format: ActivityFormat;
@@ -260,10 +265,7 @@ export async function createEnrollment(
 }
 
 type ReportOverrides = Partial<
-  Pick<
-    ActivityReport,
-    "category" | "description" | "createdAt" | "resolvedAt" | "resolvedById"
-  >
+  Pick<ActivityReport, "category" | "description" | "createdAt" | "decisionId">
 >;
 
 /**
@@ -281,6 +283,51 @@ export async function createReport(
       userId,
       category: "SPAM",
       description: "Conteúdo promocional repetido.",
+      ...overrides,
+    },
+  });
+}
+
+type ModerationDecisionOverrides = Partial<{
+  verdict: ModerationVerdict;
+  justification: string;
+  createdAt: Date;
+}>;
+
+/**
+ * Creates a ModerationDecision directly in the database. `decidedById` may be
+ * null to stand for a manager whose account was removed (onDelete: SetNull).
+ */
+export async function createModerationDecision(
+  activityId: string,
+  decidedById: string | null,
+  overrides: ModerationDecisionOverrides = {},
+): Promise<ModerationDecision> {
+  return prisma.moderationDecision.create({
+    data: {
+      activityId,
+      decidedById,
+      verdict: "REJECTED",
+      justification: "Denúncia improcedente.",
+      ...overrides,
+    },
+  });
+}
+
+type CertificateOverrides = Partial<
+  Pick<Certificate, "validationCode" | "issuedAt">
+>;
+
+/** Creates a Certificate directly in the database for a given enrollment. */
+export async function createCertificate(
+  enrollmentId: string,
+  overrides: CertificateOverrides = {},
+): Promise<Certificate> {
+  return prisma.certificate.create({
+    data: {
+      enrollmentId,
+      validationCode: generateValidationCode(),
+      issuedAt: new Date(),
       ...overrides,
     },
   });

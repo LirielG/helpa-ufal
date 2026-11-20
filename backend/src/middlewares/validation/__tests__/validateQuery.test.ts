@@ -5,7 +5,7 @@ import ValidationError from "@/models/error/ValidationError.js";
 import { validateQuery } from "../validateQuery.js";
 import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
 import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
-import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
+import { ListReportedActivitiesQuerySchema } from "@/schemas/moderation/moderationSchemas.js";
 
 // Contract: the middleware never responds by itself — it either forwards the
 // parsed query through res.locals.validatedQuery or forwards one
@@ -146,7 +146,7 @@ describe("validateQuery(ListParticipantsQuerySchema)", () => {
 
 describe("validateQuery with a strict schema", () => {
   const strictMiddleware = validateQuery(
-    ListReportsQuerySchema,
+    ListReportedActivitiesQuerySchema,
     INVALID_QUERY_MESSAGE,
   );
 
@@ -158,15 +158,15 @@ describe("validateQuery with a strict schema", () => {
   }
 
   it("reports each unknown parameter as its own UNKNOWN_PARAMETER item", () => {
-    const error = callStrict({ status: "OPEN", search: "x" });
+    const error = callStrict({ resolved: "false", search: "x" });
 
     expect(error).toBeInstanceOf(ValidationError);
     expect(error?.message).toBe(INVALID_QUERY_MESSAGE);
     expect(error?.errors).toEqual([
       {
-        field: "status",
+        field: "resolved",
         code: "UNKNOWN_PARAMETER",
-        message: "status is not a supported query parameter.",
+        message: "resolved is not a supported query parameter.",
       },
       {
         field: "search",
