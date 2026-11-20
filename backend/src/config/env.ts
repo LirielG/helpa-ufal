@@ -8,7 +8,7 @@ if (process.env["NODE_ENV"]) {
 
 dotenv.config({ path: ".env", quiet: true });
 
-export const EnvSchema = z.object({
+const BaseEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -95,6 +95,46 @@ export const EnvSchema = z.object({
   ADMIN_REGISTRATION_CODE: z.string().min(1).optional(),
   ADMIN_CNDB: z.string().min(1).optional(),
   ADMIN_COURSE: z.string().min(1).optional(),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  // true for implicit TLS (port 465); false upgrades with STARTTLS.
+  SMTP_SECURE: z.stringbool().default(false),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  // Kept apart from SMTP_USER: providers such as Brevo log in with an
+  // internal address, while the sender must be a verified one.
+  MAIL_FROM: z.string().min(1).optional(),
+});
+
+const PRODUCTION_MAIL_VARIABLES = [
+  "SMTP_HOST",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "MAIL_FROM",
+] as const;
+
+export const EnvSchema = BaseEnvSchema.superRefine((value, ctx) => {
+  if (value.NODE_ENV !== "production") return;
+
+  for (const variable of PRODUCTION_MAIL_VARIABLES) {
+    if (value[variable] === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: [variable],
+        message: `${variable} is required when NODE_ENV=production.`,
+      });
+    }
+  }
+
+  // Ethereal accepts every message and delivers none, so production would
+  // "send" e-mails that nobody ever receives.
+  if (value.SMTP_HOST?.toLowerCase().includes("ethereal.email")) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["SMTP_HOST"],
+      message: "SMTP_HOST must not point to ethereal.email in production.",
+    });
+  }
 });
 
 export const env = EnvSchema.parse(process.env);
