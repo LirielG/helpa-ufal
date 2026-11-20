@@ -133,6 +133,56 @@ describe("ActionsList sub-tabs", () => {
     expect(screen.queryByText("Concluída")).not.toBeInTheDocument();
   });
 
+  it("replaces the previous list with loading while the next sub-tab is pending", async () => {
+    signIn();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+
+    server.use(
+      http.get(`${API}/users/me/activities`, async ({ request }) => {
+        const filter = new URL(request.url).searchParams.get("filter");
+
+        if (filter === "managed") await gate;
+
+        return HttpResponse.json(
+          page([makeUserActivityItem({ title: `Ação ${filter}` })]),
+        );
+      }),
+    );
+
+    function Switcher() {
+      const [, setSearchParams] = useSearchParams();
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setSearchParams({ filter: "managed" })}
+          >
+            ir-gerenciadas
+          </button>
+          <ActionsList />
+        </>
+      );
+    }
+
+    const { user } = render(<Switcher />, {
+      route: "/my-activities?filter=enrolled",
+    });
+
+    expect(await screen.findByText("Ação enrolled")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "ir-gerenciadas" }));
+
+    // Without the reset, the enrolled items would render as managed cards,
+    // offering edit and delete on actions the user does not manage.
+    expect(screen.getByText("Carregando atividades...")).toBeInTheDocument();
+    expect(screen.queryByText("Ação enrolled")).not.toBeInTheDocument();
+
+    release();
+
+    expect(await screen.findByText("Ação managed")).toBeInTheDocument();
+  });
+
   it("never shows the response of a sub-tab the user already left", async () => {
     signIn();
     let release!: () => void;

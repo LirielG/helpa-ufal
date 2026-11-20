@@ -44,13 +44,17 @@ export function ActionsList() {
   }, [filterParam, setSearchParams]);
 
   // The sub-tab lives in the URL, so it changes one render after the click
-  // (or with no click at all, on browser Back). Resetting the page while
-  // rendering, not in the click handler, keeps the old sub-tab from being
-  // fetched again at page one before the new one arrives.
+  // (or with no click at all, on browser Back). Resetting while rendering, not
+  // in the click handler, keeps the old sub-tab from being fetched again at
+  // page one, and keeps its items from rendering for one frame with the new
+  // sub-tab's cards and controls.
   if (pagedSubTab !== activeSubTab) {
     setPagedSubTab(activeSubTab);
     setPage(1);
     setTotalPages(1);
+    setActivities([]);
+    setError(null);
+    setIsLoading(true);
   }
 
   const reloadActivities = useCallback(() => {
