@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, Route, Routes } from "react-router";
 import {
   API,
   delay,
@@ -10,8 +10,12 @@ import {
   screen,
   server,
   waitFor,
+  signIn,
+  signOut,
 } from "@/test";
 import { CertificateValidation } from "@/pages/CertificateValidation";
+import { PublicRoute } from "@/routes/PublicRoute";
+import { Footer } from "@/components/Footer";
 
 function LocationProbe() {
   const navigate = useNavigate();
@@ -277,5 +281,139 @@ describe("CertificateValidation", () => {
 
       await waitFor(() => expect(codes).toHaveLength(2));
     });
+  });
+});
+
+describe("navigation", () => {
+  function renderValidationFlow(route: string) {
+    return render(
+      <Routes>
+        <Route
+          path="/validar/:validationCode?"
+          element={
+            <PublicRoute>
+              <CertificateValidation />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <>
+              <h1>Feed de ações</h1>
+              <Footer />
+            </>
+          }
+        />
+        <Route path="/login" element={<h1>Tela de login</h1>} />
+      </Routes>,
+      { route },
+    );
+  }
+
+  it("navigates to /dashboard from a direct /validar/<code> entry with no prior history", async () => {
+    recordRequests();
+    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+
+    await screen.findByText("Certificado autêntico");
+
+    const exploreLink = screen.getByRole("link", {
+      name: "Explorar ações",
+    });
+    expect(exploreLink).toBeVisible();
+    expect(exploreLink).toHaveAttribute("href", "/dashboard");
+
+    await user.click(exploreLink);
+
+    expect(
+      await screen.findByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
+  });
+
+  it("navigates to /dashboard from an empty form with typed text without submitting a validation query", async () => {
+    const codes = recordRequests();
+    const { user } = renderValidationFlow("/validar");
+
+    await user.type(screen.getByLabelText("Código de validação"), "7KQ4MX9T2R");
+    await user.click(screen.getByRole("link", { name: "Explorar ações" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
+    expect(codes).toEqual([]);
+  });
+
+  it("allows navigating to /dashboard while validation is in progress", async () => {
+    recordRequests(async () => {
+      await delay("infinite");
+      return HttpResponse.json(makeCertificateValidation());
+    });
+
+    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+
+    expect(screen.getByText("Consultando certificado…")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Explorar ações" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
+  });
+
+  it("allows navigating to /dashboard when the code is not found (404)", async () => {
+    recordRequests(() =>
+      HttpResponse.json(
+        { status: 404, message: "Certificate not found." },
+        { status: 404 },
+      ),
+    );
+    const { user } = renderValidationFlow("/validar/0000000000");
+
+    await screen.findByText("Código não encontrado");
+    await user.click(screen.getByRole("link", { name: "Explorar ações" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
+  });
+
+  it("allows navigating to /dashboard on network error", async () => {
+    recordRequests(() => HttpResponse.error());
+    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+
+    await screen.findByText(/não foi possível consultar o certificado/i);
+    await user.click(screen.getByRole("link", { name: "Explorar ações" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
+  });
+
+  it("allows a visitor to reach /validar from the footer without redirecting to login", async () => {
+    signOut();
+    const { user } = renderValidationFlow("/dashboard");
+
+    await user.click(screen.getByRole("link", { name: "Validar certificado" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Validar certificado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Tela de login" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("allows a signed-in user to reach /validar from the footer without redirecting to login", async () => {
+    signIn();
+    const { user } = renderValidationFlow("/dashboard");
+
+    await user.click(screen.getByRole("link", { name: "Validar certificado" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Validar certificado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Tela de login" }),
+    ).not.toBeInTheDocument();
   });
 });

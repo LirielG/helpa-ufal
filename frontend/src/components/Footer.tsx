@@ -9,11 +9,13 @@ export function Footer() {
     ? [
         { label: "Ações", to: "/dashboard" },
         { label: "Meu perfil", to: "/profile" },
+        { label: "Validar certificado", to: "/validar" },
       ]
     : [
         { label: "Sobre o projeto", to: "/" },
         { label: "Entrar", to: "/login" },
         { label: "Criar conta", to: "/register" },
+        { label: "Validar certificado", to: "/validar" },
       ];
 
   return (

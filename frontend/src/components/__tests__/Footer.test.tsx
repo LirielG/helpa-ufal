@@ -3,7 +3,7 @@ import { Route, Routes } from "react-router";
 import { CurrentUrl, render, screen, signIn, signOut, within } from "@/test";
 import { Footer } from "../Footer";
 
-function renderFooter(route = "/validar") {
+function renderFooter(route = "/activity/act-1") {
   return render(
     <Routes>
       <Route
@@ -22,7 +22,7 @@ function renderFooter(route = "/validar") {
 
 describe("Footer", () => {
   describe("for a visitor", () => {
-    it("renders Sobre o projeto, Entrar and Criar conta in order without Contato or dead links", () => {
+    it("renders Sobre o projeto, Entrar, Criar conta and Validar certificado in order without Contato or dead links", () => {
       signOut();
       renderFooter();
 
@@ -33,11 +33,13 @@ describe("Footer", () => {
         "Sobre o projeto",
         "Entrar",
         "Criar conta",
+        "Validar certificado",
       ]);
 
       expect(links[0]).toHaveAttribute("href", "/");
       expect(links[1]).toHaveAttribute("href", "/login");
       expect(links[2]).toHaveAttribute("href", "/register");
+      expect(links[3]).toHaveAttribute("href", "/validar");
 
       expect(
         within(footer).queryByRole("heading", { name: "Contato" }),
@@ -54,23 +56,40 @@ describe("Footer", () => {
       ["Sobre o projeto", "/"],
       ["Entrar", "/login"],
       ["Criar conta", "/register"],
+      ["Validar certificado", "/validar"],
     ] as const)(
       "navigates to %s (%s) when clicked",
       async (label, expectedPath) => {
         signOut();
-        const { user } = renderFooter("/validar");
+        const { user } = renderFooter("/activity/act-1");
 
-        await user.click(screen.getByRole("link", { name: label }));
+        const link = screen.getByRole("link", { name: label });
+        expect(link).toBeVisible();
+        await user.click(link);
 
         expect(
           screen.getByRole("status", { name: "URL atual" }),
         ).toHaveTextContent(expectedPath);
       },
     );
+
+    it("opens Validar certificado via keyboard", async () => {
+      signOut();
+      const { user } = renderFooter("/activity/act-1");
+
+      const link = screen.getByRole("link", { name: "Validar certificado" });
+      link.focus();
+      expect(link).toHaveFocus();
+      await user.keyboard("{Enter}");
+
+      expect(
+        screen.getByRole("status", { name: "URL atual" }),
+      ).toHaveTextContent("/validar");
+    });
   });
 
   describe("for a signed-in user", () => {
-    it("renders Ações and Meu perfil in order without visitor links or Contato", () => {
+    it("renders Ações, Meu perfil and Validar certificado in order without visitor links or Contato", () => {
       signIn();
       renderFooter();
 
@@ -80,10 +99,12 @@ describe("Footer", () => {
       expect(links.map((link) => link.textContent)).toEqual([
         "Ações",
         "Meu perfil",
+        "Validar certificado",
       ]);
 
       expect(links[0]).toHaveAttribute("href", "/dashboard");
       expect(links[1]).toHaveAttribute("href", "/profile");
+      expect(links[2]).toHaveAttribute("href", "/validar");
 
       expect(
         within(footer).queryByRole("link", { name: "Sobre o projeto" }),
@@ -105,13 +126,16 @@ describe("Footer", () => {
     it.each([
       ["Ações", "/dashboard"],
       ["Meu perfil", "/profile"],
+      ["Validar certificado", "/validar"],
     ] as const)(
       "navigates to %s (%s) when clicked",
       async (label, expectedPath) => {
         signIn();
-        const { user } = renderFooter("/validar");
+        const { user } = renderFooter("/activity/act-1");
 
-        await user.click(screen.getByRole("link", { name: label }));
+        const link = screen.getByRole("link", { name: label });
+        expect(link).toBeVisible();
+        await user.click(link);
 
         expect(
           screen.getByRole("status", { name: "URL atual" }),
