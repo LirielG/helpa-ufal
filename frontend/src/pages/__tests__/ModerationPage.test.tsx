@@ -464,10 +464,9 @@ describe("ModerationPage", () => {
 
       expect(await screen.findByText("Denúncia 1")).toBeInTheDocument();
       await user.click(
-        within(screen.getByRole("navigation", { name: "Paginação" })).getByRole(
-          "button",
-          { name: "Página 2" },
-        ),
+        within(
+          screen.getByRole("navigation", { name: "Paginação" }),
+        ).getByRole("button", { name: "Página 2" }),
       );
       expect(await screen.findByText("Denúncia 21")).toBeInTheDocument();
 

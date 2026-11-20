@@ -86,7 +86,7 @@ export function DashboardShell({
       inflightProfilePromise = null;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null);
-
+       
       setProfileError(false);
       return;
     }

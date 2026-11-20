@@ -241,10 +241,11 @@ export function Register() {
             </div>
           </div>
           {/* eslint-disable-next-line react-hooks/incompatible-library */}
-          <PasswordGuidelines password={watch("password") ?? ""} />
+          <PasswordGuidelines password={watch("password") ?? ""} />        
+          
         </div>
 
-        <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
+        <Button type="submit" size="lg" isLoading={isLoading}variant="navy">          
           Criar conta
         </Button>
       </form>
