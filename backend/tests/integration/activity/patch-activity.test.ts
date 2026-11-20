@@ -237,7 +237,7 @@ describe("PATCH /activities/:activityId", () => {
           : null,
       },
     });
-  });  
+  });
 
   it("computes availableSlots from the approved enrollments in the PATCH response", async () => {
     const author = await createTeacher();

@@ -40,7 +40,10 @@ describe("Request logging middleware (integration)", () => {
       .send({ email, password: DEFAULT_PASSWORD });
 
     expect(response.status).toBe(200);
-    const issuedToken: string = response.body.token;
+    // The session token travels only in the Set-Cookie header.
+    const setCookie = response.headers["set-cookie"];
+    const [sessionCookie] = Array.isArray(setCookie) ? setCookie : [setCookie];
+    const issuedToken = /^token=([^;]+)/.exec(sessionCookie ?? "")?.[1];
     expect(issuedToken).toBeTruthy();
 
     expect(logSpy).toHaveBeenCalledTimes(1);
