@@ -5,6 +5,7 @@ import {
   isConnectionFailure,
   type ApiValidationError,
 } from "../../services/apiError";
+import { WORKLOAD_EXCEEDS_DURATION_MESSAGE } from "../../validators/activity";
 
 const FIELD_MESSAGES: Record<string, string> = {
   title: "Informe um título válido.",
@@ -14,7 +15,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   area: "Informe uma área de atuação válida.",
   format: "Selecione um formato de ação válido.",
   slots: "Informe uma quantidade de vagas válida.",
-  workloadHours: "Informe uma carga horária válida.",
+  workloadHours: WORKLOAD_EXCEEDS_DURATION_MESSAGE,
   startDate: "A data de início deve ser futura e anterior à de encerramento.",
   endDate: "A data de encerramento deve ser posterior à de início.",
   url: "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
