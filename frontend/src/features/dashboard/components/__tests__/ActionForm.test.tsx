@@ -702,4 +702,59 @@ describe("ActionRegister", () => {
       screen.getByRole("button", { name: /(^|\s)15 de março/ }),
     ).toBeEnabled();
   });
+
+  describe("workload duration validation", () => {
+    it("blocks workload above the action duration and shows the hour limit", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      const endTime = screen.getByLabelText("Horário de encerramento");
+      await user.clear(endTime);
+      await user.type(endTime, "12:00");
+
+      const workload = screen.getByLabelText("Carga horária total");
+      await user.clear(workload);
+      await user.type(workload, "5");
+
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      expect(
+        await screen.findByText(
+          "A carga horária não pode passar da duração da ação (4 h).",
+        ),
+      ).toBeInTheDocument();
+      expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it("accepts workload equal to the exact duration", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      const endTime = screen.getByLabelText("Horário de encerramento");
+      await user.clear(endTime);
+      await user.type(endTime, "12:00");
+
+      const workload = screen.getByLabelText("Carga horária total");
+      await user.clear(workload);
+      await user.type(workload, "4");
+
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ workloadHours: 4 }),
+        ),
+      );
+    });
+  });
 });
