@@ -144,7 +144,7 @@ describe("ActionDetail enrollments button", () => {
 });
 
 describe("ActionDetail focus restoration after enrollment modal closure", () => {
-  it("focuses Cancelar inscrição when closing success modal with Esc after APPROVED update", async () => {
+  it("focuses Cancelar inscrição when enrollment succeeds and refreshes to APPROVED", async () => {
     signIn({ id: "user-123", isManager: false });
 
     const initialAction = makeActionDetail({
@@ -185,62 +185,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
     });
     await user.click(confirmButton);
 
-    await screen.findByText("Oba! Você está dentro!");
-
-    await user.keyboard("{Escape}");
-
-    await waitFor(() => {
-      expect(document.activeElement).toBe(
-        screen.getByRole("button", { name: /Cancelar inscrição/i }),
-      );
-    });
-  });
-
-  it("focuses Cancelar inscrição when closing success modal via backdrop click", async () => {
-    signIn({ id: "user-123", isManager: false });
-
-    const initialAction = makeActionDetail({
-      id: ACTION_ID,
-      status: "OPEN",
-      enrollmentStatus: null,
-    });
-    const updatedAction = makeActionDetail({
-      id: ACTION_ID,
-      status: "OPEN",
-      enrollmentStatus: "APPROVED",
-    });
-
-    let getCallCount = 0;
-    server.use(
-      http.get(`${API}/activities/${ACTION_ID}`, () => {
-        getCallCount += 1;
-        return HttpResponse.json(
-          getCallCount === 1 ? initialAction : updatedAction,
-        );
-      }),
-      http.put(`${API}/activities/${ACTION_ID}/enrollments/me`, () =>
-        HttpResponse.json(makeEnrollment({ activityId: ACTION_ID }), {
-          status: 201,
-        }),
-      ),
-    );
-
-    const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
-
-    const enrollButton = await screen.findByRole("button", {
-      name: /Inscrever-se/i,
-    });
-    await user.click(enrollButton);
-
-    const confirmButton = await screen.findByRole("button", {
-      name: /✓ Confirmar/i,
-    });
-    await user.click(confirmButton);
-
-    await screen.findByText("Oba! Você está dentro!");
-
-    const backdrop = screen.getByRole("button", { name: "Fechar modal" });
-    await user.click(backdrop);
+    await screen.findByText("Inscrição realizada.");
 
     await waitFor(() => {
       expect(document.activeElement).toBe(
@@ -278,26 +223,32 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
       ),
     );
 
-    const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
+    const hideCancelStyle = document.createElement("style");
+    hideCancelStyle.textContent = "button.bg-red-800 { display: none; }";
+    document.head.appendChild(hideCancelStyle);
 
-    const enrollButton = await screen.findByRole("button", {
-      name: /Inscrever-se/i,
-    });
-    await user.click(enrollButton);
+    try {
+      const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
 
-    const confirmButton = await screen.findByRole("button", {
-      name: /✓ Confirmar/i,
-    });
-    await user.click(confirmButton);
+      const enrollButton = await screen.findByRole("button", {
+        name: /Inscrever-se/i,
+      });
+      await user.click(enrollButton);
 
-    await screen.findByText("Oba! Você está dentro!");
+      const confirmButton = await screen.findByRole("button", {
+        name: /✓ Confirmar/i,
+      });
+      await user.click(confirmButton);
 
-    await user.keyboard("{Escape}");
+      await screen.findByText("Inscrição realizada.");
 
-    await waitFor(() => {
-      const heading = screen.getByRole("heading", { level: 1 });
-      expect(document.activeElement).toBe(heading);
-    });
+      await waitFor(() => {
+        const heading = screen.getByRole("heading", { level: 1 });
+        expect(document.activeElement).toBe(heading);
+      });
+    } finally {
+      hideCancelStyle.remove();
+    }
   });
 
   it("focuses the main title h1 when Cancelar inscrição is hidden with display: none", async () => {
@@ -329,31 +280,32 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
       ),
     );
 
-    const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
+    const hideCancelStyle = document.createElement("style");
+    hideCancelStyle.textContent = "button.bg-red-800 { display: none; }";
+    document.head.appendChild(hideCancelStyle);
 
-    const enrollButton = await screen.findByRole("button", {
-      name: /Inscrever-se/i,
-    });
-    await user.click(enrollButton);
+    try {
+      const { user } = renderDetailWithEnrollmentsRoute("author-1", true);
 
-    const confirmButton = await screen.findByRole("button", {
-      name: /✓ Confirmar/i,
-    });
-    await user.click(confirmButton);
+      const enrollButton = await screen.findByRole("button", {
+        name: /Inscrever-se/i,
+      });
+      await user.click(enrollButton);
 
-    await screen.findByText("Oba! Você está dentro!");
+      const confirmButton = await screen.findByRole("button", {
+        name: /✓ Confirmar/i,
+      });
+      await user.click(confirmButton);
 
-    const cancelBtn = screen.getByRole("button", {
-      name: /Cancelar inscrição/i,
-    });
-    cancelBtn.style.display = "none";
+      await screen.findByText("Inscrição realizada.");
 
-    await user.keyboard("{Escape}");
-
-    await waitFor(() => {
-      const heading = screen.getByRole("heading", { level: 1 });
-      expect(document.activeElement).toBe(heading);
-    });
+      await waitFor(() => {
+        const heading = screen.getByRole("heading", { level: 1 });
+        expect(document.activeElement).toBe(heading);
+      });
+    } finally {
+      hideCancelStyle.remove();
+    }
   });
 
   it("restores focus to original button when modal is closed before confirmation or on error", async () => {
