@@ -144,7 +144,7 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
         className="w-full min-h-[50vh] bg-white"
         style={FEED_BACKGROUND_STYLE}
       >
-        <div className="max-w-10xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+        <div className="page-container py-8 flex flex-col gap-8">
           <FeedTabs
             active={feed}
             onChange={changeFeed}
