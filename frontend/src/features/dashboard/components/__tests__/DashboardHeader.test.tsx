@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Route, Routes, useLocation } from "react-router";
+import { useAuthStore } from "@/stores/authStore";
 import {
+  act,
   CurrentUrl,
+  makeUser,
   render,
   renderWithAuthPages,
   screen,
@@ -126,4 +129,43 @@ describe("DashboardHeader", () => {
       // O botão "Sair" não é mais testado como ausente aqui, pois a DashboardShell o renderiza através da Sidebar.
     });
   });
+
+  it("keeps the logo in place when the initial session check finishes", () => {
+    localStorage.setItem("help_auth_token", "token");
+    // Through the shell, which passes onToggleSidebar: the signed-in header then puts the menu button before the logo.
+    render(
+      <DashboardShell header={<DashboardHeader />}>
+        <p>Feed</p>
+      </DashboardShell>,
+    );
+
+    const verifyingLayout = layoutOfHeader();
+
+    act(() => {
+      useAuthStore.setState({ user: makeUser(), isSessionVerified: true });
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Ir para a página inicial" }),
+    ).toBeInTheDocument();
+    expect(layoutOfHeader()).toEqual(verifyingLayout);
+  });
 });
+
+// What decides where the logo is drawn: the row's width and padding, the group holding the logo,
+// the size of the slot before it (the menu button below lg), and the logo's own size.
+function layoutOfHeader() {
+  const row = screen.getByRole("banner").firstElementChild;
+  const group = row?.firstElementChild;
+  const slot = group?.children.length === 2 ? group.firstElementChild : null;
+  return {
+    row: row?.className,
+    group: group?.className,
+    slot: slot && {
+      hiddenFromLg: slot.classList.contains("lg:hidden"),
+      padding: slot.classList.contains("p-2"),
+      icon: slot.firstElementChild?.classList.contains("size-6"),
+    },
+    logo: screen.getByAltText("helpa").className,
+  };
+}
