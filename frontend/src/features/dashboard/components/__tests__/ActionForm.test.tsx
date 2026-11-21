@@ -533,18 +533,18 @@ describe("ActionRegister", () => {
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
   });
 
-  it("names the current step for screens without the side bar", async () => {
+  it("shows the step indicator at the top of the modal", async () => {
     const { user } = render(
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
     );
 
     expect(
-      screen.getByText("Etapa 1 de 2 · Identificação"),
+      screen.getByText("Passo 1 de 2 · Identificação"),
     ).toBeInTheDocument();
 
     await fillStep1(user);
 
-    expect(screen.getByText("Etapa 2 de 2 · Logística")).toBeInTheDocument();
+    expect(screen.getByText("Passo 2 de 2 · Logística")).toBeInTheDocument();
   });
 
   it("labels the fields the same way as the edit form", async () => {
@@ -701,5 +701,117 @@ describe("ActionRegister", () => {
     expect(
       screen.getByRole("button", { name: /(^|\s)15 de março/ }),
     ).toBeEnabled();
+  });
+
+  it("closes the modal from the header close button when untouched", async () => {
+    const onCloseMock = vi.fn();
+    const { user } = render(
+      <ActionRegister
+        isOpen={true}
+        onClose={onCloseMock}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Fechar" }));
+
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates an in-person action with address fields", async () => {
+    const onCreate = spyOnCreate();
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user);
+    const selects = screen.getAllByRole("combobox");
+    await user.selectOptions(selects[0], "ARAPIRACA");
+    await user.selectOptions(selects[1], "IN_PERSON");
+
+    const numberInputs = screen.getAllByRole("spinbutton");
+    await user.type(numberInputs[0], "4");
+    await user.type(numberInputs[1], "30");
+
+    fireEvent.change(screen.getByLabelText("Data de início"), {
+      target: { value: futureDateDisplay() },
+    });
+    fireEvent.change(screen.getByLabelText("Data de encerramento"), {
+      target: { value: futureDateDisplay() },
+    });
+
+    await user.type(screen.getByLabelText("Logradouro"), "Rua Dois, 100");
+    await user.type(screen.getByLabelText("Bairro"), "Centro");
+    await user.type(screen.getByLabelText("CEP"), "57300-000");
+    await user.type(screen.getByLabelText("Cidade"), "Arapiraca");
+    await user.type(screen.getByLabelText("Estado"), "al");
+
+    await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          format: "IN_PERSON",
+          address: {
+            addressLine: "Rua Dois, 100",
+            district: "Centro",
+            zipCode: "57300000",
+            city: "Arapiraca",
+            state: "AL",
+          },
+        }),
+      ),
+    );
+  });
+
+  it("creates a hybrid action with both link and address fields", async () => {
+    const onCreate = spyOnCreate();
+    const { user } = render(
+      <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+    );
+
+    await fillStep1(user);
+    const selects = screen.getAllByRole("combobox");
+    await user.selectOptions(selects[0], "ARAPIRACA");
+    await user.selectOptions(selects[1], "HYBRID");
+
+    const numberInputs = screen.getAllByRole("spinbutton");
+    await user.type(numberInputs[0], "4");
+    await user.type(numberInputs[1], "30");
+
+    fireEvent.change(screen.getByLabelText("Data de início"), {
+      target: { value: futureDateDisplay() },
+    });
+    fireEvent.change(screen.getByLabelText("Data de encerramento"), {
+      target: { value: futureDateDisplay() },
+    });
+
+    await user.type(
+      screen.getByLabelText("Link para o evento"),
+      "https://meet.google.com/hibrido",
+    );
+    await user.type(screen.getByLabelText("Logradouro"), "Av. Central");
+    await user.type(screen.getByLabelText("Bairro"), "Bom Sucesso");
+    await user.type(screen.getByLabelText("CEP"), "57309-005");
+    await user.type(screen.getByLabelText("Cidade"), "Arapiraca");
+    await user.type(screen.getByLabelText("Estado"), "AL");
+
+    await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          format: "HYBRID",
+          url: "https://meet.google.com/hibrido",
+          address: {
+            addressLine: "Av. Central",
+            district: "Bom Sucesso",
+            zipCode: "57309005",
+            city: "Arapiraca",
+            state: "AL",
+          },
+        }),
+      ),
+    );
   });
 });
