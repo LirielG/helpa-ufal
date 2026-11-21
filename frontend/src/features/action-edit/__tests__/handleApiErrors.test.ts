@@ -136,6 +136,24 @@ describe("handleActionApiErrors", () => {
       expect(setError).toHaveBeenCalledTimes(2);
     });
 
+    it("translates a workloadHours API error as exceeding the action duration", () => {
+      const { setError, setGeneralError } = callWith(
+        validationError([
+          {
+            field: "workloadHours",
+            message:
+              "workloadHours cannot exceed the total duration of the activity.",
+          },
+        ]),
+      );
+
+      expect(setError).toHaveBeenCalledWith("workloadHours", {
+        type: "server",
+        message: "A carga horária não pode passar da duração da ação.",
+      });
+      expect(setGeneralError).not.toHaveBeenCalled();
+    });
+
     it("falls back to the general error when the field is unknown", () => {
       const { setError, setGeneralError } = callWith(
         validationError([{ field: "status", message: "Unexpected field." }]),
