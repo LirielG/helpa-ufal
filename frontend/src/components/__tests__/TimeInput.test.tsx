@@ -42,7 +42,9 @@ describe("timeSchema", () => {
     );
   });
 
-  it("keeps the required message for an empty value", () => {
-    expect(schema.safeParse("").error?.issues[0].message).toBe("Obrigatório");
+  it.each(["", undefined])("keeps the required message for %j", (value) => {
+    const result = schema.safeParse(value);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe("Obrigatório");
   });
 });

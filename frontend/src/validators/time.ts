@@ -8,7 +8,7 @@ export const INVALID_TIME_MESSAGE = "Informe um horário válido (hh:mm).";
 /** Empty keeps the screen's own "required" message; anything else must be `hh:mm`. */
 export function timeSchema(requiredMessage: string) {
   return z
-    .string()
+    .string({ error: requiredMessage })
     .min(1, requiredMessage)
     .regex(TIME_PATTERN, INVALID_TIME_MESSAGE);
 }

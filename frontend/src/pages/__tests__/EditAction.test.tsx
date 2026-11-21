@@ -1011,6 +1011,34 @@ describe("EditAction", () => {
       ).toBeInTheDocument();
       expect(onUpdate).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ["Horário de início", "O horário de início é obrigatório"],
+      ["Horário de encerramento", "O horário de encerramento é obrigatório"],
+    ])(
+      "shows the Portuguese required message when %s is cleared",
+      async (label, expectedMessage) => {
+        mockAction(
+          editableAction(
+            {},
+            {
+              startDate: "2026-03-10T11:00:00.000Z",
+              endDate: "2026-03-17T21:00:00.000Z",
+            },
+          ),
+        );
+        const onUpdate = spyOnUpdate();
+        const { user } = renderEditAction();
+
+        await findTitleField();
+
+        await user.clear(screen.getByLabelText(label));
+        await user.click(getSaveButton());
+
+        expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
+        expect(onUpdate).not.toHaveBeenCalled();
+      },
+    );
   });
 
   it("makes no request and stays on the form when nothing changed", async () => {
