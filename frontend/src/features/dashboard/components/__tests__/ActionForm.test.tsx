@@ -63,7 +63,11 @@ async function fillStep1(
   });
 }
 
-async function fillStep2(user: UserEvent) {
+function getUrlField() {
+  return screen.getByPlaceholderText(/Ex: https:\/\/meet.google.com/i);
+}
+
+async function fillStep2(user: UserEvent, url = "https://meet.google.com/abc") {
   const selects = screen.getAllByRole("combobox");
   await user.selectOptions(selects[0], "ARAPIRACA");
   await user.selectOptions(selects[1], "ONLINE");
@@ -72,10 +76,7 @@ async function fillStep2(user: UserEvent) {
   await user.type(numberInputs[0], "4");
   await user.type(numberInputs[1], "50");
 
-  await user.type(
-    screen.getByPlaceholderText(/Ex: https:\/\/meet.google.com/i),
-    "https://meet.google.com/abc",
-  );
+  await user.type(getUrlField(), url);
 
   fireEvent.change(screen.getByLabelText("Data de início"), {
     target: { value: futureDateDisplay() },
@@ -638,6 +639,67 @@ describe("ActionRegister", () => {
     },
   );
 
+  describe("link field", () => {
+    it.each([
+      ["meet.google.com/abc-defg-hij", "https://meet.google.com/abc-defg-hij"],
+      ["www.exemplo.com", "https://www.exemplo.com"],
+      ["http://exemplo.com", "http://exemplo.com"],
+    ])("sends %j as %j", async (typed, sent) => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user, typed);
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ url: sent }),
+        ),
+      );
+    });
+
+    it("shows the link with https:// once the field loses focus", async () => {
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await user.selectOptions(screen.getAllByRole("combobox")[1], "ONLINE");
+      await user.type(getUrlField(), "meet.google.com/abc");
+      await user.tab();
+
+      expect(getUrlField()).toHaveValue("https://meet.google.com/abc");
+    });
+
+    it.each(["javascript:alert(1)", "ftp://x", "nao-e-um-link"])(
+      "blocks %j without creating the action",
+      async (typed) => {
+        const onCreate = spyOnCreate();
+        const { user } = render(
+          <ActionRegister
+            isOpen={true}
+            onClose={vi.fn()}
+            onSuccess={vi.fn()}
+          />,
+        );
+
+        await fillStep1(user);
+        await fillStep2(user, typed);
+        await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+        expect(
+          await screen.findByText(
+            "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+          ),
+        ).toBeInTheDocument();
+        expect(onCreate).not.toHaveBeenCalled();
+      },
+    );
+  });
+  
   it("disables days before the start date in the end-date calendar", async () => {
     const { user } = render(
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,

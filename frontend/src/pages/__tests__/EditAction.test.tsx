@@ -376,6 +376,49 @@ describe("EditAction", () => {
     );
   });
 
+  it("saves a link typed without a scheme with https://", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "www.exemplo.com");
+    await user.tab();
+
+    expect(url).toHaveValue("https://www.exemplo.com");
+
+    await user.click(getSaveButton());
+
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith({
+        url: "https://www.exemplo.com",
+      }),
+    );
+  });
+
+  it("blocks a link with a scheme other than http or https", async () => {
+    mockAction(editableAction({ format: "ONLINE", address: null }));
+    const onUpdate = spyOnUpdate();
+    const { user } = renderEditAction();
+
+    await findTitleField();
+
+    const url = screen.getByLabelText("Link para o evento");
+    await user.clear(url);
+    await user.type(url, "javascript:alert(1)");
+    await user.click(getSaveButton());
+
+    expect(
+      await screen.findByText(
+        "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+      ),
+    ).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
   it("does not show the link field for an in-person action", async () => {
     mockAction(editableAction({ format: "IN_PERSON" }));
 
@@ -432,7 +475,9 @@ describe("EditAction", () => {
     await user.click(getSaveButton());
 
     expect(
-      await screen.findByText("Informe uma URL válida"),
+      await screen.findByText(
+        "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+      ),
     ).toBeInTheDocument();
     expect(onUpdate).not.toHaveBeenCalled();
   });

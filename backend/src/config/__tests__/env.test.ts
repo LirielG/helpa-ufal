@@ -305,3 +305,89 @@ describe("EnvSchema — ADMIN teacher fields", () => {
     },
   );
 });
+
+describe("EnvSchema — SMTP and MAIL_FROM", () => {
+  const productionSmtpEnv = {
+    ...minimalEnv,
+    NODE_ENV: "production",
+    SMTP_HOST: "smtp-relay.brevo.com",
+    SMTP_USER: "login@smtp-brevo.com",
+    SMTP_PASS: "smtp-password",
+    MAIL_FROM: "Helpa <no-reply@helpa.ufal.br>",
+  };
+
+  it("defaults SMTP_PORT to 587 and SMTP_SECURE to false", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.SMTP_PORT).toBe(587);
+    expect(parsed.SMTP_SECURE).toBe(false);
+  });
+
+  it("parses SMTP_PORT and SMTP_SECURE overrides", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      SMTP_PORT: "465",
+      SMTP_SECURE: "true",
+    });
+
+    expect(parsed.SMTP_PORT).toBe(465);
+    expect(parsed.SMTP_SECURE).toBe(true);
+  });
+
+  it.each(["development", "test"])(
+    "leaves the SMTP variables and MAIL_FROM optional with NODE_ENV=%s",
+    (nodeEnv) => {
+      const parsed = EnvSchema.parse({ ...minimalEnv, NODE_ENV: nodeEnv });
+
+      expect(parsed.SMTP_HOST).toBeUndefined();
+      expect(parsed.SMTP_USER).toBeUndefined();
+      expect(parsed.SMTP_PASS).toBeUndefined();
+      expect(parsed.MAIL_FROM).toBeUndefined();
+    },
+  );
+
+  it("accepts a complete SMTP configuration in production", () => {
+    const parsed = EnvSchema.parse(productionSmtpEnv);
+
+    expect(parsed.SMTP_HOST).toBe("smtp-relay.brevo.com");
+    expect(parsed.MAIL_FROM).toBe("Helpa <no-reply@helpa.ufal.br>");
+  });
+
+  it.each(["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "MAIL_FROM"] as const)(
+    "rejects a production environment without %s, naming the variable",
+    (variable) => {
+      const { [variable]: _omitted, ...rest } = productionSmtpEnv;
+
+      const result = EnvSchema.safeParse(rest);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toHaveLength(1);
+      expect(result.error?.issues[0]?.path).toEqual([variable]);
+      expect(result.error?.issues[0]?.message).toContain(variable);
+    },
+  );
+
+  it.each(["smtp.ethereal.email", "SMTP.Ethereal.Email"])(
+    "rejects SMTP_HOST=%s in production",
+    (host) => {
+      const result = EnvSchema.safeParse({
+        ...productionSmtpEnv,
+        SMTP_HOST: host,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(["SMTP_HOST"]);
+      expect(result.error?.issues[0]?.message).toContain("SMTP_HOST");
+    },
+  );
+
+  it("accepts an Ethereal SMTP_HOST outside production", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      NODE_ENV: "development",
+      SMTP_HOST: "smtp.ethereal.email",
+    });
+
+    expect(parsed.SMTP_HOST).toBe("smtp.ethereal.email");
+  });
+});

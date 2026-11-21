@@ -90,7 +90,7 @@ export const SIDEBAR_LABELS = {
   completedActivities: "Atividades Concluídas",
   managedActivities: "Atividades Gerenciadas",
   personalData: "Dados Pessoais",
-  certificates: "Certificados",
+  certificates: "Meus certificados",
   reports: "Denúncias",
   help: "Ajuda",
   logout: "Sair da conta",

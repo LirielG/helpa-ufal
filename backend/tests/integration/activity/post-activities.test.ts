@@ -282,6 +282,23 @@ describe("POST /activities", () => {
     });
   });
 
+  it.each(["javascript:alert(1)", "ftp://x"])(
+    "returns 400 for a url with a scheme other than http or https (%s)",
+    async (url) => {
+      const author = await createTeacher();
+
+      const response = await request(app)
+        .post("/activities")
+        .set(...authCookie(author.token))
+        .send(validPayload({ url }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors).toEqual([
+        expect.objectContaining({ field: "url", code: "VALIDATION_ERROR" }),
+      ]);
+    },
+  );
+
   it("creates an ONLINE activity without a url", async () => {
     const author = await createTeacher();
 

@@ -4,6 +4,7 @@ import { ApiError } from "@/services/apiError";
 import { downloadCertificate } from "../../services";
 import type { UserActivity } from "../../types";
 import { formatWorkloadHours, formatHomologatedWorkloadHours } from "@/utils";
+import { ActionCover } from "@/components/ActionCover";
 
 const DOWNLOAD_ERROR_MESSAGE =
   "Não foi possível baixar o certificado. Tente novamente.";
@@ -68,59 +69,66 @@ export function CompletedCard({ activity }: { activity: UserActivity }) {
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 transition-all hover:shadow-md flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <CircleCheck className="size-6 shrink-0 text-white fill-[#3BB54A]" />
-        <h4 className="font-bold text-gray-900 leading-snug">
-          {activity.action.title}
-        </h4>
-      </div>
-      <p className="text-sm text-gray-600">{activity.description}</p>
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md flex flex-col">
+      <ActionCover
+        id={activity.action.id}
+        type={activity.action.type}
+        className="h-48 shrink-0"
+      />
+      <div className="p-5 flex flex-col gap-3 flex-1">
+        <div className="flex items-center gap-2">
+          <CircleCheck className="size-6 shrink-0 text-white fill-[#3BB54A]" />
+          <h4 className="font-bold text-gray-900 leading-snug">
+            {activity.action.title}
+          </h4>
+        </div>
+        <p className="text-sm text-gray-600">{activity.description}</p>
 
-      <div className="flex items-center gap-4 flex-wrap text-sm text-gray-600">
-        <span className="flex items-center gap-2">
-          <MapPin className="size-4 shrink-0 text-gray-400" />
-          {activity.location}
-        </span>
-        <span className="flex items-center gap-2">
-          <Calendar className="size-4 shrink-0 text-gray-400" />
-          {activity.date}
-        </span>
-        {workloadLabel && (
-          <span className="ml-auto bg-[#006300] text-white text-xs font-semibold px-3 py-1.5 rounded-full">
-            {workloadLabel}
+        <div className="flex items-center gap-4 flex-wrap text-sm text-gray-600">
+          <span className="flex items-center gap-2">
+            <MapPin className="size-4 shrink-0 text-gray-400" />
+            {activity.location}
           </span>
-        )}
-      </div>
-
-      {certificate && (
-        <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
-          <div className="flex flex-col items-start gap-3">
-            <p className="text-sm text-gray-600">
-              Código de validação:{" "}
-              <span className="font-mono font-semibold text-gray-900">
-                {formatValidationCode(certificate.validationCode)}
-              </span>
-            </p>
-            {!isUnavailable && (
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={isDownloading}
-                className="flex items-center gap-2 px-4 py-1.5 bg-[#1B75BB] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="size-4 shrink-0" />
-                {isDownloading ? "Baixando..." : "Baixar certificado"}
-              </button>
-            )}
-          </div>
-          {downloadError && (
-            <p role="alert" className="text-sm text-red-600">
-              {downloadError}
-            </p>
+          <span className="flex items-center gap-2">
+            <Calendar className="size-4 shrink-0 text-gray-400" />
+            {activity.date}
+          </span>
+          {workloadLabel && (
+            <span className="ml-auto bg-[#006300] text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+              {workloadLabel}
+            </span>
           )}
         </div>
-      )}
+
+        {certificate && (
+          <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm text-gray-600">
+                Código de validação:{" "}
+                <span className="font-mono font-semibold text-gray-900">
+                  {formatValidationCode(certificate.validationCode)}
+                </span>
+              </p>
+              {!isUnavailable && (
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-[#1B75BB] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="size-4 shrink-0" />
+                  {isDownloading ? "Baixando..." : "Baixar certificado"}
+                </button>
+              )}
+            </div>
+            {downloadError && (
+              <p role="alert" className="text-sm text-red-600">
+                {downloadError}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
