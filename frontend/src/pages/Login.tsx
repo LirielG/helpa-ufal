@@ -23,12 +23,7 @@ type LoginRouteState = ReturnToState & {
 };
 
 export function Login() {
-  const {
-    login,
-    isLoading,
-    error: authError,
-    clearError
-  } = useAuth();
+  const { login, isLoading, error: authError, clearError } = useAuth();
   const { state } = useLocation();
   const [showPassword, setShowPassword] = useState(false);
 

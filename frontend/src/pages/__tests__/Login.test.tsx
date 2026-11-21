@@ -253,6 +253,5 @@ describe("Login", () => {
         expect(logoLink).toHaveAttribute("href", "/");
       }
     });
-
   });
 });

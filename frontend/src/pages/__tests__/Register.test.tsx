@@ -503,6 +503,5 @@ describe("Register page", () => {
         expect(logoLink).toHaveAttribute("href", "/");
       }
     });
-
   });
 });

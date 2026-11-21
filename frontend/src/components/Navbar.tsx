@@ -6,7 +6,6 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-
   // Hide profile button on login and register pages
   const hideProfile =
     location.pathname === "/login" || location.pathname === "/register";

@@ -156,4 +156,3 @@ describe("DashboardSidebar", () => {
     expect(onCloseMobile).toHaveBeenCalledTimes(1);
   });
 });
-
