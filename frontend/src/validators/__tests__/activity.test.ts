@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   activityDescriptionSchema,
   activityTitleSchema,
   activityTitleSchemaFor,
   isValidActionUrl,
+  maxWorkloadHoursFor,
   normalizeActionUrl,
+  validateWorkloadDuration,
 } from "../activity";
 
 function errorOf(value: string) {
@@ -112,5 +115,96 @@ describe("isValidActionUrl", () => {
     normalizeActionUrl("mailto:contato@ufal.br"),
   ])("rejects %j", (value) => {
     expect(isValidActionUrl(value)).toBe(false);
+  });
+});
+
+describe("validateWorkloadDuration", () => {
+  const schema = z
+    .object({
+      startDate: z.string(),
+      startTime: z.string(),
+      endDate: z.string(),
+      endTime: z.string(),
+      workloadHours: z.number(),
+    })
+    .superRefine(validateWorkloadDuration);
+
+  it("accepts workload equal to the exact duration", () => {
+    const result = schema.safeParse({
+      startDate: "2026-11-20",
+      startTime: "08:00",
+      endDate: "2026-11-20",
+      endTime: "12:00",
+      workloadHours: 4,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects workload above the duration and shows the limit in hours", () => {
+    const result = schema.safeParse({
+      startDate: "2026-11-20",
+      startTime: "08:00",
+      endDate: "2026-11-20",
+      endTime: "12:00",
+      workloadHours: 5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ["workloadHours"],
+      message: "A carga horária não pode passar da duração da ação (4 h).",
+    });
+  });
+
+  it("rounds fractional durations down to whole hours", () => {
+    expect(maxWorkloadHoursFor("2026-11-20", "08:00", "2026-11-20", "12:30")).toBe(
+      4,
+    );
+
+    const result = schema.safeParse({
+      startDate: "2026-11-20",
+      startTime: "08:00",
+      endDate: "2026-11-20",
+      endTime: "12:30",
+      workloadHours: 5,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "A carga horária não pode passar da duração da ação (4 h).",
+    );
+  });
+
+  it("formats thousands in pt-BR when duration reaches 1000 hours", () => {
+    const result = schema.safeParse({
+      startDate: "2026-01-01",
+      startTime: "08:00",
+      endDate: "2026-02-12",
+      endTime: "00:00",
+      workloadHours: 1001,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "A carga horária não pode passar da duração da ação (1.000 h).",
+    );
+  });
+
+  it("skips the workload check when the date range is reversed or invalid", () => {
+    expect(
+      maxWorkloadHoursFor("2026-11-20", "12:00", "2026-11-20", "08:00"),
+    ).toBeNull();
+    expect(maxWorkloadHoursFor("", "08:00", "2026-11-20", "12:00")).toBeNull();
+
+    const result = schema.safeParse({
+      startDate: "2026-11-20",
+      startTime: "12:00",
+      endDate: "2026-11-20",
+      endTime: "08:00",
+      workloadHours: 10,
+    });
+
+    expect(result.success).toBe(true);
   });
 });
