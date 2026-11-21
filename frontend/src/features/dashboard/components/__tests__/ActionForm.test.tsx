@@ -616,6 +616,28 @@ describe("ActionRegister", () => {
     expect(onCreate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["Horário de início", "Informe o horário de início."],
+    ["Horário de encerramento", "Informe o horário de encerramento."],
+  ])(
+    "shows the Portuguese required message when %s is cleared",
+    async (label, expectedMessage) => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      await user.clear(screen.getByLabelText(label));
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
+      expect(onCreate).not.toHaveBeenCalled();
+    },
+  );
+
   it("disables days before the start date in the end-date calendar", async () => {
     const { user } = render(
       <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
