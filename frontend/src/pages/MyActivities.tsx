@@ -16,7 +16,7 @@ export function MyActivities() {
           backgroundSize: "cover",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+        <div className="page-container py-8">
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <ActionsList />
           </div>
