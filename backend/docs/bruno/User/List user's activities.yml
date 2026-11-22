@@ -296,8 +296,9 @@ docs: |-
   one response.
 
   ## Item
-  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller
-  (with `details`, `null` when the activity has none), plus:
+  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller,
+  except for `reportedByMe`, which exists only on the detail route (with `details`, `null`
+  when the activity has none), plus:
 
   | Field        | Description |
   |--------------|-------------|
@@ -306,6 +307,7 @@ docs: |-
   | `certificate` | The certificate of that enrollment: `{ id, validationCode, issuedAt }`, or `null` when there is none. Always present, in every filter. A certificate exists exactly when `enrollment.attendanceConfirmed` is `true` |
 
   The detail route's `enrollmentStatus` is not repeated: `enrollment.status` carries it.
+  `reportedByMe` is not repeated either.
 
   `certificate.validationCode` comes in its stored form (10 characters, no hyphen); showing it
   as `7KQ4M-X9T2R` is the screen's job. `certificate.id` is what
