@@ -97,7 +97,7 @@ export function AboutSection() {
             <button
               type="button"
               onClick={scrollToOrigin}
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-lg bg-[#002147] text-white text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-md hover:bg-[#001630] hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-lg bg-[#002147] text-white text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-md hover:bg-[#001630] hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <span>Conhecer o Projeto</span>
               <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
@@ -106,7 +106,7 @@ export function AboutSection() {
             <button
               type="button"
               onClick={() => navigate("/register")}
-              className="inline-flex items-center justify-center px-6 py-3.5 sm:py-3 rounded-lg bg-white text-[#000A1E] text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-sm hover:bg-[#F2F4F6] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="inline-flex items-center justify-center px-6 py-3.5 sm:py-3 rounded-lg bg-white text-[#000A1E] text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-sm hover:bg-[#F2F4F6] hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               Fazer Cadastro para Voluntariar
             </button>
@@ -200,7 +200,7 @@ export function AboutSection() {
               ({ id, title, description, iconBg, iconColor, Icon }) => (
                 <div
                   key={id}
-                  className="bg-white rounded-xl shadow-xs p-5 sm:p-6 md:px-12 md:py-6 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
+                  className="bg-white rounded-xl shadow-xs p-5 sm:p-6 md:px-12 md:py-6 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 hover:shadow-lg transition-all duration-200"
                 >
                   <div
                     className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}
