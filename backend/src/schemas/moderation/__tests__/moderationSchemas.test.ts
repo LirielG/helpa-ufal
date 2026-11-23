@@ -8,6 +8,9 @@ import {
   MAX_PAGE_LIMIT,
 } from "@/schemas/common/PaginationSchemas.js";
 
+const REPORT_ID_1 = "b2c3d4e5-0000-4000-8000-000000000007";
+const REPORT_ID_2 = "b2c3d4e5-0000-4000-8000-000000000008";
+
 function queryIssues(query: Record<string, unknown>) {
   const result = ListReportedActivitiesQuerySchema.safeParse(query);
   expect(result.success).toBe(false);
@@ -45,6 +48,14 @@ describe("ListReportedActivitiesQuerySchema", () => {
     ).toBe("open");
   });
 
+  it("accepts page up to Number.MAX_SAFE_INTEGER", () => {
+    expect(
+      ListReportedActivitiesQuerySchema.parse({
+        page: String(Number.MAX_SAFE_INTEGER),
+      }).page,
+    ).toBe(Number.MAX_SAFE_INTEGER);
+  });
+
   it.each(["", "OPEN", "DECIDED", "resolved", "true"])(
     "rejects status=%j instead of falling back to the default",
     (value) => {
@@ -56,7 +67,16 @@ describe("ListReportedActivitiesQuerySchema", () => {
     },
   );
 
-  it.each(["0", "-1", "1.5", "abc", ""])("rejects page=%j", (value) => {
+  it.each([
+    "0",
+    "-1",
+    "1.5",
+    "abc",
+    "",
+    String(Number.MAX_SAFE_INTEGER + 1),
+    "99999999999999999999",
+    `1${"0".repeat(310)}`,
+  ])("rejects page=%j", (value) => {
     const issues = queryIssues({ page: value });
 
     expect(issues).toHaveLength(1);
@@ -86,16 +106,18 @@ describe("ListReportedActivitiesQuerySchema", () => {
 
 describe("CreateModerationDecisionSchema", () => {
   it.each(["UPHELD", "REJECTED"] as const)(
-    "accepts verdict=%s and trims justification",
+    "accepts verdict=%s, trims justification, and accepts reportIds",
     (verdict) => {
       expect(
         CreateModerationDecisionSchema.parse({
           verdict,
           justification: "  Conteúdo fora das diretrizes institucionais.  ",
+          reportIds: [REPORT_ID_1, REPORT_ID_2],
         }),
       ).toEqual({
         verdict,
         justification: "Conteúdo fora das diretrizes institucionais.",
+        reportIds: [REPORT_ID_1, REPORT_ID_2],
       });
     },
   );
@@ -105,6 +127,7 @@ describe("CreateModerationDecisionSchema", () => {
       CreateModerationDecisionSchema.parse({
         verdict: "REJECTED",
         justification: " a ",
+        reportIds: [REPORT_ID_1],
       }).justification,
     ).toBe("a");
 
@@ -113,6 +136,7 @@ describe("CreateModerationDecisionSchema", () => {
       CreateModerationDecisionSchema.parse({
         verdict: "UPHELD",
         justification: `  ${max}  `,
+        reportIds: [REPORT_ID_1],
       }).justification,
     ).toBe(max);
   });
@@ -120,7 +144,11 @@ describe("CreateModerationDecisionSchema", () => {
   it.each(["", "   ", "\t\n", "x".repeat(501)])(
     "rejects invalid justification length (%j) with field justification",
     (justification) => {
-      const issues = bodyIssues({ verdict: "REJECTED", justification });
+      const issues = bodyIssues({
+        verdict: "REJECTED",
+        justification,
+        reportIds: [REPORT_ID_1],
+      });
 
       expect(issues).toHaveLength(1);
       expect(issues[0]!.path).toEqual(["justification"]);
@@ -129,7 +157,11 @@ describe("CreateModerationDecisionSchema", () => {
 
   it("rejects missing or non-string justification", () => {
     for (const value of [undefined, null, 123]) {
-      const issues = bodyIssues({ verdict: "REJECTED", justification: value });
+      const issues = bodyIssues({
+        verdict: "REJECTED",
+        justification: value,
+        reportIds: [REPORT_ID_1],
+      });
       expect(issues).toHaveLength(1);
       expect(issues[0]!.path).toEqual(["justification"]);
     }
@@ -141,6 +173,7 @@ describe("CreateModerationDecisionSchema", () => {
       const issues = bodyIssues({
         verdict,
         justification: "Justificativa válida.",
+        reportIds: [REPORT_ID_1],
       });
 
       expect(issues).toHaveLength(1);
@@ -148,10 +181,36 @@ describe("CreateModerationDecisionSchema", () => {
     },
   );
 
+  it.each([undefined, null, "not-an-array", []])(
+    "rejects missing, non-array, or empty reportIds (%j)",
+    (reportIds) => {
+      const issues = bodyIssues({
+        verdict: "REJECTED",
+        justification: "Justificativa válida.",
+        reportIds,
+      });
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]!.path).toEqual(["reportIds"]);
+    },
+  );
+
+  it("rejects non-UUID entries inside reportIds with element path", () => {
+    const issues = bodyIssues({
+      verdict: "REJECTED",
+      justification: "Justificativa válida.",
+      reportIds: [REPORT_ID_1, "not-a-uuid"],
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.path).toEqual(["reportIds", 1]);
+  });
+
   it("rejects unknown keys in the request body", () => {
     const issues = bodyIssues({
       verdict: "REJECTED",
       justification: "Justificativa válida.",
+      reportIds: [REPORT_ID_1],
       extra: true,
     });
 

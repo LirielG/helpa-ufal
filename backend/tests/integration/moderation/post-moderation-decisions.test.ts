@@ -10,6 +10,7 @@ import {
   createCertificate,
   createEnrollment,
   createManager,
+  createModerationDecision,
   createReport,
   createStudent,
   createTeacher,
@@ -30,7 +31,7 @@ function decide(
 describe("POST /activities/:activityId/moderation-decisions", () => {
   // ---------- 201 REJECTED & queue transitions ----------
 
-  it("links all open reports on REJECTED, moves activity from open to decided, and reopens on a new report", async () => {
+  it("links the reviewed open reports on REJECTED (order-independent), moves activity from open to decided, and reopens on a new report", async () => {
     const manager = await createManager({ fullName: "Gestora UFAL" });
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
@@ -47,6 +48,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       {
         verdict: "REJECTED",
         justification: "  Conteúdo verificado e regular.  ",
+        reportIds: [report3.id, report1.id, report2.id],
       },
       manager.token,
     );
@@ -122,7 +124,10 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     const manager = await createManager();
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const pendingStudent = await createStudent();
     const approvedStudent = await createStudent();
@@ -160,6 +165,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       {
         verdict: "UPHELD",
         justification: "Ação viola diretrizes da instituição.",
+        reportIds: [report.id],
       },
       manager.token,
     );
@@ -214,11 +220,18 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       const manager = await createManager();
       const author = await createTeacher();
       const activity = await createActivity(author.user.id, { status });
-      await createReport(activity.id, (await createStudent()).user.id);
+      const report = await createReport(
+        activity.id,
+        (await createStudent()).user.id,
+      );
 
       const response = await decide(
         activity.id,
-        { verdict: "UPHELD", justification: "Remoção procedente." },
+        {
+          verdict: "UPHELD",
+          justification: "Remoção procedente.",
+          reportIds: [report.id],
+        },
         manager.token,
       );
 
@@ -231,6 +244,186 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     },
   );
 
+  // ---------- 409 REPORTS_CHANGED ----------
+
+  it("returns 409 REPORTS_CHANGED when a new report arrives between GET /reported-activities and POST", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { status: "OPEN" });
+
+    const r1 = await createStudent();
+    const r2 = await createStudent();
+    const r3 = await createStudent();
+    await createReport(activity.id, r1.user.id, { category: "SPAM" });
+    await createReport(activity.id, r2.user.id, { category: "SPAM" });
+
+    const queue = await request(app)
+      .get("/reported-activities?status=open")
+      .set(...authCookie(manager.token));
+    expect(queue.status).toBe(200);
+    const seenReportIds: string[] = queue.body.items[0].openReports.map(
+      (r: { id: string }) => r.id,
+    );
+    expect(seenReportIds).toHaveLength(2);
+
+    // Another user submits a new report before the manager submits their decision.
+    const lateReport = await createReport(activity.id, r3.user.id, {
+      category: "INAPPROPRIATE_CONTENT",
+      description: "Conteúdo impróprio.",
+    });
+
+    const response = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Não é spam.",
+        reportIds: seenReportIds,
+      },
+      manager.token,
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 409,
+      code: "REPORTS_CHANGED",
+      message: "Open reports changed since the queue was loaded.",
+    });
+
+    // No decision was created and all three reports remain open.
+    const decisions = await prisma.moderationDecision.findMany({
+      where: { activityId: activity.id },
+    });
+    expect(decisions).toHaveLength(0);
+
+    const openReports = await prisma.activityReport.findMany({
+      where: { activityId: activity.id, decisionId: null },
+    });
+    expect(openReports.map((r) => r.id).sort()).toEqual(
+      [...seenReportIds, lateReport.id].sort(),
+    );
+  });
+
+  it("returns 409 REPORTS_CHANGED when reportIds includes a report ID from another activity", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activityA = await createActivity(author.user.id, { status: "OPEN" });
+    const activityB = await createActivity(author.user.id, { status: "OPEN" });
+
+    const reportA = await createReport(
+      activityA.id,
+      (await createStudent()).user.id,
+    );
+    const reportB = await createReport(
+      activityB.id,
+      (await createStudent()).user.id,
+    );
+
+    // Report ID from activity B alone.
+    const onlyOther = await decide(
+      activityA.id,
+      {
+        verdict: "REJECTED",
+        justification: "ID de outra ação.",
+        reportIds: [reportB.id],
+      },
+      manager.token,
+    );
+    expect(onlyOther.status).toBe(409);
+    expect(onlyOther.body).toEqual({
+      status: 409,
+      code: "REPORTS_CHANGED",
+      message: "Open reports changed since the queue was loaded.",
+    });
+
+    // Report ID from activity B alongside activity A's open report.
+    const mixed = await decide(
+      activityA.id,
+      {
+        verdict: "REJECTED",
+        justification: "Mistura de IDs.",
+        reportIds: [reportA.id, reportB.id],
+      },
+      manager.token,
+    );
+    expect(mixed.status).toBe(409);
+    expect(mixed.body.code).toBe("REPORTS_CHANGED");
+
+    // Neither activity's report was closed and no decision was created.
+    const [storedA, storedB, decisionsCount] = await Promise.all([
+      prisma.activityReport.findUniqueOrThrow({ where: { id: reportA.id } }),
+      prisma.activityReport.findUniqueOrThrow({ where: { id: reportB.id } }),
+      prisma.moderationDecision.count(),
+    ]);
+    expect(storedA.decisionId).toBeNull();
+    expect(storedB.decisionId).toBeNull();
+    expect(decisionsCount).toBe(0);
+  });
+
+  it("returns 409 REPORTS_CHANGED when reportIds includes an already-decided report ID", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { status: "OPEN" });
+
+    const pastDecision = await createModerationDecision(
+      activity.id,
+      manager.user.id,
+      { verdict: "REJECTED", justification: "Decisão anterior." },
+    );
+    const decidedReport = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+      { decisionId: pastDecision.id },
+    );
+    const openReport = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
+
+    // Sending only the already-decided report ID.
+    const onlyDecided = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Tentando reusar denúncia decidida.",
+        reportIds: [decidedReport.id],
+      },
+      manager.token,
+    );
+    expect(onlyDecided.status).toBe(409);
+    expect(onlyDecided.body).toEqual({
+      status: 409,
+      code: "REPORTS_CHANGED",
+      message: "Open reports changed since the queue was loaded.",
+    });
+
+    // Sending both the open report and the already-decided report ID.
+    const withDecided = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Inclui denúncia já decidida.",
+        reportIds: [openReport.id, decidedReport.id],
+      },
+      manager.token,
+    );
+    expect(withDecided.status).toBe(409);
+    expect(withDecided.body.code).toBe("REPORTS_CHANGED");
+
+    // Past decision remains intact and open report stays open.
+    const [storedDecided, storedOpen, decisions] = await Promise.all([
+      prisma.activityReport.findUniqueOrThrow({
+        where: { id: decidedReport.id },
+      }),
+      prisma.activityReport.findUniqueOrThrow({ where: { id: openReport.id } }),
+      prisma.moderationDecision.findMany({
+        where: { activityId: activity.id },
+      }),
+    ]);
+    expect(storedDecided.decisionId).toBe(pastDecision.id);
+    expect(storedOpen.decisionId).toBeNull();
+    expect(decisions).toHaveLength(1);
+  });
+
   // ---------- COMPLETED rules ----------
 
   it("returns 409 ACTIVITY_COMPLETED for UPHELD on a COMPLETED activity, while accepting REJECTED", async () => {
@@ -239,11 +432,18 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     const activity = await createActivity(author.user.id, {
       status: "COMPLETED",
     });
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const upheldRes = await decide(
       activity.id,
-      { verdict: "UPHELD", justification: "Tentativa de remoção." },
+      {
+        verdict: "UPHELD",
+        justification: "Tentativa de remoção.",
+        reportIds: [report.id],
+      },
       manager.token,
     );
     expect(upheldRes.status).toBe(409);
@@ -255,7 +455,11 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
 
     const rejectedRes = await decide(
       activity.id,
-      { verdict: "REJECTED", justification: "Denúncia improcedente." },
+      {
+        verdict: "REJECTED",
+        justification: "Denúncia improcedente.",
+        reportIds: [report.id],
+      },
       manager.token,
     );
     expect(rejectedRes.status).toBe(201);
@@ -289,7 +493,11 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
 
     const response = await decide(
       activity.id,
-      { verdict: "UPHELD", justification: "Sem denúncias." },
+      {
+        verdict: "UPHELD",
+        justification: "Sem denúncias.",
+        reportIds: [randomUUID()],
+      },
       manager.token,
     );
 
@@ -306,17 +514,28 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     const manager2 = await createManager();
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const [res1, res2] = await Promise.all([
       decide(
         activity.id,
-        { verdict: "REJECTED", justification: "Decisão 1." },
+        {
+          verdict: "REJECTED",
+          justification: "Decisão 1.",
+          reportIds: [report.id],
+        },
         manager1.token,
       ),
       decide(
         activity.id,
-        { verdict: "UPHELD", justification: "Decisão 2." },
+        {
+          verdict: "UPHELD",
+          justification: "Decisão 2.",
+          reportIds: [report.id],
+        },
         manager2.token,
       ),
     ]);
@@ -346,7 +565,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
 
       const response = await decide(
         activity.id,
-        { verdict: "REJECTED", justification },
+        { verdict: "REJECTED", justification, reportIds: [randomUUID()] },
         manager.token,
       );
 
@@ -361,12 +580,48 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     },
   );
 
+  it("returns 400 for empty or malformed reportIds", async () => {
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id);
+
+    const emptyIds = await decide(
+      activity.id,
+      { verdict: "REJECTED", justification: "Válida.", reportIds: [] },
+      manager.token,
+    );
+    expect(emptyIds.status).toBe(400);
+    expect(emptyIds.body.errors).toContainEqual(
+      expect.objectContaining({
+        field: "reportIds",
+        code: "VALIDATION_ERROR",
+      }),
+    );
+
+    const badUuid = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Válida.",
+        reportIds: ["not-a-uuid"],
+      },
+      manager.token,
+    );
+    expect(badUuid.status).toBe(400);
+    expect(badUuid.body.errors).toContainEqual(
+      expect.objectContaining({
+        field: "reportIds.0",
+        code: "VALIDATION_ERROR",
+      }),
+    );
+  });
+
   it("combines invalid activityId and invalid body into one errors[]", async () => {
     const manager = await createManager();
 
     const response = await decide(
       "not-a-uuid",
-      { verdict: "INVALID", justification: "" },
+      { verdict: "INVALID", justification: "", reportIds: [] },
       manager.token,
     );
 
@@ -383,6 +638,10 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
           field: "justification",
           code: "VALIDATION_ERROR",
         }),
+        expect.objectContaining({
+          field: "reportIds",
+          code: "VALIDATION_ERROR",
+        }),
       ]),
     );
   });
@@ -393,12 +652,19 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     const deleted = await createActivity(author.user.id, {
       deletedAt: new Date(),
     });
-    await createReport(deleted.id, (await createStudent()).user.id);
+    const report = await createReport(
+      deleted.id,
+      (await createStudent()).user.id,
+    );
 
     for (const id of [randomUUID(), deleted.id]) {
       const response = await decide(
         id,
-        { verdict: "REJECTED", justification: "Não existe." },
+        {
+          verdict: "REJECTED",
+          justification: "Não existe.",
+          reportIds: [report.id],
+        },
         manager.token,
       );
       expect(response.status).toBe(404);
@@ -413,11 +679,18 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
   it("returns 403 FORBIDDEN when the manager is the author of the activity", async () => {
     const managerAuthor = await createManager();
     const activity = await createActivity(managerAuthor.user.id);
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const response = await decide(
       activity.id,
-      { verdict: "REJECTED", justification: "Minha própria ação." },
+      {
+        verdict: "REJECTED",
+        justification: "Minha própria ação.",
+        reportIds: [report.id],
+      },
       managerAuthor.token,
     );
 
@@ -462,6 +735,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       expect.arrayContaining([
         expect.objectContaining({ field: "verdict" }),
         expect.objectContaining({ field: "justification" }),
+        expect.objectContaining({ field: "reportIds" }),
       ]),
     );
 
@@ -470,6 +744,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       {
         verdict: "REJECTED",
         justification: "Justificativa válida.",
+        reportIds: [randomUUID()],
         unexpectedField: true,
       },
       manager.token,
@@ -486,11 +761,18 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       status: "OPEN",
       removedByModerationAt: originalRemovedAt,
     });
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const response = await decide(
       activity.id,
-      { verdict: "UPHELD", justification: "Segunda análise procedente." },
+      {
+        verdict: "UPHELD",
+        justification: "Segunda análise procedente.",
+        reportIds: [report.id],
+      },
       manager.token,
     );
 
@@ -506,13 +788,17 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
   it("maps a deleted manager FK violation during decision creation to 401 SESSION_INVALID instead of 500", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id);
-    await createReport(activity.id, (await createStudent()).user.id);
+    const report = await createReport(
+      activity.id,
+      (await createStudent()).user.id,
+    );
 
     const repository = new ModerationRepository();
     await expectHttpError(
       repository.createDecision(activity.id, randomUUID(), {
         verdict: "REJECTED",
         justification: "Gestor removido em voo.",
+        reportIds: [report.id],
       }),
       401,
       "Session is no longer valid.",

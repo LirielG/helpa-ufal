@@ -18,7 +18,10 @@ http:
     data: |-
       {
         "verdict": "UPHELD",
-        "justification": "A ação viola as diretrizes institucionais da plataforma."
+        "justification": "A ação viola as diretrizes institucionais da plataforma.",
+        "reportIds": [
+          "b2c3d4e5-0000-4000-8000-000000000007"
+        ]
       }
 
 settings:
@@ -30,7 +33,7 @@ settings:
 
 examples:
   - name: 201 - Created
-    description: Decision registered and linked to all open reports of the activity. Returns the decision in the format of an item of decisions[] in GET /reported-activities.
+    description: Decision registered and linked to the open reports reviewed by the manager. Returns the decision in the format of an item of decisions[] in GET /reported-activities.
     request:
       url: "{{baseUrl}}/activities/:activityId/moderation-decisions"
       method: POST
@@ -43,7 +46,10 @@ examples:
         data: |-
           {
             "verdict": "UPHELD",
-            "justification": "A ação viola as diretrizes institucionais da plataforma."
+            "justification": "A ação viola as diretrizes institucionais da plataforma.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 201
@@ -78,7 +84,7 @@ examples:
           }
 
   - name: 400 - Invalid path or body
-    description: Invalid activityId, verdict or justification (empty, whitespace-only or over 500 chars after trim). Path and body errors are returned in a single errors[].
+    description: Invalid activityId, verdict, justification (empty, whitespace-only or over 500 chars after trim), or reportIds (empty array or invalid UUIDs). Path and body errors are returned in a single errors[].
     request:
       url: "{{baseUrl}}/activities/:activityId/moderation-decisions"
       method: POST
@@ -91,7 +97,8 @@ examples:
         data: |-
           {
             "verdict": "UPHELD",
-            "justification": "   "
+            "justification": "   ",
+            "reportIds": []
           }
     response:
       status: 400
@@ -116,6 +123,11 @@ examples:
                 "field": "justification",
                 "code": "VALIDATION_ERROR",
                 "message": "justification must contain between 1 and 500 characters."
+              },
+              {
+                "field": "reportIds",
+                "code": "VALIDATION_ERROR",
+                "message": "reportIds must contain at least one report ID."
               }
             ]
           }
@@ -134,7 +146,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 401
@@ -165,7 +180,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 403
@@ -196,7 +214,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 403
@@ -227,7 +248,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 404
@@ -258,7 +282,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 409
@@ -275,6 +302,40 @@ examples:
             "message": "Activity has no open reports."
           }
 
+  - name: 409 - Reports changed
+    description: The set of open report IDs on the activity does not match reportIds (e.g., a new report arrived after GET /reported-activities, or an ID belongs to another activity or was already decided). Reload the queue before deciding again.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/moderation-decisions"
+      method: POST
+      params:
+        - name: activityId
+          value: 22ac40bd-e160-4c6e-8505-b63913d2482f
+          type: path
+      body:
+        type: json
+        data: |-
+          {
+            "verdict": "REJECTED",
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
+          }
+    response:
+      status: 409
+      statusText: Conflict
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 409,
+            "code": "REPORTS_CHANGED",
+            "message": "Open reports changed since the queue was loaded."
+          }
+
   - name: 409 - Activity completed
     description: UPHELD is not allowed for COMPLETED activities (only REJECTED is accepted).
     request:
@@ -289,7 +350,10 @@ examples:
         data: |-
           {
             "verdict": "UPHELD",
-            "justification": "Tentativa de remoção de ação concluída."
+            "justification": "Tentativa de remoção de ação concluída.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 409
@@ -320,7 +384,10 @@ examples:
         data: |-
           {
             "verdict": "REJECTED",
-            "justification": "Sem indícios."
+            "justification": "Sem indícios.",
+            "reportIds": [
+              "b2c3d4e5-0000-4000-8000-000000000007"
+            ]
           }
     response:
       status: 500
@@ -338,7 +405,7 @@ examples:
           }
 
 docs: |-
-  Records a moderation decision against an activity, closing all of its open reports atomically. General rules (status codes, error body, validation order) are in [api-conventions.md](../../api-conventions.md).
+  Records a moderation decision against an activity, closing the exact set of open reports reviewed by the manager atomically. General rules (status codes, error body, validation order) are in [api-conventions.md](../../api-conventions.md).
 
   **Authentication:** manager only (`requireAuth({ manager: true })`).
 
@@ -348,10 +415,11 @@ docs: |-
   |---|---|---|
   | `verdict` | `"UPHELD" \| "REJECTED"` | Required |
   | `justification` | `string` | Required, trimmed, 1 to 500 characters |
+  | `reportIds` | `string[]` | Required, non-empty array of UUIDs matching the activity's current open reports |
 
   **Route-specific behavior**
 
-  - Validation order: `401` → `403` (manager role) → `400` (`activityId` and body combined) → `404 ACTIVITY_NOT_FOUND` → `403 FORBIDDEN` (manager is the activity author) → `409 NO_OPEN_REPORTS` → `409 ACTIVITY_COMPLETED`.
-  - Runs under a row lock on `Activity` (`SELECT ... FOR UPDATE`), so concurrent requests serialize cleanly and double-clicks return `409 NO_OPEN_REPORTS` without creating orphan decisions.
+  - Validation order: `401` → `403` (manager role) → `400` (`activityId` and body combined) → `404 ACTIVITY_NOT_FOUND` → `403 FORBIDDEN` (manager is the activity author) → `409 NO_OPEN_REPORTS` → `409 REPORTS_CHANGED` → `409 ACTIVITY_COMPLETED`.
+  - Runs under a row lock on `Activity` (`SELECT ... FOR UPDATE`), comparing `reportIds` against the activity's currently open reports as a set. If a new report arrived after `GET /reported-activities`, or if `reportIds` contains an ID from another activity or an already-decided report, responds `409 REPORTS_CHANGED` so the manager reloads the queue. Double-clicks return `409 NO_OPEN_REPORTS` without creating orphan decisions.
   - `UPHELD` (allowed on `OPEN`, `IN_PROGRESS` and `CANCELLED` activities): sets `Activity.removedByModerationAt` (if not already set) and transitions `PENDING`/`APPROVED` enrollments without a certificate to `CANCELLED`. `Activity.status` and existing certificates are never altered.
-  - `REJECTED`: closes all open reports without modifying the activity or its enrollments.
+  - `REJECTED`: closes the reviewed open reports without modifying the activity or its enrollments.

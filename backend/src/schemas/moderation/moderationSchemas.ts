@@ -25,6 +25,11 @@ export const CreateModerationDecisionSchema = z.strictObject(
       .trim()
       .min(1, "justification must contain between 1 and 500 characters.")
       .max(500, "justification must contain between 1 and 500 characters."),
+    reportIds: z
+      .array(z.uuid("reportIds must contain valid UUIDs."), {
+        error: "reportIds must be an array of UUIDs.",
+      })
+      .min(1, "reportIds must contain at least one report ID."),
   },
   { error: "Request body must be a JSON object." },
 );

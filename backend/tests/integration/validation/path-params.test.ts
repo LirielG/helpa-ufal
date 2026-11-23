@@ -50,7 +50,11 @@ const routes = [
     method: "post",
     path: "/activities/:id/moderation-decisions",
     field: "activityId",
-    body: { verdict: "REJECTED", justification: "Sem indícios." },
+    body: {
+      verdict: "REJECTED",
+      justification: "Sem indícios.",
+      reportIds: ["b2c3d4e5-0000-4000-8000-000000000007"],
+    },
   },
 ] as const;
 

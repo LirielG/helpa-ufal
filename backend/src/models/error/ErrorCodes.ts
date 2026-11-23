@@ -23,6 +23,7 @@ export type SpecificErrorCode =
   | "ALREADY_IN_USE"
   | "SLOTS_BELOW_APPROVED_ENROLLMENTS"
   | "NO_OPEN_REPORTS"
+  | "REPORTS_CHANGED"
   | "ACTIVITY_COMPLETED";
 
 export type ErrorCode = GenericErrorCode | SpecificErrorCode;

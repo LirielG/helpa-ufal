@@ -13,7 +13,7 @@ export type ActivityModerationState = {
   authorId: string;
   status: ActivityStatus;
   removedByModerationAt: Date | null;
-  openReportsCount: number;
+  openReportIds: string[];
 };
 
 export interface IModerationRepository {

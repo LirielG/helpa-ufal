@@ -13,7 +13,6 @@ import type {
   ReportedActivityItem,
 } from "@/types/moderation.js";
 import { expectHttpError } from "@/utils/tests.js";
-import ValidationError from "@/models/error/ValidationError.js";
 
 const ACTIVITY_ID = "22ac40bd-e160-4c6e-8505-b63913d2482f";
 const AUTHOR_ID = "a1b2c3d4-0000-4000-8000-000000000099";
@@ -21,6 +20,8 @@ const MANAGER_ID = "a1b2c3d4-0000-4000-8000-000000000001";
 const REPORTER_ID = "a1b2c3d4-0000-4000-8000-000000000042";
 const DECISION_ID = "c3d4e5f6-0000-4000-8000-000000000010";
 const REPORT_ID = "b2c3d4e5-0000-4000-8000-000000000007";
+const REPORT_ID_2 = "b2c3d4e5-0000-4000-8000-000000000008";
+const REPORT_ID_3 = "b2c3d4e5-0000-4000-8000-000000000009";
 const CREATED_AT = new Date("2026-06-05T19:44:20.000Z");
 const DECIDED_AT = new Date("2026-06-10T12:00:00.000Z");
 
@@ -79,7 +80,7 @@ function anActivityState(
     authorId: AUTHOR_ID,
     status: "OPEN",
     removedByModerationAt: null,
-    openReportsCount: 2,
+    openReportIds: [REPORT_ID, REPORT_ID_2],
     ...overrides,
   };
 }
@@ -164,45 +165,18 @@ describe("ModerationService.listReportedActivities", () => {
       totalPages: 5,
     });
   });
-
-  it.each([
-    { page: 0, limit: 20, field: "page" },
-    { page: -1, limit: 20, field: "page" },
-    { page: 1.5, limit: 20, field: "page" },
-    { page: Number.POSITIVE_INFINITY, limit: 20, field: "page" },
-    { page: 1, limit: 0, field: "limit" },
-  ])(
-    "throws ValidationError for invalid pagination ($page, $limit) before touching repository",
-    async ({ page, limit, field }) => {
-      const { service, moderationRepository } = setup();
-
-      await expect(
-        service.listReportedActivities({ status: "open", page, limit }),
-      ).rejects.toBeInstanceOf(ValidationError);
-
-      try {
-        await service.listReportedActivities({ status: "open", page, limit });
-      } catch (err) {
-        expect((err as ValidationError).statusCode).toBe(400);
-        expect((err as ValidationError).errors).toContainEqual(
-          expect.objectContaining({ field }),
-        );
-      }
-      expect(
-        moderationRepository.listReportedActivities,
-      ).not.toHaveBeenCalled();
-    },
-  );
 });
 
 describe("ModerationService.createDecision", () => {
   const rejectInput: CreateModerationDecisionInput = {
     verdict: "REJECTED",
     justification: "Denúncia improcedente.",
+    reportIds: [REPORT_ID, REPORT_ID_2],
   };
   const upholdInput: CreateModerationDecisionInput = {
     verdict: "UPHELD",
     justification: "Ação viola diretrizes da plataforma.",
+    reportIds: [REPORT_ID, REPORT_ID_2],
   };
 
   it("delegates a valid decision to the repository and returns its DTO", async () => {
@@ -222,6 +196,28 @@ describe("ModerationService.createDecision", () => {
       ACTIVITY_ID,
       MANAGER_ID,
       rejectInput,
+    );
+    expect(response).toBe(createdDecision);
+  });
+
+  it("accepts matching reportIds regardless of order", async () => {
+    const createdDecision = aDecision();
+    const { service, moderationRepository } = setup({ createdDecision });
+    const reversedInput: CreateModerationDecisionInput = {
+      ...rejectInput,
+      reportIds: [REPORT_ID_2, REPORT_ID],
+    };
+
+    const response = await service.createDecision(
+      ACTIVITY_ID,
+      MANAGER_ID,
+      reversedInput,
+    );
+
+    expect(moderationRepository.createDecision).toHaveBeenCalledWith(
+      ACTIVITY_ID,
+      MANAGER_ID,
+      reversedInput,
     );
     expect(response).toBe(createdDecision);
   });
@@ -283,7 +279,7 @@ describe("ModerationService.createDecision", () => {
     const { service, moderationRepository } = setup({
       activityState: anActivityState({
         authorId: MANAGER_ID,
-        openReportsCount: 0,
+        openReportIds: [],
         status: "COMPLETED",
       }),
     });
@@ -299,7 +295,7 @@ describe("ModerationService.createDecision", () => {
 
   it("throws 409 NO_OPEN_REPORTS when the activity has no open reports", async () => {
     const { service, moderationRepository } = setup({
-      activityState: anActivityState({ openReportsCount: 0 }),
+      activityState: anActivityState({ openReportIds: [] }),
     });
 
     await expectHttpError(
@@ -311,11 +307,11 @@ describe("ModerationService.createDecision", () => {
     expect(moderationRepository.createDecision).not.toHaveBeenCalled();
   });
 
-  it("prioritizes 409 NO_OPEN_REPORTS over 409 ACTIVITY_COMPLETED", async () => {
+  it("prioritizes 409 NO_OPEN_REPORTS over 409 REPORTS_CHANGED and 409 ACTIVITY_COMPLETED", async () => {
     const { service, moderationRepository } = setup({
       activityState: anActivityState({
         status: "COMPLETED",
-        openReportsCount: 0,
+        openReportIds: [],
       }),
     });
 
@@ -324,6 +320,54 @@ describe("ModerationService.createDecision", () => {
       409,
       "Activity has no open reports.",
       "NO_OPEN_REPORTS",
+    );
+    expect(moderationRepository.createDecision).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: "subset (missing a new report)", reportIds: [REPORT_ID] },
+    {
+      label: "superset (includes an extra report ID)",
+      reportIds: [REPORT_ID, REPORT_ID_2, REPORT_ID_3],
+    },
+    {
+      label: "same size with a different ID",
+      reportIds: [REPORT_ID, REPORT_ID_3],
+    },
+  ])(
+    "throws 409 REPORTS_CHANGED when reportIds is a $label",
+    async ({ reportIds }) => {
+      const { service, moderationRepository } = setup();
+
+      await expectHttpError(
+        service.createDecision(ACTIVITY_ID, MANAGER_ID, {
+          ...rejectInput,
+          reportIds,
+        }),
+        409,
+        "Open reports changed since the queue was loaded.",
+        "REPORTS_CHANGED",
+      );
+      expect(moderationRepository.createDecision).not.toHaveBeenCalled();
+    },
+  );
+
+  it("prioritizes 409 REPORTS_CHANGED over 409 ACTIVITY_COMPLETED", async () => {
+    const { service, moderationRepository } = setup({
+      activityState: anActivityState({
+        status: "COMPLETED",
+        openReportIds: [REPORT_ID, REPORT_ID_2],
+      }),
+    });
+
+    await expectHttpError(
+      service.createDecision(ACTIVITY_ID, MANAGER_ID, {
+        ...upholdInput,
+        reportIds: [REPORT_ID],
+      }),
+      409,
+      "Open reports changed since the queue was loaded.",
+      "REPORTS_CHANGED",
     );
     expect(moderationRepository.createDecision).not.toHaveBeenCalled();
   });

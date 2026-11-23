@@ -71,13 +71,6 @@ class ModerationRepository implements IModerationRepository {
   }> {
     const skip = (page - 1) * limit;
 
-    // Guard against offsets beyond safe integer range: return the empty page
-    // past the last one promised by api-conventions §3 instead of a 500.
-    if (!Number.isSafeInteger(skip)) {
-      const total = await this.countReportedActivities(this._prisma, status);
-      return { items: [], total };
-    }
-
     // RepeatableRead keeps count, page IDs, and hydrated relations on the same
     // MVCC snapshot so a concurrent decision never returns an "open" item with
     // empty openReports or a mismatched total.
@@ -155,10 +148,9 @@ class ModerationRepository implements IModerationRepository {
         authorId: true,
         status: true,
         removedByModerationAt: true,
-        _count: {
-          select: {
-            activityReports: { where: { decisionId: null } },
-          },
+        activityReports: {
+          where: { decisionId: null },
+          select: { id: true },
         },
       },
     });
@@ -170,7 +162,7 @@ class ModerationRepository implements IModerationRepository {
       authorId: activity.authorId,
       status: activity.status,
       removedByModerationAt: activity.removedByModerationAt,
-      openReportsCount: activity._count.activityReports,
+      openReportIds: activity.activityReports.map((report) => report.id),
     };
   }
 
@@ -184,15 +176,17 @@ class ModerationRepository implements IModerationRepository {
       // business rules under the lock so concurrent decisions, enrollments,
       // and status transitions serialize cleanly.
       const activity = await lockActivityForModeration(tx, activityId);
-      const openReportsCount =
+      const openReports =
         activity && activity.authorId !== managerId
-          ? await tx.activityReport.count({
+          ? await tx.activityReport.findMany({
               where: { activityId, decisionId: null },
+              select: { id: true },
             })
-          : 0;
+          : [];
+      const openReportIds = openReports.map((report) => report.id);
 
-      const state = activity ? { ...activity, openReportsCount } : null;
-      assertCanModerateActivity(state, managerId, data.verdict);
+      const state = activity ? { ...activity, openReportIds } : null;
+      assertCanModerateActivity(state, managerId, data.verdict, data.reportIds);
 
       const decidedAt = new Date();
       let created: { id: string };
@@ -222,7 +216,7 @@ class ModerationRepository implements IModerationRepository {
       }
 
       await tx.activityReport.updateMany({
-        where: { activityId, decisionId: null },
+        where: { id: { in: openReportIds }, activityId, decisionId: null },
         data: { decisionId: created.id },
       });
 
