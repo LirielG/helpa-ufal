@@ -29,7 +29,7 @@ function setupFeaturedServer(activities = mockActions) {
       const status = url.searchParams.get("status");
       const limit = url.searchParams.get("limit");
 
-      if (status === "OPEN" && limit === "4") {
+      if (!status && limit === "4") {
         return HttpResponse.json(makePage(activities));
       }
 
@@ -128,7 +128,42 @@ describe("HeroBanner", () => {
     });
   });
 
-  it("sends the correct query parameters (status=OPEN, orderBy=start_date, order=asc, limit=4)", async () => {
+  it("renders a single banner without controls when only one action is returned", async () => {
+    setupFeaturedServer([mockActions[0]]);
+    render(<HeroBanner />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+    expect(
+      screen.queryByRole("button", { name: "Próximo slide" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Slide anterior" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Ir para slide/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows controls when two or more actions are returned", async () => {
+    setupFeaturedServer(mockActions.slice(0, 2));
+    render(<HeroBanner />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+    expect(
+      screen.getByRole("button", { name: "Próximo slide" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Slide anterior" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ir para slide 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ir para slide 2" }),
+    ).toBeInTheDocument();
+  });
+
+  it("sends the correct query parameters (orderBy=start_date, order=asc, limit=4 without status)", async () => {
     let params: URLSearchParams | null = null;
     server.use(
       http.get(`${API}/activities`, ({ request }) => {
@@ -140,7 +175,7 @@ describe("HeroBanner", () => {
     render(<HeroBanner />);
 
     await waitFor(() => {
-      expect(params?.get("status")).toBe("OPEN");
+      expect(params?.get("status")).toBeNull();
       expect(params?.get("orderBy")).toBe("start_date");
       expect(params?.get("order")).toBe("asc");
       expect(params?.get("limit")).toBe("4");
@@ -153,7 +188,7 @@ describe("HeroBanner", () => {
       http.get(`${API}/activities`, ({ request }) => {
         const url = new URL(request.url);
         if (
-          url.searchParams.get("status") === "OPEN" &&
+          !url.searchParams.get("status") &&
           url.searchParams.get("limit") === "4"
         ) {
           attempts += 1;
