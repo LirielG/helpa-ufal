@@ -158,9 +158,9 @@ describe("validateWorkloadDuration", () => {
   });
 
   it("rounds fractional durations down to whole hours", () => {
-    expect(maxWorkloadHoursFor("2026-11-20", "08:00", "2026-11-20", "12:30")).toBe(
-      4,
-    );
+    expect(
+      maxWorkloadHoursFor("2026-11-20", "08:00", "2026-11-20", "12:30"),
+    ).toBe(4);
 
     const result = schema.safeParse({
       startDate: "2026-11-20",
