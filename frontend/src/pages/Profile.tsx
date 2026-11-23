@@ -113,7 +113,7 @@ export function Profile() {
           backgroundSize: "cover",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+        <div className="page-container py-8">
           {isLoading && (
             <div className="flex items-center justify-center min-h-[40vh]">
               <p className="text-gray-500 text-lg">Carregando...</p>

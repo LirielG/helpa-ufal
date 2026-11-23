@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router";
 import helpaBlueLogoT from "../assets/helpa-logo-blue-text.svg";
+import { HomeLogoLink } from "./HomeLogoLink";
 
 export function Navbar() {
   const location = useLocation();
@@ -20,10 +21,9 @@ export function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center">
-          <img
+          <HomeLogoLink
             src={helpaBlueLogoT}
-            alt="helpa"
-            className="h-10 md:h-12 w-auto"
+            imageClassName="h-10 md:h-12 w-auto"
           />
         </div>
         {!hideProfile && (

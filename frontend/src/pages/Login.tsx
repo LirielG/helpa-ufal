@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { Mail } from "lucide-react";
-import { Button, Alert } from "../components";
+import { Button, Alert, HomeLogoLink } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -55,10 +55,9 @@ export function Login() {
       header={
         <div className="flex items-center gap-2">
           <div className="shrink-0">
-            <img
+            <HomeLogoLink
               src={helpaBlueLogo}
-              alt="helpa"
-              className="h-8 md:h-10 w-auto"
+              imageClassName="h-8 md:h-10 w-auto"
             />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">Bem vindo</h1>

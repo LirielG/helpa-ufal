@@ -9,8 +9,8 @@ import {
   render,
   screen,
   server,
-  waitFor,
   signIn,
+  waitFor,
   signOut,
 } from "@/test";
 import { CertificateValidation } from "@/pages/CertificateValidation";
@@ -280,6 +280,31 @@ describe("CertificateValidation", () => {
       await user.click(screen.getByRole("button", { name: "Validar" }));
 
       await waitFor(() => expect(codes).toHaveLength(2));
+    });
+  });
+
+  describe("Helpa logo link", () => {
+    it("renders the logo as a link to / for a visitor", () => {
+      renderPage("/validar");
+
+      const logoLink = screen.getByRole("link", {
+        name: "Ir para a página inicial do Helpa",
+      });
+
+      expect(logoLink).toBeInTheDocument();
+      expect(logoLink).toHaveAttribute("href", "/");
+    });
+
+    it("renders the logo as a link to /dashboard for a signed-in user", () => {
+      signIn({ fullName: "Carlos Silva" });
+      renderPage("/validar");
+
+      const logoLink = screen.getByRole("link", {
+        name: "Ir para a página inicial do Helpa",
+      });
+
+      expect(logoLink).toBeInTheDocument();
+      expect(logoLink).toHaveAttribute("href", "/dashboard");
     });
   });
 });

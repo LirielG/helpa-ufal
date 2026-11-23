@@ -50,12 +50,21 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
   if (isVerifyingInitialSession) {
     return (
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 h-16 md:h-20 flex items-center">
-        <div className="max-w-[1440px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <img
-            src={helpaBlueLogo}
-            alt="helpa"
-            className="h-8 md:h-10 w-auto"
-          />
+        {/* Same row as the signed-in header below, so the logo stays put when the check confirms the session. */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* Holds the menu button's space below lg, where the signed-in header shows it before the logo. */}
+            {onToggleSidebar && (
+              <span aria-hidden="true" className="lg:hidden p-2">
+                <span className="block size-6" />
+              </span>
+            )}
+            <img
+              src={helpaBlueLogo}
+              alt="helpa"
+              className="h-8 md:h-10 w-auto"
+            />
+          </div>
           <div
             role="status"
             aria-label="Verificando sessão"

@@ -35,27 +35,29 @@ export function ActionHero({
 
       <div className="absolute inset-0 bg-linear-to-b from-black/20 via-black/30 to-black/70" />
 
-      <div className="relative z-10 px-6 pb-8 max-w-4xl">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1 text-white/90 hover:text-white text-sm mb-3 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="size-4" />
-          Voltar
-        </button>
+      <div className="relative z-10 page-container pb-8">
+        <div className="max-w-4xl">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1 text-white/90 hover:text-white text-sm mb-3 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="size-4" />
+            Voltar
+          </button>
 
-        <span className="inline-block bg-[#1B75BB] text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
-          {category}
-        </span>
+          <span className="inline-block bg-[#1B75BB] text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
+            {category}
+          </span>
 
-        <h1
-          ref={titleRef}
-          tabIndex={-1}
-          className="text-3xl md:text-4xl font-bold text-white mb-2"
-        >
-          {title}
-        </h1>
+          <h1
+            ref={titleRef}
+            tabIndex={-1}
+            className="text-3xl md:text-4xl font-bold text-white mb-2"
+          >
+            {title}
+          </h1>
+        </div>
       </div>
     </div>
   );
