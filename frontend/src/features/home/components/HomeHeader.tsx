@@ -93,7 +93,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="px-4 lg:px-5 py-2 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-[#000A1E] rounded-lg hover:bg-gray-100 active:scale-[0.98] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+            className="px-4 lg:px-5 py-2 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-[#000A1E] rounded-lg hover:bg-gray-100 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
           >
             Entrar
           </button>
@@ -101,7 +101,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
           <button
             type="button"
             onClick={() => navigate("/register")}
-            className="px-5 lg:px-6 py-2.5 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
+            className="px-5 lg:px-6 py-2.5 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
           >
             Cadastrar-se
           </button>
@@ -117,7 +117,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
               ? "Fechar menu de navegação"
               : "Abrir menu de navegação"
           }
-          className="md:hidden p-2.5 rounded-lg text-[#000A1E] hover:bg-gray-100 active:scale-95 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+          className="md:hidden p-2.5 rounded-lg text-[#000A1E] hover:bg-gray-100 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
         >
           {isMobileMenuOpen ? (
             <X className="size-6" />
