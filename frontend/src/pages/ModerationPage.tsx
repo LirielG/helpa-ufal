@@ -89,7 +89,7 @@ export function ModerationPage() {
       >
         <div
           ref={containerRef}
-          className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+          className="page-container py-8"
         >
           <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
             <h1 className="text-2xl font-bold text-gray-900">
