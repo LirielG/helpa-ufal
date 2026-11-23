@@ -212,9 +212,7 @@ describe("Dashboard", () => {
 
     const { user } = render(<Dashboard />);
 
-    expect(
-      screen.queryByRole("dialog", { name: "Criar uma ação" }),
-    ).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).toBeNull();
 
     const createBtn = await screen.findByRole("button", {
       name: "Criar uma ação",
