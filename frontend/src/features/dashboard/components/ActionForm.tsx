@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
 import { z } from "zod";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue.svg";
 import {
@@ -13,7 +14,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
-  Eye,
   Loader2,
   ChevronDown,
 } from "lucide-react";
@@ -214,7 +214,7 @@ function SelectWrapper({ children }: { children: React.ReactNode }) {
 interface ActionRegisterProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (createdId: string) => void;
 }
 
 export function ActionRegister({
@@ -224,7 +224,6 @@ export function ActionRegister({
 }: ActionRegisterProps) {
   const [step, setStep] = useState<keyof typeof STEP_NAMES>(1);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
 
@@ -337,12 +336,16 @@ export function ActionRegister({
             : {}),
         };
 
-        await api.post<CreateActivityResponse>("/activities", payload);
+        const created = await api.post<CreateActivityResponse>(
+          "/activities",
+          payload,
+        );
 
         reset();
         setStep(1);
-        setShowSuccessConfirm(true);
-        if (onSuccess) onSuccess();
+        toast.success("Ação criada.");
+        onClose();
+        onSuccess?.(created.id);
       } catch (err) {
         handleCreateActionApiErrors(err, setError, setGeneralError);
         if (
@@ -361,7 +364,7 @@ export function ActionRegister({
     },
   );
 
-  if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
+  if (!isOpen && !showCancelConfirm) return null;
 
   const today = formatISODate(new Date());
 
@@ -975,29 +978,6 @@ export function ActionRegister({
                 Descartar
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSuccessConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-60 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-8 flex flex-col items-center text-center shadow-xl">
-            <div className="bg-[#05442A] text-white p-2 rounded-lg mb-4 flex items-center justify-center size-10">
-              <Check className="size-6 stroke-[3]" />
-            </div>
-            <h3 className="text-lg font-bold text-[#0A2540] max-w-[240px] mb-6">
-              Sua ação foi registrada com sucesso!
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowSuccessConfirm(false);
-                onClose();
-              }}
-              className="w-full bg-[#0A2540] text-white py-3 px-6 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#1B75BB] transition-colors"
-            >
-              <Eye className="size-4" /> Visualizar no feed
-            </button>
           </div>
         </div>
       )}
