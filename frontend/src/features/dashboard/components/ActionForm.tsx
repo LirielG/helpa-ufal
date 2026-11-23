@@ -25,6 +25,7 @@ import {
   activityTitleSchema,
   isValidActionUrl,
   normalizeActionUrl,
+  validateWorkloadDuration,
 } from "../../../validators/activity";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type {
@@ -104,6 +105,7 @@ const formSchema = baseSchema
       path: ["endDate"],
     },
   )
+  .superRefine(validateWorkloadDuration)
   .refine(
     (d) =>
       (d.format !== "ONLINE" && d.format !== "HYBRID") ||
