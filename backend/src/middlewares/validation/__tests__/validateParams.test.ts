@@ -5,7 +5,7 @@ import {
   ActivityPathParamsSchema,
   EnrollmentPathParamsSchema,
 } from "@/schemas/common/PathParamsSchemas.js";
-import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
+import { ListReportedActivitiesQuerySchema } from "@/schemas/moderation/moderationSchemas.js";
 import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
 import { UpdateActivitySchema } from "@/schemas/activity/ActivitySchemas.js";
 import { validateParams } from "../validateParams.js";
@@ -161,7 +161,7 @@ describe("validateParams", () => {
     const next = vi.fn();
 
     validateParams(ActivityPathParamsSchema, {
-      query: ListReportsQuerySchema,
+      query: ListReportedActivitiesQuerySchema,
       body: UpdateActivitySchema,
     })(req, res, next);
 

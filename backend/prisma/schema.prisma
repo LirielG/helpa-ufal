@@ -57,6 +57,11 @@ enum ReportReason {
   OTHER
 }
 
+enum ModerationVerdict {
+  UPHELD
+  REJECTED
+}
+
 
 model User {
   id           String   @id @default(uuid())
@@ -74,8 +79,8 @@ model User {
   activities  Activity[]
   enrollments Enrollment[]
 
-  reports          ActivityReport[] @relation("ActivityReporter")
-  resolvedReports  ActivityReport[] @relation("ReportResolver")
+  reports             ActivityReport[]     @relation("ActivityReporter")
+  moderationDecisions ModerationDecision[]
 }
 
 model Student {
@@ -122,17 +127,19 @@ model Activity {
   endDate   DateTime
   slots     Int             @default(1)
   status    ActivityStatus  @default(OPEN)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  deletedAt DateTime?       
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  deletedAt             DateTime?
+  removedByModerationAt DateTime?
 
   @@index([type])
   @@index([authorId])
 
-  author      User             @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  details     ActivityDetails?
-  enrollments Enrollment[]
-  activityReports ActivityReport[]
+  author              User                 @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  details             ActivityDetails?
+  enrollments         Enrollment[]
+  activityReports     ActivityReport[]
+  moderationDecisions ModerationDecision[]
 }
 
 model ActivityDetails {
@@ -187,21 +194,36 @@ model Certificate {
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onUpdate: Cascade)
 }
 
-model ActivityReport {
-  id           String       @id @default(uuid())
-  activityId   String
-  userId       String?
-  category     ReportReason
-  description  String?
-  createdAt    DateTime     @default(now())
-  resolvedAt   DateTime?
-  resolvedById String?
+model ModerationDecision {
+  id            String            @id @default(uuid())
+  activityId    String
+  verdict       ModerationVerdict
+  justification String
+  decidedById   String?
+  createdAt     DateTime          @default(now())
 
-  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user       User?    @relation("ActivityReporter", fields: [userId], references: [id], onDelete: SetNull)
-  resolvedBy User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  activity  Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  decidedBy User?            @relation(fields: [decidedById], references: [id], onDelete: SetNull)
+  reports   ActivityReport[]
+
+  @@index([activityId, createdAt])
+}
+
+model ActivityReport {
+  id          String       @id @default(uuid())
+  activityId  String
+  userId      String?
+  category    ReportReason
+  description String?
+  createdAt   DateTime     @default(now())
+  decisionId  String?
+
+  activity Activity            @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User?               @relation("ActivityReporter", fields: [userId], references: [id], onDelete: SetNull)
+  decision ModerationDecision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
 
   @@unique([userId, activityId])
+  @@index([decisionId])
 }
 
 model SigaaActivity {

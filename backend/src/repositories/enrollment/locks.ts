@@ -24,6 +24,7 @@ export async function lockActivityForCapacity(
   `;
   return rows[0] ?? null;
 }
+
 /**
  * Locks the Activity row and returns, read under that lock, the two values the
  * attendance decision depends on: the activity status and the workload ceiling
@@ -46,6 +47,43 @@ export async function lockActivityForAttendance(
     WHERE a.id = ${activityId}
       AND a."deletedAt" IS NULL
     FOR UPDATE OF a
+  `;
+  return rows[0] ?? null;
+}
+
+/**
+ * Locks the Activity row for a moderation decision, returning the fields
+ * needed to validate authorship, status, and prior moderation removal under
+ * the lock. Keeps the LOCK ORDERING RULE above (Activity before Enrollment)
+ * so UPHELD cancellations serialize cleanly against concurrent enrollments
+ * and status changes, and concurrent decisions cannot produce an orphan
+ * decision with zero reports.
+ *
+ * Returns null for an activity that does not exist or was soft-deleted by
+ * its author.
+ */
+export async function lockActivityForModeration(
+  tx: Prisma.TransactionClient,
+  activityId: string,
+): Promise<{
+  id: string;
+  authorId: string;
+  status: ActivityStatus;
+  removedByModerationAt: Date | null;
+} | null> {
+  const rows = await tx.$queryRaw<
+    {
+      id: string;
+      authorId: string;
+      status: ActivityStatus;
+      removedByModerationAt: Date | null;
+    }[]
+  >`
+    SELECT id, "authorId", status, "removedByModerationAt"
+    FROM "Activity"
+    WHERE id = ${activityId}
+      AND "deletedAt" IS NULL
+    FOR UPDATE
   `;
   return rows[0] ?? null;
 }

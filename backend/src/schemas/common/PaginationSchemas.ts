@@ -19,7 +19,10 @@ function positiveInteger(field: string) {
  * with its own filters and an unknown parameter still answers 400.
  */
 export const PaginationQuerySchema = z.strictObject({
-  page: positiveInteger("page").default("1").transform(Number),
+  page: positiveInteger("page")
+    .default("1")
+    .transform(Number)
+    .refine(Number.isSafeInteger, "page must be a positive integer."),
   limit: positiveInteger("limit")
     .default(String(DEFAULT_PAGE_LIMIT))
     .transform(Number)
