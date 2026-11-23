@@ -151,13 +151,20 @@ describe("moderation migrations", () => {
         );
         expect(remainingLegacyCols).toEqual([]);
 
-        const partialIndex = await tx.$queryRawUnsafe<{ indexname: string }[]>(
+        const reportIndexes = await tx.$queryRawUnsafe<{ indexname: string }[]>(
           `SELECT indexname
            FROM pg_indexes
            WHERE schemaname = '${schema}'
-             AND indexname = 'ActivityReport_open_activityId_createdAt_idx'`,
+             AND tablename = 'ActivityReport'`,
         );
-        expect(partialIndex).toHaveLength(1);
+        const indexNames = reportIndexes.map((row) => row.indexname);
+        expect(indexNames).toContain(
+          "ActivityReport_open_activityId_createdAt_idx",
+        );
+        expect(indexNames).toContain("ActivityReport_decisionId_idx");
+        expect(indexNames).not.toContain(
+          "ActivityReport_activityId_decisionId_idx",
+        );
 
         await tx.$executeRawUnsafe(`SAVEPOINT check_blank`);
         await expect(

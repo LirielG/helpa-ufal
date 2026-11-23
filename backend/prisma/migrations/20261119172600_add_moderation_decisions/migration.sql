@@ -60,9 +60,6 @@ DROP COLUMN "resolvedById";
 CREATE INDEX "ModerationDecision_activityId_createdAt_idx" ON "ModerationDecision"("activityId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ActivityReport_activityId_decisionId_idx" ON "ActivityReport"("activityId", "decisionId");
-
--- CreateIndex
 CREATE INDEX "ActivityReport_decisionId_idx" ON "ActivityReport"("decisionId");
 
 -- AddForeignKey

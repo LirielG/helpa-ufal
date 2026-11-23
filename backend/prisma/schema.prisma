@@ -223,7 +223,6 @@ model ActivityReport {
   decision ModerationDecision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
 
   @@unique([userId, activityId])
-  @@index([activityId, decisionId])
   @@index([decisionId])
 }
 
