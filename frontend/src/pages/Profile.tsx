@@ -99,11 +99,12 @@ export function Profile() {
     return null;
   }
 
-  // NOTE: the shell below (DashboardShell + background) is the pre-sidebar
-  // one. Replace it with the layout that wraps the sidebar once I can see it;
-  // everything inside <main-content> stays as is.
   return (
-    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+    <DashboardShell
+      header={<DashboardHeader />}
+      footer={<Footer />}
+      syncedProfile={profile}
+    >
       <div
         className="w-full flex-1"
         style={{

@@ -34,7 +34,10 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const headingId = useId();
-  // Blocks a second submit (Enter, double click) before `isSubmitting` renders.
+  // `isSubmitting` goes back to false when a second submit returns early, with
+  // the first request still pending, so the button follows its own state. The
+  // ref blocks a second submit before that state has rendered.
+  const [isSending, setIsSending] = useState(false);
   const isSendingRef = useRef(false);
 
   const {
@@ -94,6 +97,7 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
     }
 
     isSendingRef.current = true;
+    setIsSending(true);
     try {
       await onSave(changes);
       setFeedback({
@@ -105,6 +109,7 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
       if (message) setFeedback({ type: "error", message });
     } finally {
       isSendingRef.current = false;
+      setIsSending(false);
     }
   };
 
@@ -220,8 +225,8 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
           type="submit"
           variant="navy"
           size="md"
-          isLoading={isSubmitting}
-          disabled={isSubmitting || !hasChanges}
+          isLoading={isSubmitting || isSending}
+          disabled={isSubmitting || isSending || !hasChanges}
         >
           Salvar Alterações
         </Button>

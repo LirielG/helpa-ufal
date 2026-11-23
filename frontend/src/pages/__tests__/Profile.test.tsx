@@ -9,6 +9,7 @@ import {
   screen,
   server,
   signIn,
+  waitFor,
   within,
 } from "@/test";
 import type { UserProfile } from "@/types/profile";
@@ -196,7 +197,12 @@ describe("Profile — personal data", () => {
 
       await screen.findByText("Perfil atualizado com sucesso.");
       expect(useAuthStore.getState().user?.fullName).toBe("Mariana Costa");
-      expect(useAuthStore.getState().user).not.toBeNull();
+      const sidebar = screen.getByRole("complementary", {
+        name: "Menu lateral do usuário",
+      });
+      expect(
+        within(sidebar).getByRole("heading", { name: "Mariana Costa" }),
+      ).toBeInTheDocument();
 
       expect(screen.getByLabelText("Nome completo")).toHaveValue(
         "Mariana Costa",
@@ -522,5 +528,62 @@ describe("Profile — layout", () => {
 
     await screen.findByText("Perfil atualizado com sucesso.");
     expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the save button disabled while the first save is pending, even after repeated Enter", async () => {
+    signIn({ fullName: "Joana Ribeiro" });
+    const onRequest = vi.fn();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.patch(`${API}/users/me`, async ({ request }) => {
+        onRequest(await request.json());
+        await gate;
+        return HttpResponse.json(profileOf({ fullName: "Joana Lima" }));
+      }),
+    );
+    const { user } = renderProfile();
+
+    await replaceName(user, "Joana Lima");
+    const save = getSaveButton();
+    await user.keyboard("{Enter}{Enter}");
+
+    await waitFor(() => expect(onRequest).toHaveBeenCalledTimes(1));
+    expect(save).toBeDisabled();
+
+    release();
+
+    await screen.findByText("Perfil atualizado com sucesso.");
+    expect(onRequest).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Profile — sidebar summary", () => {
+  it("keeps the total the update returns after saving the name", async () => {
+    signIn({ fullName: "Joana Ribeiro" });
+    serveProfile({ totalWorkloadHours: 40 });
+    spyOnUpdate((body) =>
+      HttpResponse.json(
+        profileOf({
+          ...(body as Partial<UserProfile>),
+          totalWorkloadHours: 41,
+        }),
+      ),
+    );
+    const { user } = renderProfile();
+
+    const sidebar = await screen.findByRole("complementary", {
+      name: "Menu lateral do usuário",
+    });
+    expect(await within(sidebar).findByText("40 horas")).toBeInTheDocument();
+
+    await replaceName(user, "Joana Lima");
+    await user.click(getSaveButton());
+
+    await screen.findByText("Perfil atualizado com sucesso.");
+    expect(await within(sidebar).findByText("41 horas")).toBeInTheDocument();
+    expect(within(sidebar).queryByText("40 horas")).toBeNull();
   });
 });
