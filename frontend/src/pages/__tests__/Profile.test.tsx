@@ -257,6 +257,50 @@ describe("Profile — personal data", () => {
       expect(onUpdate).not.toHaveBeenCalled();
     });
 
+    it("keeps the save button disabled when a field is only focused and left", async () => {
+      signIn({ fullName: "Joana Ribeiro" });
+      const { user } = renderProfile();
+
+      const field = await findNameField();
+      await user.click(field);
+      await user.tab();
+      await user.click(screen.getByLabelText("Senha atual"));
+      await user.tab();
+
+      expect(getSaveButton()).toBeDisabled();
+    });
+
+    it("keeps the button disabled when only the current password is filled, as a browser autofill would", async () => {
+      signIn({ fullName: "Joana Ribeiro" });
+      const onUpdate = spyOnUpdate();
+      const { user } = renderProfile();
+
+      await findNameField();
+      await user.type(screen.getByLabelText("Senha atual"), CURRENT_PASSWORD);
+
+      expect(getSaveButton()).toBeDisabled();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("saves only the name when the current password was filled by the browser", async () => {
+      signIn({ fullName: "Joana Ribeiro" });
+      const onUpdate = spyOnUpdate();
+      const { user } = renderProfile();
+
+      await findNameField();
+      await user.type(screen.getByLabelText("Senha atual"), CURRENT_PASSWORD);
+      await replaceName(user, "Joana Lima");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText("Perfil atualizado com sucesso."),
+      ).toBeInTheDocument();
+      expect(onUpdate).toHaveBeenCalledExactlyOnceWith({
+        fullName: "Joana Lima",
+      });
+      expect(screen.queryByText("Informe a nova senha")).toBeNull();
+    });
+
     it("blocks a name over the length limit without calling the API", async () => {
       signIn();
       const onUpdate = spyOnUpdate();

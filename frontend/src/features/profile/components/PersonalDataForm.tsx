@@ -40,6 +40,8 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
   const [isSending, setIsSending] = useState(false);
   const isSendingRef = useRef(false);
 
+  const schemaResolver = zodResolver(editProfileSchemaFor(user.fullName));
+
   const {
     register,
     handleSubmit,
@@ -47,7 +49,14 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<EditProfileFields>({
-    resolver: zodResolver(editProfileSchemaFor(user.fullName)),
+    resolver: (values, context, options) =>
+      schemaResolver(
+        values.newPassword || values.confirmNewPassword
+          ? values
+          : { ...values, currentPassword: "" },
+        context,
+        options,
+      ),
     mode: "onSubmit",
     defaultValues: {
       fullName: user.fullName,
@@ -57,22 +66,17 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
     },
   });
 
-  const [fullName, currentPassword, newPassword, confirmNewPassword] =
-    useWatch({
-      control,
-      name: [
-        "fullName",
-        "currentPassword",
-        "newPassword",
-        "confirmNewPassword",
-      ],
-    });
+  const [fullName, newPassword, confirmNewPassword] = useWatch({
+    control,
+    name: ["fullName", "newPassword", "confirmNewPassword"],
+  });
 
   // The name is compared trimmed, as the submit does, so a stray space is not
-  // a change the user made.
+  // a change the user made. The current password alone is not a change either
+  // (see the resolver above).
   const hasChanges =
     (fullName ?? "").trim() !== user.fullName.trim() ||
-    Boolean(currentPassword || newPassword || confirmNewPassword);
+    Boolean(newPassword || confirmNewPassword);
 
   const onValidSubmit = async (data: EditProfileFields) => {
     if (isSendingRef.current) return;
