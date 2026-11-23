@@ -512,9 +512,7 @@ describe("ActionDetail enrollment cancellation", () => {
       await screen.findByRole("button", { name: /Inscrever-se/ }),
     );
     await user.click(screen.getByRole("button", { name: /Confirmar/ }));
-    expect(
-      await screen.findByText("Oba! Você está dentro!"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Inscrição realizada.")).toBeInTheDocument();
 
     expect(await screen.findByText("Inscrito")).toBeInTheDocument();
   });
