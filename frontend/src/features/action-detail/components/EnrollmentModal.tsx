@@ -1,6 +1,5 @@
 import { useId, useState } from "react";
-import { useNavigate } from "react-router";
-import { UserPlus, CheckCircle } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { Button } from "../../../components/Button";
 import { ActionSummary } from "./ActionSummary";
 import { Alert } from "../../../components/Alert";
@@ -9,8 +8,9 @@ import { getEnrollmentErrorMessage } from "../errors";
 import type { Activity } from "@/services/contracts/activity";
 import { ApiError } from "../../../services/apiError";
 import { useDialog } from "../../../hooks/useDialog";
+import { toast } from "react-toastify";
 
-type ModalStep = "confirm" | "loading" | "success" | "error";
+type ModalStep = "confirm" | "loading" | "error";
 
 interface EnrollmentModalProps {
   action: Activity;
@@ -25,7 +25,6 @@ export function EnrollmentModal({
   onSuccess,
   getFallbackFocus,
 }: EnrollmentModalProps) {
-  const navigate = useNavigate();
   const titleId = useId();
   const [step, setStep] = useState<ModalStep>("confirm");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,13 +61,9 @@ export function EnrollmentModal({
       setIsSubmitting(false);
     }
 
-    setStep("success");
+    toast.success("Inscrição realizada.");
     onSuccess?.();
-  };
-
-  const handleBackToFeed = () => {
     onClose();
-    navigate("/dashboard");
   };
 
   const handleRetry = () => {
@@ -93,31 +88,6 @@ export function EnrollmentModal({
         className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
       >
         <div className="px-8 py-8 flex flex-col items-center gap-5 text-center">
-          {step === "success" && (
-            <>
-              <div className="size-16 rounded-xl bg-[#1a4a1a] flex items-center justify-center">
-                <CheckCircle className="size-9 text-white" />
-              </div>
-              <div>
-                <h2 id={titleId} className="text-xl font-bold text-gray-900">
-                  Oba! Você está dentro!
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Sua inscrição foi confirmada
-                </p>
-              </div>
-              <Button
-                variant="navy"
-                size="lg"
-                rounded
-                onClick={handleBackToFeed}
-                className="flex items-center justify-center gap-2 mt-2"
-              >
-                ← Voltar para o feed
-              </Button>
-            </>
-          )}
-
           {step === "error" && (
             <>
               <h2 id={titleId} className="sr-only">

@@ -134,9 +134,7 @@ describe("ActionRegister", () => {
         expect.objectContaining({ title: "Abc" }),
       ),
     );
-    expect(
-      await screen.findByText("Sua ação foi registrada com sucesso!"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
   });
 
   it("closes the modal directly without confirmation if the form is untouched", async () => {
@@ -178,7 +176,8 @@ describe("ActionRegister", () => {
     expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("creates the action successfully and shows the confirmation modal", async () => {
+  it("closes the modal, shows a toast, and passes the created id to onSuccess without a second modal", async () => {
+    const onCloseMock = vi.fn();
     const onSuccessMock = vi.fn();
 
     server.use(
@@ -190,7 +189,7 @@ describe("ActionRegister", () => {
     const { user } = render(
       <ActionRegister
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={onCloseMock}
         onSuccess={onSuccessMock}
       />,
     );
@@ -200,16 +199,13 @@ describe("ActionRegister", () => {
 
     await user.click(screen.getByRole("button", { name: /Criar ação/i }));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Sua ação foi registrada com sucesso!"),
-      ).toBeInTheDocument();
-    });
-
-    await user.click(
-      screen.getByRole("button", { name: /Visualizar no feed/i }),
-    );
+    expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Sua ação foi registrada com sucesso!"),
+    ).not.toBeInTheDocument();
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
     expect(onSuccessMock).toHaveBeenCalledTimes(1);
+    expect(onSuccessMock).toHaveBeenCalledWith("nova-acao-123");
   });
 
   it("returns to Step 1 if the API returns a validation error for a Step 1 field", async () => {
@@ -339,9 +335,7 @@ describe("ActionRegister", () => {
           expect.objectContaining({ area: "Astronomia Amadora" }),
         ),
       );
-      expect(
-        await screen.findByText("Sua ação foi registrada com sucesso!"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
     });
 
     it("sends a chosen suggestion exactly as suggested", async () => {
@@ -422,9 +416,7 @@ describe("ActionRegister", () => {
           expect.objectContaining({ area: "Astronomia Amadora" }),
         ),
       );
-      expect(
-        await screen.findByText("Sua ação foi registrada com sucesso!"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
     });
   });
 
@@ -813,5 +805,60 @@ describe("ActionRegister", () => {
         }),
       ),
     );
+  });
+
+  describe("workload duration validation", () => {
+    it("blocks workload above the action duration and shows the hour limit", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      const endTime = screen.getByLabelText("Horário de encerramento");
+      await user.clear(endTime);
+      await user.type(endTime, "12:00");
+
+      const workload = screen.getByLabelText("Carga horária total");
+      await user.clear(workload);
+      await user.type(workload, "5");
+
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      expect(
+        await screen.findByText(
+          "A carga horária não pode passar da duração da ação (4 h).",
+        ),
+      ).toBeInTheDocument();
+      expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it("accepts workload equal to the exact duration", async () => {
+      const onCreate = spyOnCreate();
+      const { user } = render(
+        <ActionRegister isOpen={true} onClose={vi.fn()} onSuccess={vi.fn()} />,
+      );
+
+      await fillStep1(user);
+      await fillStep2(user);
+
+      const endTime = screen.getByLabelText("Horário de encerramento");
+      await user.clear(endTime);
+      await user.type(endTime, "12:00");
+
+      const workload = screen.getByLabelText("Carga horária total");
+      await user.clear(workload);
+      await user.type(workload, "4");
+
+      await user.click(screen.getByRole("button", { name: /Criar ação/i }));
+
+      await waitFor(() =>
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ workloadHours: 4 }),
+        ),
+      );
+    });
   });
 });

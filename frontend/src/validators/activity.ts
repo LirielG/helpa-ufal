@@ -53,3 +53,51 @@ export function isValidActionUrl(value: string) {
   const { username, password } = new URL(value);
   return !username && !password;
 }
+
+const MS_PER_HOUR = 1000 * 60 * 60;
+
+export const WORKLOAD_EXCEEDS_DURATION_MESSAGE =
+  "A carga horária não pode passar da duração da ação.";
+
+/** Whole hours between start and end, rounded down; null when the range is invalid. */
+export function maxWorkloadHoursFor(
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+): number | null {
+  const start = new Date(`${startDate}T${startTime}`);
+  const end = new Date(`${endDate}T${endTime}`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  if (end <= start) return null;
+  return Math.floor((end.getTime() - start.getTime()) / MS_PER_HOUR);
+}
+
+export function workloadExceedsDurationMessage(maxHours: number): string {
+  return `A carga horária não pode passar da duração da ação (${maxHours.toLocaleString("pt-BR")} h).`;
+}
+
+export function validateWorkloadDuration(
+  data: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    workloadHours: number;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const maxHours = maxWorkloadHoursFor(
+    data.startDate,
+    data.startTime,
+    data.endDate,
+    data.endTime,
+  );
+  if (maxHours !== null && data.workloadHours > maxHours) {
+    ctx.addIssue({
+      code: "custom",
+      message: workloadExceedsDurationMessage(maxHours),
+      path: ["workloadHours"],
+    });
+  }
+}

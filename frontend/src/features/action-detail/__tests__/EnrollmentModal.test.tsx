@@ -30,7 +30,7 @@ describe("EnrollmentModal", () => {
 
   describe("successful enrollment", () => {
     it.each([201, 200])(
-      "shows success after PUT returns %i",
+      "shows toast, notifies parent and closes after PUT returns %i",
       async (status) => {
         const action = makeActionDetail({ id: "act-123" });
         const onClose = vi.fn();
@@ -69,55 +69,45 @@ describe("EnrollmentModal", () => {
         });
         await user.click(confirmButton);
 
-        // Should call onSuccess callback
-        expect(onSuccess).toHaveBeenCalledOnce();
-
-        // Should show success message
         await waitFor(() => {
-          expect(
-            screen.getByText("Oba! Você está dentro!"),
-          ).toBeInTheDocument();
+          expect(onClose).toHaveBeenCalledOnce();
         });
+        expect(onSuccess).toHaveBeenCalledOnce();
         expect(
-          screen.getByRole("dialog", { name: "Oba! Você está dentro!" }),
-        ).toHaveAttribute("aria-modal", "true");
+          await screen.findByText("Inscrição realizada."),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("Oba! Você está dentro!"),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: /Voltar para o feed/i }),
+        ).not.toBeInTheDocument();
       },
     );
 
     it("shows loading state during request", async () => {
       const action = makeActionDetail({ id: "act-456" });
+      const onClose = vi.fn();
       server.use(
         http.put(`${API}/activities/act-456/enrollments/me`, async () => {
-          // Delay to observe loading state
           await new Promise((resolve) => setTimeout(resolve, 100));
           return new HttpResponse(null, { status: 201 });
         }),
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
+        <EnrollmentModal action={action} onClose={onClose} />,
       );
 
-      // Find and click the confirm button (button with SVG checkmark)
-      const buttons = screen.getAllByRole("button");
-      const confirmButton =
-        buttons.find(
-          (btn) =>
-            !btn.hasAttribute("aria-label") &&
-            !(btn as HTMLButtonElement).disabled &&
-            btn.textContent?.includes("✓"),
-        ) || screen.getByRole("button", { name: /Confirmar/i });
-
+      const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
       await user.click(confirmButton);
 
-      // Wait for loading state - button should show "Carregando..."
       await waitFor(() => {
         expect(screen.getByText("Carregando...")).toBeInTheDocument();
       });
 
-      // Wait for success
       await waitFor(() => {
-        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
+        expect(onClose).toHaveBeenCalledOnce();
       });
     });
   });
@@ -331,6 +321,7 @@ describe("EnrollmentModal", () => {
   describe("Double-click prevention", () => {
     it("prevents multiple requests from double-clicking confirm button", async () => {
       const action = makeActionDetail({ id: "act-dblclick" });
+      const onClose = vi.fn();
       let requestCount = 0;
 
       server.use(
@@ -343,7 +334,7 @@ describe("EnrollmentModal", () => {
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
+        <EnrollmentModal action={action} onClose={onClose} />,
       );
 
       const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
@@ -354,7 +345,7 @@ describe("EnrollmentModal", () => {
 
       // Wait for requests to complete
       await waitFor(() => {
-        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
+        expect(onClose).toHaveBeenCalledOnce();
       });
 
       // Verify only one request was made
@@ -363,6 +354,7 @@ describe("EnrollmentModal", () => {
 
     it("disables confirm button during submission", async () => {
       const action = makeActionDetail({ id: "act-disable" });
+      const onClose = vi.fn();
       server.use(
         http.put(`${API}/activities/act-disable/enrollments/me`, async () => {
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -371,7 +363,7 @@ describe("EnrollmentModal", () => {
       );
 
       const { user } = render(
-        <EnrollmentModal action={action} onClose={vi.fn()} />,
+        <EnrollmentModal action={action} onClose={onClose} />,
       );
 
       const confirmButton = screen.getByRole("button", { name: /Confirmar/i });
@@ -384,7 +376,7 @@ describe("EnrollmentModal", () => {
 
       // Wait for success
       await waitFor(() => {
-        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
+        expect(onClose).toHaveBeenCalledOnce();
       });
     });
   });

@@ -1,13 +1,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
 import { z } from "zod";
 import {
   ACTION_TYPE_OPTIONS,
   ACTION_FORMAT_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
 } from "../constants";
-import { X, ArrowRight, ArrowLeft, Check, Eye, Loader2 } from "lucide-react";
+import { X, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import {
@@ -16,6 +17,7 @@ import {
   activityTitleSchema,
   isValidActionUrl,
   normalizeActionUrl,
+  validateWorkloadDuration,
 } from "../../../validators/activity";
 import { handleCreateActionApiErrors } from "../../action-edit/handleApiErrors";
 import type {
@@ -102,6 +104,7 @@ const formSchema = baseSchema
       path: ["endDate"],
     },
   )
+  .superRefine(validateWorkloadDuration)
   .refine(
     (d) =>
       (d.format !== "ONLINE" && d.format !== "HYBRID") ||
@@ -192,7 +195,7 @@ const FORMAT_SELECT_OPTIONS = [
 interface ActionRegisterProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (createdId: string) => void;
 }
 
 export function ActionRegister({
@@ -203,7 +206,6 @@ export function ActionRegister({
   const titleId = useId();
   const [step, setStep] = useState<keyof typeof STEP_NAMES>(1);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showSuccessConfirm, setShowSuccessConfirm] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
 
@@ -316,12 +318,16 @@ export function ActionRegister({
             : {}),
         };
 
-        await api.post<CreateActivityResponse>("/activities", payload);
+        const created = await api.post<CreateActivityResponse>(
+          "/activities",
+          payload,
+        );
 
         reset();
         setStep(1);
-        setShowSuccessConfirm(true);
-        if (onSuccess) onSuccess();
+        toast.success("Ação criada.");
+        onClose();
+        onSuccess?.(created.id);
       } catch (err) {
         handleCreateActionApiErrors(err, setError, setGeneralError);
         if (
@@ -340,7 +346,7 @@ export function ActionRegister({
     },
   );
 
-  if (!isOpen && !showSuccessConfirm && !showCancelConfirm) return null;
+  if (!isOpen && !showCancelConfirm) return null;
 
   const today = formatISODate(new Date());
 
@@ -490,122 +496,120 @@ export function ActionRegister({
                   />
                 </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <fieldset>
-                      <legend className="block text-sm font-medium text-gray-700 mb-1">
-                        Horário
-                      </legend>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label
-                            htmlFor="startTime"
-                            className="block text-xs text-gray-500 mb-1"
-                          >
-                            Início
-                          </label>
-                          <Controller
-                            name="startTime"
-                            control={control}
-                            render={({ field }) => (
-                              <TimeInput
-                                id="startTime"
-                                aria-label="Horário de início"
-                                aria-invalid={
-                                  errors.startTime ? true : undefined
-                                }
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                                ref={field.ref}
-                                error={errors.startTime?.message}
-                              />
-                            )}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="endTime"
-                            className="block text-xs text-gray-500 mb-1"
-                          >
-                            Fim
-                          </label>
-                          <Controller
-                            name="endTime"
-                            control={control}
-                            render={({ field }) => (
-                              <TimeInput
-                                id="endTime"
-                                aria-label="Horário de encerramento"
-                                aria-invalid={errors.endTime ? true : undefined}
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                                ref={field.ref}
-                                error={errors.endTime?.message}
-                              />
-                            )}
-                          />
-                        </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <fieldset>
+                    <legend className="block text-sm font-medium text-gray-700 mb-1">
+                      Horário
+                    </legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label
+                          htmlFor="startTime"
+                          className="block text-xs text-gray-500 mb-1"
+                        >
+                          Início
+                        </label>
+                        <Controller
+                          name="startTime"
+                          control={control}
+                          render={({ field }) => (
+                            <TimeInput
+                              id="startTime"
+                              aria-label="Horário de início"
+                              aria-invalid={errors.startTime ? true : undefined}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              ref={field.ref}
+                              error={errors.startTime?.message}
+                            />
+                          )}
+                        />
                       </div>
-                    </fieldset>
+                      <div>
+                        <label
+                          htmlFor="endTime"
+                          className="block text-xs text-gray-500 mb-1"
+                        >
+                          Fim
+                        </label>
+                        <Controller
+                          name="endTime"
+                          control={control}
+                          render={({ field }) => (
+                            <TimeInput
+                              id="endTime"
+                              aria-label="Horário de encerramento"
+                              aria-invalid={errors.endTime ? true : undefined}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              ref={field.ref}
+                              error={errors.endTime?.message}
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </fieldset>
 
-                    <fieldset>
-                      <legend className="block text-sm font-medium text-gray-700 mb-1">
-                        Data
-                      </legend>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label
-                            htmlFor="startDate"
-                            className="block text-xs text-gray-500 mb-1"
-                          >
-                            Início
-                          </label>
-                          <Controller
-                            name="startDate"
-                            control={control}
-                            render={({ field }) => (
-                              <DatePicker
-                                id="startDate"
-                                aria-label="Data de início"
-                                min={today}
-                                invalid={!!errors.startDate}
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                                ref={field.ref}
-                              />
-                            )}
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="endDate"
-                            className="block text-xs text-gray-500 mb-1"
-                          >
-                            Fim
-                          </label>
-                          <Controller
-                            name="endDate"
-                            control={control}
-                            render={({ field }) => (
-                              <DatePicker
-                                id="endDate"
-                                aria-label="Data de encerramento"
-                                min={startDate || today}
-                                invalid={!!errors.endDate}
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                                ref={field.ref}
-                              />
-                            )}
-                          />
-                        </div>
+                  <fieldset>
+                    <legend className="block text-sm font-medium text-gray-700 mb-1">
+                      Data
+                    </legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label
+                          htmlFor="startDate"
+                          className="block text-xs text-gray-500 mb-1"
+                        >
+                          Início
+                        </label>
+                        <Controller
+                          name="startDate"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              id="startDate"
+                              aria-label="Data de início"
+                              min={today}
+                              invalid={!!errors.startDate}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              ref={field.ref}
+                            />
+                          )}
+                        />
                       </div>
-                      {(errors.startDate || errors.endDate) && (
-                        <p className="text-xs text-red-500 mt-1" role="alert">
-                          {errors.startDate?.message ?? errors.endDate?.message}
-                        </p>
-                      )}
-                    </fieldset>
-                  </div>
+                      <div>
+                        <label
+                          htmlFor="endDate"
+                          className="block text-xs text-gray-500 mb-1"
+                        >
+                          Fim
+                        </label>
+                        <Controller
+                          name="endDate"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              id="endDate"
+                              aria-label="Data de encerramento"
+                              min={startDate || today}
+                              invalid={!!errors.endDate}
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              ref={field.ref}
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+                    {(errors.startDate || errors.endDate) && (
+                      <p className="text-xs text-red-500 mt-1" role="alert">
+                        {errors.startDate?.message ?? errors.endDate?.message}
+                      </p>
+                    )}
+                  </fieldset>
+                </div>
 
                 <div className="w-full sm:w-1/2">
                   <Select
@@ -807,31 +811,6 @@ export function ActionRegister({
                 Descartar
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSuccessConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-60 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-8 flex flex-col items-center text-center shadow-xl">
-            <div className="bg-[#05442A] text-white p-2 rounded-lg mb-4 flex items-center justify-center size-10">
-              <Check className="size-6 stroke-[3]" />
-            </div>
-            <h3 className="text-lg font-bold text-[#0A2540] max-w-[240px] mb-6">
-              Sua ação foi registrada com sucesso!
-            </h3>
-            <Button
-              type="button"
-              variant="navy"
-              size="md"
-              onClick={() => {
-                setShowSuccessConfirm(false);
-                onClose();
-              }}
-              className="w-full inline-flex items-center justify-center gap-2"
-            >
-              <Eye className="size-4" /> Visualizar no feed
-            </Button>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router";
-import { render, screen, signIn } from "@/test";
+import { render, screen, signIn, within } from "@/test";
 import { DashboardSidebar } from "../DashboardSidebar";
 
 function renderSidebarAt(
@@ -104,6 +104,56 @@ describe("DashboardSidebar", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it("links the avatar and name block to /profile", async () => {
+    signIn({ fullName: "Liriel Gomes", email: "liriel@ufal.br" });
+    const { user } = render(
+      <Routes>
+        <Route path="/profile" element={<h1>Perfil</h1>} />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    const link = screen.getByRole("link", { name: "Abrir meu perfil" });
+    expect(link).toHaveAttribute("href", "/profile");
+
+    await user.click(link);
+
+    expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument();
+  });
+
+  it("opens the profile link with the keyboard", async () => {
+    signIn();
+    const { user } = render(
+      <Routes>
+        <Route path="/profile" element={<h1>Perfil</h1>} />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    screen.getByRole("link", { name: "Abrir meu perfil" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("heading", { name: "Perfil" })).toBeInTheDocument();
+  });
+
+  it("closes the mobile sidebar when the profile link is clicked", async () => {
+    signIn();
+    const onCloseMobile = vi.fn();
+    const { user } = renderSidebarAt("/dashboard", {
+      isOpenMobile: true,
+      onCloseMobile,
+    });
+
+    const drawer = screen.getByRole("dialog");
+    await user.click(
+      within(drawer).getByRole("link", { name: "Abrir meu perfil" }),
+    );
+
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
   });
 
   it("navigates to /my-activities with correct filters when clicking action subitems", async () => {

@@ -141,7 +141,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/profile",
     );
@@ -158,7 +160,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/activity/action-123",
     );
@@ -175,7 +179,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/activity/action-123/edit",
     );
@@ -192,7 +198,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/dashboard",
     );
@@ -208,12 +216,16 @@ describe("DashboardShell", () => {
       name: /criar uma ação/i,
     });
     await user.click(createButton);
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     const closeButton = screen.getByRole("button", { name: /cancelar/i });
     await user.click(closeButton);
 
-    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/profile",
     );
@@ -240,16 +252,20 @@ describe("DashboardShell", () => {
       name: /criar uma ação/i,
     });
     await user.click(createButton);
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     const closeButton = screen.getByRole("button", { name: /cancelar/i });
     await user.click(closeButton);
 
-    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(input).toHaveValue("Texto em edição");
   });
 
-  it("takes the user to the feed after creating an action from /profile", async () => {
+  it("opens the created action page with a toast after creating an action from /profile", async () => {
     server.use(
       http.post("*/activities", () => {
         return HttpResponse.json({ id: "nova-acao-123" }, { status: 201 });
@@ -272,21 +288,20 @@ describe("DashboardShell", () => {
     await user.click(screen.getByRole("button", { name: /Criar ação/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Sua ação foi registrada com sucesso!"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("current-pathname")).toHaveTextContent(
+        "/activity/nova-acao-123",
+      );
     });
-
-    await user.click(
-      screen.getByRole("button", { name: /Visualizar no feed/i }),
-    );
-
-    expect(screen.getByTestId("current-pathname")).toHaveTextContent(
-      "/dashboard",
-    );
+    expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Sua ação foi registrada com sucesso!"),
+    ).not.toBeInTheDocument();
   });
 
-  it("reloads feed without navigating when creating an action from /dashboard", async () => {
+  it("reloads the feed before navigating to the created action page from /dashboard", async () => {
     let getActivitiesCount = 0;
     let carouselRequestsCount = 0;
 
@@ -312,7 +327,6 @@ describe("DashboardShell", () => {
 
     await waitFor(() => expect(getActivitiesCount).toBe(1));
     await waitFor(() => expect(carouselRequestsCount).toBe(1));
-    const locationKey = screen.getByTestId("current-location-key").textContent;
 
     const createButton = screen.getByRole("button", {
       name: /criar uma ação/i,
@@ -325,21 +339,19 @@ describe("DashboardShell", () => {
     await user.click(screen.getByRole("button", { name: /Criar ação/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Sua ação foi registrada com sucesso!"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("current-pathname")).toHaveTextContent(
+        "/activity/nova-acao-123",
+      );
     });
     await waitFor(() => expect(getActivitiesCount).toBe(2));
     await waitFor(() => expect(carouselRequestsCount).toBe(2));
-
-    await user.click(
-      screen.getByRole("button", { name: /Visualizar no feed/i }),
-    );
-
-    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("current-location-key")).toHaveTextContent(
-      locationKey!,
-    );
+    expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Sua ação foi registrada com sucesso!"),
+    ).not.toBeInTheDocument();
   });
 
   it("closes the register modal automatically when DashboardShell unmounts", () => {
@@ -357,10 +369,14 @@ describe("DashboardShell", () => {
       },
     );
 
-    expect(screen.getByRole("dialog", { name: "Criar uma ação" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     unmount();
 
-    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
   });
 });
