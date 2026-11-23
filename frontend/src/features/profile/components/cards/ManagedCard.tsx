@@ -10,6 +10,7 @@ import {
 } from "../../services";
 import { ConfirmStatusModal } from "./ConfirmStatusModal";
 import { DeleteActionModal } from "./DeleteActionModal";
+import { ActionCover } from "@/components/ActionCover";
 
 // The current status first, then only the transitions the backend accepts.
 const STATUS_OPTIONS: Record<
@@ -184,145 +185,154 @@ export function ManagedCard({
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 transition-all hover:shadow-md flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex flex-col justify-between gap-3 min-w-0 flex-1">
-          <div>
-            <h4 className="font-bold text-gray-900 leading-snug text-lg mb-1">
-              {activity.action.title}
-            </h4>
-            <p className="text-sm text-gray-600">{activity.description}</p>
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md flex flex-col">
+      <ActionCover
+        id={activity.action.id}
+        type={activity.action.type}
+        className="h-48 shrink-0"
+      />
+      <div className="p-6 flex flex-col gap-4 flex-1">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col justify-between gap-3 min-w-0 flex-1">
+            <div>
+              <h4 className="font-bold text-gray-900 leading-snug text-lg mb-1">
+                {activity.action.title}
+              </h4>
+              <p className="text-sm text-gray-600">{activity.description}</p>
+            </div>
+
+            <div className="flex items-center gap-6 flex-wrap text-xs font-medium text-gray-500 mt-2">
+              <span className="flex items-center gap-2">
+                <MapPin className="size-4 shrink-0 text-gray-400" />
+                {activity.location}
+              </span>
+              <span className="flex items-center gap-2">
+                <Calendar className="size-4 shrink-0 text-gray-400" />
+                {activity.date}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-6 flex-wrap text-xs font-medium text-gray-500 mt-2">
-            <span className="flex items-center gap-2">
-              <MapPin className="size-4 shrink-0 text-gray-400" />
-              {activity.location}
-            </span>
-            <span className="flex items-center gap-2">
-              <Calendar className="size-4 shrink-0 text-gray-400" />
-              {activity.date}
-            </span>
+          <div className="flex flex-col items-end justify-between self-stretch gap-4 shrink-0">
+            <div className="flex flex-col items-start gap-1">
+              <label
+                htmlFor={`status-select-${activity.action.id}`}
+                className="text-xs font-medium text-gray-700"
+              >
+                Status
+              </label>
+              <select
+                id={`status-select-${activity.action.id}`}
+                value={currentStatus}
+                onChange={handleSelectChange}
+                disabled={isLoading || isTerminal || isLocked}
+                aria-describedby={
+                  showStatusHint
+                    ? `status-hint-${activity.action.id}`
+                    : undefined
+                }
+                className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {STATUS_OPTIONS[currentStatus].map((opt) => (
+                  <option
+                    key={opt.value}
+                    value={opt.value}
+                    className="bg-white text-gray-800 py-1.5 px-3 hover:bg-gray-200"
+                  >
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {showStatusHint && (
+                <p
+                  id={`status-hint-${activity.action.id}`}
+                  className="text-xs text-gray-600 leading-tight max-w-[150px] mt-0.5"
+                >
+                  Para concluir, primeiro marque a ação como Em andamento.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                aria-label="Excluir atividade"
+                className="text-red-400 hover:text-red-600 transition-colors p-1"
+              >
+                <Trash2 className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onEdit(activity.action.id)}
+                aria-label="Editar atividade"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <Pencil className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onManageEnrollments(activity.action.id)}
+                aria-label="Gerenciar inscritos"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <Users className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-end justify-between self-stretch gap-4 shrink-0">
-          <div className="flex flex-col items-start gap-1">
-            <label
-              htmlFor={`status-select-${activity.action.id}`}
-              className="text-xs font-medium text-gray-700"
-            >
-              Status
-            </label>
-            <select
-              id={`status-select-${activity.action.id}`}
-              value={currentStatus}
-              onChange={handleSelectChange}
-              disabled={isLoading || isTerminal || isLocked}
-              aria-describedby={
-                showStatusHint ? `status-hint-${activity.action.id}` : undefined
-              }
-              className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {STATUS_OPTIONS[currentStatus].map((opt) => (
-                <option
-                  key={opt.value}
-                  value={opt.value}
-                  className="bg-white text-gray-800 py-1.5 px-3 hover:bg-gray-200"
-                >
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            {showStatusHint && (
-              <p
-                id={`status-hint-${activity.action.id}`}
-                className="text-xs text-gray-600 leading-tight max-w-[150px] mt-0.5"
+        {errorState && (
+          <div
+            role="alert"
+            className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-2"
+          >
+            <span>{errorState.message}</span>
+            {errorState.canRetry && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shrink-0"
               >
-                Para concluir, primeiro marque a ação como Em andamento.
-              </p>
+                Tentar novamente
+              </button>
             )}
           </div>
+        )}
 
-          <div className="flex flex-col items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              aria-label="Excluir atividade"
-              className="text-red-400 hover:text-red-600 transition-colors p-1"
-            >
-              <Trash2 className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onEdit(activity.action.id)}
-              aria-label="Editar atividade"
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-            >
-              <Pencil className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onManageEnrollments(activity.action.id)}
-              aria-label="Gerenciar inscritos"
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-            >
-              <Users className="size-4" />
-            </button>
-          </div>
-        </div>
+        {pendingStatus && (
+          <ConfirmStatusModal
+            activity={activity}
+            pendingStatus={pendingStatus}
+            isLoading={isLoading}
+            onConfirm={() => {
+              const target = pendingStatus;
+              setPendingStatus(null);
+              performStatusUpdate(target);
+            }}
+            onCancel={() => setPendingStatus(null)}
+          />
+        )}
+
+        {(showDeleteModal || showDeletedSuccess) && (
+          <DeleteActionModal
+            isSuccess={showDeletedSuccess}
+            isLoading={isDeleting}
+            errorMessage={deleteError}
+            onConfirmDelete={handleConfirmDelete}
+            onClose={() => {
+              // Removing the card from the list unmounts it, so the success
+              // modal must be dismissed first or it would vanish unseen.
+              if (showDeletedSuccess) {
+                onDelete(activity.action.id);
+                return;
+              }
+              setShowDeleteModal(false);
+              setDeleteError(null);
+            }}
+          />
+        )}
       </div>
-
-      {errorState && (
-        <div
-          role="alert"
-          className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-2"
-        >
-          <span>{errorState.message}</span>
-          {errorState.canRetry && (
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors shrink-0"
-            >
-              Tentar novamente
-            </button>
-          )}
-        </div>
-      )}
-
-      {pendingStatus && (
-        <ConfirmStatusModal
-          activity={activity}
-          pendingStatus={pendingStatus}
-          isLoading={isLoading}
-          onConfirm={() => {
-            const target = pendingStatus;
-            setPendingStatus(null);
-            performStatusUpdate(target);
-          }}
-          onCancel={() => setPendingStatus(null)}
-        />
-      )}
-
-      {(showDeleteModal || showDeletedSuccess) && (
-        <DeleteActionModal
-          isSuccess={showDeletedSuccess}
-          isLoading={isDeleting}
-          errorMessage={deleteError}
-          onConfirmDelete={handleConfirmDelete}
-          onClose={() => {
-            // Removing the card from the list unmounts it, so the success
-            // modal must be dismissed first or it would vanish unseen.
-            if (showDeletedSuccess) {
-              onDelete(activity.action.id);
-              return;
-            }
-            setShowDeleteModal(false);
-            setDeleteError(null);
-          }}
-        />
-      )}
     </div>
   );
 }

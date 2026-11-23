@@ -6,8 +6,8 @@ import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
 import { fetchUserActivities } from "../services";
 import {
+  ACTIVITY_LIST_TITLES,
   DEFAULT_ACTIVITY_STATUS,
-  PROFILE_SUB_TABS,
   isActivityStatus,
 } from "../constants";
 import { useActionRegister } from "../../../hooks/useActionRegister";
@@ -30,14 +30,31 @@ export function ActionsList() {
   const [totalPages, setTotalPages] = useState(1);
   const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
 
+  useEffect(() => {
+    if (!filterParam || !isActivityStatus(filterParam)) {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.set("filter", DEFAULT_ACTIVITY_STATUS);
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [filterParam, setSearchParams]);
+
   // The sub-tab lives in the URL, so it changes one render after the click
-  // (or with no click at all, on browser Back). Resetting the page while
-  // rendering, not in the click handler, keeps the old sub-tab from being
-  // fetched again at page one before the new one arrives.
+  // (or with no click at all, on browser Back). Resetting while rendering, not
+  // in the click handler, keeps the old sub-tab from being fetched again at
+  // page one, and keeps its items from rendering for one frame with the new
+  // sub-tab's cards and controls.
   if (pagedSubTab !== activeSubTab) {
     setPagedSubTab(activeSubTab);
     setPage(1);
     setTotalPages(1);
+    setActivities([]);
+    setError(null);
+    setIsLoading(true);
   }
 
   const reloadActivities = useCallback(() => {
@@ -95,25 +112,6 @@ export function ActionsList() {
   const handleManageEnrollments = (id: string) =>
     navigate(`/activity/${id}/enrollments`);
 
-  // Clearing here, not in the effect, keeps the previous tab's items from
-  // rendering for one frame with the new tab's cards and controls.
-  const selectSubTab = (tab: ActivityStatus) => {
-    if (tab === activeSubTab) return;
-
-    setActivities([]);
-    setError(null);
-    setIsLoading(true);
-    setSearchParams(
-      (previous) => {
-        const next = new URLSearchParams(previous);
-        if (tab === DEFAULT_ACTIVITY_STATUS) next.delete("filter");
-        else next.set("filter", tab);
-        return next;
-      },
-      { replace: true },
-    );
-  };
-
   const selectPage = (nextPage: number) => {
     if (nextPage === page) return;
 
@@ -126,27 +124,9 @@ export function ActionsList() {
 
   return (
     <div className="space-y-6">
-      <nav className="flex items-center gap-2 border-b border-gray-200">
-        {PROFILE_SUB_TABS.map((tab) => {
-          const isActive = tab.id === activeSubTab;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => selectSubTab(tab.id)}
-              aria-current={isActive ? "page" : undefined}
-              className={`flex-1 whitespace-nowrap px-4 py-3 -mb-px border-b-2 text-sm transition cursor-pointer ${
-                isActive
-                  ? "border-[#1B75BB] text-[#1B75BB] font-bold"
-                  : "border-transparent text-gray-500 font-medium hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </nav>
+      <h1 className="text-xl sm:text-2xl font-bold text-[#000A1E]">
+        {ACTIVITY_LIST_TITLES[activeSubTab]}
+      </h1>
 
       {isLoading && (
         <p className="text-gray-500 text-center py-8">

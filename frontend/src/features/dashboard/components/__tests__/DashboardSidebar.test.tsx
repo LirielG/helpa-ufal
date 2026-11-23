@@ -155,4 +155,50 @@ describe("DashboardSidebar", () => {
 
     expect(onCloseMobile).toHaveBeenCalledTimes(1);
   });
+
+  it("navigates to /my-activities with correct filters when clicking action subitems", async () => {
+    signIn();
+    const { user } = render(
+      <Routes>
+        <Route path="/my-activities" element={<h1>Minhas Atividades</h1>} />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Atividades Inscritas/i }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Minhas Atividades" }),
+    ).toBeInTheDocument();
+  });
+
+  it("navigates to /my-activities?filter=completed when clicking Meus certificados", async () => {
+    signIn();
+    const { user } = render(
+      <Routes>
+        <Route path="/my-activities" element={<h1>Minhas Atividades</h1>} />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Certificados/i }));
+    expect(
+      screen.getByRole("heading", { name: "Minhas Atividades" }),
+    ).toBeInTheDocument();
+  });
+
+  it("highlights Ações and the active subitem on /my-activities?filter=completed", () => {
+    signIn();
+    renderSidebarAt("/my-activities?filter=completed");
+
+    expect(
+      screen.getByRole("button", { name: /Atividades Concluídas/i }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getByRole("button", { name: /Atividades Inscritas/i }),
+    ).not.toHaveAttribute("aria-current");
+  });
 });

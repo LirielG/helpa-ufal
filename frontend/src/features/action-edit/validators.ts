@@ -3,6 +3,9 @@ import {
   activityDescriptionSchema,
   activityTitleSchema,
   activityTitleSchemaFor,
+  ACTION_URL_INVALID_MESSAGE,
+  isValidActionUrl,
+  normalizeActionUrl,
 } from "../../validators/activity";
 import { timeSchema } from "../../validators/time";
 
@@ -85,7 +88,7 @@ const actionEditBaseSchema = z
       ],
       { message: "Selecione o campus" },
     ),
-    url: z.string(),
+    url: z.string().transform(normalizeActionUrl),
     address: z
       .object({
         addressLine: z.string().trim(),
@@ -110,17 +113,17 @@ const actionEditBaseSchema = z
     // checked: an error there would block the save with nothing on screen.
     if (data.format === "IN_PERSON") return;
 
-    if (!data.url.trim()) {
+    if (!data.url) {
       ctx.addIssue({
         code: "custom",
         message:
           "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
         path: ["url"],
       });
-    } else if (!z.url().safeParse(data.url).success) {
+    } else if (!isValidActionUrl(data.url)) {
       ctx.addIssue({
         code: "custom",
-        message: "Informe uma URL válida",
+        message: ACTION_URL_INVALID_MESSAGE,
         path: ["url"],
       });
     }

@@ -26,6 +26,7 @@ import {
   actionEditSchemaFor,
   type ActionEditSchemaType,
 } from "../features/action-edit/validators";
+import { normalizeActionUrl } from "../validators/activity";
 import { getActionById } from "../features/action-detail/services";
 import { handleActionApiErrors } from "../features/action-edit/handleApiErrors";
 import { updateAction } from "../features/action-edit/services";
@@ -97,6 +98,7 @@ export function EditAction() {
     handleSubmit,
     reset,
     setError,
+    setValue,
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
@@ -345,7 +347,7 @@ export function EditAction() {
       footer={<Footer />}
       containerStyle={{ backgroundColor: "#E0F6F6" }}
     >
-      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+      <div className="page-container py-10">
         {generalError && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium flex items-center justify-between shadow-sm">
             <span>{generalError}</span>
@@ -547,7 +549,10 @@ export function EditAction() {
                     label="Link para o evento"
                     placeholder="Ex: https://meet.google.com/abc-defg-hij"
                     error={errors.url?.message}
-                    {...register("url")}
+                    {...register("url", {
+                      onBlur: (e) =>
+                        setValue("url", normalizeActionUrl(e.target.value)),
+                    })}
                   />
                 )}
               </div>

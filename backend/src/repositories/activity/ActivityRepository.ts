@@ -468,7 +468,7 @@ class ActivityRepository implements IActivityRepository {
       });
 
       return toFullResponse(updated, approvedCount);
-      });
+    });
   }
 
   public async updateStatus(

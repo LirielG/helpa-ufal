@@ -53,29 +53,32 @@ export function DashboardSidebar({
   const totalWorkloadHours = profile?.totalWorkloadHours;
 
   const searchParams = new URLSearchParams(location.search);
-  const rawSection = searchParams.get("section") || searchParams.get("filter");
+  const filterParam = searchParams.get("filter");
 
-  const activeSubTab: ActionSubTab | null =
-    rawSection === "enrolled" ||
-    rawSection === "completed" ||
-    rawSection === "managed"
-      ? rawSection
-      : null;
+  const isMyActivities = location.pathname === "/my-activities";
 
-  const isActionSubRoute = activeSubTab !== null;
+  const activeSubTab: ActionSubTab | null = isMyActivities
+    ? filterParam === "completed" || filterParam === "managed"
+      ? filterParam
+      : "enrolled"
+    : null;
 
-  const isHomeActive = location.pathname === "/dashboard" && !isActionSubRoute;
+  const isHomeActive = location.pathname === "/dashboard";
 
-  const isPersonalDataActive =
-    location.pathname === "/profile" && !isActionSubRoute;
-
-  const isCertificatesActive = location.pathname.startsWith("/validar");
+  const isPersonalDataActive = location.pathname === "/profile";
 
   const isModerationActive = location.pathname === "/moderation";
 
   const handleNavigate = (path: string) => {
     onCloseMobile?.();
     navigate(path);
+  };
+
+  // Switching lists inside /my-activities replaces the entry, so Back leaves
+  // the page instead of walking through every filter clicked.
+  const handleActionSubNavigate = (tab: ActionSubTab) => {
+    onCloseMobile?.();
+    navigate(`/my-activities?filter=${tab}`, { replace: isMyActivities });
   };
 
   const handleLogout = async () => {
@@ -203,7 +206,7 @@ export function DashboardSidebar({
                 onClick={() => setActionsExpanded((prev) => !prev)}
                 aria-expanded={actionsExpanded}
                 className={`w-full flex items-center justify-between px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
-                  isActionSubRoute ? activeMainItemClass : inactiveMainItemClass
+                  isMyActivities ? activeMainItemClass : inactiveMainItemClass
                 }`}
               >
                 <span className="flex items-center gap-3">
@@ -232,11 +235,7 @@ export function DashboardSidebar({
                         <button
                           key={subItem.id}
                           type="button"
-                          onClick={() =>
-                            handleNavigate(
-                              `/profile?section=${subItem.id}&tab=actions`,
-                            )
-                          }
+                          onClick={() => handleActionSubNavigate(subItem.id)}
                           aria-current={isSubActive ? "page" : undefined}
                           className={`w-full text-left px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-md text-xs lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                             isSubActive
@@ -269,13 +268,8 @@ export function DashboardSidebar({
 
             <button
               type="button"
-              onClick={() => handleNavigate("/validar")}
-              aria-current={isCertificatesActive ? "page" : undefined}
-              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
-                isCertificatesActive
-                  ? activeMainItemClass
-                  : inactiveMainItemClass
-              }`}
+              onClick={() => handleActionSubNavigate("completed")}
+              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${inactiveMainItemClass}`}
             >
               <BadgeCheck className="size-4 lg:size-5 shrink-0" />
               <span>{SIDEBAR_LABELS.certificates}</span>
