@@ -1,5 +1,6 @@
 import { useParams } from "react-router";
 import { Footer } from "@/components/Footer";
+import { HomeLogoLink } from "@/components/HomeLogoLink";
 import helpaBlueLogo from "@/assets/helpa-logo-blue-text.svg";
 import { ValidationPanel } from "@/features/certificate-validation/components/ValidationPanel";
 
@@ -23,10 +24,9 @@ export function CertificateValidation() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <img
+          <HomeLogoLink
             src={helpaBlueLogo}
-            alt="helpa"
-            className="h-10 md:h-12 w-auto"
+            imageClassName="h-10 md:h-12 w-auto"
           />
         </div>
       </header>

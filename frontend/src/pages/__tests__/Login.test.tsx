@@ -239,4 +239,19 @@ describe("Login", () => {
 
     expect(passwordInput).toHaveAttribute("type", "password");
   });
+
+  describe("Helpa logo link", () => {
+    it("renders the logo as a link to / for a visitor", () => {
+      render(<Login />, { route: "/login" });
+
+      const logoLinks = screen.getAllByRole("link", {
+        name: "Ir para a página inicial do Helpa",
+      });
+
+      expect(logoLinks).toHaveLength(2);
+      for (const logoLink of logoLinks) {
+        expect(logoLink).toHaveAttribute("href", "/");
+      }
+    });
+  });
 });

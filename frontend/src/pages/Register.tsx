@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Button, Alert, Tooltip } from "../components";
+import { Button, Alert, Tooltip, HomeLogoLink } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { RegisterSchema, type RegisterFields } from "../validators/auth";
 import type { RegisterRequest } from "../types";
+import helpaBlueLogo from "../assets/helpa-logo-blue.svg";
 import { AuthField } from "../features/auth/components/AuthField";
 import { AuthFooterLink } from "../features/auth/components/AuthFooterLink";
 import { AuthShell } from "../features/auth/components/AuthShell";
@@ -99,6 +100,12 @@ export function Register() {
         maxWidthClassName="max-w-4xl"
         header={
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <HomeLogoLink
+                src={helpaBlueLogo}
+                imageClassName="h-8 md:h-10 w-auto"
+              />
+            </div>
             <h1 className="text-4xl font-bold mb-4 text-gray-900">
               Criar conta no helpa
             </h1>
