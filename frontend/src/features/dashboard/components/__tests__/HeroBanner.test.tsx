@@ -103,6 +103,25 @@ describe("HeroBanner", () => {
       "/activity/2",
     );
   });
+
+  it("renders 'Saiba mais' with link styling and arrow on every slide", async () => {
+    render(<HeroBanner />);
+    await screen.findByRole("heading");
+
+    const links = screen.getAllByRole("link", {
+      name: "Saiba mais",
+      hidden: true,
+    });
+    expect(links).toHaveLength(4);
+
+    links.forEach((link) => {
+      expect(link).toHaveTextContent("Saiba mais →");
+      expect(link).toHaveClass("underline");
+      expect(link).toHaveClass("underline-offset-4");
+      expect(link).toHaveClass("hover:decoration-2");
+      expect(link).toHaveClass("text-white");
+    });
+  });
   it("does not render when there are no OPEN actions available", async () => {
     setupFeaturedServer([]);
     render(<HeroBanner />);

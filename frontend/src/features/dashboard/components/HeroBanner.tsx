@@ -118,9 +118,9 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
                       </span>
                       <Link
                         to={`/activity/${action.id}`}
-                        className="px-6 py-2 bg-[#1B75BB] hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                        className="text-white font-semibold underline underline-offset-4 hover:decoration-2 transition-colors inline-flex items-center gap-1"
                       >
-                        Saiba mais
+                        Saiba mais <span aria-hidden="true">→</span>
                       </Link>
                     </div>
                   </div>
