@@ -141,7 +141,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/profile",
     );
@@ -158,7 +160,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/activity/action-123",
     );
@@ -175,7 +179,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/activity/action-123/edit",
     );
@@ -192,7 +198,9 @@ describe("DashboardShell", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/dashboard",
     );
@@ -208,12 +216,16 @@ describe("DashboardShell", () => {
       name: /criar uma ação/i,
     });
     await user.click(createButton);
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     const closeButton = screen.getByRole("button", { name: /cancelar/i });
     await user.click(closeButton);
 
-    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("current-pathname")).toHaveTextContent(
       "/profile",
     );
@@ -240,12 +252,16 @@ describe("DashboardShell", () => {
       name: /criar uma ação/i,
     });
     await user.click(createButton);
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     const closeButton = screen.getByRole("button", { name: /cancelar/i });
     await user.click(closeButton);
 
-    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(input).toHaveValue("Texto em edição");
   });
 
@@ -277,7 +293,9 @@ describe("DashboardShell", () => {
       );
     });
     expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
-    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Sua ação foi registrada com sucesso!"),
     ).not.toBeInTheDocument();
@@ -328,7 +346,9 @@ describe("DashboardShell", () => {
     await waitFor(() => expect(getActivitiesCount).toBe(2));
     await waitFor(() => expect(carouselRequestsCount).toBe(2));
     expect(await screen.findByText("Ação criada.")).toBeInTheDocument();
-    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Sua ação foi registrada com sucesso!"),
     ).not.toBeInTheDocument();
@@ -349,10 +369,14 @@ describe("DashboardShell", () => {
       },
     );
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
 
     unmount();
 
-    expect(screen.queryByText("Vamos criar uma ação?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Criar uma ação" }),
+    ).not.toBeInTheDocument();
   });
 });
