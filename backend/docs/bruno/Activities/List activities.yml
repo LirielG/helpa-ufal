@@ -32,7 +32,7 @@ http:
     - name: status
       value: OPEN
       type: query
-      description: Filter by activity status.
+      description: Filter by activity status. Without status, only OPEN activities whose startDate is in the future are listed. OPEN lists every OPEN activity, of any date.
       disabled: true
     - name: status
       value: IN_PROGRESS
@@ -48,6 +48,11 @@ http:
       value: CANCELLED
       type: query
       description: Filter by activity status.
+      disabled: true
+    - name: status
+      value: ALL
+      type: query
+      description: Filter by activity status. ALL lifts the status filter and lists every activity that was not deleted.
       disabled: true
     - name: type
       value: EXTENSION
@@ -303,7 +308,7 @@ docs: |-
   |-------|-------|-------|
   | `search` | Partial, case-insensitive, on `title` | Combines with the other filters |
   | `area` | Exact, case-insensitive, on `details.area` | Empty value = no filtering, never a 400. Valid values: `GET /activities/filters` |
-  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED | Present-and-empty (`?status=`) is a 400, not "no filter" |
+  | `status` | Enum: OPEN, IN_PROGRESS, COMPLETED, CANCELLED, ALL | Absent = OPEN with a future `startDate`. `OPEN` lists every OPEN activity, of any date. `ALL` lists every activity that was not deleted. Present-and-empty (`?status=`) is a 400, not "no filter" |
   | `type` | Enum: EXTENSION, COURSE, EVENT, LECTURE, OTHER | Present-and-empty (`?type=`) is a 400, not "no filter" |
   | `campus` | Enum: MACEIO, ARAPIRACA, PALMEIRA, PENEDO, RIO_LARGO, DELMIRO_GOUVEIA, SANTANA_IPANEMA | Case-sensitive. Unknown or empty value is a 400 on `campus` |
   | `format` | Enum: IN_PERSON, ONLINE, HYBRID | Present-and-empty (`?format=`) is a 400, not "no filter" |
