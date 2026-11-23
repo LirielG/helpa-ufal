@@ -4,6 +4,7 @@ import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmen
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
 import { expectHttpError } from "@/utils/tests.js";
+import { daysFromNow } from "../../../../tests/helpers/dates.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 const ACTIVITY_ID = "f26559ac-d672-4252-a9a4-d6fe6583d8ec";
@@ -32,8 +33,8 @@ function anActivity(overrides: Record<string, unknown> = {}) {
     title: "Atividade de Teste",
     type: "COURSE",
     campus: "ARAPIRACA",
-    startDate: new Date("2026-08-29T09:00:00.000Z"),
-    endDate: new Date("2026-09-05T18:00:00.000Z"),
+    startDate: daysFromNow(7),
+    endDate: daysFromNow(14),
     slots: 30,
     availableSlots: 5,
     status: "OPEN",
@@ -89,6 +90,7 @@ describe("EnrollmentService.enroll", () => {
     );
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
+
 
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
     "throws 409 when the activity status is %s (not open for enrollment)",
