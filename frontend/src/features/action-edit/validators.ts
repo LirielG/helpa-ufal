@@ -6,6 +6,7 @@ import {
   ACTION_URL_INVALID_MESSAGE,
   isValidActionUrl,
   normalizeActionUrl,
+  validateWorkloadDuration,
 } from "../../validators/activity";
 import { timeSchema } from "../../validators/time";
 
@@ -108,6 +109,7 @@ const actionEditBaseSchema = z
       path: ["endDate"],
     },
   )
+  .superRefine(validateWorkloadDuration)
   .superRefine((data, ctx) => {
     // In person the link field is hidden, so whatever it still holds is not
     // checked: an error there would block the save with nothing on screen.

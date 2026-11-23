@@ -978,6 +978,45 @@ describe("EditAction", () => {
       ).toBeInTheDocument();
       expect(onUpdate).not.toHaveBeenCalled();
     });
+
+    it("blocks workload above the action duration and shows the hour limit", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de início", "08:00");
+      changeField("Horário de encerramento", "12:00");
+      changeField("Carga horária", "5");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "A carga horária não pode passar da duração da ação (4 h).",
+        ),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("accepts workload equal to the exact duration", async () => {
+      mockScheduledAction(START, "2026-03-10T21:00:00.000Z");
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+
+      changeField("Horário de início", "08:00");
+      changeField("Horário de encerramento", "12:00");
+      changeField("Carga horária", "4");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ workloadHours: 4 }),
+        ),
+      );
+    });
   });
 
   describe("time validation", () => {

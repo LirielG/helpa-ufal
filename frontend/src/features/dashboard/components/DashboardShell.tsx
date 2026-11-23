@@ -30,7 +30,6 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [wasCreated, setWasCreated] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(() =>
@@ -94,22 +93,13 @@ export function DashboardShell({
     void loadProfile(false);
   }, [isAuthenticated, loadProfile]);
 
-  const handleSuccess = () => {
-    setWasCreated(true);
-
-    if (onSuccessCallback) {
-      onSuccessCallback();
-    }
+  const handleSuccess = (createdId: string) => {
+    onSuccessCallback?.();
+    navigate(`/activity/${createdId}`);
   };
 
   const handleClose = () => {
-    const shouldGoToFeed = wasCreated && !onSuccessCallback;
     closeRegisterModal();
-    setWasCreated(false);
-
-    if (shouldGoToFeed) {
-      navigate("/dashboard");
-    }
   };
 
   return (

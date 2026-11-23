@@ -103,7 +103,7 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
               </div>
 
               <div className="relative h-full flex items-center">
-                <div className="container mx-auto px-4">
+                <div className="page-container">
                   <div className="max-w-2xl text-white space-y-4">
                     <h2 className="text-4xl md:text-5xl font-bold line-clamp-2">
                       {action.title}

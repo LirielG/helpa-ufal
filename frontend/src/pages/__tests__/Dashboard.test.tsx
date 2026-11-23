@@ -212,14 +212,16 @@ describe("Dashboard", () => {
 
     const { user } = render(<Dashboard />);
 
-    expect(screen.queryByText("Vamos criar uma ação?")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).toBeNull();
 
     const createBtn = await screen.findByRole("button", {
       name: "Criar uma ação",
     });
     await user.click(createBtn);
 
-    expect(screen.getByText("Vamos criar uma ação?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Criar uma ação" }),
+    ).toBeInTheDocument();
   });
 
   it("switches between the Helpa and SIGAA feeds", async () => {
