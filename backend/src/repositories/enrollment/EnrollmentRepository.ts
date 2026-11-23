@@ -113,7 +113,7 @@ class EnrollmentRepository implements IEnrollmentRepository {
       // gets serialized against concurrent writers. The Service's check
       // remains as a fast-path (fails fast without opening a transaction),
       // this one is the actual source of truth for the error ordering.
-      if (activity.status !== "OPEN") {
+      if (activity.status !== "OPEN" || activity.startDate <= new Date()) {
         throw new CustomError(409, "Activity is not open for enrollment.", {
           code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
         });
