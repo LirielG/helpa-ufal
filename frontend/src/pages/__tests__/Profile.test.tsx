@@ -104,17 +104,13 @@ function countProfileReads() {
   return () => reads;
 }
 
-/** Answers every profile read with the given total of homologated hours. */
-function serveTotalWorkloadHours(totalWorkloadHours: number) {
+/** Answers every profile read with the signed-in user plus the overrides. */
+function serveProfile(overrides: Partial<UserProfile> = {}) {
   server.use(
     http.get(`${API}/users/me`, () =>
-      HttpResponse.json(profileOf({ totalWorkloadHours })),
+      HttpResponse.json(profileOf(overrides)),
     ),
   );
-}
-
-function findContributionCounter() {
-  return screen.findByRole("group", { name: "Total contribuído" });
 }
 
 function findNameField() {
@@ -122,7 +118,7 @@ function findNameField() {
 }
 
 function getSaveButton() {
-  return screen.getByRole("button", { name: "Salvar alterações" });
+  return screen.getByRole("button", { name: "Salvar Alterações" });
 }
 
 async function replaceName(user: UserEvent, name: string) {
@@ -143,7 +139,7 @@ async function fillPasswordChange(
   await findNameField();
   if (current) await user.type(screen.getByLabelText("Senha atual"), current);
   await user.type(screen.getByLabelText("Nova senha"), next);
-  await user.type(screen.getByLabelText("Confirmar nova senha"), confirmation);
+  await user.type(screen.getByLabelText("Confirmação da senha"), confirmation);
 }
 
 describe("Profile — personal data", () => {
@@ -156,8 +152,8 @@ describe("Profile — personal data", () => {
 
       expect(screen.getByLabelText("Email")).toBeDisabled();
       expect(screen.getByLabelText("Email")).toHaveValue(signedIn.email);
-      expect(screen.getByLabelText("Tipo de perfil")).toBeDisabled();
-      expect(screen.getByLabelText("Tipo de perfil")).toHaveValue("Docente");
+      expect(screen.getByLabelText("Tipo de conta")).toBeDisabled();
+      expect(screen.getByLabelText("Tipo de conta")).toHaveValue("Docente");
     });
 
     it("offers no profile photo change and shows the initials instead", async () => {
@@ -190,7 +186,7 @@ describe("Profile — personal data", () => {
       });
     });
 
-    it("updates the name shown in the rest of the app without reloading", async () => {
+    it("updates the form and the stored user without reloading or ending the session", async () => {
       signIn({ fullName: "Joana Ribeiro" });
       spyOnUpdate();
       const { user } = renderProfile();
@@ -200,11 +196,12 @@ describe("Profile — personal data", () => {
 
       await screen.findByText("Perfil atualizado com sucesso.");
       expect(useAuthStore.getState().user?.fullName).toBe("Mariana Costa");
+      expect(useAuthStore.getState().user).not.toBeNull();
 
-      const headings = screen.getAllByRole("heading", {
-        name: "Mariana Costa",
-      });
-      expect(headings.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByLabelText("Nome completo")).toHaveValue(
+        "Mariana Costa",
+      );
+      expect(screen.getAllByText("MC").length).toBeGreaterThan(0);
     });
 
     it("does not read the profile again after saving", async () => {
@@ -237,17 +234,20 @@ describe("Profile — personal data", () => {
       });
     });
 
-    it("makes no request when nothing changed", async () => {
-      signIn();
+    it("keeps the save button disabled until something changes", async () => {
+      signIn({ fullName: "Joana Ribeiro" });
       const onUpdate = spyOnUpdate();
       const { user } = renderProfile();
 
-      await findNameField();
-      await user.click(getSaveButton());
+      const field = await findNameField();
+      expect(getSaveButton()).toBeDisabled();
 
-      expect(
-        await screen.findByText("Nenhuma alteração para salvar."),
-      ).toBeInTheDocument();
+      await user.type(field, " Lima");
+      expect(getSaveButton()).toBeEnabled();
+
+      await user.clear(field);
+      await user.type(field, "Joana Ribeiro");
+      expect(getSaveButton()).toBeDisabled();
       expect(onUpdate).not.toHaveBeenCalled();
     });
 
@@ -367,7 +367,7 @@ describe("Profile — personal data", () => {
       await findNameField();
       const current = screen.getByLabelText("Senha atual");
       const next = screen.getByLabelText("Nova senha");
-      const confirmation = screen.getByLabelText("Confirmar nova senha");
+      const confirmation = screen.getByLabelText("Confirmação da senha");
       const [currentToggle, nextToggle] = screen.getAllByRole("button", {
         name: "Mostrar senha",
       });
@@ -406,7 +406,7 @@ describe("Profile — personal data", () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Senha atual")).toHaveValue("Errada@123");
       expect(screen.getByLabelText("Nova senha")).toHaveValue(NEW_PASSWORD);
-      expect(screen.getByLabelText("Confirmar nova senha")).toHaveValue(
+      expect(screen.getByLabelText("Confirmação da senha")).toHaveValue(
         NEW_PASSWORD,
       );
     });
@@ -471,68 +471,56 @@ describe("Profile — personal data", () => {
   });
 });
 
-describe("Profile — total contributed", () => {
-  it("shows the total of homologated hours", async () => {
+describe("Profile — layout", () => {
+  it("shows the page title and the form, without a global summary", async () => {
     signIn();
-    serveTotalWorkloadHours(40);
+    serveProfile({ totalWorkloadHours: 40 });
     renderProfile();
 
-    const counter = await findContributionCounter();
-
-    expect(within(counter).getByText("40")).toBeInTheDocument();
-    expect(within(counter).getByText("horas")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Dados Pessoais" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("form", { name: "Editar Perfil" }),
+    ).toBeInTheDocument();
+    // The total contributed is shown by the sidebar, not repeated here.
+    expect(
+      screen.queryByRole("group", { name: "Total contribuído" }),
+    ).toBeNull();
   });
 
-  it("shows a total of zero", async () => {
+  it("shows registration code and course as read-only", async () => {
     signIn();
-    serveTotalWorkloadHours(0);
+    serveProfile();
     renderProfile();
 
-    const counter = await findContributionCounter();
+    await findNameField();
 
-    expect(within(counter).getByText("0")).toBeInTheDocument();
-    expect(within(counter).getByText("horas")).toBeInTheDocument();
+    expect(screen.getByLabelText("Matrícula")).toBeDisabled();
+    expect(screen.getByLabelText("Matrícula")).toHaveValue("2026000001");
+    expect(screen.getByLabelText("Curso")).toBeDisabled();
+    expect(screen.getByLabelText("Curso")).toHaveValue("Ciência da Computação");
   });
 
-  it("uses the singular label for one hour", async () => {
+  it("has no sign-out button inside the form", async () => {
     signIn();
-    serveTotalWorkloadHours(1);
     renderProfile();
 
-    const counter = await findContributionCounter();
+    await findNameField();
+    const form = screen.getByRole("form", { name: "Editar Perfil" });
 
-    expect(within(counter).getByText("1")).toBeInTheDocument();
-    expect(within(counter).getByText("hora")).toBeInTheDocument();
+    expect(within(form).queryByRole("button", { name: /sair/i })).toBeNull();
   });
 
-  it("shows a three-digit total in full", async () => {
-    signIn();
-    serveTotalWorkloadHours(120);
-    renderProfile();
-
-    const counter = await findContributionCounter();
-
-    expect(within(counter).getByText("120")).toBeInTheDocument();
-  });
-
-  it("keeps the total the update returns after saving the name", async () => {
+  it("sends only once when the save button is clicked repeatedly", async () => {
     signIn({ fullName: "Joana Ribeiro" });
-    serveTotalWorkloadHours(40);
-    spyOnUpdate((body) =>
-      HttpResponse.json(
-        profileOf({
-          ...(body as Partial<UserProfile>),
-          totalWorkloadHours: 41,
-        }),
-      ),
-    );
+    const onUpdate = spyOnUpdate();
     const { user } = renderProfile();
 
-    await replaceName(user, "Joana Ribeiro Lima");
-    await user.click(getSaveButton());
-    await screen.findByText("Perfil atualizado com sucesso.");
+    await replaceName(user, "Joana Lima");
+    await user.dblClick(getSaveButton());
 
-    const counter = await findContributionCounter();
-    expect(within(counter).getByText("41")).toBeInTheDocument();
+    await screen.findByText("Perfil atualizado com sucesso.");
+    expect(onUpdate).toHaveBeenCalledTimes(1);
   });
 });

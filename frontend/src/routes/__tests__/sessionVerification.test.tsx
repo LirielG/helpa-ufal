@@ -104,8 +104,9 @@ describe("session verification on load", () => {
 
     check.respond(() => HttpResponse.json(meResponse(user)));
 
-    expect(await screen.findByText("Dados Pessoais")).toBeInTheDocument();
-    expect(queryLoginForm()).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "Dados Pessoais" }),
+    ).toBeInTheDocument();    expect(queryLoginForm()).toBeNull();
     expect(useAuthStore.getState().user).not.toBeNull();
   });
 

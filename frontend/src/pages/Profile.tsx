@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
+import { User } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
 import { Alert } from "../components/Alert";
-import { ProfileCard } from "../features/profile/components/ProfileCard";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
 import { getProfile, updateProfile } from "../features/profile/services";
 import {
@@ -22,7 +22,7 @@ const PASSWORD_CHANGED_MESSAGE =
   "Senha alterada. Entre novamente com a nova senha.";
 
 export function Profile() {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
   const navigate = useNavigate();
 
@@ -90,18 +90,18 @@ export function Profile() {
       return;
     }
 
+    // The sidebar reads the name from the auth store, so it updates here too.
     setProfile(updated);
     if (user) setUser({ ...user, fullName: updated.fullName });
-  };
-
-  const handleLogout = async () => {
-    await logout();
   };
 
   if (isLegacyActionsUrl) {
     return null;
   }
 
+  // NOTE: the shell below (DashboardShell + background) is the pre-sidebar
+  // one. Replace it with the layout that wraps the sidebar once I can see it;
+  // everything inside <main-content> stays as is.
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
       <div
@@ -113,20 +113,33 @@ export function Profile() {
           backgroundSize: "cover",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 py-8">
+        <div className="w-full max-w-5xl mx-auto px-4 py-6 md:py-8 space-y-6">
+          <h1 className="flex items-center gap-3 text-2xl md:text-4xl font-bold text-[#00579A]">
+            <span
+              aria-hidden="true"
+              className="flex size-9 md:size-11 shrink-0 items-center justify-center rounded-lg bg-[#00579A] text-white"
+            >
+              <User className="size-5 md:size-6" />
+            </span>
+            Dados Pessoais
+          </h1>
+
           {isLoading && (
-            <div className="flex items-center justify-center min-h-[40vh]">
+            <div
+              role="status"
+              className="flex items-center justify-center min-h-[40vh]"
+            >
               <p className="text-gray-500 text-lg">Carregando...</p>
             </div>
           )}
 
           {!isLoading && loadError && (
-            <div className="flex flex-col items-center justify-center gap-4 py-12">
+            <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
               <Alert type="error" message={loadError} />
               <button
                 type="button"
                 onClick={handleRetry}
-                className="px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer"
+                className="px-4 py-2 bg-[#1B75BB] text-white rounded-lg hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B75BB] transition-colors font-medium cursor-pointer"
               >
                 Tentar novamente
               </button>
@@ -134,16 +147,8 @@ export function Profile() {
           )}
 
           {!isLoading && !loadError && profile && (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              <ProfileCard user={profile} />
-
-              <div className="bg-white rounded-2xl shadow-sm p-6">
-                <PersonalDataForm
-                  user={profile}
-                  onSave={handleSave}
-                  onLogout={handleLogout}
-                />
-              </div>
+            <div className="bg-white rounded-2xl md:rounded-3xl shadow-md p-5 sm:p-8 md:p-10">
+              <PersonalDataForm user={profile} onSave={handleSave} />
             </div>
           )}
         </div>

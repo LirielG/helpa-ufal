@@ -83,7 +83,9 @@ describe("AppRoutes", () => {
       await screen.findByRole("button", { name: "Entrar" });
       await submitLogin(user);
 
-      expect(await screen.findByText("Dados Pessoais")).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: "Dados Pessoais" }),
+      ).toBeInTheDocument();
     });
 
     it("lets a signed-in user reach /profile", async () => {
@@ -91,7 +93,9 @@ describe("AppRoutes", () => {
 
       render(<AppRoutes />, { route: "/profile" });
 
-      expect(await screen.findByText("Dados Pessoais")).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: "Dados Pessoais" }),
+      ).toBeInTheDocument();
     });
 
     it("drops the user on the login screen when they log out of /profile", async () => {
