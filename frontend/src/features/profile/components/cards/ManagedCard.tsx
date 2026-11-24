@@ -12,24 +12,14 @@ import { ConfirmStatusModal } from "./ConfirmStatusModal";
 import { DeleteActionModal } from "./DeleteActionModal";
 import { ActionCover } from "@/components/ActionCover";
 import { Button } from "@/components/Button";
+import { ACTION_STATUS_LABELS } from "../../../dashboard/constants";
 
 // The current status first, then only the transitions the backend accepts.
-const STATUS_OPTIONS: Record<
-  ActivityStatus,
-  { value: ActivityStatus; label: string }[]
-> = {
-  OPEN: [
-    { value: "OPEN", label: "Aberta" },
-    { value: "IN_PROGRESS", label: "Em andamento" },
-    { value: "CANCELLED", label: "Cancelada" },
-  ],
-  IN_PROGRESS: [
-    { value: "IN_PROGRESS", label: "Em andamento" },
-    { value: "COMPLETED", label: "Concluída" },
-    { value: "CANCELLED", label: "Cancelada" },
-  ],
-  COMPLETED: [{ value: "COMPLETED", label: "Concluída" }],
-  CANCELLED: [{ value: "CANCELLED", label: "Cancelada" }],
+const STATUS_BADGE_CLASSES: Record<ActivityStatus, string> = {
+  OPEN: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  IN_PROGRESS: "bg-blue-50 text-[#1B75BB] border-blue-200",
+  COMPLETED: "bg-gray-100 text-gray-700 border-gray-200",
+  CANCELLED: "bg-red-50 text-red-700 border-red-200",
 };
 
 const NOT_FOUND_MESSAGE =
@@ -69,10 +59,9 @@ export function ManagedCard({
 
   const isSubmittingRef = useRef(false);
 
-  const isTerminal =
-    currentStatus === "COMPLETED" || currentStatus === "CANCELLED";
   const isLocked = errorState?.isLocked === true;
-  const showStatusHint = currentStatus === "OPEN" && !isLocked;
+  const canTransition =
+    currentStatus === "OPEN" || currentStatus === "IN_PROGRESS";
 
   const reloadAfterConflict = async () => {
     setErrorState({
@@ -166,19 +155,6 @@ export function ManagedCard({
     }
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selected = e.target.value as ActivityStatus;
-    if (selected === currentStatus || selected === "OPEN") return;
-
-    const transitionStatus = selected as ActivityStatusTransition;
-
-    if (transitionStatus === "IN_PROGRESS") {
-      performStatusUpdate("IN_PROGRESS");
-    } else {
-      setPendingStatus(transitionStatus);
-    }
-  };
-
   const handleRetry = () => {
     if (errorState?.retryStatus) {
       performStatusUpdate(errorState.retryStatus);
@@ -214,78 +190,83 @@ export function ManagedCard({
             </div>
           </div>
 
-          <div className="flex flex-col items-end justify-between self-stretch gap-4 shrink-0">
-            <div className="flex flex-col items-start gap-1">
-              <label
-                htmlFor={`status-select-${activity.action.id}`}
-                className="text-xs font-medium text-gray-700"
-              >
-                Status
-              </label>
-              <select
-                id={`status-select-${activity.action.id}`}
-                value={currentStatus}
-                onChange={handleSelectChange}
-                disabled={isLoading || isTerminal || isLocked}
-                aria-describedby={
-                  showStatusHint
-                    ? `status-hint-${activity.action.id}`
-                    : undefined
-                }
-                className="border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {STATUS_OPTIONS[currentStatus].map((opt) => (
-                  <option
-                    key={opt.value}
-                    value={opt.value}
-                    className="bg-white text-gray-800 py-1.5 px-3 hover:bg-gray-200"
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              {showStatusHint && (
-                <p
-                  id={`status-hint-${activity.action.id}`}
-                  className="text-xs text-gray-600 leading-tight max-w-[150px] mt-0.5"
+          <span
+            className={`shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_BADGE_CLASSES[currentStatus]}`}
+          >
+            {ACTION_STATUS_LABELS[currentStatus]}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100">
+          {canTransition && (
+            <div className="flex flex-wrap items-center gap-2">
+              {currentStatus === "OPEN" && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={isLoading || isLocked}
+                  onClick={() => setPendingStatus("IN_PROGRESS")}
                 >
-                  Para concluir, primeiro marque a ação como Em andamento.
-                </p>
+                  Iniciar ação
+                </Button>
               )}
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+              {currentStatus === "IN_PROGRESS" && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={isLoading || isLocked}
+                  onClick={() => setPendingStatus("COMPLETED")}
+                >
+                  Concluir ação
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => onEdit(activity.action.id)}
+                disabled={isLoading || isLocked}
+                onClick={() => setPendingStatus("CANCELLED")}
               >
-                Editar
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => onManageEnrollments(activity.action.id)}
-              >
-                Inscritos
-              </Button>
-
-              <Button
-                type="button"
-                variant="danger"
-                size="sm"
-                onClick={() => setShowDeleteModal(true)}
-                className="text-red-400 hover:text-red-600 transition-colors p-1"
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <Trash2 className="size-4 shrink-0" />
-                  Excluir
-                </span>
+                Cancelar ação
               </Button>
             </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => onEdit(activity.action.id)}
+            >
+              Editar
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => onManageEnrollments(activity.action.id)}
+            >
+              Inscritos
+            </Button>
+
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => setShowDeleteModal(true)}
+              className="text-red-400 hover:text-red-600 transition-colors p-1"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Trash2 className="size-4 shrink-0" />
+                Excluir
+              </span>
+            </Button>
           </div>
         </div>
 
