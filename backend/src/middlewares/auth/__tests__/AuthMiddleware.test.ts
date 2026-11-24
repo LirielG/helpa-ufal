@@ -53,6 +53,10 @@ function aTokenWithInvalidSignature(
   return jwt.sign(payload, "wrong-secret");
 }
 
+function aTokenWithClaims(claims: object): string {
+  return jwt.sign(claims, process.env.JWT_SECRET!);
+}
+
 function mockRequest(
   options: {
     cookieToken?: string;
@@ -112,6 +116,7 @@ describe("AuthMiddleware", () => {
     ["malformed", MALFORMED_TOKEN],
     ["expired", anExpiredToken()],
     ["tampered", aTokenWithInvalidSignature()],
+    ["claimless", aTokenWithClaims({})],
   ])(
     "rejects a present %s cookie with optionalAuth()",
     async (_label, token) => {
@@ -189,6 +194,19 @@ describe("AuthMiddleware", () => {
     it("throws 401 for an expired token", async () => {
       const handler = middleware.requireAuth();
       const req = mockRequest({ cookieToken: anExpiredToken() });
+      const next = mockNext();
+
+      await expectAuthError(() => handler(req, RES, next), 401);
+      expect(next).not.toHaveBeenCalled();
+      expect(req.user).toBeUndefined();
+    });
+
+    it.each([
+      ["no claims", {}],
+      ["incomplete claims", { id: "x" }],
+    ])("throws 401 for a token with %s", async (_label, claims) => {
+      const handler = middleware.requireAuth();
+      const req = mockRequest({ cookieToken: aTokenWithClaims(claims) });
       const next = mockNext();
 
       await expectAuthError(() => handler(req, RES, next), 401);
