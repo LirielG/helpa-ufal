@@ -14,6 +14,10 @@ describe("generateValidationCode", () => {
     }
   });
 
+  it("draws codes of the requested length", () => {
+    expect(generateValidationCode(8)).toMatch(/^[0-9A-HJKMNP-TV-Z]{8}$/);
+  });
+
   it("draws a different code each time", () => {
     expect(generateValidationCode()).not.toBe(generateValidationCode());
   });
@@ -49,6 +53,12 @@ describe("normalizeValidationCode", () => {
     },
   );
 
+  it("normalizes a code of the requested length", () => {
+    expect(normalizeValidationCode("abcd-efgh", 8)).toBe("ABCDEFGH");
+    expect(normalizeValidationCode("ABCD–EFGO", 8)).toBe("ABCDEFG0");
+    expect(normalizeValidationCode("7KQ4MX9T2R", 8)).toBeNull();
+  });
+
   it("rejects U, which has no meaning in the alphabet", () => {
     expect(normalizeValidationCode("7KQ4MX9T2U")).toBeNull();
   });
@@ -57,5 +67,9 @@ describe("normalizeValidationCode", () => {
 describe("formatValidationCode", () => {
   it("splits the stored code into two groups of five", () => {
     expect(formatValidationCode("7KQ4MX9T2R")).toBe("7KQ4M-X9T2R");
+  });
+
+  it("splits an eight-character code into two groups of four", () => {
+    expect(formatValidationCode("ABCDEFGH")).toBe("ABCD-EFGH");
   });
 });

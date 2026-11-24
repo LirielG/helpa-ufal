@@ -2,7 +2,13 @@ import type { Request, Response } from "express";
 import AuthService from "@/services/auth/AuthService.js";
 import type { IAuthService } from "@/services/auth/IAuthService.js";
 import type { IAuthController } from "@/controllers/auth/IAuthController.js";
-import { LoginSchema, RegisterSchema } from "@/schemas/auth/AuthSchemas.js";
+import {
+  ForgotPasswordSchema,
+  LoginSchema,
+  RegisterSchema,
+  ResetPasswordSchema,
+  VerifyResetCodeSchema,
+} from "@/schemas/auth/AuthSchemas.js";
 import { authCookieMaxAge, authCookieOptions } from "@/config/auth-cookie.js";
 
 type Props = {
@@ -39,6 +45,27 @@ class AuthController implements IAuthController {
 
   public async logout(req: Request, res: Response): Promise<void> {
     res.clearCookie("token", authCookieOptions);
+
+    res.status(204).send();
+  }
+
+  public async forgotPassword(req: Request, res: Response): Promise<void> {
+    const data = ForgotPasswordSchema.parse(req.body);
+    await this._authService.requestPasswordReset(data);
+
+    res.status(204).send();
+  }
+
+  public async verifyResetCode(req: Request, res: Response): Promise<void> {
+    const data = VerifyResetCodeSchema.parse(req.body);
+    await this._authService.verifyResetCode(data);
+
+    res.status(204).send();
+  }
+
+  public async resetPassword(req: Request, res: Response): Promise<void> {
+    const data = ResetPasswordSchema.parse(req.body);
+    await this._authService.resetPassword(data);
 
     res.status(204).send();
   }
