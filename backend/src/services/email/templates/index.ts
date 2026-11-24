@@ -1,7 +1,9 @@
 import passwordChanged from "@/services/email/templates/passwordChanged.js";
+import passwordResetCode from "@/services/email/templates/passwordResetCode.js";
 
 export const emailTemplates = {
   passwordChanged,
+  passwordResetCode,
 };
 
 export type EmailTemplateCode = keyof typeof emailTemplates;
