@@ -1,8 +1,10 @@
 import UserRepository from "@/repositories/auth/UserRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
+import EmailService from "@/services/email/EmailService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IEmailService } from "@/services/email/IEmailService.js";
 import type {
   IUserRepository,
   UserWithProfile,
@@ -23,12 +25,20 @@ type Props = {
   userRepository?: IUserRepository;
   activityRepository?: IActivityRepository;
   enrollmentRepository?: IEnrollmentRepository;
+  emailService?: IEmailService;
 };
+
+// The e-mail greets by first name. fullName is already trimmed on the way in,
+// but splitting on any run of whitespace keeps this safe for stored data too.
+function firstNameOf(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0];
+}
 
 class UserService implements IUserService {
   private _userRepository: IUserRepository;
   private _activityRepository: IActivityRepository;
   private _enrollmentRepository: IEnrollmentRepository;
+  private _emailService: IEmailService;
 
   constructor(props?: Props) {
     this._userRepository = props?.userRepository ?? new UserRepository();
@@ -36,6 +46,7 @@ class UserService implements IUserService {
       props?.activityRepository ?? new ActivityRepository();
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
+    this._emailService = props?.emailService ?? new EmailService();
   }
 
   public async getProfile(userId: string): Promise<UserProfileResponse> {
@@ -77,12 +88,24 @@ class UserService implements IUserService {
       newHash = await bcryptjs.hash(input.newPassword, BCRYPT_SALT_ROUNDS);
     }
 
-    const [updatedUser, totalWorkloadHours] = await Promise.all([
-      this._userRepository.updateProfile(userId, {
+    // The owner is told as soon as the write succeeds, not after the response
+    // is built: from that moment the password HAS changed, even if reading the
+    // workload hours or building the profile fails right after.
+    const updateProfile = this._userRepository
+      .updateProfile(userId, {
         ...(input.fullName !== undefined && { fullName: input.fullName }),
         ...(input.course !== undefined && { course: input.course }),
         ...(newHash !== undefined && { passwordHash: newHash }),
-      }),
+      })
+      .then((user) => {
+        if (newHash !== undefined) {
+          this.notifyPasswordChanged(user.email, user.fullName);
+        }
+        return user;
+      });
+
+    const [updatedUser, totalWorkloadHours] = await Promise.all([
+      updateProfile,
       this._enrollmentRepository.sumConfirmedHoursByUserId(userId),
     ]);
 
@@ -101,6 +124,19 @@ class UserService implements IUserService {
     );
 
     return toPaginated(items, total, page, limit);
+  }
+
+  /**
+   * Fire and forget: the password is already changed, so a slow or failing
+   * SMTP server must neither delay the response nor turn it into an error.
+   * The failure is logged; the address is not, to keep it out of the logs.
+   */
+  private notifyPasswordChanged(email: string, fullName: string): void {
+    void this._emailService
+      .send(email, "passwordChanged", { firstName: firstNameOf(fullName) })
+      .catch((error: unknown) => {
+        console.error("[UserService] Password changed email failed:", error);
+      });
   }
 
   private toProfileResponse(

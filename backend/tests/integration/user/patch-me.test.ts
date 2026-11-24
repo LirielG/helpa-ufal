@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import bcryptjs from "bcryptjs";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
+import EmailService from "@/services/email/EmailService.js";
 import {
   createActivity,
   createEnrollment,
@@ -896,5 +897,164 @@ describe("PATCH /users/me", () => {
         expect(Object.keys(changed.body)).not.toContain("passwordHash");
       },
     );
+  });
+
+  // ---------- Password changed e-mail (issue #432) ----------
+  //
+  // integrationSetup replaces the SMTP transport, so no e-mail leaves the
+  // process. These tests read what the route handed to EmailService.send.
+
+  describe("password changed e-mail", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function spyOnSend() {
+      return vi.spyOn(EmailService.prototype, "send").mockResolvedValue();
+    }
+
+    it("sends passwordChanged to the owner, with the first name only", async () => {
+      const send = spyOnSend();
+      const student = await createStudent({ fullName: "Maria Silva" });
+
+      const response = await changePassword(student.token, DEFAULT_PASSWORD);
+
+      expect(response.status).toBe(200);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        student.user.email,
+        "passwordChanged",
+        { firstName: "Maria" },
+      );
+    });
+
+    it("sends it to a TEACHER's own address too", async () => {
+      const send = spyOnSend();
+      const teacher = await createTeacher({ fullName: "Ricardo Almeida" });
+
+      const response = await changePassword(teacher.token, DEFAULT_PASSWORD);
+
+      expect(response.status).toBe(200);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        teacher.user.email,
+        "passwordChanged",
+        { firstName: "Ricardo" },
+      );
+    });
+
+    it("greets by the name saved in the same request", async () => {
+      const send = spyOnSend();
+      const student = await createStudent({ fullName: "Maria Silva" });
+
+      const response = await changePassword(
+        student.token,
+        DEFAULT_PASSWORD,
+        NEW_PASSWORD,
+        { fullName: "Joana Souza" },
+      );
+
+      expect(response.status).toBe(200);
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        student.user.email,
+        "passwordChanged",
+        { firstName: "Joana" },
+      );
+    });
+
+    it.each([
+      ["only fullName (a student)", createStudent, { fullName: "Nome Novo" }],
+      [
+        // Only a TEACHER may edit the course here; a student's is rejected (400).
+        "only course (a teacher)",
+        createTeacher,
+        { course: "Engenharia de Software" },
+      ],
+    ])(
+      "does not send anything when the request changes %s",
+      async (_label, createUser, body) => {
+        const send = spyOnSend();
+        const account = await createUser();
+
+        const response = await patchMe(account.token, body);
+
+        expect(response.status).toBe(200);
+        expect(send).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      [
+        "a wrong currentPassword (403)",
+        (token: string) => changePassword(token, "Wrong@1234"),
+        403,
+      ],
+      [
+        "a newPassword equal to the current one (422)",
+        (token: string) =>
+          changePassword(token, DEFAULT_PASSWORD, DEFAULT_PASSWORD),
+        422,
+      ],
+      [
+        "a newPassword outside the policy (400)",
+        (token: string) => changePassword(token, DEFAULT_PASSWORD, "weak"),
+        400,
+      ],
+      [
+        "a newPassword without currentPassword (400)",
+        (token: string) => patchMe(token, { newPassword: NEW_PASSWORD }),
+        400,
+      ],
+    ])("does not send anything on %s", async (_label, attempt, status) => {
+      const send = spyOnSend();
+      const student = await createStudent();
+
+      const response = await attempt(student.token);
+
+      expect(response.status).toBe(status);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("does not send anything when the credential is rejected (401)", async () => {
+      const send = spyOnSend();
+
+      const response = await changePassword(invalidToken(), DEFAULT_PASSWORD);
+
+      expect(response.status).toBe(401);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("answers exactly the same 200 when the e-mail fails, and the change still holds", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      const send = vi
+        .spyOn(EmailService.prototype, "send")
+        .mockRejectedValue(new Error("smtp down"));
+      const student = await createStudent();
+
+      const response = await changePassword(student.token, DEFAULT_PASSWORD);
+
+      expect(response.status).toBe(200);
+      expect(response.body.id).toBe(student.user.id);
+      expect(Object.keys(response.body)).not.toContain("passwordHash");
+      expect(send).toHaveBeenCalledOnce();
+      // The change itself was not rolled back by the failed e-mail.
+      expect((await login(student.user.email, NEW_PASSWORD)).status).toBe(200);
+      expect((await login(student.user.email, DEFAULT_PASSWORD)).status).toBe(
+        401,
+      );
+      await vi.waitFor(() => expect(consoleError).toHaveBeenCalled());
+    });
+
+    it("does not hold the response while the e-mail is still being sent", async () => {
+      const send = vi
+        .spyOn(EmailService.prototype, "send")
+        .mockReturnValue(new Promise<void>(() => undefined));
+      const student = await createStudent();
+
+      const response = await changePassword(student.token, DEFAULT_PASSWORD);
+
+      expect(response.status).toBe(200);
+      expect(send).toHaveBeenCalledOnce();
+    });
   });
 });
