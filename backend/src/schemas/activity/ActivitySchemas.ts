@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACTIVITY_TITLE_MAX_LENGTH } from "@/schemas/common/FieldLimits.js";
+import { PaginationQuerySchema } from "@/schemas/common/PaginationSchemas.js";
 import { ActivityType, ActivityFormat, CampusLocation } from "@prisma/client";
 import { ActivityStatus } from "@/types/activity.js";
 
@@ -139,6 +140,8 @@ export const UpdateActivityStatusSchema = z
 export type UpdateActivityStatusInput = z.infer<
   typeof UpdateActivityStatusSchema
 >;
+
+export const ListActivitiesQuerySchema = PaginationQuerySchema.loose();
 
 export const allowedTransitions: Record<ActivityStatus, ActivityStatus[]> = {
   OPEN: ["IN_PROGRESS", "CANCELLED"],

@@ -27,12 +27,12 @@ http:
     - name: page
       value: "1"
       type: query
-      description: "Page number. Out-of-range values are normalized, never rejected."
+      description: "Page number"
       disabled: true
     - name: limit
-      value: "10"
+      value: "20"
       type: query
-      description: "Items per page. Out-of-range values are normalized, never rejected."
+      description: "Items per page"
       disabled: true
     - name: orderBy
       value: lastSeenAt
@@ -74,7 +74,7 @@ examples:
           type: query
           description: "Page number"
         - name: limit
-          value: "10"
+          value: "20"
           type: query
           description: "Items per page"
         - name: search
@@ -123,11 +123,11 @@ examples:
             ],
             "total": 1,
             "page": 1,
-            "limit": 10,
+            "limit": 20,
             "totalPages": 1
           }
   - name: 400 - Validation error
-    description: Only orderBy and order are validated. Any other invalid value — including page and limit out of range — is normalized or ignored instead of rejected.
+    description: Invalid orderBy or order.
     request:
       url: "{{baseUrl}}/sigaa-activities"
       method: GET
@@ -153,6 +153,38 @@ examples:
                 "field": "orderBy",
                 "message": "orderBy must be one of: title, lastSeenAt"
               }
+            ]
+          }
+  - name: 400 - Invalid pagination
+    description: page or limit is not a positive integer, or limit is above the ceiling. One item per parameter.
+    request:
+      url: "{{baseUrl}}/sigaa-activities"
+      method: GET
+      params:
+        - name: page
+          value: "0"
+          type: query
+          description: Below the first page.
+        - name: limit
+          value: "101"
+          type: query
+          description: Above the ceiling.
+    response:
+      status: 400
+      statusText: Bad Request
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 400,
+            "code": "VALIDATION_ERROR",
+            "message": "Invalid query parameters.",
+            "errors": [
+              { "field": "page", "code": "VALIDATION_ERROR", "message": "page must be a positive integer." },
+              { "field": "limit", "code": "VALIDATION_ERROR", "message": "limit must be at most 100." }
             ]
           }
   - name: 500 - Internal error
@@ -185,13 +217,13 @@ docs: |-
   | `search` | Partial, case-insensitive, on `title` | — |
   | `type` | Exact, on the raw SIGAA type (values from `GET /sigaa-activities/filters`) | — |
   | `department` | Exact, on the department acronym (values from `GET /sigaa-activities/filters`) | — |
-  | `page` / `limit` | Pagination, normalized instead of rejected (see below) | `1` / `10` |
+  | `page` / `limit` | Conventional pagination | conventional |
   | `orderBy` | `title` or `lastSeenAt` | `lastSeenAt` |
   | `order` | `asc` or `desc` | `desc` |
 
   - `department` is nullable on each item. `type` is the raw SIGAA label, as scraped; `normalizedType` is the mapped value (EXTENSION, COURSE, EVENT, LECTURE, OTHER).
   - `search`, `type` and `department` combine: `search` is a partial, case-insensitive match on the title, while `type` and `department` are exact matches. Only active activities are listed.
-  - Only `orderBy` and `order` are validated (400). `page` and `limit` out of range do NOT return 400 — they are normalized silently: a `limit` above the ceiling becomes the ceiling, `limit=0` falls back to the route's default of 10, `limit=-5` becomes 1 and `page=abc` becomes 1. The response echoes the normalized values. This diverges from the conventions, which reject out-of-range values with 400, and from GET /activities, which follows them.
+  - Invalid `page`, `limit`, `orderBy` or `order` values answer 400.
   - Unknown query params and filter values that match nothing are accepted and return an empty `items` list.
   - The request triggers an on-demand sync with the SIGAA (12h cache), so the first call after the cache expires can take much longer than the following ones. Use GET /sigaa-activities/filters when you only need the filter values, since that route never syncs.
 

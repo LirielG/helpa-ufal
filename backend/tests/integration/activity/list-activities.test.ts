@@ -189,7 +189,7 @@ describe("GET /activities — area filter", () => {
   // ---------- 400 - Validation ----------
   it("does not interfere with the existing query validation", async () => {
     // `area` itself never validates (issue #158, trap 5). The 400 below comes
-    // from `limit` — proving the new param slots into the existing manual
+    // from `limit` — proving the new param slots into the existing
     // validation without changing it.
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });
@@ -199,12 +199,12 @@ describe("GET /activities — area filter", () => {
       .query({ area: "Saúde", limit: 101 });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Validation error.");
+    expect(response.body.message).toBe("Invalid query parameters.");
     expect(response.body.errors).toEqual([
       {
         field: "limit",
         code: "VALIDATION_ERROR",
-        message: "limit can not exceed 100.",
+        message: "limit must be at most 100.",
       },
     ]);
   });

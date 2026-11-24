@@ -35,14 +35,6 @@ const MAX_SLOTS = 10_000;
 const MAX_WORKLOAD_HOURS = 8_760; // hours in a year
 const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
 
-// `page` and `limit` accept only plain digits. parseInt() alone is too
-// lenient: it turns "10.9" into 10 and "20abc" into 20 without any warning.
-const STRICT_INTEGER_PATTERN = /^\d+$/;
-
-function isStrictIntegerString(value: unknown): value is string {
-  return typeof value === "string" && STRICT_INTEGER_PATTERN.test(value);
-}
-
 // A filter is invalid when it is PRESENT but not one of the accepted values.
 // "Present" means anything other than `undefined`: an empty `?type=` is a
 // present-and-invalid value (400), not an absent filter. A non-string value
@@ -164,38 +156,6 @@ class ActivityService implements IActivityService {
   public async list(
     filters: IListActivitiesFilters,
   ): Promise<IListActivitiesResponse> {
-    // Absent -> default. Present (even empty) -> must be a plain integer.
-    const pageRaw: unknown = filters.page ?? "1";
-    const limitRaw: unknown = filters.limit ?? "20";
-
-    const pageNum = isStrictIntegerString(pageRaw) ? Number(pageRaw) : NaN;
-    const limitNum = isStrictIntegerString(limitRaw) ? Number(limitRaw) : NaN;
-
-    const paginationErrors = [];
-
-    if (isNaN(pageNum) || pageNum < 1) {
-      paginationErrors.push({
-        field: "page",
-        message: "page must be a positive integer.",
-      } as ValidationErrorItem);
-    }
-
-    if (isNaN(limitNum) || limitNum < 1) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit must be a positive integer.",
-      } as ValidationErrorItem);
-    } else if (limitNum > 100) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit can not exceed 100.",
-      } as ValidationErrorItem);
-    }
-
-    if (paginationErrors.length > 0) {
-      throw new ValidationError(paginationErrors);
-    }
-
     const filterErrors = [];
 
     // Derived from the Prisma enums, so a value added to schema.prisma is
@@ -273,13 +233,13 @@ class ActivityService implements IActivityService {
       search: filters.search,
       campus: filters.campus,
       area: trimmedArea ? trimmedArea : undefined,
-      page: pageNum,
-      limit: limitNum,
+      page: filters.page,
+      limit: filters.limit,
       orderBy: sortField,
       order: (filters.order ?? "desc") as "asc" | "desc",
     });
 
-    return toPaginated(result.items, result.total, pageNum, limitNum);
+    return toPaginated(result.items, result.total, filters.page, filters.limit);
   }
 
   public async listFilterOptions(): Promise<ActivityFilterOptions> {
