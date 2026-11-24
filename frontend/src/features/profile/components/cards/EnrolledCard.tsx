@@ -52,7 +52,7 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
             onClick={() => setShowCancelModal(true)}
             className="self-end px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
           >
-            Cancelar
+            Cancelar inscrição
           </button>
         )}
 

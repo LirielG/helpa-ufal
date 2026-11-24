@@ -745,4 +745,25 @@ describe("EnrolledCard", () => {
       screen.queryByRole("button", { name: "Gerenciar inscritos" }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders 'Cancelar inscrição' button for open actions and opens confirmation modal on click", async () => {
+    const activity = makeUserActivity({
+      action: { id: "act-2", title: "Plantio de Árvores", status: "OPEN" },
+    });
+
+    const { user } = render(
+      <EnrolledCard activity={activity} onCancelled={vi.fn()} />,
+    );
+
+    const cancelButton = screen.getByRole("button", {
+      name: "Cancelar inscrição",
+    });
+    expect(cancelButton).toBeInTheDocument();
+
+    await user.click(cancelButton);
+
+    expect(
+      screen.getByRole("dialog", { name: "Cancelar inscrição" }),
+    ).toBeInTheDocument();
+  });
 });
