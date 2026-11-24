@@ -111,26 +111,6 @@ const actionEditBaseSchema = z
   )
   .superRefine(validateWorkloadDuration)
   .superRefine((data, ctx) => {
-    // In person the link field is hidden, so whatever it still holds is not
-    // checked: an error there would block the save with nothing on screen.
-    if (data.format === "IN_PERSON") return;
-
-    if (!data.url) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
-        path: ["url"],
-      });
-    } else if (!isValidActionUrl(data.url)) {
-      ctx.addIssue({
-        code: "custom",
-        message: ACTION_URL_INVALID_MESSAGE,
-        path: ["url"],
-      });
-    }
-  })
-  .superRefine((data, ctx) => {
     if (data.format === "ONLINE") return;
 
     REQUIRED_ADDRESS_FIELDS.forEach(([field, message]) => {
@@ -163,21 +143,34 @@ const actionEditBaseSchema = z
     }
   });
 
+/** Values of the action as loaded, before any edit. */
+export type SavedAction = {
+  title: string;
+  description: string;
+  url: string;
+  format: ActionEditSchemaType["format"] | undefined;
+};
+
 /**
- * The description rule only binds a description the user is changing: actions
- * created while the description was optional may hold a shorter one, and that
- * must not block an unrelated edit.
+ * Actions created under older rules may hold a title, description or link that
+ * no longer passes. Each of these rules binds only a value the user is
+ * changing, so an old one does not block an unrelated edit.
  */
-export function actionEditSchemaFor(
-  savedDescription: string,
-  savedTitle: string,
-) {
+export function actionEditSchemaFor(saved: SavedAction) {
   return actionEditBaseSchema
     .safeExtend({
-      title: activityTitleSchemaFor(savedTitle),
+      title: activityTitleSchemaFor(saved.title),
+      // The saved link stays as it is: normalized, an untouched
+      // "mailto:a@b.br" would become "https://mailto:a@b.br" and count as
+      // changed.
+      url: z
+        .string()
+        .transform((url) =>
+          url === saved.url ? url : normalizeActionUrl(url),
+        ),
     })
     .superRefine(({ description }, ctx) => {
-      if (description === savedDescription.trim()) return;
+      if (description === saved.description.trim()) return;
 
       const result = activityDescriptionSchema.safeParse(description);
       if (!result.success) {
@@ -185,6 +178,28 @@ export function actionEditSchemaFor(
           code: "custom",
           message: result.error.issues[0].message,
           path: ["description"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      // In person the link field is hidden, so whatever it still holds is not
+      // checked: an error there would block the save with nothing on screen.
+      if (data.format === "IN_PERSON") return;
+
+      if (data.url === saved.url && data.format === saved.format) return;
+
+      if (!data.url) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Informe um link válido. Ele é obrigatório em ações on-line e híbridas.",
+          path: ["url"],
+        });
+      } else if (!isValidActionUrl(data.url)) {
+        ctx.addIssue({
+          code: "custom",
+          message: ACTION_URL_INVALID_MESSAGE,
+          path: ["url"],
         });
       }
     });
