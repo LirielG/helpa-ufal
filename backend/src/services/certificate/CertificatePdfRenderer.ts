@@ -133,9 +133,9 @@ export function buildCertificateContent(
     period: `realizada ${when}, com carga horária de ${hours}.`,
     issued: `Emitido em ${dateFormatter.format(data.issuedAt)}`,
     validationCode: `Código de validação: ${formatValidationCode(data.validationCode)}`,
-    verifyAt: `Confira a autenticidade em ${printedHost}/validar`,
+    verifyAt: `Confira a autenticidade em ${printedHost}/validate`,
     // The QR carries the stored form (no hyphen), unlike the printed code.
-    qrUrl: `${appPublicUrl}/validar/${data.validationCode}`,
+    qrUrl: `${appPublicUrl}/validate/${data.validationCode}`,
   };
 }
 

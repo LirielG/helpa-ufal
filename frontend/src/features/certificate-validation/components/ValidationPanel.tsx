@@ -28,7 +28,7 @@ export function ValidationPanel({ code }: ValidationPanelProps) {
     navigating.current = true;
 
     // The result gets a shareable link.
-    navigate(`/validar/${encodeURIComponent(submitted)}`);
+    navigate(`/validate/${encodeURIComponent(submitted)}`);
   };
 
   return (

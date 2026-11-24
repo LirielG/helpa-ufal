@@ -137,7 +137,7 @@ describe("EnvSchema — APP_PUBLIC_URL", () => {
     expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
   });
 
-  // `/validar/<code>` is appended to the value, which would land inside a
+  // `/validate/<code>` is appended to the value, which would land inside a
   // query string or fragment.
   it.each([
     "helpa.ufal.br",

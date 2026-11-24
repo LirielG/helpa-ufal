@@ -39,7 +39,7 @@ describe("Footer", () => {
       expect(links[0]).toHaveAttribute("href", "/");
       expect(links[1]).toHaveAttribute("href", "/login");
       expect(links[2]).toHaveAttribute("href", "/register");
-      expect(links[3]).toHaveAttribute("href", "/validar");
+      expect(links[3]).toHaveAttribute("href", "/validate");
 
       expect(
         within(footer).queryByRole("heading", { name: "Contato" }),
@@ -56,7 +56,7 @@ describe("Footer", () => {
       ["Sobre o projeto", "/"],
       ["Entrar", "/login"],
       ["Criar conta", "/register"],
-      ["Validar certificado", "/validar"],
+      ["Validar certificado", "/validate"],
     ] as const)(
       "navigates to %s (%s) when clicked",
       async (label, expectedPath) => {
@@ -84,7 +84,7 @@ describe("Footer", () => {
 
       expect(
         screen.getByRole("status", { name: "URL atual" }),
-      ).toHaveTextContent("/validar");
+      ).toHaveTextContent("/validate");
     });
   });
 
@@ -104,7 +104,7 @@ describe("Footer", () => {
 
       expect(links[0]).toHaveAttribute("href", "/dashboard");
       expect(links[1]).toHaveAttribute("href", "/profile");
-      expect(links[2]).toHaveAttribute("href", "/validar");
+      expect(links[2]).toHaveAttribute("href", "/validate");
 
       expect(
         within(footer).queryByRole("link", { name: "Sobre o projeto" }),
@@ -126,7 +126,7 @@ describe("Footer", () => {
     it.each([
       ["Ações", "/dashboard"],
       ["Meu perfil", "/profile"],
-      ["Validar certificado", "/validar"],
+      ["Validar certificado", "/validate"],
     ] as const)(
       "navigates to %s (%s) when clicked",
       async (label, expectedPath) => {

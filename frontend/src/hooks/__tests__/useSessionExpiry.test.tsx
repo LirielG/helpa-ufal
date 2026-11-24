@@ -49,12 +49,12 @@ describe("useSessionExpiry", () => {
   it("drops the user but stays on the certificate validation page", () => {
     useAuthStore.getState().setUser(makeUser());
 
-    render(<LocationProbe />, { route: "/validar/7KQ4MX9T2R" });
+    render(<LocationProbe />, { route: "/validate/7KQ4MX9T2R" });
 
     act(() => notifySessionExpired());
 
     expect(useAuthStore.getState().user).toBeNull();
-    expect(screen.getByText("/validar/7KQ4MX9T2R")).toBeInTheDocument();
+    expect(screen.getByText("/validate/7KQ4MX9T2R")).toBeInTheDocument();
   });
 
   it("stops reacting after being unmounted", () => {

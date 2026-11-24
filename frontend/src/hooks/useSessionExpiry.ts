@@ -9,7 +9,7 @@ import { useAuthStore } from "../stores/authStore";
  * from the result.
  */
 function staysOnExpiry(pathname: string): boolean {
-  return pathname === "/validar" || pathname.startsWith("/validar/");
+  return pathname === "/validate" || pathname.startsWith("/validate/");
 }
 
 /**
