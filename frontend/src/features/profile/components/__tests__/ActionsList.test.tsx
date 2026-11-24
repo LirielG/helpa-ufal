@@ -687,7 +687,7 @@ describe("ActionsList pagination", () => {
     await user.click(screen.getByRole("button", { name: "Página 3" }));
     await screen.findByText("Ação 41");
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
     await user.click(await screen.findByRole("button", { name: "Fechar" }));
 
@@ -855,7 +855,7 @@ describe("ActionsList deletion", () => {
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
       "button",
       {
-        name: "Excluir atividade",
+        name: "Excluir",
       },
     );
     await user.click(deleteButton);
@@ -883,7 +883,7 @@ describe("ActionsList deletion", () => {
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
       "button",
       {
-        name: "Excluir atividade",
+        name: "Excluir",
       },
     );
     await user.click(deleteButton);

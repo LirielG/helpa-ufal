@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MapPin, Calendar, Pencil, Trash2, Users } from "lucide-react";
+import { MapPin, Calendar, Trash2 } from "lucide-react";
 import type { ActivityStatus } from "@/services/contracts/activity";
 import { ApiError } from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
@@ -11,6 +11,7 @@ import {
 import { ConfirmStatusModal } from "./ConfirmStatusModal";
 import { DeleteActionModal } from "./DeleteActionModal";
 import { ActionCover } from "@/components/ActionCover";
+import { Button } from "@/components/Button";
 
 // The current status first, then only the transitions the backend accepts.
 const STATUS_OPTIONS: Record<
@@ -253,31 +254,37 @@ export function ManagedCard({
               )}
             </div>
 
-            <div className="flex flex-col items-center gap-3">
-              <button
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onEdit(activity.action.id)}
+              >
+                Editar
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onManageEnrollments(activity.action.id)}
+              >
+                Inscritos
+              </Button>
+
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
                 onClick={() => setShowDeleteModal(true)}
-                aria-label="Excluir atividade"
                 className="text-red-400 hover:text-red-600 transition-colors p-1"
               >
-                <Trash2 className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onEdit(activity.action.id)}
-                aria-label="Editar atividade"
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-              >
-                <Pencil className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onManageEnrollments(activity.action.id)}
-                aria-label="Gerenciar inscritos"
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-              >
-                <Users className="size-4" />
-              </button>
+                <span className="inline-flex items-center gap-1.5">
+                  <Trash2 className="size-4 shrink-0" />
+                  Excluir
+                </span>
+              </Button>
             </div>
           </div>
         </div>

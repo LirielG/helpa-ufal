@@ -570,7 +570,7 @@ describe("ManagedCard status control", () => {
     const onEdit = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit);
 
-    await user.click(screen.getByRole("button", { name: "Editar atividade" }));
+    await user.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
   });
@@ -584,7 +584,7 @@ describe("ManagedCard deletion", () => {
     );
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
 
     expect(
       screen.getByRole("heading", { name: "Confirmar exclusão" }),
@@ -608,7 +608,7 @@ describe("ManagedCard deletion", () => {
     const requests = recordDeletes();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Não" }));
 
     expect(
@@ -621,7 +621,7 @@ describe("ManagedCard deletion", () => {
   it("includes confirmation copy distinguishing deletion from cancellation with no notification promise", async () => {
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
 
     expect(
       screen.getByText(/será completamente excluída e não terá como recorrer/i),
@@ -639,7 +639,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     expect(
@@ -655,7 +655,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
@@ -670,7 +670,7 @@ describe("ManagedCard deletion", () => {
     );
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() =>
@@ -683,7 +683,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     expect(
@@ -700,7 +700,7 @@ describe("ManagedCard deletion", () => {
     );
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.dblClick(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() => expect(requests).toHaveLength(1));
@@ -708,14 +708,33 @@ describe("ManagedCard deletion", () => {
 });
 
 describe("ManagedCard enrollments entry point", () => {
+  it("renders Editar, Inscritos and Excluir in order with danger styling only on Excluir", () => {
+    renderCard(managed("OPEN"));
+
+    const editButton = screen.getByRole("button", { name: "Editar" });
+    const enrollmentsButton = screen.getByRole("button", { name: "Inscritos" });
+    const deleteButton = screen.getByRole("button", { name: "Excluir" });
+
+    expect(
+      editButton.compareDocumentPosition(enrollmentsButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      enrollmentsButton.compareDocumentPosition(deleteButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    expect(deleteButton).toHaveClass("bg-red-800");
+    expect(editButton).not.toHaveClass("bg-red-800");
+    expect(enrollmentsButton).not.toHaveClass("bg-red-800");
+  });
+
   it("opens the enrollment list without triggering edit", async () => {
     const onEdit = vi.fn();
     const onManageEnrollments = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
 
-    await user.click(
-      screen.getByRole("button", { name: "Gerenciar inscritos" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Inscritos" }));
 
     expect(onManageEnrollments).toHaveBeenCalledWith(ACTION_ID);
     expect(onEdit).not.toHaveBeenCalled();
@@ -726,7 +745,7 @@ describe("ManagedCard enrollments entry point", () => {
     const onManageEnrollments = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
 
-    await user.click(screen.getByRole("button", { name: "Editar atividade" }));
+    await user.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
     expect(onManageEnrollments).not.toHaveBeenCalled();
@@ -742,7 +761,7 @@ describe("EnrolledCard", () => {
     render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);
 
     expect(
-      screen.queryByRole("button", { name: "Gerenciar inscritos" }),
+      screen.queryByRole("button", { name: "Inscritos" }),
     ).not.toBeInTheDocument();
   });
 });
