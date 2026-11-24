@@ -766,4 +766,29 @@ describe("EnrolledCard", () => {
       screen.getByRole("dialog", { name: "Cancelar inscrição" }),
     ).toBeInTheDocument();
   });
+
+  it("renders the title as a link to /activity/:id with stretched link covering the card", () => {
+    const activity = makeUserActivity({
+      action: { id: "act-2", title: "Plantio de Árvores" },
+    });
+
+    render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);
+
+    const titleLink = screen.getByRole("link", { name: "Plantio de Árvores" });
+    expect(titleLink).toHaveAttribute("href", "/activity/act-2");
+    expect(titleLink).toHaveClass("after:absolute", "after:inset-0");
+  });
+
+  it("renders 'Ver detalhes' button without icon as a link to /activity/:id", () => {
+    const activity = makeUserActivity({
+      action: { id: "act-2", title: "Plantio de Árvores" },
+    });
+
+    render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);
+
+    const detailsLink = screen.getByRole("link", { name: "Ver detalhes" });
+    expect(detailsLink).toHaveAttribute("href", "/activity/act-2");
+    expect(detailsLink).toHaveTextContent("Ver detalhes");
+    expect(detailsLink.querySelector("svg")).toBeNull();
+  });
 });

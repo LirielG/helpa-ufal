@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { MapPin, Calendar } from "lucide-react";
 import { CancelEnrollmentModal } from "@/features/action-detail/components/CancelEnrollmentModal";
 import type { UserActivity } from "../../types";
@@ -24,7 +25,7 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md flex flex-col">
+    <div className="relative bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md flex flex-col">
       <ActionCover
         id={activity.action.id}
         type={activity.action.type}
@@ -32,7 +33,12 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
       />
       <div className="p-5 flex flex-col gap-3 flex-1">
         <h4 className="font-bold text-gray-900 leading-snug">
-          {activity.action.title}
+          <Link
+            to={`/activity/${activity.action.id}`}
+            className="hover:text-[#00579A] transition-colors after:absolute after:inset-0"
+          >
+            {activity.action.title}
+          </Link>
         </h4>
         <p className="text-sm text-gray-600">{activity.description}</p>
 
@@ -46,15 +52,24 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
           <span>{activity.date}</span>
         </div>
 
-        {canCancel && (
-          <button
-            type="button"
-            onClick={() => setShowCancelModal(true)}
-            className="self-end px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+        <div className="mt-auto pt-2 flex items-center justify-between gap-3 flex-wrap">
+          <Link
+            to={`/activity/${activity.action.id}`}
+            className="relative z-10 px-4 py-2 border border-[#00579A] text-[#00579A] hover:bg-[#00579A] hover:text-white rounded-lg text-sm font-semibold transition-colors text-center"
           >
-            Cancelar inscrição
-          </button>
-        )}
+            Ver detalhes
+          </Link>
+
+          {canCancel && (
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(true)}
+              className="relative z-10 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Cancelar inscrição
+            </button>
+          )}
+        </div>
 
         {showCancelModal && (
           <CancelEnrollmentModal
