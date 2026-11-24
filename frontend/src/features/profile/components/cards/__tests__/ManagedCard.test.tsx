@@ -14,6 +14,7 @@ import type { ActivityStatus } from "@/services/contracts/activity";
 import type { UserActivity } from "../../../types";
 import { ManagedCard } from "../ManagedCard";
 import { EnrolledCard } from "../EnrolledCard";
+import { toast } from "react-toastify";
 
 const ACTION_ID = "act-managed";
 
@@ -661,8 +662,9 @@ describe("ManagedCard status control", () => {
 });
 
 describe("ManagedCard deletion", () => {
-  it("shows the success modal after a 204 and reports the deletion only once it is closed", async () => {
+  it("closes the modal, removes the card and shows a toast after a 204 without a second modal", async () => {
     const onDelete = vi.fn();
+    const toastSuccess = vi.spyOn(toast, "success");
     const requests = recordDeletes(
       () => new HttpResponse(null, { status: 204 }),
     );
@@ -676,15 +678,15 @@ describe("ManagedCard deletion", () => {
 
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
-    expect(
-      await screen.findByText("Sua ação foi excluída"),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
     expect(requests).toHaveLength(1);
-    expect(onDelete).not.toHaveBeenCalled();
+    expect(toastSuccess).toHaveBeenCalledWith("Ação excluída.");
+    expect(
+      screen.queryByRole("heading", { name: "Confirmar exclusão" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Sua ação foi excluída")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Fechar" }));
-
-    expect(onDelete).toHaveBeenCalledWith(ACTION_ID);
+    toastSuccess.mockRestore();
   });
 
   it("does not send DELETE request when cancelling the confirmation modal", async () => {

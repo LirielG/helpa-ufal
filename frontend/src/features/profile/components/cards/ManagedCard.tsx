@@ -13,6 +13,7 @@ import { DeleteActionModal } from "./DeleteActionModal";
 import { ActionCover } from "@/components/ActionCover";
 import { Button } from "@/components/Button";
 import { ACTION_STATUS_LABELS } from "../../../dashboard/constants";
+import { toast } from "react-toastify";
 
 // The current status first, then only the transitions the backend accepts.
 const STATUS_BADGE_CLASSES: Record<ActivityStatus, string> = {
@@ -46,7 +47,6 @@ export function ManagedCard({
     useState<ActivityStatusTransition | null>(null);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeletedSuccess, setShowDeletedSuccess] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -132,8 +132,9 @@ export function ManagedCard({
 
     try {
       await deleteActivity(activity.action.id);
+      toast.success("Ação excluída.");
       setShowDeleteModal(false);
-      setShowDeletedSuccess(true);
+      onDelete(activity.action.id);
     } catch (err: unknown) {
       const status = err instanceof ApiError ? err.status : undefined;
 
@@ -302,19 +303,14 @@ export function ManagedCard({
           />
         )}
 
-        {(showDeleteModal || showDeletedSuccess) && (
+        {showDeleteModal && (
           <DeleteActionModal
-            isSuccess={showDeletedSuccess}
             isLoading={isDeleting}
             errorMessage={deleteError}
             onConfirmDelete={handleConfirmDelete}
             onClose={() => {
               // Removing the card from the list unmounts it, so the success
               // modal must be dismissed first or it would vanish unseen.
-              if (showDeletedSuccess) {
-                onDelete(activity.action.id);
-                return;
-              }
               setShowDeleteModal(false);
               setDeleteError(null);
             }}
