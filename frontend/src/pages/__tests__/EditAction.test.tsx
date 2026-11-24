@@ -765,6 +765,212 @@ describe("EditAction", () => {
     });
   });
 
+  describe("link saved before the http/https rule", () => {
+    it("saves another field without touching the old link", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "ftp://files.ufal.br/x",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Novo título");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({ title: "Novo título" }),
+      );
+      expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    });
+
+    it("leaves an old link without slashes as it is when the field only gets focus", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "mailto:contato@ufal.br",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Novo título");
+
+      const url = screen.getByLabelText("Link para o evento");
+      await user.click(url);
+      await user.tab();
+      expect(url).toHaveValue("mailto:contato@ufal.br");
+
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({ title: "Novo título" }),
+      );
+    });
+
+    it("does not send an old link that was edited and then restored", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "mailto:contato@ufal.br",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Novo título");
+
+      const url = screen.getByLabelText("Link para o evento");
+      await user.type(url, "x");
+      await user.tab();
+      expect(url).toHaveValue("https://mailto:contato@ufal.brx");
+      await user.clear(url);
+      await user.type(url, "mailto:contato@ufal.br");
+      await user.tab();
+      expect(url).toHaveValue("mailto:contato@ufal.br");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({ title: "Novo título" }),
+      );
+    });
+
+    it("blocks an old link left with the https:// the field added", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "mailto:contato@ufal.br",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+      const url = screen.getByLabelText("Link para o evento");
+      await user.type(url, "x");
+      await user.tab();
+      await user.type(url, "{Backspace}");
+      expect(url).toHaveValue("https://mailto:contato@ufal.br");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+        ),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("sends an old link completed with https://", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "meet.google.com:443/x",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+      const url = screen.getByLabelText("Link para o evento");
+      await user.clear(url);
+      await user.type(url, "https://meet.google.com:443/x");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({
+          url: "https://meet.google.com:443/x",
+        }),
+      );
+    });
+
+    it("blocks an old link changed to another invalid one", async () => {
+      mockAction(
+        editableAction({
+          format: "ONLINE",
+          address: null,
+          url: "ftp://files.ufal.br/x",
+        }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      await findTitleField();
+      const url = screen.getByLabelText("Link para o evento");
+      await user.clear(url);
+      await user.type(url, "ftp://outro");
+      await user.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+        ),
+      ).toBeInTheDocument();
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("saves another field of an online action that has no link", async () => {
+      mockAction(
+        editableAction({ format: "ONLINE", address: null, url: null }),
+      );
+      const onUpdate = spyOnUpdate();
+      const { user } = renderEditAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Novo título");
+      await user.click(getSaveButton());
+
+      await waitFor(() =>
+        expect(onUpdate).toHaveBeenCalledWith({ title: "Novo título" }),
+      );
+    });
+
+    it.each([
+      ["IN_PERSON", "ONLINE"],
+      ["IN_PERSON", "HYBRID"],
+      ["ONLINE", "HYBRID"],
+    ] as const)(
+      "still checks the old link when the format goes from %s to %s",
+      async (savedFormat, format) => {
+        mockAction(
+          editableAction({
+            format: savedFormat,
+            url: "ftp://files.ufal.br/x",
+          }),
+        );
+        const onUpdate = spyOnUpdate();
+        const { user } = renderEditAction();
+
+        await findTitleField();
+        await user.selectOptions(
+          screen.getByLabelText("Formato da ação"),
+          format,
+        );
+        await user.click(getSaveButton());
+
+        expect(
+          await screen.findByText(
+            "Informe um link válido, como https://meet.google.com/abc-defg-hij.",
+          ),
+        ).toBeInTheDocument();
+        expect(onUpdate).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("keeps an action editable when its area is outside the suggestions", async () => {
     mockAction(editableAction({ area: "Tecnologia e Inovação" }));
     const onUpdate = spyOnUpdate();
