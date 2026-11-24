@@ -4,6 +4,12 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   label?: string;
   error?: string;
   helperText?: string;
+  /**
+   * Shows the character counter. An uncontrolled field is recounted on typing
+   * and on every render, which covers react-hook-form's `reset`. `setValue`
+   * alone renders nothing, so a form that calls it must also pass `value`.
+   */
+  maxLength?: number;
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -26,11 +32,27 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const generatedId = React.useId();
     const textareaId = id ?? generatedId;
     const hasCounter = maxLength !== undefined;
-    const counterId = `${textareaId}-counter`;
+    const counterId = React.useId();
 
-    const [uncontrolledLength, setUncontrolledLength] = React.useState(() =>
-      String(defaultValue ?? "").length,
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+    React.useImperativeHandle(
+      ref,
+      () => textareaRef.current as HTMLTextAreaElement,
+      [],
     );
+
+    const [uncontrolledLength, setUncontrolledLength] = React.useState(
+      () => String(defaultValue ?? "").length,
+    );
+
+    // react-hook-form writes the value through the ref, with no change event.
+    // Must stay below useImperativeHandle: that is where the form gets the ref
+    // and writes its value. It cannot loop: an unchanged length renders nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useLayoutEffect(() => {
+      if (!hasCounter || !textareaRef.current) return;
+      setUncontrolledLength(textareaRef.current.value.length);
+    });
 
     const currentLength =
       value !== undefined ? String(value).length : uncontrolledLength;
@@ -68,7 +90,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
 
         <textarea
-          ref={ref}
+          ref={textareaRef}
           id={textareaId}
           maxLength={maxLength}
           value={value}
@@ -108,7 +130,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             {helperText && !error ? (
               <p className="mt-1 text-sm text-gray-500">{helperText}</p>
             ) : null}
-            {error ? <p className="mt-1 text-sm text-red-500">{error}</p> : null}
+            {error ? (
+              <p className="mt-1 text-sm text-red-500">{error}</p>
+            ) : null}
           </>
         )}
       </div>
