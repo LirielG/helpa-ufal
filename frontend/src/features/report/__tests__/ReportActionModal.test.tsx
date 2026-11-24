@@ -189,7 +189,7 @@ describe("ReportActionModal", () => {
       expect(screen.getByText("3/500")).toBeInTheDocument();
     });
 
-    it("blocks a description over 500 characters before any request", async () => {
+    it("cuts a pasted description at 500 characters and sends what is left", async () => {
       const bodies = captureReports();
       const { user } = await renderModal();
 
@@ -197,14 +197,14 @@ describe("ReportActionModal", () => {
       await user.click(descriptionField());
       await user.paste("a".repeat(501));
 
-      expect(
-        await screen.findByText("Limite de 500 caracteres"),
-      ).toBeInTheDocument();
-      expect(submitButton()).toBeDisabled();
+      expect(screen.getByText("500/500")).toBeInTheDocument();
 
       await user.click(submitButton());
 
-      expect(bodies).toHaveLength(0);
+      await screen.findByText("Denúncia registrada");
+      expect(bodies).toEqual([
+        { category: "OTHER", description: "a".repeat(500) },
+      ]);
     });
   });
 
