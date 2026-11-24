@@ -29,7 +29,7 @@ login de novo.
 | `Activities/`  | CRUD de ações, transição de status e denúncias                                        |
 | `Auth/`        | Login, cadastro e logout                                                              |
 | `Enrollments/` | Inscrição e cancelamento em uma ação, listagem de inscritos e confirmação de presença |
-| `Reports/`     | Moderação de denúncias por gestores                                                   |
+| `Reports/`     | Fila de ações denunciadas e decisões de moderação por gestores                        |
 | `SIGAA/`       | Listagem das ações raspadas do SIGAA e os valores aceitos pelos filtros               |
 | `User/`        | Rotas de perfil do usuário                                                            |
 

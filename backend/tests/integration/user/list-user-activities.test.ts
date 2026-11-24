@@ -1067,7 +1067,7 @@ describe("GET /users/me/activities", () => {
 
         const response = await listActivities(
           user.token,
-          "?filter=managed&page=99999999999999999999",
+          `?filter=managed&page=${Number.MAX_SAFE_INTEGER}`,
         );
 
         expect(response.status).toBe(200);
@@ -1076,6 +1076,24 @@ describe("GET /users/me/activities", () => {
           total: 1,
           totalPages: 1,
         });
+      });
+
+      it("answers 400 when page exceeds safe integer range", async () => {
+        const user = await createTeacher();
+
+        const response = await listActivities(
+          user.token,
+          `?filter=managed&page=1${"0".repeat(310)}`,
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual([
+          {
+            field: "page",
+            code: "VALIDATION_ERROR",
+            message: "page must be a positive integer.",
+          },
+        ]);
       });
 
       it("defaults to page 1 and limit 20", async () => {

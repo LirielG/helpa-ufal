@@ -17,9 +17,3 @@ export const EnrollmentPathParamsSchema = z.object({
 });
 
 export type EnrollmentPathParams = z.output<typeof EnrollmentPathParamsSchema>;
-
-export const ReportPathParamsSchema = z.object({
-  reportId: uuidParam("reportId"),
-});
-
-export type ReportPathParams = z.output<typeof ReportPathParamsSchema>;

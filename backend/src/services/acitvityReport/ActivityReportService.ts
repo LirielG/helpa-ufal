@@ -1,15 +1,8 @@
 import type { IActivityReportService } from "./IActivityReportService.js";
 import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
-import {
-  CreateActivityReportInput,
-  ListReportsQuery,
-} from "@/schemas/activityReport/activityReportSchemas.js";
-import type {
-  ActivityReportResponse,
-  ReportResponse,
-} from "@/types/activityReport.js";
-import { type Paginated, toPaginated } from "@/types/pagination.js";
+import type { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
+import type { ActivityReportResponse } from "@/types/activityReport.js";
 import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
@@ -56,40 +49,6 @@ class ActivityReportService implements IActivityReportService {
     }
 
     return this._reportRepository.create(activityId, requesterId, data);
-  }
-
-  public async listReports(
-    query: ListReportsQuery,
-  ): Promise<Paginated<ReportResponse>> {
-    const { items, total } = await this._reportRepository.list(query);
-
-    return toPaginated(items, total, query.page, query.limit);
-  }
-
-  public async resolveReport(
-    reportId: string,
-    requesterId: string,
-  ): Promise<ReportResponse> {
-    const report = await this._reportRepository.findById(reportId);
-    if (!report) {
-      throw new CustomError(404, "Report not found.");
-    }
-
-    // Idempotent: an already resolved report comes back as it is, so the
-    // first resolver and the original resolvedAt stay on record.
-    if (report.resolvedAt) return report;
-
-    const resolved = await this._reportRepository.resolve(
-      reportId,
-      requesterId,
-    );
-    // The activity can be hard-deleted between the read and the write, and
-    // the cascade takes its reports with it.
-    if (!resolved) {
-      throw new CustomError(404, "Report not found.");
-    }
-
-    return resolved;
   }
 }
 
