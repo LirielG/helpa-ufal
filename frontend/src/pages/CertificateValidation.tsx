@@ -6,8 +6,8 @@ import { ValidationPanel } from "@/features/certificate-validation/components/Va
 
 /**
  * Public page where whoever received a HELPA certificate checks it, reached
- * from the printed QR code (`/validar/<code>`) or by typing the printed
- * address (`/validar`). Both paths are printed on issued PDFs, so they can
+ * from the printed QR code (`/validate/<code>`) or by typing the printed
+ * address (`/validate`). Both paths are printed on issued PDFs, so they can
  * never change.
  *
  * The readers have no account and are checking someone else's document, so

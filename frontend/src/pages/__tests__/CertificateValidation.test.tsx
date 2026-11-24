@@ -36,7 +36,7 @@ function renderPage(route: string) {
       <CertificateValidation />
       <LocationProbe />
     </>,
-    { route, path: "/validar/:validationCode?" },
+    { route, path: "/validate/:validationCode?" },
   );
 }
 
@@ -62,7 +62,7 @@ describe("CertificateValidation", () => {
     it("validates on mount and shows what the certificate attests", async () => {
       const codes = recordRequests();
 
-      renderPage("/validar/7KQ4MX9T2R");
+      renderPage("/validate/7KQ4MX9T2R");
 
       expect(
         await screen.findByText("Certificado autêntico"),
@@ -84,7 +84,7 @@ describe("CertificateValidation", () => {
     });
 
     it("fills the field with the code from the URL", async () => {
-      renderPage("/validar/7KQ4MX9T2R");
+      renderPage("/validate/7KQ4MX9T2R");
 
       expect(screen.getByLabelText("Código de validação")).toHaveValue(
         "7KQ4MX9T2R",
@@ -93,7 +93,7 @@ describe("CertificateValidation", () => {
     });
 
     it("announces the result to screen readers", async () => {
-      renderPage("/validar/7KQ4MX9T2R");
+      renderPage("/validate/7KQ4MX9T2R");
 
       const result = await screen.findByText("Certificado autêntico");
 
@@ -106,7 +106,7 @@ describe("CertificateValidation", () => {
     it("trims the code from the URL like a typed one", async () => {
       const codes = recordRequests();
 
-      renderPage("/validar/%207KQ4MX9T2R%20");
+      renderPage("/validate/%207KQ4MX9T2R%20");
 
       await screen.findByText("Certificado autêntico");
       expect(codes).toEqual(["7KQ4MX9T2R"]);
@@ -125,7 +125,7 @@ describe("CertificateValidation", () => {
             )
           : HttpResponse.json(makeCertificateValidation());
       });
-      const { user } = renderPage("/validar/7KQ4MX9T2R");
+      const { user } = renderPage("/validate/7KQ4MX9T2R");
 
       await screen.findByText("Certificado autêntico");
 
@@ -153,7 +153,7 @@ describe("CertificateValidation", () => {
         }),
       );
 
-      renderPage("/validar/7KQ4MX9T2R");
+      renderPage("/validate/7KQ4MX9T2R");
 
       await screen.findByText("Certificado autêntico");
       expect(screen.queryByText("maria@ufal.br")).toBeNull();
@@ -170,7 +170,7 @@ describe("CertificateValidation", () => {
         ),
       );
 
-      renderPage("/validar/0000000000");
+      renderPage("/validate/0000000000");
 
       expect(
         await screen.findByText("Código não encontrado"),
@@ -193,7 +193,7 @@ describe("CertificateValidation", () => {
           ? HttpResponse.error()
           : HttpResponse.json(makeCertificateValidation()),
       );
-      const { user } = renderPage("/validar/7KQ4MX9T2R");
+      const { user } = renderPage("/validate/7KQ4MX9T2R");
 
       expect(
         await screen.findByText(/não foi possível consultar o certificado/i),
@@ -214,7 +214,7 @@ describe("CertificateValidation", () => {
   describe("form", () => {
     it("trims the typed code, sends the rest as typed and puts it in the URL", async () => {
       const codes = recordRequests();
-      const { user } = renderPage("/validar");
+      const { user } = renderPage("/validate");
 
       await user.type(
         screen.getByLabelText("Código de validação"),
@@ -226,19 +226,19 @@ describe("CertificateValidation", () => {
       ).toBeInTheDocument();
       expect(codes).toEqual(["7kq4m-x9t2r"]);
       expect(screen.getByTestId("location")).toHaveTextContent(
-        "/validar/7kq4m-x9t2r",
+        "/validate/7kq4m-x9t2r",
       );
     });
 
     it("sends no request when the field is empty", async () => {
       const codes = recordRequests();
-      const { user } = renderPage("/validar");
+      const { user } = renderPage("/validate");
 
       await user.type(screen.getByLabelText("Código de validação"), "   ");
       await user.click(screen.getByRole("button", { name: "Validar" }));
 
       expect(codes).toEqual([]);
-      expect(screen.getByTestId("location")).toHaveTextContent(/^\/validar$/);
+      expect(screen.getByTestId("location")).toHaveTextContent(/^\/validate$/);
     });
 
     it("validates once on a double click", async () => {
@@ -246,7 +246,7 @@ describe("CertificateValidation", () => {
         await delay(50);
         return HttpResponse.json(makeCertificateValidation());
       });
-      const { user } = renderPage("/validar");
+      const { user } = renderPage("/validate");
 
       await user.type(
         screen.getByLabelText("Código de validação"),
@@ -263,7 +263,7 @@ describe("CertificateValidation", () => {
         await delay(50);
         return HttpResponse.json(makeCertificateValidation());
       });
-      const { user } = renderPage("/validar/7KQ4MX9T2R");
+      const { user } = renderPage("/validate/7KQ4MX9T2R");
 
       await screen.findByText("Certificado autêntico");
       await user.dblClick(screen.getByRole("button", { name: "Validar" }));
@@ -274,7 +274,7 @@ describe("CertificateValidation", () => {
 
     it("validates again when the code already in the URL is submitted", async () => {
       const codes = recordRequests();
-      const { user } = renderPage("/validar/7KQ4MX9T2R");
+      const { user } = renderPage("/validate/7KQ4MX9T2R");
 
       await screen.findByText("Certificado autêntico");
       await user.click(screen.getByRole("button", { name: "Validar" }));
@@ -285,7 +285,7 @@ describe("CertificateValidation", () => {
 
   describe("Helpa logo link", () => {
     it("renders the logo as a link to / for a visitor", () => {
-      renderPage("/validar");
+      renderPage("/validate");
 
       const logoLink = screen.getByRole("link", {
         name: "Ir para a página inicial do Helpa",
@@ -297,7 +297,7 @@ describe("CertificateValidation", () => {
 
     it("renders the logo as a link to /dashboard for a signed-in user", () => {
       signIn({ fullName: "Carlos Silva" });
-      renderPage("/validar");
+      renderPage("/validate");
 
       const logoLink = screen.getByRole("link", {
         name: "Ir para a página inicial do Helpa",
@@ -314,7 +314,7 @@ describe("navigation", () => {
     return render(
       <Routes>
         <Route
-          path="/validar/:validationCode?"
+          path="/validate/:validationCode?"
           element={
             <PublicRoute>
               <CertificateValidation />
@@ -336,9 +336,9 @@ describe("navigation", () => {
     );
   }
 
-  it("navigates to /dashboard from a direct /validar/<code> entry with no prior history", async () => {
+  it("navigates to /dashboard from a direct /validate/<code> entry with no prior history", async () => {
     recordRequests();
-    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+    const { user } = renderValidationFlow("/validate/7KQ4MX9T2R");
 
     await screen.findByText("Certificado autêntico");
 
@@ -357,7 +357,7 @@ describe("navigation", () => {
 
   it("navigates to /dashboard from an empty form with typed text without submitting a validation query", async () => {
     const codes = recordRequests();
-    const { user } = renderValidationFlow("/validar");
+    const { user } = renderValidationFlow("/validate");
 
     await user.type(screen.getByLabelText("Código de validação"), "7KQ4MX9T2R");
     await user.click(screen.getByRole("link", { name: "Explorar ações" }));
@@ -374,7 +374,7 @@ describe("navigation", () => {
       return HttpResponse.json(makeCertificateValidation());
     });
 
-    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+    const { user } = renderValidationFlow("/validate/7KQ4MX9T2R");
 
     expect(screen.getByText("Consultando certificado…")).toBeInTheDocument();
 
@@ -392,7 +392,7 @@ describe("navigation", () => {
         { status: 404 },
       ),
     );
-    const { user } = renderValidationFlow("/validar/0000000000");
+    const { user } = renderValidationFlow("/validate/0000000000");
 
     await screen.findByText("Código não encontrado");
     await user.click(screen.getByRole("link", { name: "Explorar ações" }));
@@ -404,7 +404,7 @@ describe("navigation", () => {
 
   it("allows navigating to /dashboard on network error", async () => {
     recordRequests(() => HttpResponse.error());
-    const { user } = renderValidationFlow("/validar/7KQ4MX9T2R");
+    const { user } = renderValidationFlow("/validate/7KQ4MX9T2R");
 
     await screen.findByText(/não foi possível consultar o certificado/i);
     await user.click(screen.getByRole("link", { name: "Explorar ações" }));
@@ -414,7 +414,7 @@ describe("navigation", () => {
     ).toBeInTheDocument();
   });
 
-  it("allows a visitor to reach /validar from the footer without redirecting to login", async () => {
+  it("allows a visitor to reach /validate from the footer without redirecting to login", async () => {
     signOut();
     const { user } = renderValidationFlow("/dashboard");
 
@@ -428,7 +428,7 @@ describe("navigation", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("allows a signed-in user to reach /validar from the footer without redirecting to login", async () => {
+  it("allows a signed-in user to reach /validate from the footer without redirecting to login", async () => {
     signIn();
     const { user } = renderValidationFlow("/dashboard");
 

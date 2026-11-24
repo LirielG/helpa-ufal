@@ -177,7 +177,7 @@ describe("AppRoutes", () => {
     });
 
     it("lets a guest validate a certificate without being sent to login", async () => {
-      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+      render(<AppRoutes />, { route: "/validate/7KQ4MX9T2R" });
 
       expect(
         await screen.findByText("Certificado autêntico"),
@@ -189,7 +189,7 @@ describe("AppRoutes", () => {
     it("lets a signed-in user validate a certificate without being sent away", async () => {
       signIn();
 
-      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+      render(<AppRoutes />, { route: "/validate/7KQ4MX9T2R" });
 
       expect(
         await screen.findByText("Certificado autêntico"),
@@ -198,8 +198,8 @@ describe("AppRoutes", () => {
       expect(screen.queryByRole("button", { name: /sair/i })).toBeNull();
     });
 
-    it("opens the empty validation form at /validar", async () => {
-      render(<AppRoutes />, { route: "/validar" });
+    it("opens the empty validation form at /validate", async () => {
+      render(<AppRoutes />, { route: "/validate" });
 
       expect(await screen.findByLabelText("Código de validação")).toHaveValue(
         "",
@@ -239,7 +239,7 @@ describe("AppRoutes", () => {
       );
       signIn();
 
-      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+      render(<AppRoutes />, { route: "/validate/7KQ4MX9T2R" });
 
       expect(
         await screen.findByText(/não foi possível consultar o certificado/i),
@@ -260,7 +260,7 @@ describe("AppRoutes", () => {
       );
       signIn();
 
-      render(<AppRoutes />, { route: "/validar/7KQ4MX9T2R" });
+      render(<AppRoutes />, { route: "/validate/7KQ4MX9T2R" });
 
       expect(
         await screen.findByText("Certificado autêntico"),
