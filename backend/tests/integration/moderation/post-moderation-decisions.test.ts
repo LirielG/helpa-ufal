@@ -1,9 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
 import ModerationRepository from "@/repositories/moderation/ModerationRepository.js";
+import EmailService from "@/services/email/EmailService.js";
+import {
+  emailTemplates,
+  type EmailTemplateCode,
+  type EmailTemplateVars,
+} from "@/services/email/templates/index.js";
+import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.js";
 import { expectHttpError } from "@/utils/tests.js";
 import {
   createActivity,
@@ -29,6 +36,10 @@ function decide(
 }
 
 describe("POST /activities/:activityId/moderation-decisions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   // ---------- 201 REJECTED & queue transitions ----------
 
   it("links the reviewed open reports on REJECTED (order-independent), moves activity from open to decided, and reopens on a new report", async () => {
@@ -804,5 +815,263 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
       "Session is no longer valid.",
       "SESSION_INVALID",
     );
+  });
+
+  // ---------- Post-commit e-mail notifications (#445) ----------
+
+  it("sends UPHELD emails to active reporters, author, and non-certified cancelled enrollees without leaking identities or reasons", async () => {
+    const sendSpy = vi.spyOn(EmailService.prototype, "send");
+
+    const manager = await createManager({ fullName: "Gestora Sigilosa" });
+    const author = await createTeacher({ fullName: "Professor Autor" });
+    const activity = await createActivity(author.user.id, {
+      title: "Semana de Extensão UFAL",
+      status: "OPEN",
+    });
+
+    const reporter1 = await createStudent({ fullName: "Denunciante Um" });
+    const reporter2 = await createStudent({ fullName: "Denunciante Dois" });
+    const deletedReporter = await createStudent({
+      fullName: "Conta Apagada",
+    });
+
+    const report1 = await createReport(activity.id, reporter1.user.id, {
+      category: "SPAM",
+      description: "Propaganda repetida.",
+    });
+    const report2 = await createReport(activity.id, reporter2.user.id, {
+      category: "MISINFORMATION",
+      description: "Informações falsas.",
+    });
+    const orphanReport = await createReport(
+      activity.id,
+      deletedReporter.user.id,
+      { category: "OTHER" },
+    );
+    await prisma.user.delete({ where: { id: deletedReporter.user.id } });
+
+    const pendingStudent = await createStudent();
+    const approvedStudent = await createStudent();
+    const certifiedStudent = await createStudent();
+    const rejectedStudent = await createStudent();
+
+    await createEnrollment(pendingStudent.user.id, activity.id, {
+      status: "PENDING",
+    });
+    await createEnrollment(approvedStudent.user.id, activity.id, {
+      status: "APPROVED",
+    });
+    const certifiedEnrollment = await createEnrollment(
+      certifiedStudent.user.id,
+      activity.id,
+      {
+        status: "APPROVED",
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 10,
+      },
+    );
+    await createCertificate(certifiedEnrollment.id);
+    await createEnrollment(rejectedStudent.user.id, activity.id, {
+      status: "REJECTED",
+    });
+
+    const justification = "Ação fora das normas institucionais.";
+    const response = await decide(
+      activity.id,
+      {
+        verdict: "UPHELD",
+        justification,
+        reportIds: [report1.id, report2.id, orphanReport.id],
+      },
+      manager.token,
+    );
+
+    expect(response.status).toBe(201);
+    expect(sendSpy).toHaveBeenCalledTimes(5);
+
+    const calls = sendSpy.mock.calls.map(([to, templateCode, vars]) => ({
+      to,
+      templateCode,
+      vars,
+    }));
+
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        {
+          to: reporter1.user.email,
+          templateCode: "reportReviewed",
+          vars: {
+            activityTitle: "Semana de Extensão UFAL",
+            verdict: "UPHELD",
+          },
+        },
+        {
+          to: reporter2.user.email,
+          templateCode: "reportReviewed",
+          vars: {
+            activityTitle: "Semana de Extensão UFAL",
+            verdict: "UPHELD",
+          },
+        },
+        {
+          to: author.user.email,
+          templateCode: "activityRemovedByModeration",
+          vars: {
+            activityTitle: "Semana de Extensão UFAL",
+            justification,
+          },
+        },
+        {
+          to: pendingStudent.user.email,
+          templateCode: "enrollmentCancelledByModeration",
+          vars: { activityTitle: "Semana de Extensão UFAL" },
+        },
+        {
+          to: approvedStudent.user.email,
+          templateCode: "enrollmentCancelledByModeration",
+          vars: { activityTitle: "Semana de Extensão UFAL" },
+        },
+      ]),
+    );
+
+    const recipients = calls.map((call) => call.to);
+    expect(recipients).not.toContain(deletedReporter.user.email);
+    expect(recipients).not.toContain(certifiedStudent.user.email);
+    expect(recipients).not.toContain(rejectedStudent.user.email);
+
+    const forbiddenTokens = [
+      "Gestora Sigilosa",
+      "Denunciante Um",
+      "Denunciante Dois",
+      "Conta Apagada",
+      "SPAM",
+      "MISINFORMATION",
+      "Propaganda repetida.",
+      "Informações falsas.",
+    ];
+
+    for (const call of calls) {
+      const template = emailTemplates[
+        call.templateCode as EmailTemplateCode
+      ] as IEmailTemplate<EmailTemplateVars[EmailTemplateCode]>;
+      const rendered = template.render(
+        call.vars as EmailTemplateVars[EmailTemplateCode],
+      );
+      const payload = `${rendered.subject}\n${rendered.text}\n${rendered.html}`;
+      for (const token of forbiddenTokens) {
+        expect(payload).not.toContain(token);
+      }
+    }
+  });
+
+  it("sends REJECTED emails only to reporters with the published notice", async () => {
+    const sendSpy = vi.spyOn(EmailService.prototype, "send");
+
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      title: "Curso de Extensão em Dados",
+      status: "OPEN",
+    });
+
+    const reporter1 = await createStudent();
+    const reporter2 = await createStudent();
+    const enrollee = await createStudent();
+
+    const report1 = await createReport(activity.id, reporter1.user.id);
+    const report2 = await createReport(activity.id, reporter2.user.id);
+    await createEnrollment(enrollee.user.id, activity.id, {
+      status: "APPROVED",
+    });
+
+    const response = await decide(
+      activity.id,
+      {
+        verdict: "REJECTED",
+        justification: "Denúncias improcedentes.",
+        reportIds: [report1.id, report2.id],
+      },
+      manager.token,
+    );
+
+    expect(response.status).toBe(201);
+    expect(sendSpy).toHaveBeenCalledTimes(2);
+    expect(
+      sendSpy.mock.calls.map(([to, templateCode, vars]) => ({
+        to,
+        templateCode,
+        vars,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        {
+          to: reporter1.user.email,
+          templateCode: "reportReviewed",
+          vars: {
+            activityTitle: "Curso de Extensão em Dados",
+            verdict: "REJECTED",
+          },
+        },
+        {
+          to: reporter2.user.email,
+          templateCode: "reportReviewed",
+          vars: {
+            activityTitle: "Curso de Extensão em Dados",
+            verdict: "REJECTED",
+          },
+        },
+      ]),
+    );
+  });
+
+  it("persists the decision and still responds 201 when email delivery fails", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.spyOn(EmailService.prototype, "send").mockRejectedValue(
+      new Error("SMTP unavailable"),
+    );
+
+    const manager = await createManager();
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, { status: "OPEN" });
+    const reporter = await createStudent();
+    const enrollee = await createStudent();
+
+    const report = await createReport(activity.id, reporter.user.id);
+    const enrollment = await createEnrollment(enrollee.user.id, activity.id, {
+      status: "APPROVED",
+    });
+
+    const response = await decide(
+      activity.id,
+      {
+        verdict: "UPHELD",
+        justification: "Remoção confirmada mesmo sem SMTP.",
+        reportIds: [report.id],
+      },
+      manager.token,
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.verdict).toBe("UPHELD");
+
+    const storedDecision = await prisma.moderationDecision.findUnique({
+      where: { id: response.body.id },
+    });
+    expect(storedDecision).not.toBeNull();
+
+    const storedActivity = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(storedActivity.removedByModerationAt).not.toBeNull();
+
+    const storedEnrollment = await prisma.enrollment.findUniqueOrThrow({
+      where: { id: enrollment.id },
+    });
+    expect(storedEnrollment.status).toBe("CANCELLED");
+
+    // One error logged per failed recipient (reporter + author + enrollee).
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(3);
   });
 });

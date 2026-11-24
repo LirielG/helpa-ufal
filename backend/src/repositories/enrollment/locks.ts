@@ -68,6 +68,7 @@ export async function lockActivityForModeration(
 ): Promise<{
   id: string;
   authorId: string;
+  title: string;
   status: ActivityStatus;
   removedByModerationAt: Date | null;
 } | null> {
@@ -75,11 +76,12 @@ export async function lockActivityForModeration(
     {
       id: string;
       authorId: string;
+      title: string;
       status: ActivityStatus;
       removedByModerationAt: Date | null;
     }[]
   >`
-    SELECT id, "authorId", status, "removedByModerationAt"
+    SELECT id, "authorId", title, status, "removedByModerationAt"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL
