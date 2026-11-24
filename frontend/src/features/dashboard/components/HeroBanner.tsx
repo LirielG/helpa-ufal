@@ -135,7 +135,7 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
+            className="absolute left-4 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
             aria-label="Slide anterior"
           >
             <ChevronLeft className="size-6" />
@@ -143,13 +143,13 @@ export function HeroBanner({ refreshKey }: HeroBannerProps = {}) {
 
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
+            className="absolute right-4 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 size-10 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-colors z-10"
             aria-label="Próximo slide"
           >
             <ChevronRight className="size-6" />
           </button>
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10 h-10">
             {featuredActions.map((_, index) => (
               <button
                 key={index}

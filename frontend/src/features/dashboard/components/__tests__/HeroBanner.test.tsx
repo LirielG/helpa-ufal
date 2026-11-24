@@ -182,6 +182,48 @@ describe("HeroBanner", () => {
     ).toBeInTheDocument();
   });
 
+  it("positions arrows at the bottom-6 row on mobile and centers vertically on md+", async () => {
+    setupFeaturedServer(mockActions.slice(0, 2));
+    render(<HeroBanner />);
+
+    await screen.findByRole("heading");
+
+    const prevButton = screen.getByRole("button", { name: "Slide anterior" });
+    const nextButton = screen.getByRole("button", { name: "Próximo slide" });
+    const dotsContainer = screen
+      .getByRole("button", { name: "Ir para slide 1" })
+      .parentElement;
+
+    expect(prevButton).toHaveClass(
+      "absolute",
+      "left-4",
+      "bottom-6",
+      "md:bottom-auto",
+      "md:top-1/2",
+      "md:-translate-y-1/2",
+      "size-10",
+    );
+    expect(nextButton).toHaveClass(
+      "absolute",
+      "right-4",
+      "bottom-6",
+      "md:bottom-auto",
+      "md:top-1/2",
+      "md:-translate-y-1/2",
+      "size-10",
+    );
+    expect(dotsContainer).toHaveClass(
+      "absolute",
+      "bottom-6",
+      "left-1/2",
+      "-translate-x-1/2",
+      "h-10",
+      "flex",
+      "items-center",
+      "gap-2",
+    );
+  });
+
   it("sends the correct query parameters (orderBy=start_date, order=asc, limit=4 without status)", async () => {
     let params: URLSearchParams | null = null;
     server.use(
