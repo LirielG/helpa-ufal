@@ -19,13 +19,17 @@ describe("ActivityController.list", () => {
   ])(
     "lists activities using only filters for an $session request",
     async ({ user }) => {
-      const filters = { area: "Saúde", page: "2", limit: "5" };
+      const filters = { area: "Saúde", page: 2, limit: 5 };
       const result = { items: [], total: 0, page: 2, limit: 5, totalPages: 1 };
       const list = vi.fn().mockResolvedValue(result);
       const activityService = { list } as unknown as IActivityService;
       const controller = new ActivityController({ activityService });
-      const req = { query: filters, user } as unknown as Request;
-      const res = { status: vi.fn(), json: vi.fn() };
+      const req = { user } as unknown as Request;
+      const res = {
+        status: vi.fn(),
+        json: vi.fn(),
+        locals: { validatedQuery: filters },
+      };
       res.status.mockReturnValue(res);
 
       await controller.list(req, res as unknown as Response);

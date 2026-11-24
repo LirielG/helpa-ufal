@@ -4,6 +4,8 @@ import type { NextFunction, Request, Response } from "express";
 import ValidationError from "@/models/error/ValidationError.js";
 import { validateQuery } from "../validateQuery.js";
 import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
+import { ListActivitiesQuerySchema } from "@/schemas/activity/ActivitySchemas.js";
+import { ListSigaaActivitiesQuerySchema } from "@/schemas/sigaa/SigaaActivitySchemas.js";
 import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
 import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
 
@@ -57,7 +59,7 @@ describe("validateQuery(ListParticipantsQuerySchema)", () => {
     expect(error).toBeUndefined();
     expect(next).toHaveBeenCalledTimes(1);
     expect(next).toHaveBeenCalledWith(); // next() with no arguments
-    expect(locals.validatedQuery).toEqual({ page: 1, limit: 10 });
+    expect(locals.validatedQuery).toEqual({ page: 1, limit: 20 });
   });
 
   it("forwards explicit values already transformed to numbers", () => {
@@ -71,11 +73,11 @@ describe("validateQuery(ListParticipantsQuerySchema)", () => {
     expect(typeof query.limit).toBe("number");
   });
 
-  it("accepts the upper boundary limit=50", () => {
-    const { error, locals } = callMiddleware({ limit: "50" });
+  it("accepts the upper boundary limit=100", () => {
+    const { error, locals } = callMiddleware({ limit: "100" });
 
     expect(error).toBeUndefined();
-    expect((locals.validatedQuery as { limit: number }).limit).toBe(50);
+    expect((locals.validatedQuery as { limit: number }).limit).toBe(100);
   });
 
   // ---------- 400 - one error item per field ----------
@@ -102,10 +104,10 @@ describe("validateQuery(ListParticipantsQuerySchema)", () => {
   );
 
   it("rejects limit above the cap with the cap-specific message", () => {
-    const { error } = callMiddleware({ limit: "51" });
+    const { error } = callMiddleware({ limit: "101" });
 
     expect(error?.errors).toEqual([
-      { field: "limit", message: "limit must be at most 50." },
+      { field: "limit", message: "limit must be at most 100." },
     ]);
   });
 
@@ -190,5 +192,82 @@ describe("validateQuery with a strict schema", () => {
       ]),
     );
     expect(error?.errors).toHaveLength(2);
+  });
+});
+
+describe.each([
+  ["GET /activities", ListActivitiesQuerySchema],
+  ["GET /sigaa-activities", ListSigaaActivitiesQuerySchema],
+  ["GET /activities/:activityId/enrollments", ListParticipantsQuerySchema],
+] as const)("shared pagination schema of %s", (_route, schema) => {
+  function call(query: Record<string, unknown>) {
+    const { res, locals } = fakeResponse();
+    const next = vi.fn();
+    validateQuery(schema, INVALID_QUERY_MESSAGE)(
+      fakeRequest(query),
+      res,
+      next as unknown as NextFunction,
+    );
+    return {
+      error: next.mock.calls[0]?.[0] as MiddlewareError | undefined,
+      locals,
+    };
+  }
+
+  it("applies the defaults when page and limit are absent", () => {
+    expect(call({}).locals.validatedQuery).toEqual({ page: 1, limit: 20 });
+  });
+
+  it("accepts limit=100 and rejects limit=101", () => {
+    expect(call({ limit: "100" }).locals.validatedQuery).toEqual({
+      page: 1,
+      limit: 100,
+    });
+    expect(call({ limit: "101" }).error?.errors).toEqual([
+      { field: "limit", message: "limit must be at most 100." },
+    ]);
+  });
+
+  it.each(["10.9", "20abc", "1e2", "-5", "+5", " 5", "02", "0", ""])(
+    "rejects page and limit %j with one item per parameter",
+    (value) => {
+      expect(call({ page: value, limit: value }).error?.errors).toEqual([
+        { field: "page", message: "page must be a positive integer." },
+        { field: "limit", message: "limit must be a positive integer." },
+      ]);
+    },
+  );
+
+  it("rejects a repeated limit (?limit=1&limit=2 arrives as an array)", () => {
+    const { error } = call({ limit: ["1", "2"] });
+
+    expect(error?.errors).toHaveLength(1);
+    expect(error?.errors[0].field).toBe("limit");
+  });
+
+  it("does not reject unknown parameters", () => {
+    expect(call({ foo: "bar" }).error).toBeUndefined();
+  });
+});
+
+describe.each([
+  ["GET /activities", ListActivitiesQuerySchema],
+  ["GET /sigaa-activities", ListSigaaActivitiesQuerySchema],
+] as const)("filters of %s", (_route, schema) => {
+  it("reach the controller untouched", () => {
+    const { res, locals } = fakeResponse();
+
+    validateQuery(schema, INVALID_QUERY_MESSAGE)(
+      fakeRequest({ type: "", search: " x " }),
+      res,
+      vi.fn() as unknown as NextFunction,
+    );
+
+    expect(locals.validatedQuery).toEqual({
+      page: 1,
+      limit: 20,
+      type: "",
+      search: " x ",
+    });
   });
 });

@@ -41,8 +41,8 @@ export interface IListActivitiesFilters {
   format?: string;
   status?: string;
   search?: string;
-  page?: string;
-  limit?: string;
+  page: number;
+  limit: number;
   orderBy?: string;
   order?: string;
   campus?: string;

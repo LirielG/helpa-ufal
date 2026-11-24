@@ -72,7 +72,7 @@ describe("GET /activities/:activityId/enrollments", () => {
       ],
       total: 1,
       page: 1, // default
-      limit: 10, // default
+      limit: 20, // default
       totalPages: 1,
       totalPresent: 0,
     });
@@ -224,7 +224,7 @@ describe("GET /activities/:activityId/enrollments", () => {
       items: [],
       total: 0,
       page: 1,
-      limit: 10,
+      limit: 20,
       totalPages: 1,
       totalPresent: 0,
     });
@@ -299,6 +299,27 @@ describe("GET /activities/:activityId/enrollments", () => {
     expect(response.body.items[0].userId).toBe(students[4].user.id);
   });
 
+  it("accepts limit at the ceiling of 100", async () => {
+    const { author, activity } = await anActivityWithAuthor();
+
+    const response = await request(app)
+      .get(`${listUrl(activity.id)}?limit=100`)
+      .set(...authCookie(author.token));
+
+    expect(response.status).toBe(200);
+    expect(response.body.limit).toBe(100);
+  });
+
+  it("ignores unknown parameters", async () => {
+    const { author, activity } = await anActivityWithAuthor();
+
+    const response = await request(app)
+      .get(`${listUrl(activity.id)}?foo=bar`)
+      .set(...authCookie(author.token));
+
+    expect(response.status).toBe(200);
+  });
+
   it("never exposes passwordHash or any field outside the DTO", async () => {
     const { author, activity } = await anActivityWithAuthor();
     const enrolled = await createStudent();
@@ -327,7 +348,7 @@ describe("GET /activities/:activityId/enrollments", () => {
     ["page=-1", "page", "page must be a positive integer."],
     ["limit=abc", "limit", "limit must be a positive integer."],
     ["limit=0", "limit", "limit must be a positive integer."],
-    ["limit=51", "limit", "limit must be at most 50."],
+    ["limit=101", "limit", "limit must be at most 100."],
   ] as const)(
     "returns 400 for %s naming the offending field",
     async (queryString, field, message) => {

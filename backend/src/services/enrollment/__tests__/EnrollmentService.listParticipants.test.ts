@@ -309,7 +309,7 @@ describe("EnrollmentService.listParticipants", () => {
     },
   );
 
-  it("applies the defaults (page 1, limit 10) when page and limit are omitted", async () => {
+  it("applies the defaults (page 1, limit 20) when page and limit are omitted", async () => {
     const { service, enrollmentRepository } = aService();
 
     const result = await service.listParticipants(
@@ -320,9 +320,9 @@ describe("EnrollmentService.listParticipants", () => {
     expect(enrollmentRepository.findByActivityId).toHaveBeenCalledWith(
       ACTIVITY_ID,
       0,
-      10,
+      20,
     );
-    expect(result).toMatchObject({ page: 1, limit: 10 });
+    expect(result).toMatchObject({ page: 1, limit: 20 });
   });
 
   it.each([

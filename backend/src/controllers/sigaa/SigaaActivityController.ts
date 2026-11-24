@@ -16,7 +16,7 @@ export class SigaaActivityController implements ISigaaActivityController {
   }
 
   public async list(req: Request, res: Response): Promise<void> {
-    const filters = req.query as unknown as SigaaActivityFilters;
+    const filters = res.locals.validatedQuery as SigaaActivityFilters;
     const result = await this._service.list(filters);
     res.status(200).json(result);
   }

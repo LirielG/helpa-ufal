@@ -115,7 +115,7 @@ describe("validateParams", () => {
     expect(next).toHaveBeenCalledWith();
     expect(res.locals).toEqual({
       validatedParams: { activityId },
-      validatedQuery: { page: 2, limit: 10 },
+      validatedQuery: { page: 2, limit: 20 },
       validatedBody: {
         startDate: new Date("2026-12-01T10:00:00Z"),
         title: "Updated",
