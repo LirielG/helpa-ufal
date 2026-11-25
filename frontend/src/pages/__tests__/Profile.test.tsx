@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router";
 import type { UserEvent } from "@testing-library/user-event";
 import {
+  act,
   API,
   HttpResponse,
   http,
@@ -108,9 +109,7 @@ function countProfileReads() {
 /** Answers every profile read with the signed-in user plus the overrides. */
 function serveProfile(overrides: Partial<UserProfile> = {}) {
   server.use(
-    http.get(`${API}/users/me`, () =>
-      HttpResponse.json(profileOf(overrides)),
-    ),
+    http.get(`${API}/users/me`, () => HttpResponse.json(profileOf(overrides))),
   );
 }
 
@@ -197,6 +196,7 @@ describe("Profile — personal data", () => {
 
       await screen.findByText("Perfil atualizado com sucesso.");
       expect(useAuthStore.getState().user?.fullName).toBe("Mariana Costa");
+      // The sidebar shows the new name too, not only the form.
       const sidebar = screen.getByRole("complementary", {
         name: "Menu lateral do usuário",
       });
@@ -574,7 +574,7 @@ describe("Profile — layout", () => {
     expect(onUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the save button disabled while the first save is pending, even after repeated Enter", async () => {
+  it("keeps the save button disabled while the first save is pending, even when two submits go out together", async () => {
     signIn({ fullName: "Joana Ribeiro" });
     const onRequest = vi.fn();
     let release: () => void = () => {};
@@ -592,7 +592,14 @@ describe("Profile — layout", () => {
 
     await replaceName(user, "Joana Lima");
     const save = getSaveButton();
-    await user.keyboard("{Enter}{Enter}");
+
+    const form = screen.getByRole("form", {
+      name: "Editar Perfil",
+    }) as HTMLFormElement;
+    act(() => {
+      form.requestSubmit();
+      form.requestSubmit();
+    });
 
     await waitFor(() => expect(onRequest).toHaveBeenCalledTimes(1));
     expect(save).toBeDisabled();

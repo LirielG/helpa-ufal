@@ -114,7 +114,7 @@ export function Profile() {
           backgroundSize: "cover",
         }}
       >
-        <div className="w-full max-w-5xl mx-auto px-4 py-6 md:py-8 space-y-6">
+        <div className="page-container py-6 md:py-8 space-y-6">
           <h1 className="flex items-center gap-3 text-2xl md:text-4xl font-bold text-[#00579A]">
             <span
               aria-hidden="true"
