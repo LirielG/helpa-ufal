@@ -71,6 +71,7 @@ export default defineConfig([
   },
 ]);
 ```
+
 ## UI Conventions
 
 - **Modal action feedback:** When an action triggered from a modal succeeds, close the modal immediately, display a toast notification (`react-toastify`) confirming the outcome, and update the underlying view. Do not render a secondary success modal or an internal success step unless the user needs to read or save specific information.

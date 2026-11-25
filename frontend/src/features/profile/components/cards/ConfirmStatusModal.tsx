@@ -2,9 +2,6 @@ import { Calendar, MapPin, Clock, Check, X, Play } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 import { formatWorkloadHours } from "@/utils";
 
-// The cancel title must not be "Confirmar cancelamento", which the enrollment
-// cancellation modal uses.
-
 const STATUS_MODAL_COPY: Record<
   ActivityStatusTransition,
   {
@@ -27,6 +24,8 @@ const STATUS_MODAL_COPY: Record<
     backOut: "Voltar",
   },
   CANCELLED: {
+    // The cancel title must not be "Confirmar cancelamento", which the enrollment
+    // cancellation modal uses.
     title: "Cancelar ação",
     subtitle: "Você está prestes a cancelar a ação:",
     body: "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
@@ -122,8 +121,8 @@ export function ConfirmStatusModal({
             disabled={isLoading}
             className={`${
               pendingStatus === "CANCELLED"
-                ? "bg-[#0066FF] hover:bg-blue-700"
-                : "bg-[#C81A17] hover:bg-red-700"
+                ? "bg-[#C81A17] hover:bg-red-700"
+                : "bg-[#0066FF] hover:bg-blue-700"
             } text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors disabled:opacity-50 cursor-pointer`}
           >
             {copy.title}

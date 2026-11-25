@@ -837,7 +837,7 @@ describe("ActionsList deletion", () => {
     return view;
   }
 
-  it("reloads the list and shows a toast after the deletion success modal is dismissed", async () => {
+  it("reloads the list and shows a toast after the deletion", async () => {
     signIn();
     const { deleted, remove } = mockManagedActions();
 

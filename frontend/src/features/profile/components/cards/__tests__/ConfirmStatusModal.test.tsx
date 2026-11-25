@@ -10,22 +10,31 @@ describe("ConfirmStatusModal", () => {
       "Iniciar ação",
       "Voltar",
       "A ação passa a constar como em andamento. Novas inscrições deixam de ser aceitas.",
+      "bg-[#0066FF]",
     ],
     [
       "COMPLETED",
       "Concluir ação",
       "Voltar",
       "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
+      "bg-[#0066FF]",
     ],
     [
       "CANCELLED",
       "Cancelar ação",
       "Manter ação",
       "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
+      "bg-[#C81A17]",
     ],
   ] as const)(
     "renders %s copy and triggers confirm/cancel callbacks",
-    async (pendingStatus, confirmLabel, cancelLabel, body) => {
+    async (
+      pendingStatus,
+      confirmLabel,
+      cancelLabel,
+      body,
+      confirmColorClass,
+    ) => {
       const onConfirm = vi.fn();
       const onCancel = vi.fn();
       const { user } = render(
@@ -47,6 +56,11 @@ describe("ConfirmStatusModal", () => {
         within(dialog).getByRole("button", { name: cancelLabel }),
       );
       expect(onCancel).toHaveBeenCalledOnce();
+
+      const confirmButton = within(dialog).getByRole("button", {
+        name: confirmLabel,
+      });
+      expect(confirmButton).toHaveClass(confirmColorClass);
 
       await user.click(
         within(dialog).getByRole("button", { name: confirmLabel }),

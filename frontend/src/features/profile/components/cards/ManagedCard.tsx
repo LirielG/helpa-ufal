@@ -15,7 +15,6 @@ import { Button } from "@/components/Button";
 import { ACTION_STATUS_LABELS } from "../../../dashboard/constants";
 import { toast } from "react-toastify";
 
-// The current status first, then only the transitions the backend accepts.
 const STATUS_BADGE_CLASSES: Record<ActivityStatus, string> = {
   OPEN: "bg-emerald-50 text-emerald-700 border-emerald-200",
   IN_PROGRESS: "bg-blue-50 text-[#1B75BB] border-blue-200",
@@ -237,7 +236,7 @@ export function ManagedCard({
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -261,7 +260,6 @@ export function ManagedCard({
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteModal(true)}
-              className="text-red-400 hover:text-red-600 transition-colors p-1"
             >
               <span className="inline-flex items-center gap-1.5">
                 <Trash2 className="size-4 shrink-0" />
@@ -309,8 +307,6 @@ export function ManagedCard({
             errorMessage={deleteError}
             onConfirmDelete={handleConfirmDelete}
             onClose={() => {
-              // Removing the card from the list unmounts it, so the success
-              // modal must be dismissed first or it would vanish unseen.
               setShowDeleteModal(false);
               setDeleteError(null);
             }}
