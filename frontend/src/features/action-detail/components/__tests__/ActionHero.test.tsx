@@ -16,9 +16,7 @@ describe("ActionHero", () => {
     );
 
     expect(container.firstElementChild).toHaveClass(
-      "h-[35vh]",
-      "min-h-64",
-      "max-h-96",
+      "min-h-[clamp(16rem,35vh,24rem)]",
     );
     expect(screen.getByRole("img", { hidden: true })).toBeInTheDocument();
     expect(screen.getByText("Tecnologia")).toBeInTheDocument();
