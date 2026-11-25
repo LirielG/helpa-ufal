@@ -30,7 +30,6 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [wasCreated, setWasCreated] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(() =>
@@ -94,22 +93,13 @@ export function DashboardShell({
     void loadProfile(false);
   }, [isAuthenticated, loadProfile]);
 
-  const handleSuccess = () => {
-    setWasCreated(true);
-
-    if (onSuccessCallback) {
-      onSuccessCallback();
-    }
+  const handleSuccess = (createdId: string) => {
+    onSuccessCallback?.();
+    navigate(`/activity/${createdId}`);
   };
 
   const handleClose = () => {
-    const shouldGoToFeed = wasCreated && !onSuccessCallback;
     closeRegisterModal();
-    setWasCreated(false);
-
-    if (shouldGoToFeed) {
-      navigate("/dashboard");
-    }
   };
 
   return (
@@ -141,7 +131,7 @@ export function DashboardShell({
               onClick={openRegisterModal}
               aria-label="Criar uma ação"
               title="Criar uma ação"
-              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
+              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
             >
               <Plus className="size-7 md:size-5 lg:size-6 stroke-[2.5]" />
               <span className="hidden md:inline font-semibold text-sm lg:text-base tracking-wide whitespace-nowrap">

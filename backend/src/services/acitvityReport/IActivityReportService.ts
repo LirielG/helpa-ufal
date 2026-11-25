@@ -1,12 +1,5 @@
-import {
-  CreateActivityReportInput,
-  ListReportsQuery,
-} from "@/schemas/activityReport/activityReportSchemas.js";
-import type {
-  ActivityReportResponse,
-  ReportResponse,
-} from "@/types/activityReport.js";
-import type { Paginated } from "@/types/pagination.js";
+import type { CreateActivityReportInput } from "@/schemas/activityReport/activityReportSchemas.js";
+import type { ActivityReportResponse } from "@/types/activityReport.js";
 
 export interface IActivityReportService {
   createReport(
@@ -14,6 +7,4 @@ export interface IActivityReportService {
     requesterId: string,
     data: CreateActivityReportInput,
   ): Promise<ActivityReportResponse>;
-  listReports(query: ListReportsQuery): Promise<Paginated<ReportResponse>>;
-  resolveReport(reportId: string, requesterId: string): Promise<ReportResponse>;
 }

@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 /* Content column shared by every signed-in page and by the text inside full-width banners, so all of them start at the same left edge. */
 @utility page-container {
   @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;

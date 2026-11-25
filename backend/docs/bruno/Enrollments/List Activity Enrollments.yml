@@ -18,7 +18,7 @@ http:
       type: query
       description: Page number
     - name: limit
-      value: "10"
+      value: "20"
       type: query
       description: Items per page
 
@@ -45,7 +45,7 @@ examples:
           type: query
           description: Page number
         - name: limit
-          value: "10"
+          value: "20"
           type: query
           description: Items per page
     response:
@@ -110,7 +110,7 @@ examples:
             ],
             "total": 3,
             "page": 1,
-            "limit": 10,
+            "limit": 20,
             "totalPages": 1,
             "totalPresent": 1
           }
@@ -138,7 +138,7 @@ examples:
             "items": [],
             "total": 0,
             "page": 1,
-            "limit": 10,
+            "limit": 20,
             "totalPages": 1,
             "totalPresent": 0
           }
@@ -175,7 +175,7 @@ examples:
           }
 
   - name: 400 - Invalid query params
-    description: page or limit is not a positive integer, or limit is above the route's ceiling. Query validation runs after authentication; missing, invalid or expired credentials return 401 even when the query is invalid.
+    description: page or limit is not a positive integer, or limit is above the ceiling. Query validation runs after authentication; missing, invalid or expired credentials return 401 even when the query is invalid.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -207,7 +207,7 @@ examples:
           }
 
   - name: 400 - Limit above maximum
-    description: limit above the route's ceiling is rejected. The ceiling protects the query against unbounded page sizes.
+    description: limit above the ceiling is rejected. The ceiling protects the query against unbounded page sizes.
     request:
       url: "{{baseUrl}}/activities/:activityId/enrollments"
       method: GET
@@ -217,7 +217,7 @@ examples:
           type: path
           description: Activity UUID
         - name: limit
-          value: "51"
+          value: "101"
           type: query
           description: Items per page
     response:
@@ -234,7 +234,7 @@ examples:
             "status": 400,
             "message": "Invalid query parameters.",
             "errors": [
-              { "field": "limit", "code": "VALIDATION_ERROR", "message": "limit must be at most 50." }
+              { "field": "limit", "code": "VALIDATION_ERROR", "message": "limit must be at most 100." }
             ]
           }
 
@@ -355,11 +355,11 @@ docs: |-
   | Param | Rule | Default |
   |-------|------|---------|
   | `page` | positive integer | `1` |
-  | `limit` | positive integer, up to the route's ceiling | `10` |
+  | `limit` | positive integer, up to the conventional ceiling | conventional |
 
   Unknown parameters are ignored.
 
-  - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`. This route does not follow the conventional pagination yet: its default `limit` is 10 and its ceiling is lower than the conventional one (see the "400 - Limit above maximum" example).
+  - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`.
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
   - Validation order: authentication (401) → path and query format (400, aggregated errors[]) → activity existence (404) → authorization (403).

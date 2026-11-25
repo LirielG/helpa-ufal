@@ -69,11 +69,14 @@ describe("ActionDetail Integration", () => {
         await screen.findByRole("button", { name: /Inscrever-se/ }),
       );
       await user.click(screen.getByRole("button", { name: /Confirmar/ }));
+
       expect(
-        await screen.findByText("Oba! Você está dentro!"),
+        await screen.findByText("Inscrição realizada."),
       ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
       await waitFor(() => expect(calls).toBe(2));
-      await user.click(screen.getByRole("button", { name: "Fechar modal" }));
 
       expect(
         screen.getByRole("heading", { name: action.title }),
@@ -98,6 +101,7 @@ describe("ActionDetail Integration", () => {
         id: actionId,
         availableSlots: 5,
         slots: 20,
+        enrollmentStatus: null,
       });
 
       // Updated action with 4 available slots (after enrollment)
@@ -105,17 +109,16 @@ describe("ActionDetail Integration", () => {
         id: actionId,
         availableSlots: 4,
         slots: 20,
+        enrollmentStatus: "APPROVED",
       });
 
       server.use(
         http.get(`${API}/activities/${actionId}`, () => {
           getCallCount += 1;
           // First call returns 5 slots, second call returns 4 slots
-          if (getCallCount === 1) {
-            return HttpResponse.json(initialAction);
-          } else {
-            return HttpResponse.json(updatedAction);
-          }
+          return HttpResponse.json(
+            getCallCount === 1 ? initialAction : updatedAction,
+          );
         }),
         http.put(`${API}/activities/${actionId}/enrollments/me`, () =>
           HttpResponse.json(
@@ -139,46 +142,38 @@ describe("ActionDetail Integration", () => {
         path: "/activity/:id",
       });
 
-      // Wait for initial load
-      await waitFor(() => {
-        expect(
-          screen.getByRole("button", { name: /Inscrever-se/i }),
-        ).toBeInTheDocument();
+      // Click "Inscrever-se" button
+      const enrollButton = await screen.findByRole("button", {
+        name: /Inscrever-se/i,
       });
 
-      // Verify initial slot count is displayed
       expect(
         screen.getByText("5 disponíveis / 20 no total"),
       ).toBeInTheDocument();
 
-      // Click "Inscrever-se" button
-      const enrollButton = screen.getByRole("button", {
-        name: /Inscrever-se/i,
-      });
       await user.click(enrollButton);
 
-      // Wait for modal to appear
+      expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /Confirmar/i }));
+
+      expect(
+        await screen.findByText("Inscrição realizada."),
+      ).toBeInTheDocument();
       await waitFor(() => {
-        expect(screen.getByText("Confirmar inscrição")).toBeInTheDocument();
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       });
 
-      // Click confirm in modal
-      const buttons = screen.getAllByRole("button");
-      const confirmButton = buttons.find(
-        (btn) =>
-          btn.textContent?.includes("✓") ||
-          btn.textContent?.includes("Confirmar"),
-      );
-      if (confirmButton) {
-        await user.click(confirmButton);
-      }
-
-      // Wait for success message
-      await waitFor(() => {
-        expect(screen.getByText("Oba! Você está dentro!")).toBeInTheDocument();
-      });
-
-      // Verify GET was called twice (initial load + refetch after enrollment)
+      expect(
+        await screen.findByRole("button", { name: /Cancelar inscrição/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Inscrito")).toBeInTheDocument();
+      expect(
+        screen.getByText("4 disponíveis / 20 no total"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Voltar para o feed/i }),
+      ).not.toBeInTheDocument();
       expect(getCallCount).toBe(2);
     },
   );

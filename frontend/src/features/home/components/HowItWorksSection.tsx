@@ -260,7 +260,7 @@ export function HowItWorksSection({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full text-left">
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:-translate-y-1">
+            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow">
               <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
                 01
               </div>
@@ -273,7 +273,7 @@ export function HowItWorksSection({
               </p>
             </div>
 
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:-translate-y-1">
+            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow">
               <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
                 02
               </div>
@@ -285,7 +285,7 @@ export function HowItWorksSection({
               </p>
             </div>
 
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:-translate-y-1 sm:col-span-2 md:col-span-1">
+            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow sm:col-span-2 md:col-span-1">
               <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
                 03
               </div>

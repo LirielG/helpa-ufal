@@ -267,11 +267,13 @@ examples:
         data: |-
           {
             "status": 400,
-            "message": "Validation error.",
+            "code": "VALIDATION_ERROR",
+            "message": "Invalid query parameters.",
             "errors": [
               {
                 "field": "limit",
-                "message": "limit can not exceed 100."
+                "code": "VALIDATION_ERROR",
+                "message": "limit must be at most 100."
               }
             ]
           }

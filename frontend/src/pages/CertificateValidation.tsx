@@ -1,12 +1,13 @@
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { Footer } from "@/components/Footer";
+import { HomeLogoLink } from "@/components/HomeLogoLink";
 import helpaBlueLogo from "@/assets/helpa-logo-blue-text.svg";
 import { ValidationPanel } from "@/features/certificate-validation/components/ValidationPanel";
 
 /**
  * Public page where whoever received a HELPA certificate checks it, reached
- * from the printed QR code (`/validar/<code>`) or by typing the printed
- * address (`/validar`). Both paths are printed on issued PDFs, so they can
+ * from the printed QR code (`/validate/<code>`) or by typing the printed
+ * address (`/validate`). Both paths are printed on issued PDFs, so they can
  * never change.
  *
  * The readers have no account and are checking someone else's document, so
@@ -22,12 +23,17 @@ export function CertificateValidation() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <img
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <HomeLogoLink
             src={helpaBlueLogo}
-            alt="helpa"
-            className="h-10 md:h-12 w-auto"
+            imageClassName="h-10 md:h-12 w-auto"
           />
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white bg-[#00579A] hover:bg-[#00447a] rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
+          >
+            Explorar ações
+          </Link>
         </div>
       </header>
 

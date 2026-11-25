@@ -25,6 +25,7 @@ import {
 import {
   actionEditSchemaFor,
   type ActionEditSchemaType,
+  type SavedAction,
 } from "../features/action-edit/validators";
 import { normalizeActionUrl } from "../validators/activity";
 import { getActionById } from "../features/action-detail/services";
@@ -69,8 +70,12 @@ export function EditAction() {
 
   const user = useAuthStore((state) => state.user);
   const [actionAuthorId, setActionAuthorId] = useState<string | null>(null);
-  const [savedDescription, setSavedDescription] = useState("");
-  const [savedTitle, setSavedTitle] = useState("");
+  const [savedAction, setSavedAction] = useState<SavedAction>({
+    title: "",
+    description: "",
+    url: "",
+    format: undefined,
+  });
 
   const [isLoadingAction, setIsLoadingAction] = useState(Boolean(id));
   const [loadError, setLoadError] = useState<"notFound" | "connection" | null>(
@@ -102,7 +107,7 @@ export function EditAction() {
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm({
-    resolver: zodResolver(actionEditSchemaFor(savedDescription, savedTitle)),
+    resolver: zodResolver(actionEditSchemaFor(savedAction)),
     mode: "onSubmit",
   });
 
@@ -129,8 +134,12 @@ export function EditAction() {
         if (!isMounted) return;
 
         setActionAuthorId(action.authorId);
-        setSavedDescription(action.details?.description ?? "");
-        setSavedTitle(action.title);
+        setSavedAction({
+          title: action.title,
+          description: action.details?.description ?? "",
+          url: action.details?.url ?? "",
+          format: action.details?.format,
+        });
 
         reset({
           title: action.title,
@@ -247,10 +256,11 @@ export function EditAction() {
     // Online and hybrid actions require a link, so switching to one of them
     // sends the current link along with the new format, even if it was not
     // edited. In person the field is hidden, so a link typed before the
-    // switch is dropped, as the create form does.
+    // switch is dropped, as the create form does. The check has to match the
+    // schema's: a link it did not validate must not be sent.
     if (
       data.format !== "IN_PERSON" &&
-      (dirtyFields.url || dirtyFields.format)
+      (data.url !== savedAction.url || dirtyFields.format)
     ) {
       payload.url = data.url;
     }
@@ -550,8 +560,11 @@ export function EditAction() {
                     placeholder="Ex: https://meet.google.com/abc-defg-hij"
                     error={errors.url?.message}
                     {...register("url", {
-                      onBlur: (e) =>
-                        setValue("url", normalizeActionUrl(e.target.value)),
+                      onBlur: (e) => {
+                        // Focusing the field must not rewrite an old link.
+                        if (e.target.value === savedAction.url) return;
+                        setValue("url", normalizeActionUrl(e.target.value));
+                      },
                     })}
                   />
                 )}

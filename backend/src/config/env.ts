@@ -62,7 +62,7 @@ const BaseEnvSchema = z.object({
   // Kept apart from CORS_ORIGIN on purpose: if CORS ever accepts a second
   // origin, the printed link must not change with it. Unlike CORS_ORIGIN the
   // path is kept (the frontend may live under one); only the trailing slash
-  // is dropped so `${APP_PUBLIC_URL}/validar` never doubles it. Query and
+  // is dropped so `${APP_PUBLIC_URL}/validate` never doubles it. Query and
   // fragment are refused, since the appended path would land inside them.
   APP_PUBLIC_URL: z
     .url({ protocol: /^https?$/ })
