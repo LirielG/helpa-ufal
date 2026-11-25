@@ -270,7 +270,7 @@ class ActivityService implements IActivityService {
     }
     const trimmedArea = filters.area?.trim();
 
-    const isDefault = filters.status === undefined || filters.status === "";
+    const isDefault = filters.status === undefined;
     const status = isDefault
       ? "OPEN"
       : filters.status === "ALL"
