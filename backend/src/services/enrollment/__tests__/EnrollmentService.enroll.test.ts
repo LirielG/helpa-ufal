@@ -91,6 +91,26 @@ describe("EnrollmentService.enroll", () => {
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
+  it("throws 409 when the activity is OPEN but has already started", async () => {
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(anActivity({ startDate: daysFromNow(-1) })),
+      },
+    });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      409,
+      "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+    );
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
 
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
     "throws 409 when the activity status is %s (not open for enrollment)",
@@ -115,6 +135,28 @@ describe("EnrollmentService.enroll", () => {
       expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
     },
   );
+
+  it("throws 409 when the activity is OPEN but has already started", async () => {
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValue(anActivity({ startDate: daysFromNow(-1) })),
+      },
+    });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      409,
+      "Activity is not open for enrollment.",
+      "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+    );
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
 
   // ---------- Happy path ----------
 
