@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 import mockupHelpa from "../../../assets/mockup-helpa.png";
 import mockupSigaa from "../../../assets/mockup-sigaa.png";
 
@@ -314,7 +314,6 @@ export function HowItWorksSection({
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-[#1D4ED8] text-white font-semibold shadow-md hover:bg-blue-700 hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
           >
             <span>Ir para o Feed de Ações</span>
-            <ArrowRight className="size-5 shrink-0" />
           </button>
         </div>
       </section>

@@ -8,7 +8,7 @@ import {
   ACTION_FORMAT_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
 } from "../constants";
-import { X, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import {
@@ -377,7 +377,7 @@ export function ActionRegister({
             aria-label="Fechar"
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <X className="size-5" />
+            Cancelar
           </button>
         </div>
 
@@ -721,7 +721,7 @@ export function ActionRegister({
               disabled={isSubmitting}
               className="inline-flex items-center justify-center gap-1.5 px-5"
             >
-              <X className="size-3.5" /> Cancelar
+              Cancelar
             </Button>
 
             <div className="flex items-center gap-3">
@@ -752,7 +752,7 @@ export function ActionRegister({
                   onClick={handleStep1Next}
                   className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6"
                 >
-                  Próximo <ArrowRight className="size-3.5" />
+                  Próximo
                 </Button>
               ) : (
                 <Button
@@ -769,7 +769,7 @@ export function ActionRegister({
                     </>
                   ) : (
                     <>
-                      Criar ação <Check className="size-3.5 stroke-[3]" />
+                      Criar ação
                     </>
                   )}
                 </Button>
@@ -783,7 +783,7 @@ export function ActionRegister({
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-60 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-8 flex flex-col items-center text-center shadow-xl">
             <div className="bg-[#4A0E0E] text-white p-2 rounded-lg mb-4 flex items-center justify-center size-10">
-              <X className="size-6 stroke-[3]" />
+              Cancelar
             </div>
             <h3 className="text-lg font-bold text-[#0A2540] mb-1">
               Descartar esta ação?

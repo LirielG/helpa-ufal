@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -222,9 +221,8 @@ export function ActionDetail() {
                       onClick={() =>
                         navigate(`/activity/${action.id}/enrollments`)
                       }
-                      className="flex items-center justify-center gap-3 rounded-xl"
+                      className="rounded-xl"
                     >
-                      <Users className="size-6" />
                       Ver inscritos
                     </Button>
                   )}

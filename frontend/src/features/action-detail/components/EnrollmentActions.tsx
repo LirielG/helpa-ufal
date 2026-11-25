@@ -1,4 +1,4 @@
-import { CheckCircle, UserMinus, Users } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { Button } from "../../../components/Button";
 import { getUnavailableEnrollmentLabel } from "../enrollment";
 import { UnavailableEnrollmentButton } from "./UnavailableEnrollmentButton";
@@ -44,9 +44,8 @@ export function EnrollmentActions({
             variant="danger"
             size="lg"
             onClick={onCancel}
-            className="flex items-center justify-center gap-3 rounded-xl"
+            className="rounded-xl"
           >
-            <UserMinus className="size-6" />
             Cancelar inscrição
           </Button>
         ) : (
@@ -69,9 +68,8 @@ export function EnrollmentActions({
       variant="navy"
       size="lg"
       onClick={onEnroll}
-      className="flex items-center justify-center gap-3 rounded-xl"
+      className="rounded-xl"
     >
-      <Users className="size-6" />
       Inscrever-se
     </Button>
   );

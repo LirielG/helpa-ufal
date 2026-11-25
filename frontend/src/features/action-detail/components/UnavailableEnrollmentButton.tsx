@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { Button } from "../../../components/Button";
 import type { UnavailableEnrollmentLabel } from "../enrollment";
 
@@ -14,9 +13,8 @@ export function UnavailableEnrollmentButton({
       variant="secondary"
       size="lg"
       disabled
-      className="flex items-center justify-center gap-3 rounded-xl"
+      className="rounded-xl"
     >
-      <Users className="size-6" />
       {label}
     </Button>
   );
