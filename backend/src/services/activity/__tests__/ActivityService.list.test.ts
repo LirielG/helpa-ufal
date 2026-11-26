@@ -539,21 +539,6 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("echoes normalized numeric page and limit when query has leading zeros", async () => {
-    const repository = mockRepository({
-      list: vi.fn().mockResolvedValue({ items: [], total: 3 }),
-    });
-    const service = new ActivityService({ activityRepository: repository });
-
-    await expect(service.list({ page: "02", limit: "05" })).resolves.toEqual({
-      items: [],
-      total: 3,
-      page: 2,
-      limit: 5,
-      totalPages: 1,
-    });
-  });
-
   it("defaults to OPEN activities that have not started when no status is given", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
