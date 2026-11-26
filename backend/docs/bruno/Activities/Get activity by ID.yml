@@ -22,53 +22,7 @@ settings:
 
 examples:
   - name: 200 Response (anonymous)
-    description: No session recognized, so enrollmentStatus is absent.
-    request:
-      url: "{{baseUrl}}/activities/:activityId"
-      method: GET
-      params:
-        - name: activityId
-          value: ""
-          type: path
-          description: Activity UUID
-    response:
-      status: 200
-      statusText: OK
-      headers:
-        - name: Content-Type
-          value: application/json
-      body:
-        type: json
-        data: |-
-          {
-            "id": "a1b2c3d4-0000-4000-8000-000000000001",
-            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
-            "title": "Oficina de Introdução à Programação",
-            "type": "COURSE",
-            "campus": "ARAPIRACA",
-            "startDate": "2026-08-01T08:00:00.000Z",
-            "endDate": "2026-08-15T12:00:00.000Z",
-            "slots": 40,
-            "availableSlots": 27,
-            "status": "OPEN",
-            "details": {
-              "description": "Introdução à lógica de programação para iniciantes.",
-              "area": "Tecnologia",
-              "format": "HYBRID",
-              "url": "https://meet.example.com/oficina",
-              "workloadHours": 20,
-              "address": {
-                "id": "a1b2c3d4-0000-4000-8000-000000000002",
-                "addressLine": "Av. Manoel Severino Barbosa, s/n",
-                "district": "Bom Sucesso",
-                "zipCode": "57309005",
-                "city": "Arapiraca",
-                "state": "AL"
-              }
-            }
-          }
-  - name: 200 Response (authenticated, not enrolled)
-    description: Valid token and the user never enrolled, so enrollmentStatus is null.
+    description: No session recognized, so enrollmentStatus is absent and reportedByMe is false.
     request:
       url: "{{baseUrl}}/activities/:activityId"
       method: GET
@@ -112,7 +66,55 @@ examples:
                 "state": "AL"
               }
             },
-            "enrollmentStatus": null
+            "reportedByMe": false
+          }
+  - name: 200 Response (authenticated, not enrolled)
+    description: Valid token, the user never enrolled and never reported it, so enrollmentStatus is null and reportedByMe is false.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "enrollmentStatus": null,
+            "reportedByMe": false
           }
   - name: 200 Response (authenticated, enrolled)
     description: Valid token with an active enrollment.
@@ -159,7 +161,8 @@ examples:
                 "state": "AL"
               }
             },
-            "enrollmentStatus": "APPROVED"
+            "enrollmentStatus": "APPROVED",
+            "reportedByMe": false
           }
   - name: 200 Response (authenticated, cancelled)
     description: Valid token and a cancelled enrollment; the status is still reported.
@@ -206,7 +209,56 @@ examples:
                 "state": "AL"
               }
             },
-            "enrollmentStatus": "CANCELLED"
+            "enrollmentStatus": "CANCELLED",
+            "reportedByMe": false
+          }
+  - name: 200 Response (authenticated, already reported)
+    description: Valid token and the user has a report on this activity, still open or already decided, so reportedByMe is true. It does not depend on the enrollment.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 27,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "enrollmentStatus": null,
+            "reportedByMe": true
           }
   - name: 400 Response
     description: The activityId in the path must be a UUID v4.
@@ -330,6 +382,19 @@ docs: |-
 
   Absent and `null` are different states: absent means the server recognized
   no session; `null` means authenticated with no enrollment.
+
+  The response also includes `reportedByMe`, whether the requester has a report on
+  this activity. Unlike `enrollmentStatus`, it is **always present**:
+
+  | Request | `reportedByMe` |
+  |---|---|
+  | no token | `false` |
+  | valid token, no report by this user on this activity | `false` |
+  | valid token, a report by this user on this activity, still open or already decided | `true` |
+
+  Only the requester's own report counts, and only on this activity. The field
+  exists only on this route and on the response of `PUT /activities/:activityId/status`,
+  which repeats it. The listings `GET /activities` and `GET /users/me/activities` do not include it.
 
   - The user is resolved exclusively from the JWT token (never from params, query or body).
   - Removed users and revoked sessions answer 401 with code `SESSION_INVALID`.

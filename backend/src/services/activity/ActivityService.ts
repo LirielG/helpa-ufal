@@ -1,8 +1,10 @@
 import type { AuthenticatedUser } from "@/types/auth.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
+import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -50,17 +52,21 @@ function isInvalidFilterValue(
 type Props = {
   activityRepository?: IActivityRepository;
   enrollmentRepository?: IEnrollmentRepository;
+  activityReportRepository?: IActivityReportRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
   private _enrollmentRepository: IEnrollmentRepository;
+  private _activityReportRepository: IActivityReportRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
+    this._activityReportRepository =
+      props?.activityReportRepository ?? new ActivityReportRepository();
   }
 
   public async create(
@@ -259,16 +265,25 @@ class ActivityService implements IActivityService {
 
     // Absent and null mean different things to the client: absent = no
     // session recognized, null = authenticated but never enrolled.
+    // reportedByMe is the exception: it is always present, and an anonymous
+    // caller simply has no report of their own, so it is false (no lookup).
     if (!userId) {
-      return activity;
+      return { ...activity, reportedByMe: false };
     }
 
-    const enrollment = await this._enrollmentRepository.findByUserAndActivity(
-      userId,
-      id,
-    );
+    // Both lookups hang off the token user and are independent of each other.
+    // findByUserAndActivity ignores whether the report was already resolved,
+    // which is what "already reported" means for the client.
+    const [enrollment, report] = await Promise.all([
+      this._enrollmentRepository.findByUserAndActivity(userId, id),
+      this._activityReportRepository.findByUserAndActivity(userId, id),
+    ]);
 
-    return { ...activity, enrollmentStatus: enrollment?.status ?? null };
+    return {
+      ...activity,
+      enrollmentStatus: enrollment?.status ?? null,
+      reportedByMe: report !== null,
+    };
   }
 
   public async update(

@@ -51,6 +51,13 @@ export type ActivityDetailsResponse = {
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
   enrollmentStatus?: EnrollmentStatus | null;
+  /**
+   * Whether the token owner has a report on this activity, still open or
+   * already decided. Unlike `enrollmentStatus` it is never absent on the detail
+   * route: an anonymous caller gets `false`. Optional only because the
+   * repository builds this type without it; the service sets it.
+   */
+  reportedByMe?: boolean;
 };
 
 export type UserActivityFilter = "enrolled" | "completed" | "managed";
@@ -66,13 +73,14 @@ export type UserActivityCertificate = {
  * An item of GET /users/me/activities: the activity exactly as
  * GET /activities/:activityId returns it to an anonymous caller, plus the
  * token owner's enrollment and its certificate. `enrollment` carries the
- * status, so the `enrollmentStatus` shortcut of the detail route is left out.
+ * status, so the `enrollmentStatus` shortcut of the detail route is left out,
+ * and so is `reportedByMe`, which exists only on the detail route.
  * `deletedAt` is non-null only under `completed`, for a deleted activity that
  * issued the owner a certificate.
  */
 export type UserActivityResponse = Omit<
   ActivityFullResponse,
-  "enrollmentStatus"
+  "enrollmentStatus" | "reportedByMe"
 > & {
   deletedAt: Date | null;
   enrollment: EnrollmentResponse | null;
