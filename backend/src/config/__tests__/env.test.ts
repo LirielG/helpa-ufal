@@ -316,11 +316,11 @@ describe("EnvSchema — SMTP and MAIL_FROM", () => {
     MAIL_FROM: "Helpa <no-reply@helpa.ufal.br>",
   };
 
-  it("defaults SMTP_PORT to 587 and SMTP_SECURE to false", () => {
+  it("defaults SMTP_PORT to 587 and leaves SMTP_SECURE undefined", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });
 
     expect(parsed.SMTP_PORT).toBe(587);
-    expect(parsed.SMTP_SECURE).toBe(false);
+    expect(parsed.SMTP_SECURE).toBeUndefined();
   });
 
   it("parses SMTP_PORT and SMTP_SECURE overrides", () => {
