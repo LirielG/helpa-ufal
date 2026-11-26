@@ -75,3 +75,4 @@ export default defineConfig([
 ## UI Conventions
 
 - **Modal action feedback:** When an action triggered from a modal succeeds, close the modal immediately, display a toast notification (`react-toastify`) confirming the outcome, and update the underlying view. Do not render a secondary success modal or an internal success step unless the user needs to read or save specific information.
+- **Button icons:** Plain text buttons ("Salvar", "Ver detalhes", "Entrar", "Confirmar", "Cancelar", etc.) carry no icon. Icons are kept only on icon-only buttons (which must have an `aria-label`), download actions, external links, "Voltar" and destructive actions.
