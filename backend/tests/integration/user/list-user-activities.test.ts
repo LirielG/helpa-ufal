@@ -821,8 +821,8 @@ describe("GET /users/me/activities", () => {
       ]);
 
       expect(detail.status).toBe(200);
-      // reportedByMe exists only on the detail route (issue #441): a history
-      // item is the detail MINUS that field, plus the extras below.
+      // reportedByMe exists only on the detail route: a history item is the
+      // detail MINUS that field, plus the extras below.
       const { reportedByMe, ...sharedWithDetail } = detail.body;
       expect(reportedByMe).toBe(false);
       expect(history.body.items).toEqual([

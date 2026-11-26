@@ -227,8 +227,8 @@ describe("GET /activities/:activityId", () => {
     });
   });
 
-  // Issue #441: lets the client tell "Denunciar ação" from "Ação denunciada"
-  // after a reload, without a second request.
+  // Lets the client tell "Denunciar ação" from "Ação denunciada" after a
+  // reload, without a second request.
   describe("reportedByMe", () => {
     it("is false, and present, when the request has no token", async () => {
       const author = await createTeacher();

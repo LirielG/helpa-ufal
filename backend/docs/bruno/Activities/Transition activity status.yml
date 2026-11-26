@@ -348,7 +348,7 @@ docs: |-
 
   `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.
 
-  **Response:** the complete activity, identical to `GET /activities/:activityId` with the same session after the transition. It includes `details` (nullable), its `address` (nullable), `availableSlots` calculated from approved enrollments the requester's `enrollmentStatus` (null when never enrolled) and `reportedByMe` (whether the requester has reported the activity).
+  **Response:** the complete activity, identical to `GET /activities/:activityId` with the same session after the transition. It includes `details` (nullable), its `address` (nullable), `availableSlots` calculated from approved enrollments, the requester's `enrollmentStatus` (null when never enrolled) and `reportedByMe` (whether the requester has reported the activity).
 
   The former `PATCH /activities/:activityId/status` is not registered and returns 404. Repeating the current status still follows the transition rules and returns 409.
 

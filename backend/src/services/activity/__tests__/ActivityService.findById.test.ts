@@ -102,7 +102,7 @@ describe("ActivityService.findById", () => {
     },
   );
 
-  // ---------- reportedByMe (issue #441) ----------
+  // ---------- reportedByMe ----------
 
   it("returns reportedByMe false and skips the report lookup without a userId", async () => {
     const { service, activityReportRepository } = buildService();

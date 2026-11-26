@@ -296,9 +296,8 @@ docs: |-
   one response.
 
   ## Item
-  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller,
-  except for `reportedByMe`, which exists only on the detail route (with `details`, `null`
-  when the activity has none), plus:
+  The activity exactly as `GET /activities/:activityId` returns it to an anonymous caller
+  (with `details`, `null` when the activity has none), plus:
 
   | Field        | Description |
   |--------------|-------------|
