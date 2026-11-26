@@ -23,7 +23,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   return { ...actual, readFile: vi.fn(actual.readFile) };
 });
 
-const PUBLIC_URL = "https://helpa.ufal.br";
+const APP_PUBLIC_URL = "https://helpa.ufal.br";
 
 const common: CertificatePdfData = {
   holderName: "Maria Silva",
@@ -48,7 +48,7 @@ const unicode: CertificatePdfData = {
   holderName: "Łukasz Ő Ñúñez da Conceição",
 };
 
-const renderer = new CertificatePdfRenderer({ appPublicUrl: PUBLIC_URL });
+const renderer = new CertificatePdfRenderer({ appPublicUrl: APP_PUBLIC_URL });
 
 describe("CertificatePdfRenderer.render", () => {
   beforeEach(() => {
@@ -101,7 +101,7 @@ describe("CertificatePdfRenderer.render", () => {
     vi.resetModules();
     const { CertificatePdfRenderer: FreshRenderer } =
       await import("@/services/certificate/CertificatePdfRenderer.js");
-    const fresh = new FreshRenderer({ appPublicUrl: PUBLIC_URL });
+    const fresh = new FreshRenderer({ appPublicUrl: APP_PUBLIC_URL });
 
     await fresh.render(common);
     const readsAfterFirst = vi.mocked(readFile).mock.calls.length;
@@ -127,7 +127,7 @@ describe("CERTIFICATE_TEXT_BOXES with the embedded font", () => {
 
   it("keeps the extreme name and title inside their boxes", async () => {
     const bold = await embedInter("Bold");
-    const content = buildCertificateContent(extreme, PUBLIC_URL);
+    const content = buildCertificateContent(extreme, APP_PUBLIC_URL);
 
     for (const [text, box] of [
       [content.holderName, CERTIFICATE_TEXT_BOXES.holderName],
@@ -147,7 +147,7 @@ describe("CERTIFICATE_TEXT_BOXES with the embedded font", () => {
 
   it("keeps the closing quote when the title is truncated", async () => {
     const bold = await embedInter("Bold");
-    const { activityTitle } = buildCertificateContent(extreme, PUBLIC_URL);
+    const { activityTitle } = buildCertificateContent(extreme, APP_PUBLIC_URL);
 
     const { lines } = fitText(
       activityTitle,
@@ -167,7 +167,7 @@ describe("CERTIFICATE_TEXT_BOXES with the embedded font", () => {
 
 describe("buildCertificateContent", () => {
   it("fills every block of the layout", () => {
-    expect(buildCertificateContent(common, PUBLIC_URL)).toEqual({
+    expect(buildCertificateContent(common, APP_PUBLIC_URL)).toEqual({
       institution: "Universidade Federal de Alagoas",
       heading: "Certificado",
       opening: "Certificamos que",
@@ -190,7 +190,7 @@ describe("buildCertificateContent", () => {
         activityStartDate: new Date("2026-06-10T12:00:00Z"),
         activityEndDate: new Date("2026-06-10T20:00:00Z"),
       },
-      PUBLIC_URL,
+      APP_PUBLIC_URL,
     );
 
     expect(period).toBe(
@@ -201,7 +201,7 @@ describe("buildCertificateContent", () => {
   it('prints "1 hora" in the singular', () => {
     const { period } = buildCertificateContent(
       { ...common, workloadHours: 1 },
-      PUBLIC_URL,
+      APP_PUBLIC_URL,
     );
 
     expect(period).toBe(
@@ -218,7 +218,7 @@ describe("buildCertificateContent", () => {
         activityEndDate: new Date("2026-06-11T01:30:00Z"),
         issuedAt: new Date("2026-06-16T01:30:00Z"),
       },
-      PUBLIC_URL,
+      APP_PUBLIC_URL,
     );
 
     expect(period).toBe(
