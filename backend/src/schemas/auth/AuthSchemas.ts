@@ -31,11 +31,15 @@ const resetCodeField = z.string().transform((value, ctx) => {
 
 export const ForgotPasswordSchema = z.object({ email: emailField });
 
-export const VerifyResetCodeSchema = z.object({ code: resetCodeField });
+export const VerifyResetCodeSchema = z.object({
+  email: emailField,
+  code: resetCodeField,
+});
 
 // A new password equal to the current one is accepted, unlike PATCH
 // /users/me: whoever forgot it cannot know what the current one is.
 export const ResetPasswordSchema = z.object({
+  email: emailField,
   code: resetCodeField,
   newPassword: passwordField,
 });

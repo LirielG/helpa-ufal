@@ -157,6 +157,10 @@ os três cabeçalhos são expostos pelo CORS para o frontend.
 - Em `POST /auth/forgot-password`, o contador por IP roda antes do contador por e-mail. O
   contador por e-mail vale para qualquer endereço, com ou sem conta, então não revela quais
   estão cadastrados: ele protege a caixa de entrada contra spam e a cota diária do provedor.
+- Além das quotas, o código de redefinição só vale junto com o e-mail da conta, então cada
+  palpite testa uma conta só, e cada código aceita no máximo 5 tentativas erradas, somando
+  `POST /auth/forgot-password/verify` e `POST /auth/reset-password`. A 5ª apaga o código; só
+  um novo pedido gera outro. Todas as falhas respondem o mesmo `422 INVALID_RESET_CODE`.
 - `OPTIONS` não consome quota. As demais requisições contam, inclusive as que
   respondem erro. Ao esgotar a quota da instância, todos os clientes recebem `429`
   nas requisições seguintes até o contador reiniciar.

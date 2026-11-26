@@ -11,6 +11,7 @@ import request from "supertest";
 import type { User } from "@prisma/client";
 import { app } from "@/app.js";
 import { prisma } from "@/database/prisma.js";
+import { env } from "@/config/env.js";
 import EmailService from "@/services/email/EmailService.js";
 import { hashUserCode } from "@/utils/userCode.js";
 import { createStudent, DEFAULT_PASSWORD } from "../../helpers/factories.js";
@@ -58,6 +59,18 @@ async function requestCode(email: string): Promise<string> {
   return codes[codes.length - 1].replace("-", "");
 }
 
+// A valid code that is not the one stored.
+function wrongCode(code: string): string {
+  return code === "ZZZZZZZZ" ? "YYYYYYYY" : "ZZZZZZZZ";
+}
+
+async function failedAttempts(userId: string): Promise<number | undefined> {
+  const stored = await prisma.userCode.findUnique({
+    where: { userId_type: { userId, type: "PASSWORD_RESET" } },
+  });
+  return stored?.failedAttempts;
+}
+
 function login(email: string, password: string) {
   return request(app).post("/auth/login").send({ email, password });
 }
@@ -79,7 +92,7 @@ describe("POST /auth/forgot-password", () => {
         /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/,
       ),
       resetUrl: expect.stringMatching(
-        /\/reset-password#code=[0-9A-HJKMNP-TV-Z]{8}$/,
+        /\/reset-password#email=[^&]+&code=[0-9A-HJKMNP-TV-Z]{8}$/,
       ),
     });
   });
@@ -134,13 +147,56 @@ describe("POST /auth/forgot-password", () => {
     expect(JSON.stringify(stored)).not.toContain(code);
   });
 
+  it("puts the encoded e-mail and the code in the fragment of the link", async () => {
+    const { user } = await createStudent({ email: "ana+helpa@ufal.br" });
+
+    const code = await requestCode(user.email);
+
+    const [, , vars] = send.mock.calls[0];
+    expect((vars as { resetUrl: string }).resetUrl).toBe(
+      `${env.APP_PUBLIC_URL}/reset-password#email=ana%2Bhelpa%40ufal.br&code=${code}`,
+    );
+  });
+
+  it("keeps a single code when two requests for the same account race", async () => {
+    const { user } = await createStudent();
+
+    const responses = await Promise.all([
+      request(app).post(forgotUrl).send({ email: user.email }),
+      request(app).post(forgotUrl).send({ email: user.email }),
+    ]);
+
+    expect(responses.map((r) => r.status)).toEqual([204, 204]);
+    expect(await prisma.userCode.count({ where: { userId: user.id } })).toBe(1);
+  });
+
+  it("clears the failed attempts when a new code is requested", async () => {
+    const { user } = await createStudent();
+    const code = await requestCode(user.email);
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: wrongCode(code) })
+      .expect(422);
+    expect(await failedAttempts(user.id)).toBe(1);
+
+    await requestCode(user.email);
+
+    expect(await failedAttempts(user.id)).toBe(0);
+  });
+
   it("invalidates the previous code when a new one is requested", async () => {
     const { user } = await createStudent();
     const first = await requestCode(user.email);
     const second = await requestCode(user.email);
 
-    await request(app).post(verifyUrl).send({ code: first }).expect(422);
-    await request(app).post(verifyUrl).send({ code: second }).expect(204);
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: first })
+      .expect(422);
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: second })
+      .expect(204);
     expect(await prisma.userCode.count({ where: { userId: user.id } })).toBe(1);
   });
 });
@@ -161,7 +217,7 @@ describe("POST /auth/forgot-password/verify", () => {
   ])("accepts the code %s without consuming it", async (_label, typed) => {
     await request(app)
       .post(verifyUrl)
-      .send({ code: typed(code) })
+      .send({ email: user.email, code: typed(code) })
       .expect(204);
 
     expect(await prisma.userCode.count({ where: { userId: user.id } })).toBe(1);
@@ -175,7 +231,10 @@ describe("POST /auth/forgot-password/verify", () => {
       data: { tokenHash: hashUserCode(withZero) },
     });
 
-    await request(app).post(verifyUrl).send({ code: "oabc-defg" }).expect(204);
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: "oabc-defg" })
+      .expect(204);
   });
 
   it("rejects an expired code with 422", async () => {
@@ -184,16 +243,18 @@ describe("POST /auth/forgot-password/verify", () => {
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
 
-    const response = await request(app).post(verifyUrl).send({ code });
+    const response = await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code });
 
     expect(response.status).toBe(422);
     expect(response.body).toEqual(INVALID_CODE_BODY);
   });
 
-  it("rejects an unknown code with the same 422", async () => {
-    const other = code === "ZZZZZZZZ" ? "YYYYYYYY" : "ZZZZZZZZ";
-
-    const response = await request(app).post(verifyUrl).send({ code: other });
+  it("rejects a wrong code with the same 422", async () => {
+    const response = await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: wrongCode(code) });
 
     expect(response.status).toBe(422);
     expect(response.body).toEqual(INVALID_CODE_BODY);
@@ -202,12 +263,151 @@ describe("POST /auth/forgot-password/verify", () => {
   it("rejects a code that does not normalize with 400 on code", async () => {
     const response = await request(app)
       .post(verifyUrl)
-      .send({ code: "ABC-DEF" });
+      .send({ email: user.email, code: "ABC-DEF" });
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
       expect.objectContaining({ field: "code" }),
     ]);
+  });
+});
+
+describe("Password reset code bound to the account", () => {
+  let user: User;
+  let code: string;
+
+  beforeEach(async () => {
+    ({ user } = await createStudent());
+    code = await requestCode(user.email);
+  });
+
+  const routes = [
+    ["verify", verifyUrl, {}],
+    ["reset-password", resetUrl, { newPassword: NEW_PASSWORD }],
+  ] as const;
+
+  it.each(routes)(
+    "%s rejects a missing or malformed e-mail with 400 on email",
+    async (_label, url, extra) => {
+      for (const email of [undefined, "not-an-email"]) {
+        const response = await request(app)
+          .post(url)
+          .send({ email, code, ...extra });
+
+        expect(response.status).toBe(400);
+        expect(response.body.code).toBe("VALIDATION_ERROR");
+        expect(response.body.errors).toEqual([
+          expect.objectContaining({ field: "email" }),
+        ]);
+      }
+    },
+  );
+
+  it.each(routes)(
+    "%s rejects the right code sent with another account's e-mail",
+    async (_label, url, extra) => {
+      const { user: other } = await createStudent();
+      await requestCode(other.email);
+
+      const response = await request(app)
+        .post(url)
+        .send({ email: other.email, code, ...extra });
+
+      expect(response.status).toBe(422);
+      expect(response.body).toEqual(INVALID_CODE_BODY);
+    },
+  );
+
+  it.each(routes)(
+    "%s answers an e-mail without an account with the same 422",
+    async (_label, url, extra) => {
+      const response = await request(app)
+        .post(url)
+        .send({ email: "nobody@ufal.br", code, ...extra });
+
+      expect(response.status).toBe(422);
+      expect(response.body).toEqual(INVALID_CODE_BODY);
+    },
+  );
+
+  it("still accepts the right code after four wrong ones", async () => {
+    for (let i = 0; i < 4; i++) {
+      await request(app)
+        .post(verifyUrl)
+        .send({ email: user.email, code: wrongCode(code) })
+        .expect(422);
+    }
+
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code })
+      .expect(204);
+    expect(await failedAttempts(user.id)).toBe(4);
+  });
+
+  it("deletes the code on the fifth wrong one, summing both routes, until a new request", async () => {
+    for (let i = 0; i < 3; i++) {
+      await request(app)
+        .post(verifyUrl)
+        .send({ email: user.email, code: wrongCode(code) })
+        .expect(422);
+    }
+    for (let i = 0; i < 2; i++) {
+      await request(app)
+        .post(resetUrl)
+        .send({
+          email: user.email,
+          code: wrongCode(code),
+          newPassword: NEW_PASSWORD,
+        })
+        .expect(422);
+    }
+
+    expect(await failedAttempts(user.id)).toBeUndefined();
+    const blocked = await request(app)
+      .post(resetUrl)
+      .send({ email: user.email, code, newPassword: NEW_PASSWORD });
+    expect(blocked.status).toBe(422);
+    expect(blocked.body).toEqual(INVALID_CODE_BODY);
+
+    const fresh = await requestCode(user.email);
+    await request(app)
+      .post(resetUrl)
+      .send({ email: user.email, code: fresh, newPassword: NEW_PASSWORD })
+      .expect(204);
+  });
+
+  // Each request reserves its attempt before comparing, so concurrent guesses
+  // in flight already count: with all five taken, even the right code fails.
+  it.each(routes)(
+    "%s rejects the right code once five attempts are taken",
+    async (_label, url, extra) => {
+      await prisma.userCode.updateMany({
+        where: { userId: user.id },
+        data: { failedAttempts: 5 },
+      });
+
+      const response = await request(app)
+        .post(url)
+        .send({ email: user.email, code, ...extra });
+
+      expect(response.status).toBe(422);
+      expect(response.body).toEqual(INVALID_CODE_BODY);
+    },
+  );
+
+  it("does not count a guess against an expired code", async () => {
+    await prisma.userCode.updateMany({
+      where: { userId: user.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    await request(app)
+      .post(verifyUrl)
+      .send({ email: user.email, code: wrongCode(code) })
+      .expect(422);
+
+    expect(await failedAttempts(user.id)).toBe(0);
   });
 });
 
@@ -230,7 +430,7 @@ describe("POST /auth/reset-password", () => {
 
     const response = await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: NEW_PASSWORD });
+      .send({ email: user.email, code, newPassword: NEW_PASSWORD });
 
     expect(response.status).toBe(204);
     expect(response.headers["set-cookie"]).toBeUndefined();
@@ -245,7 +445,7 @@ describe("POST /auth/reset-password", () => {
 
     const repeat = await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: OTHER_PASSWORD });
+      .send({ email: user.email, code, newPassword: OTHER_PASSWORD });
     expect(repeat.status).toBe(422);
     expect(repeat.body).toEqual(INVALID_CODE_BODY);
   });
@@ -253,14 +453,14 @@ describe("POST /auth/reset-password", () => {
   it("accepts a new password equal to the current one", async () => {
     await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: DEFAULT_PASSWORD })
+      .send({ email: user.email, code, newPassword: DEFAULT_PASSWORD })
       .expect(204);
   });
 
   it("sends the passwordChanged notice", async () => {
     await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: NEW_PASSWORD })
+      .send({ email: user.email, code, newPassword: NEW_PASSWORD })
       .expect(204);
 
     expect(send).toHaveBeenCalledWith(user.email, "passwordChanged", {
@@ -270,8 +470,12 @@ describe("POST /auth/reset-password", () => {
 
   it("lets exactly one of two concurrent resets with the same code through", async () => {
     const responses = await Promise.all([
-      request(app).post(resetUrl).send({ code, newPassword: NEW_PASSWORD }),
-      request(app).post(resetUrl).send({ code, newPassword: OTHER_PASSWORD }),
+      request(app)
+        .post(resetUrl)
+        .send({ email: user.email, code, newPassword: NEW_PASSWORD }),
+      request(app)
+        .post(resetUrl)
+        .send({ email: user.email, code, newPassword: OTHER_PASSWORD }),
     ]);
 
     expect(responses.map((r) => r.status).sort()).toEqual([204, 422]);
@@ -289,7 +493,7 @@ describe("POST /auth/reset-password", () => {
 
     const response = await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: NEW_PASSWORD });
+      .send({ email: user.email, code, newPassword: NEW_PASSWORD });
 
     expect(response.status).toBe(422);
     expect(response.body).toEqual(INVALID_CODE_BODY);
@@ -299,7 +503,7 @@ describe("POST /auth/reset-password", () => {
   it("rejects a password outside the policy with 400 on newPassword", async () => {
     const response = await request(app)
       .post(resetUrl)
-      .send({ code, newPassword: "123" });
+      .send({ email: user.email, code, newPassword: "123" });
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([
@@ -311,7 +515,7 @@ describe("POST /auth/reset-password", () => {
   it("rejects a code that does not normalize with 400 on code", async () => {
     const response = await request(app)
       .post(resetUrl)
-      .send({ code: "UUUUUUUU", newPassword: NEW_PASSWORD });
+      .send({ email: user.email, code: "UUUUUUUU", newPassword: NEW_PASSWORD });
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toEqual([

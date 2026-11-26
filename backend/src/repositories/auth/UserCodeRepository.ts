@@ -2,6 +2,7 @@ import type { PrismaClient, User, UserCodeType } from "@prisma/client";
 import { prisma } from "@/database/prisma.js";
 import type {
   IUserCodeRepository,
+  PendingUserCode,
   SaveUserCodeData,
 } from "@/repositories/auth/IUserCodeRepository.js";
 
@@ -22,34 +23,71 @@ class UserCodeRepository implements IUserCodeRepository {
     tokenHash,
     expiresAt,
   }: SaveUserCodeData): Promise<void> {
+    // Prisma runs this as INSERT ... ON CONFLICT ("userId", "type"), so two
+    // concurrent requests for the same user never raise a unique violation.
     await this._prisma.userCode.upsert({
       where: { userId_type: { userId, type } },
       create: { userId, type, tokenHash, expiresAt },
-      update: { tokenHash, expiresAt, createdAt: new Date() },
+      update: {
+        tokenHash,
+        expiresAt,
+        failedAttempts: 0,
+        createdAt: new Date(),
+      },
     });
   }
 
-  public async existsValid(
+  public async findValid(
+    userId: string,
     type: UserCodeType,
-    tokenHash: string,
     now: Date,
+  ): Promise<PendingUserCode | null> {
+    return this._prisma.userCode.findFirst({
+      where: { userId, type, expiresAt: { gt: now } },
+      select: { id: true, tokenHash: true },
+    });
+  }
+
+  // The WHERE is re-checked under the row lock, so concurrent guesses cannot
+  // take more than maxAttempts between them. Filtering by tokenHash keeps a
+  // guess against a replaced code from counting against the new one, since
+  // the upsert in save keeps the row id.
+  public async reserveAttempt(
+    id: string,
+    tokenHash: string,
+    maxAttempts: number,
   ): Promise<boolean> {
-    const count = await this._prisma.userCode.count({
-      where: { type, tokenHash, expiresAt: { gt: now } },
+    const { count } = await this._prisma.userCode.updateMany({
+      where: { id, tokenHash, failedAttempts: { lt: maxAttempts } },
+      data: { failedAttempts: { increment: 1 } },
     });
     return count > 0;
   }
 
+  public async releaseAttempt(id: string, tokenHash: string): Promise<void> {
+    await this._prisma.userCode.updateMany({
+      where: { id, tokenHash, failedAttempts: { gt: 0 } },
+      data: { failedAttempts: { decrement: 1 } },
+    });
+  }
+
+  public async deleteIfExhausted(
+    id: string,
+    tokenHash: string,
+    maxAttempts: number,
+  ): Promise<void> {
+    await this._prisma.userCode.deleteMany({
+      where: { id, tokenHash, failedAttempts: { gte: maxAttempts } },
+    });
+  }
+
   public async resetPassword(
+    id: string,
     tokenHash: string,
     passwordHash: string,
     now: Date,
   ): Promise<User | null> {
-    const where = {
-      type: "PASSWORD_RESET",
-      tokenHash,
-      expiresAt: { gt: now },
-    } as const;
+    const where = { id, tokenHash, expiresAt: { gt: now } };
 
     return this._prisma.$transaction(async (tx) => {
       const code = await tx.userCode.findFirst({
