@@ -154,7 +154,7 @@ describe("POST /auth/forgot-password", () => {
 
     const [, , vars] = send.mock.calls[0];
     expect((vars as { resetUrl: string }).resetUrl).toBe(
-      `${env.HELPA_PUBLIC_URL}/reset-password#email=ana%2Bhelpa%40ufal.br&code=${code}`,
+      `${env.APP_PUBLIC_URL}/reset-password#email=ana%2Bhelpa%40ufal.br&code=${code}`,
     );
   });
 
