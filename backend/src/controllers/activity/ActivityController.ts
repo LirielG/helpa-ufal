@@ -49,10 +49,7 @@ class ActivityController implements IActivityController {
   public async findById(req: Request, res: Response): Promise<void> {
     const { activityId } = res.locals.validatedParams as ActivityPathParams;
 
-    const activity = await this._activityService.findById(
-      activityId,
-      req.user?.id,
-    );
+    const activity = await this._activityService.findById(activityId, req.user);
     res.status(200).json(activity);
   }
 

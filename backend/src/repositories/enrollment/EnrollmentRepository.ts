@@ -18,6 +18,7 @@ import CertificateRepository from "@/repositories/certificate/CertificateReposit
 import type { ICertificateRepository } from "@/repositories/certificate/ICertificateRepository.js";
 import { prisma } from "@/database/prisma.js";
 import CustomError from "@/models/error/CustomError.js";
+import { activityRemovedError } from "@/models/activity/activityRules.js";
 import { generateValidationCode } from "@/utils/validationCode.js";
 
 const MAX_VALIDATION_CODE_ATTEMPTS = 20;
@@ -108,6 +109,10 @@ class EnrollmentRepository implements IEnrollmentRepository {
         });
       }
 
+      if (activity.removedByModerationAt !== null) {
+        throw activityRemovedError();
+      }
+
       // Re-check under the lock: the value read here is the only one
       // guaranteed to be current, so the "is the activity open" decision
       // gets serialized against concurrent writers. The Service's check
@@ -171,7 +176,12 @@ class EnrollmentRepository implements IEnrollmentRepository {
     // and one 404, with no race window.
     // Accepts APPROVED and PENDING
     const result = await this._prisma.enrollment.updateMany({
-      where: { userId, activityId, status: { in: ["APPROVED", "PENDING"] } },
+      where: {
+        userId,
+        activityId,
+        status: { in: ["APPROVED", "PENDING"] },
+        activity: { deletedAt: null, removedByModerationAt: null },
+      },
       data: { status: "CANCELLED" },
     });
 
@@ -196,6 +206,10 @@ class EnrollmentRepository implements IEnrollmentRepository {
       const activity = await lockActivityForAttendance(tx, activityId);
       if (!activity) {
         throw new CustomError(404, "Activity not found.");
+      }
+
+      if (activity.removedByModerationAt !== null) {
+        throw activityRemovedError();
       }
 
       if (activity.status !== "COMPLETED") {
