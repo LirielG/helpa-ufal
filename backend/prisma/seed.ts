@@ -8,11 +8,11 @@ import { prisma } from "../src/database/prisma.js";
 export async function seedAdmin() {
   const missingVars = (
     [
-      "APP_ADMIN_EMAIL",
-      "APP_ADMIN_PASSWORD",
-      "APP_ADMIN_FULL_NAME",
-      "APP_ADMIN_REGISTRATION_CODE",
-      "APP_ADMIN_CNDB",
+      "HELPA_ADMIN_EMAIL",
+      "HELPA_ADMIN_PASSWORD",
+      "HELPA_ADMIN_FULL_NAME",
+      "HELPA_ADMIN_REGISTRATION_CODE",
+      "HELPA_ADMIN_CNDB",
     ] as const
   ).filter((key) => !env[key]);
 
@@ -20,12 +20,12 @@ export async function seedAdmin() {
     throw new Error(`Missing required env vars: ${missingVars.join(", ")}`);
   }
 
-  const adminEmail = env.APP_ADMIN_EMAIL!.trim().toLowerCase();
-  const adminPassword = env.APP_ADMIN_PASSWORD!;
-  const adminFullName = env.APP_ADMIN_FULL_NAME!;
-  const adminRegistrationCode = env.APP_ADMIN_REGISTRATION_CODE!;
-  const adminCndb = env.APP_ADMIN_CNDB!;
-  const adminCourse = env.APP_ADMIN_COURSE ?? null;
+  const adminEmail = env.HELPA_ADMIN_EMAIL!.trim().toLowerCase();
+  const adminPassword = env.HELPA_ADMIN_PASSWORD!;
+  const adminFullName = env.HELPA_ADMIN_FULL_NAME!;
+  const adminRegistrationCode = env.HELPA_ADMIN_REGISTRATION_CODE!;
+  const adminCndb = env.HELPA_ADMIN_CNDB!;
+  const adminCourse = env.HELPA_ADMIN_COURSE ?? null;
 
   const passwordHash = await bcryptjs.hash(adminPassword, 12);
 

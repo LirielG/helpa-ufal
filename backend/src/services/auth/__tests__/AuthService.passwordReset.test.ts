@@ -121,7 +121,7 @@ describe("AuthService.requestPasswordReset", () => {
     expect(vars.firstName).toBe("Maria");
     expect(vars.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
     expect(vars.resetUrl).toBe(
-      `${env.APP_PUBLIC_URL}/reset-password#email=maria%40ufal.br&code=${vars.code.replace("-", "")}`,
+      `${env.HELPA_PUBLIC_URL}/reset-password#email=maria%40ufal.br&code=${vars.code.replace("-", "")}`,
     );
   });
 

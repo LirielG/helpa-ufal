@@ -165,7 +165,7 @@ class AuthService implements IAuthService {
         code: formatValidationCode(code),
         // In the fragment, the e-mail and the code are never sent to a server
         // nor leaked in the Referer header.
-        resetUrl: `${env.APP_PUBLIC_URL}/reset-password#email=${encodeURIComponent(user.email)}&code=${code}`,
+        resetUrl: `${env.HELPA_PUBLIC_URL}/reset-password#email=${encodeURIComponent(user.email)}&code=${code}`,
       })
       .catch((error) =>
         console.error("[AuthService] Password reset email failed:", error),

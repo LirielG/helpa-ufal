@@ -103,38 +103,38 @@ describe("EnvSchema — CORS_ORIGIN", () => {
   });
 });
 
-describe("EnvSchema — APP_PUBLIC_URL", () => {
+describe("EnvSchema — HELPA_PUBLIC_URL", () => {
   it("defaults to http://localhost:5173 when unset", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });
 
-    expect(parsed.APP_PUBLIC_URL).toBe("http://localhost:5173");
+    expect(parsed.HELPA_PUBLIC_URL).toBe("http://localhost:5173");
   });
 
   it("accepts a custom http(s) URL, keeping its path", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      APP_PUBLIC_URL: "https://helpa.ufal.br/app",
+      HELPA_PUBLIC_URL: "https://helpa.ufal.br/app",
     });
 
-    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
+    expect(parsed.HELPA_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
   });
 
   it.each([
     ["https://helpa.ufal.br/", "https://helpa.ufal.br"],
     ["https://helpa.ufal.br/app/", "https://helpa.ufal.br/app"],
   ])("removes the trailing slash from %s", (value, expected) => {
-    const parsed = EnvSchema.parse({ ...minimalEnv, APP_PUBLIC_URL: value });
+    const parsed = EnvSchema.parse({ ...minimalEnv, HELPA_PUBLIC_URL: value });
 
-    expect(parsed.APP_PUBLIC_URL).toBe(expected);
+    expect(parsed.HELPA_PUBLIC_URL).toBe(expected);
   });
 
   it("lowercases scheme and host, so the printed address never shows HTTPS://", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      APP_PUBLIC_URL: "HTTPS://Helpa.UFAL.br/app",
+      HELPA_PUBLIC_URL: "HTTPS://Helpa.UFAL.br/app",
     });
 
-    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
+    expect(parsed.HELPA_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
   });
 
   // `/validate/<code>` is appended to the value, which would land inside a
@@ -147,11 +147,11 @@ describe("EnvSchema — APP_PUBLIC_URL", () => {
   ])("rejects %s, naming the variable in the error", (value) => {
     const result = EnvSchema.safeParse({
       ...minimalEnv,
-      APP_PUBLIC_URL: value,
+      HELPA_PUBLIC_URL: value,
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["APP_PUBLIC_URL"]);
+    expect(result.error?.issues[0]?.path).toEqual(["HELPA_PUBLIC_URL"]);
   });
 });
 
@@ -250,70 +250,82 @@ describe("EnvSchema — SIGAA_CACHE_TTL_HOURS", () => {
   );
 });
 
-describe("EnvSchema — APP_ADMIN_FULL_NAME", () => {
+describe("EnvSchema — HELPA_ADMIN_FULL_NAME", () => {
   it("accepts a name at the length limit", () => {
     const name = "a".repeat(FULL_NAME_MAX_LENGTH);
 
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      APP_ADMIN_FULL_NAME: name,
+      HELPA_ADMIN_FULL_NAME: name,
     });
 
-    expect(parsed.APP_ADMIN_FULL_NAME).toBe(name);
+    expect(parsed.HELPA_ADMIN_FULL_NAME).toBe(name);
   });
 
   it("rejects a name one character over the limit, naming the variable", () => {
     const result = EnvSchema.safeParse({
       ...minimalEnv,
-      APP_ADMIN_FULL_NAME: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
+      HELPA_ADMIN_FULL_NAME: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["APP_ADMIN_FULL_NAME"]);
+    expect(result.error?.issues[0]?.path).toEqual(["HELPA_ADMIN_FULL_NAME"]);
   });
 });
 
-describe("EnvSchema — legacy ADMIN_ names", () => {
-  it("ignores the unprefixed names, leaving the APP_ADMIN_ fields undefined", () => {
+describe("EnvSchema — legacy names", () => {
+  it.each(["ADMIN_", "APP_ADMIN_"])(
+    "ignores the %s names, leaving the HELPA_ADMIN_ fields undefined",
+    (prefix) => {
+      const parsed = EnvSchema.parse({
+        ...minimalEnv,
+        [`${prefix}EMAIL`]: "admin@helpa.ufal.br",
+        [`${prefix}PASSWORD`]: "Admin@123",
+        [`${prefix}FULL_NAME`]: "Administrador",
+      });
+
+      expect(parsed.HELPA_ADMIN_EMAIL).toBeUndefined();
+      expect(parsed.HELPA_ADMIN_PASSWORD).toBeUndefined();
+      expect(parsed.HELPA_ADMIN_FULL_NAME).toBeUndefined();
+    },
+  );
+
+  it("ignores APP_PUBLIC_URL, keeping the HELPA_PUBLIC_URL default", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      ADMIN_EMAIL: "admin@helpa.ufal.br",
-      ADMIN_PASSWORD: "Admin@123",
-      ADMIN_FULL_NAME: "Administrador",
+      APP_PUBLIC_URL: "https://helpa.ufal.br",
     });
 
-    expect(parsed.APP_ADMIN_EMAIL).toBeUndefined();
-    expect(parsed.APP_ADMIN_PASSWORD).toBeUndefined();
-    expect(parsed.APP_ADMIN_FULL_NAME).toBeUndefined();
+    expect(parsed.HELPA_PUBLIC_URL).toBe("http://localhost:5173");
   });
 });
 
-describe("EnvSchema — APP_ADMIN teacher fields", () => {
-  it("leaves APP_ADMIN_REGISTRATION_CODE, APP_ADMIN_CNDB, and APP_ADMIN_COURSE undefined when unset", () => {
+describe("EnvSchema — HELPA_ADMIN teacher fields", () => {
+  it("leaves HELPA_ADMIN_REGISTRATION_CODE, HELPA_ADMIN_CNDB, and HELPA_ADMIN_COURSE undefined when unset", () => {
     const parsed = EnvSchema.parse({ ...minimalEnv });
 
-    expect(parsed.APP_ADMIN_REGISTRATION_CODE).toBeUndefined();
-    expect(parsed.APP_ADMIN_CNDB).toBeUndefined();
-    expect(parsed.APP_ADMIN_COURSE).toBeUndefined();
+    expect(parsed.HELPA_ADMIN_REGISTRATION_CODE).toBeUndefined();
+    expect(parsed.HELPA_ADMIN_CNDB).toBeUndefined();
+    expect(parsed.HELPA_ADMIN_COURSE).toBeUndefined();
   });
 
-  it("accepts non-empty strings for APP_ADMIN_REGISTRATION_CODE, APP_ADMIN_CNDB, and APP_ADMIN_COURSE", () => {
+  it("accepts non-empty strings for HELPA_ADMIN_REGISTRATION_CODE, HELPA_ADMIN_CNDB, and HELPA_ADMIN_COURSE", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      APP_ADMIN_REGISTRATION_CODE: "SIAPE123456",
-      APP_ADMIN_CNDB: "CNDB123456",
-      APP_ADMIN_COURSE: "Ciência da Computação",
+      HELPA_ADMIN_REGISTRATION_CODE: "SIAPE123456",
+      HELPA_ADMIN_CNDB: "CNDB123456",
+      HELPA_ADMIN_COURSE: "Ciência da Computação",
     });
 
-    expect(parsed.APP_ADMIN_REGISTRATION_CODE).toBe("SIAPE123456");
-    expect(parsed.APP_ADMIN_CNDB).toBe("CNDB123456");
-    expect(parsed.APP_ADMIN_COURSE).toBe("Ciência da Computação");
+    expect(parsed.HELPA_ADMIN_REGISTRATION_CODE).toBe("SIAPE123456");
+    expect(parsed.HELPA_ADMIN_CNDB).toBe("CNDB123456");
+    expect(parsed.HELPA_ADMIN_COURSE).toBe("Ciência da Computação");
   });
 
   it.each([
-    "APP_ADMIN_REGISTRATION_CODE",
-    "APP_ADMIN_CNDB",
-    "APP_ADMIN_COURSE",
+    "HELPA_ADMIN_REGISTRATION_CODE",
+    "HELPA_ADMIN_CNDB",
+    "HELPA_ADMIN_COURSE",
   ] as const)(
     "rejects an empty string for %s, naming the variable in the error",
     (variable) => {
