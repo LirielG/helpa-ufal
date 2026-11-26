@@ -122,7 +122,8 @@ describe("HeroBanner", () => {
       expect(link).toHaveClass("text-white");
     });
   });
-  it("does not render when there are no OPEN actions available", async () => {
+
+  it("does not render when the feed returns no actions", async () => {
     setupFeaturedServer([]);
     render(<HeroBanner />);
 
@@ -190,9 +191,9 @@ describe("HeroBanner", () => {
 
     const prevButton = screen.getByRole("button", { name: "Slide anterior" });
     const nextButton = screen.getByRole("button", { name: "Próximo slide" });
-    const dotsContainer = screen
-      .getByRole("button", { name: "Ir para slide 1" })
-      .parentElement;
+    const dotsContainer = screen.getByRole("button", {
+      name: "Ir para slide 1",
+    }).parentElement;
 
     expect(prevButton).toHaveClass(
       "absolute",
