@@ -155,7 +155,7 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository });
 
-    await service.list({ orderBy: "start_date" });
+    await service.list({ page: 1, limit: 20, orderBy: "start_date" });
 
     expect(activityRepository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -172,7 +172,7 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository });
 
-    await service.list({ orderBy: "created_at" });
+    await service.list({ page: 1, limit: 20, orderBy: "created_at" });
 
     expect(activityRepository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -186,7 +186,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository });
 
     try {
-      await service.list({ type: "INVALID_TYPE" as any });
+      await service.list({ page: 1, limit: 20, type: "INVALID_TYPE" as any });
       expect.fail("Should have thrown ValidationError");
     } catch (error: any) {
       expect(error.errors[0].field).toBe("type");
@@ -198,7 +198,11 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository });
 
     try {
-      await service.list({ format: "INVALID_FORMAT" as any });
+      await service.list({
+        page: 1,
+        limit: 20,
+        format: "INVALID_FORMAT" as any,
+      });
       expect.fail("Should have thrown ValidationError");
     } catch (error: any) {
       expect(error.errors[0].field).toBe("format");

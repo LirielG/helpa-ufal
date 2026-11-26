@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { matchPath, useLocation, useNavigate } from "react-router";
 import { setSessionExpiredHandler } from "../services";
 import { useAuthStore } from "../stores/authStore";
 
@@ -9,7 +9,8 @@ import { useAuthStore } from "../stores/authStore";
  * from the result.
  */
 function staysOnExpiry(pathname: string): boolean {
-  return pathname === "/validar" || pathname.startsWith("/validar/");
+  // matchPath ignores letter case, like the router that opened the page.
+  return matchPath("/validate/:validationCode?", pathname) !== null;
 }
 
 /**

@@ -81,6 +81,28 @@ model User {
 
   reports             ActivityReport[]     @relation("ActivityReporter")
   moderationDecisions ModerationDecision[]
+  codes               UserCode[]
+}
+
+enum UserCodeType {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+// One pending code per user and type: a new request replaces the row, and a
+// successful use deletes it, which is what makes the code single-use.
+// Only the HMAC of the code is stored, never the code itself.
+model UserCode {
+  id        String       @id @default(uuid())
+  userId    String
+  type      UserCodeType
+  tokenHash String       @unique
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
 }
 
 model Student {

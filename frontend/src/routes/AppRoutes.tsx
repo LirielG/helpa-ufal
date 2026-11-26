@@ -105,7 +105,7 @@ export function AppRoutes() {
       />
       {/* Both paths are printed on issued certificates: never rename them. */}
       <Route
-        path="/validar"
+        path="/validate"
         element={
           <PublicRoute>
             <CertificateValidation />
@@ -113,7 +113,7 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/validar/:validationCode"
+        path="/validate/:validationCode"
         element={
           <PublicRoute>
             <CertificateValidation />

@@ -36,11 +36,6 @@ export class SigaaActivityService implements ISigaaActivityService {
 
     await this._syncService.syncIfNeeded();
 
-    const page = Math.max(1, parseInt(filters.page || "1", 10) || 1);
-    const limit = Math.max(
-      1,
-      Math.min(100, parseInt(filters.limit || "10", 10) || 10),
-    );
     const orderBy = filters.orderBy || "lastSeenAt";
     const order = (filters.order === "asc" ? "asc" : "desc") as "asc" | "desc";
 
@@ -48,8 +43,8 @@ export class SigaaActivityService implements ISigaaActivityService {
       search: filters.search,
       type: filters.type,
       department: filters.department,
-      page,
-      limit,
+      page: filters.page,
+      limit: filters.limit,
       orderBy,
       order,
     });
@@ -64,7 +59,7 @@ export class SigaaActivityService implements ISigaaActivityService {
       lastSeenAt: a.lastSeenAt,
     }));
 
-    return toPaginated(items, result.total, page, limit);
+    return toPaginated(items, result.total, filters.page, filters.limit);
   }
 
   public async listFilterOptions(): Promise<SigaaFilterOptions> {

@@ -177,7 +177,7 @@ describe("path parameter validation", () => {
   it("combines invalid activityId and pagination before checking existence or ownership", async () => {
     const student = await createStudent();
     const response = await request(app)
-      .get("/activities/not-a-uuid/enrollments?page=0&limit=51")
+      .get("/activities/not-a-uuid/enrollments?page=0&limit=101")
       .set(...authCookie(student.token));
 
     expect(response.status).toBe(400);
@@ -193,7 +193,7 @@ describe("path parameter validation", () => {
         {
           field: "limit",
           code: "VALIDATION_ERROR",
-          message: "limit must be at most 50.",
+          message: "limit must be at most 100.",
         },
       ],
     });

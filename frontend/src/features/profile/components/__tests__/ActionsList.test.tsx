@@ -633,11 +633,13 @@ describe("ActionsList pagination", () => {
 
     await user.click(
       within(cardWithTitle("Ação 21")).getByRole("button", {
-        name: "Cancelar",
+        name: "Cancelar inscrição",
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Cancelar inscrição" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancelar inscrição",
+      }),
     );
 
     expect(await screen.findByText("Ação 41")).toBeInTheDocument();
@@ -725,10 +727,14 @@ describe("ActionsList pagination", () => {
     await screen.findByRole("heading", { name: "Ação 1" });
 
     await user.click(
-      within(cardWithTitle("Ação 1")).getByRole("button", { name: "Cancelar" }),
+      within(cardWithTitle("Ação 1")).getByRole("button", {
+        name: "Cancelar inscrição",
+      }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Cancelar inscrição" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancelar inscrição",
+      }),
     );
 
     expect(await screen.findByText("Ação 21")).toBeInTheDocument();
@@ -937,11 +943,13 @@ describe("ActionsList cancellation from the enrolled card", () => {
 
     await view.user.click(
       within(cardWithTitle(CANCELLED_TITLE)).getByRole("button", {
-        name: "Cancelar",
+        name: "Cancelar inscrição",
       }),
     );
     await view.user.click(
-      screen.getByRole("button", { name: "Cancelar inscrição" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancelar inscrição",
+      }),
     );
 
     return view;
@@ -959,7 +967,9 @@ describe("ActionsList cancellation from the enrolled card", () => {
     await openSubTab("enrolled");
     await screen.findByText(CLOSED_TITLE);
 
-    expect(screen.getAllByRole("button", { name: "Cancelar" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: "Cancelar inscrição" }),
+    ).toHaveLength(1);
   });
 
   it("removes the card and confirms with a toast when the cancellation succeeds", async () => {
@@ -1021,7 +1031,9 @@ describe("ActionsList cancellation from the enrolled card", () => {
 
     expect(screen.getByText(CANCELLED_TITLE)).toBeInTheDocument();
     // The action left OPEN, so the card stops offering what the API refuses.
-    expect(screen.getAllByRole("button", { name: "Cancelar" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: "Cancelar inscrição" }),
+    ).toHaveLength(1);
   });
 
   it("keeps the card and explains in the modal on a network failure", async () => {
@@ -1035,14 +1047,18 @@ describe("ActionsList cancellation from the enrolled card", () => {
       "Não foi possível conectar ao servidor. Tente novamente.",
     );
     expect(
-      screen.getByRole("button", { name: "Cancelar inscrição" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancelar inscrição",
+      }),
     ).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Manter inscrição" }));
 
     expect(screen.getByText(CANCELLED_TITLE)).toBeInTheDocument();
     // A transient failure leaves the action OPEN, so retrying stays available.
-    expect(screen.getAllByRole("button", { name: "Cancelar" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "Cancelar inscrição" }),
+    ).toHaveLength(2);
   });
 });
 

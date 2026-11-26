@@ -12,6 +12,7 @@ fazer de certo jeito só desempata duas opções de mesmo valor para o consumido
 | Regra                                                                                                                                                                                            | Exemplo                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | O path só tem substantivos. Coleções vão no plural.                                                                                                                                              | `/activities`, `/reported-activities`                                                      |
+| Exceção: as rotas sob `/auth` nomeiam fluxos de autenticação, e por isso usam verbos.                                                                                                            | `/auth/login`, `/auth/forgot-password`, `/auth/reset-password`                             |
 | Segmentos com mais de uma palavra usam kebab-case.                                                                                                                                               | `/sigaa-activities`, `/certificate-validations`                                            |
 | Parâmetros de path se chamam `:<recurso>Id`, nunca `:id`.                                                                                                                                        | `/activities/:activityId`                                                                  |
 | Algo do próprio usuário se acessa por `me` no path. Quem age vem sempre do token, nunca de params, query ou corpo.                                                                               | `/users/me`, `/activities/:activityId/enrollments/me`                                      |
@@ -129,14 +130,18 @@ os três cabeçalhos são expostos pelo CORS para o frontend.
 
 **Limites de requisições:**
 
-| Política                      | Chave do contador                                                      | Limite padrão | Janela |
-| ----------------------------- | ---------------------------------------------------------------------- | ------------- | ------ |
-| Geral da instância            | Única, compartilhada por todos os clientes e rotas                     | 3.000         | 1 min  |
-| Geral do cliente anônimo      | IP                                                                     | 120           | 1 min  |
-| Geral do cliente identificado | ID do usuário no JWT verificado                                        | 300           | 1 min  |
-| Login                         | IP, somente `POST /auth/login`                                         | 10            | 15 min |
-| Cadastro                      | IP, somente `POST /auth/register`                                      | 5             | 1 h    |
-| Validação de certificado      | IP, todos os códigos em `GET /certificate-validations/:validationCode` | 60            | 15 min |
+| Política                             | Chave do contador                                                                           | Limite padrão | Janela |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- | ------------- | ------ |
+| Geral da instância                   | Única, compartilhada por todos os clientes e rotas                                          | 3.000         | 1 min  |
+| Geral do cliente anônimo             | IP                                                                                          | 120           | 1 min  |
+| Geral do cliente identificado        | ID do usuário no JWT verificado                                                             | 300           | 1 min  |
+| Login                                | IP, somente `POST /auth/login`                                                              | 10            | 15 min |
+| Cadastro                             | IP, somente `POST /auth/register`                                                           | 5             | 1 h    |
+| Validação de certificado             | IP, todos os códigos em `GET /certificate-validations/:validationCode`                      | 60            | 15 min |
+| Pedido de redefinição de senha       | IP, somente `POST /auth/forgot-password`                                                    | 5             | 15 min |
+| Pedido de redefinição por e-mail     | E-mail do corpo, com `trim` e minúsculas, em `POST /auth/forgot-password`; sem e-mail, o IP | 3             | 1 h    |
+| Conferência do código de redefinição | IP, somente `POST /auth/forgot-password/verify`                                             | 10            | 15 min |
+| Redefinição de senha                 | IP, somente `POST /auth/reset-password`                                                     | 10            | 15 min |
 
 - A quota geral do cliente é compartilhada entre rotas. Um mesmo usuário mantém
   seu contador ao trocar de IP ou renovar o token; usuários diferentes no mesmo IP
@@ -145,8 +150,12 @@ os três cabeçalhos são expostos pelo CORS para o frontend.
   assinatura e da expiração. Isso não autentica a requisição: as rotas protegidas
   continuam verificando no banco a existência do usuário, a versão da sessão e as
   permissões. Um token revogado não recupera acesso por identificar um contador.
-- Os contadores específicos de login, cadastro e certificado são independentes entre
-  si e continuam por IP, mesmo com cookie válido. As quotas gerais também se aplicam.
+- Os contadores específicos de login, cadastro, certificado e redefinição de senha são
+  independentes entre si e usam a chave da tabela mesmo com cookie válido. As quotas
+  gerais também se aplicam.
+- Em `POST /auth/forgot-password`, o contador por IP roda antes do contador por e-mail. O
+  contador por e-mail vale para qualquer endereço, com ou sem conta, então não revela quais
+  estão cadastrados: ele protege a caixa de entrada contra spam e a cota diária do provedor.
 - `OPTIONS` não consome quota. As demais requisições contam, inclusive as que
   respondem erro. Ao esgotar a quota da instância, todos os clientes recebem `429`
   nas requisições seguintes até o contador reiniciar.

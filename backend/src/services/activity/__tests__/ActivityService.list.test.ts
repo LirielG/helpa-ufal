@@ -5,6 +5,8 @@ import type { IListActivitiesFilters } from "../IActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import ValidationError from "@/models/error/ValidationError.js";
 
+const pagination = { page: 1, limit: 20 };
+
 function mockRepository(
   overrides: Partial<IActivityRepository> = {},
 ): IActivityRepository {
@@ -32,11 +34,11 @@ async function captureValidationError(
 describe("ActivityService.list", () => {
   // ---------- Pagination ----------
 
-  it("applies the defaults `page: 1` and `limit: 20` when not specified", async () => {
+  it("applies the default order when only pagination is given", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({});
+    await service.list(pagination);
 
     expect(repository.list).toHaveBeenCalledWith({
       type: undefined,
@@ -51,146 +53,15 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("Rejects non-numeric 'page' value with an error in the 'page' field.", async () => {
+  it("passes page and limit along to the repository", async () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    const error = await captureValidationError(service.list({ page: "abc" }));
-
-    expect(error.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
-  it("rejects a page value less than 1 with an error in the 'page' field", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(service.list({ page: "0" }));
-
-    expect(error.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
-  it("Rejects a limit of less than 1 with an error in the limit field.", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(service.list({ limit: "0" }));
-
-    expect(error.errors).toEqual([
-      { field: "limit", message: "limit must be a positive integer." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
-  it("Rejects a limit above 100 with an error in the limit field.", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(service.list({ limit: "101" }));
-
-    expect(error.errors).toEqual([
-      { field: "limit", message: "limit can not exceed 100." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
-  });
-
-  it("accepts the limit at the ceiling (100) and passes it on to the repository", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({ limit: "100" });
-
-    expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 100 }),
-    );
-  });
-
-  // Issue #210: used to be "silently truncates a non-integer limit ('10.9'
-  // becomes 10)". The expectation flipped on purpose — this is the record of
-  // the decision that fractional / suffixed numbers are now rejected.
-  it.each(["10.9", "20abc", "1e2", "-5", "+5", " 5", ""])(
-    "rejects the non-integer limit %j with an error in the 'limit' field",
-    async (limit) => {
-      const repository = mockRepository();
-      const service = new ActivityService({ activityRepository: repository });
-
-      const error = await captureValidationError(service.list({ limit }));
-
-      expect(error.errors).toEqual([
-        { field: "limit", message: "limit must be a positive integer." },
-      ]);
-      expect(repository.list).not.toHaveBeenCalled();
-    },
-  );
-
-  it.each(["2.5", "1abc", "1e1", "-1", "+1", " 1", ""])(
-    "rejects the non-integer page %j with an error in the 'page' field",
-    async (page) => {
-      const repository = mockRepository();
-      const service = new ActivityService({ activityRepository: repository });
-
-      const error = await captureValidationError(service.list({ page }));
-
-      expect(error.errors).toEqual([
-        { field: "page", message: "page must be a positive integer." },
-      ]);
-      expect(repository.list).not.toHaveBeenCalled();
-    },
-  );
-
-  it("rejects a repeated limit (?limit=1&limit=2 arrives as an array)", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(
-      service.list({ limit: ["1", "2"] } as unknown as IListActivitiesFilters),
-    );
-
-    expect(error.errors).toEqual([
-      { field: "limit", message: "limit must be a positive integer." },
-    ]);
-  });
-
-  it("still applies the defaults when page and limit are ABSENT (not empty)", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({ page: undefined, limit: undefined });
-
-    expect(repository.list).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 20 }),
-    );
-  });
-
-  it("converts valid page and limit values ​​to numbers when passing them along", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    await service.list({ page: "2", limit: "5" });
+    await service.list({ page: 2, limit: 5 });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ page: 2, limit: 5 }),
     );
-  });
-
-  it("aggregates page and limit errors into a single ValidationError", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(
-      service.list({ page: "0", limit: "0" }),
-    );
-
-    expect(error.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
-      { field: "limit", message: "limit must be a positive integer." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
   });
 
   // ---------- Filters ----------
@@ -200,7 +71,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ status: "INVALIDO" }),
+      service.list({ ...pagination, status: "INVALIDO" }),
     );
 
     expect(error.errors).toEqual([
@@ -218,7 +89,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ order: "INVALIDO" }),
+      service.list({ ...pagination, order: "INVALIDO" }),
     );
 
     expect(error.errors).toEqual([
@@ -235,7 +106,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ orderBy: "INVALIDO" }),
+      service.list({ ...pagination, orderBy: "INVALIDO" }),
     );
 
     expect(error.errors).toEqual([
@@ -253,7 +124,7 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      await service.list({ type });
+      await service.list({ ...pagination, type });
 
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ type }),
@@ -267,7 +138,7 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      await service.list({ format });
+      await service.list({ ...pagination, format });
 
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ format }),
@@ -281,7 +152,7 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      await service.list({ status });
+      await service.list({ ...pagination, status });
 
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ status }),
@@ -294,7 +165,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ format: "INVALID_FORMAT" }),
+      service.list({ ...pagination, format: "INVALID_FORMAT" }),
     );
 
     expect(error.errors).toEqual([
@@ -312,7 +183,7 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      await service.list({ order });
+      await service.list({ ...pagination, order });
 
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ order }),
@@ -325,7 +196,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ type: "INVALIDO", status: "INVALIDO" }),
+      service.list({ ...pagination, type: "INVALIDO", status: "INVALIDO" }),
     );
 
     expect(error.errors).toEqual([
@@ -353,7 +224,7 @@ describe("ActivityService.list", () => {
       const service = new ActivityService({ activityRepository: repository });
 
       const error = await captureValidationError(
-        service.list({ [field]: "" } as IListActivitiesFilters),
+        service.list({ ...pagination, [field]: "" } as IListActivitiesFilters),
       );
 
       expect(error.errors).toHaveLength(1);
@@ -366,7 +237,9 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    const error = await captureValidationError(service.list({ type: "" }));
+    const error = await captureValidationError(
+      service.list({ ...pagination, type: "" }),
+    );
 
     expect(error.errors).toEqual([
       {
@@ -381,7 +254,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ type: undefined });
+    await service.list({ ...pagination, type: undefined });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ type: undefined }),
@@ -394,6 +267,7 @@ describe("ActivityService.list", () => {
 
     const error = await captureValidationError(
       service.list({
+        ...pagination,
         type: ["COURSE", "EVENT"],
       } as unknown as IListActivitiesFilters),
     );
@@ -406,27 +280,11 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ area: "", search: "" });
+    await service.list({ ...pagination, area: "", search: "" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ area: undefined, search: "" }),
     );
-  });
-
-  // ---------- Precedence: pagination before filters ----------
-
-  it("reports only the pagination error when pagination and filters are invalid", async () => {
-    const repository = mockRepository();
-    const service = new ActivityService({ activityRepository: repository });
-
-    const error = await captureValidationError(
-      service.list({ page: "0", type: "INVALIDO" }),
-    );
-
-    expect(error.errors).toEqual([
-      { field: "page", message: "page must be a positive integer." },
-    ]);
-    expect(repository.list).not.toHaveBeenCalled();
   });
 
   // ---------- Repository forwarding ----------
@@ -435,7 +293,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ orderBy: "created_at" });
+    await service.list({ ...pagination, orderBy: "created_at" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: "createdAt" }),
@@ -446,7 +304,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ orderBy: "start_date" });
+    await service.list({ ...pagination, orderBy: "start_date" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -459,7 +317,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ orderBy: "created_at" });
+    await service.list({ ...pagination, orderBy: "created_at" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -473,7 +331,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     await expect(
-      service.list({ type: "INVALID_TYPE" as any }),
+      service.list({ ...pagination, type: "INVALID_TYPE" as any }),
     ).rejects.toSatisfy((error: any) => {
       expect(error.statusCode ?? error.status).toBe(400);
       expect(error.errors?.[0]?.field).toBe("type");
@@ -486,7 +344,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     await expect(
-      service.list({ format: "INVALID_FORMAT" as any }),
+      service.list({ ...pagination, format: "INVALID_FORMAT" as any }),
     ).rejects.toSatisfy((error: any) => {
       expect(error.statusCode ?? error.status).toBe(400);
       expect(error.errors?.[0]?.field).toBe("format");
@@ -501,7 +359,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ search: "  robótica  " });
+    await service.list({ ...pagination, search: "  robótica  " });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ search: "  robótica  " }),
@@ -514,7 +372,7 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      await service.list({ campus });
+      await service.list({ ...pagination, campus });
 
       expect(repository.list).toHaveBeenCalledWith(
         expect.objectContaining({ campus }),
@@ -535,7 +393,9 @@ describe("ActivityService.list", () => {
       const repository = mockRepository();
       const service = new ActivityService({ activityRepository: repository });
 
-      const error = await captureValidationError(service.list({ campus }));
+      const error = await captureValidationError(
+        service.list({ ...pagination, campus }),
+      );
 
       expect(error.errors).toEqual([
         {
@@ -552,7 +412,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ campus: "INVALIDO" }),
+      service.list({ ...pagination, campus: "INVALIDO" }),
     );
 
     for (const campus of Object.values(CampusLocation)) {
@@ -565,7 +425,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     const error = await captureValidationError(
-      service.list({ type: "INVALIDO", campus: "INVALIDO" }),
+      service.list({ ...pagination, type: "INVALIDO", campus: "INVALIDO" }),
     );
 
     expect(error.errors.map((e) => e.field)).toEqual(["type", "campus"]);
@@ -577,6 +437,7 @@ describe("ActivityService.list", () => {
     const service = new ActivityService({ activityRepository: repository });
 
     await service.list({
+      ...pagination,
       startAfter: "2026-01-01",
       endBefore: "2026-12-31",
     } as unknown as IListActivitiesFilters);
@@ -604,8 +465,8 @@ describe("ActivityService.list", () => {
       status: "OPEN",
       search: "robotica",
       campus: "ARAPIRACA",
-      page: "3",
-      limit: "15",
+      page: 3,
+      limit: 15,
       orderBy: "created_at",
       order: "asc",
     });
@@ -623,7 +484,7 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("returns the paginated envelope with default page 1, limit 20, and computed totalPages", async () => {
+  it("returns the paginated envelope with computed totalPages", async () => {
     const repoResult = {
       items: [{ id: "act-1", title: "Oficina de Introdução à Programação" }],
       total: 1,
@@ -633,7 +494,7 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    await expect(service.list({})).resolves.toEqual({
+    await expect(service.list(pagination)).resolves.toEqual({
       items: repoResult.items,
       total: 1,
       page: 1,
@@ -642,7 +503,7 @@ describe("ActivityService.list", () => {
     });
   });
 
-  it("returns the normalized page, limit, and totalPages for custom pagination", async () => {
+  it("returns page, limit, and totalPages for custom pagination", async () => {
     const repoResult = {
       items: [{ id: "act-6", title: "Curso de Extensão" }],
       total: 12,
@@ -652,7 +513,7 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    await expect(service.list({ page: "2", limit: "5" })).resolves.toEqual({
+    await expect(service.list({ page: 2, limit: 5 })).resolves.toEqual({
       items: repoResult.items,
       total: 12,
       page: 2,
@@ -667,26 +528,11 @@ describe("ActivityService.list", () => {
     });
     const service = new ActivityService({ activityRepository: repository });
 
-    await expect(service.list({})).resolves.toEqual({
+    await expect(service.list(pagination)).resolves.toEqual({
       items: [],
       total: 0,
       page: 1,
       limit: 20,
-      totalPages: 1,
-    });
-  });
-
-  it("echoes normalized numeric page and limit when query has leading zeros", async () => {
-    const repository = mockRepository({
-      list: vi.fn().mockResolvedValue({ items: [], total: 3 }),
-    });
-    const service = new ActivityService({ activityRepository: repository });
-
-    await expect(service.list({ page: "02", limit: "05" })).resolves.toEqual({
-      items: [],
-      total: 3,
-      page: 2,
-      limit: 5,
       totalPages: 1,
     });
   });

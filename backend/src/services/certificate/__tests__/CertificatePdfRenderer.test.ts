@@ -83,7 +83,7 @@ describe("CertificatePdfRenderer.render", () => {
     // qrcode mutates the options it receives (adds `color`), hence
     // objectContaining instead of an exact match.
     expect(QRCode.toBuffer).toHaveBeenCalledWith(
-      "https://helpa.ufal.br/validar/7KQ4MX9T2R",
+      "https://helpa.ufal.br/validate/7KQ4MX9T2R",
       expect.objectContaining({ errorCorrectionLevel: "M", margin: 1 }),
     );
   });
@@ -178,8 +178,8 @@ describe("buildCertificateContent", () => {
         "realizada de 10/06/2026 a 12/06/2026, com carga horária de 8 horas.",
       issued: "Emitido em 15/06/2026",
       validationCode: "Código de validação: 7KQ4M-X9T2R",
-      verifyAt: "Confira a autenticidade em helpa.ufal.br/validar",
-      qrUrl: "https://helpa.ufal.br/validar/7KQ4MX9T2R",
+      verifyAt: "Confira a autenticidade em helpa.ufal.br/validate",
+      qrUrl: "https://helpa.ufal.br/validate/7KQ4MX9T2R",
     });
   });
 
@@ -233,9 +233,9 @@ describe("buildCertificateContent", () => {
       "http://localhost:5173/app",
     );
 
-    expect(content.qrUrl).toBe("http://localhost:5173/app/validar/7KQ4MX9T2R");
+    expect(content.qrUrl).toBe("http://localhost:5173/app/validate/7KQ4MX9T2R");
     expect(content.verifyAt).toBe(
-      "Confira a autenticidade em localhost:5173/app/validar",
+      "Confira a autenticidade em localhost:5173/app/validate",
     );
   });
 });

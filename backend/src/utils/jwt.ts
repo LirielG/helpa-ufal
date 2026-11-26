@@ -1,6 +1,15 @@
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 import { env } from "@/config/env.js";
 import type { AuthenticatedUser } from "@/types/auth.js";
+
+const claimsSchema = z.looseObject({
+  id: z.string(),
+  userType: z.enum(["STUDENT", "TEACHER"]),
+  isManager: z.boolean(),
+  // Tokens signed before the claim existed belong to version 0.
+  tokenVersion: z.number().default(0),
+});
 
 export function signJwt(
   payload: AuthenticatedUser,
@@ -14,10 +23,7 @@ export function signJwt(
 
 export function verifyJwt(token: string): AuthenticatedUser | null {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as AuthenticatedUser;
-
-    // Tokens signed before the claim existed belong to version 0.
-    return { ...decoded, tokenVersion: decoded.tokenVersion ?? 0 };
+    return claimsSchema.parse(jwt.verify(token, env.JWT_SECRET));
   } catch {
     return null;
   }

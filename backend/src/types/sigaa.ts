@@ -30,8 +30,8 @@ export type SigaaActivityFilters = {
   search?: string;
   type?: string;
   department?: string;
-  page?: string;
-  limit?: string;
+  page: number;
+  limit: number;
   orderBy?: string;
   order?: string;
 };

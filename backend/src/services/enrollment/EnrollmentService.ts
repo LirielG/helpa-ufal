@@ -24,6 +24,7 @@ import {
   toEnrollmentResponse,
 } from "@/types/enrollment.js";
 import { toPaginated } from "@/types/pagination.js";
+import { DEFAULT_PAGE_LIMIT } from "@/schemas/common/PaginationSchemas.js";
 
 /**
  * The single place where the 1-based page/limit of the service becomes the
@@ -128,7 +129,7 @@ class EnrollmentService implements IEnrollmentService {
     user: Pick<AuthenticatedUser, "id" | "isManager">,
     activityId: string,
     page = 1,
-    limit = 10,
+    limit = DEFAULT_PAGE_LIMIT,
   ): Promise<ParticipantsListResponse> {
     const userId = user.id;
 

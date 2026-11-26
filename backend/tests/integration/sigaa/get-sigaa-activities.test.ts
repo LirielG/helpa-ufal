@@ -28,7 +28,7 @@ describe("GET /sigaa-activities", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
     expect(response.body.page).toBe(1);
-    expect(response.body.limit).toBe(10);
+    expect(response.body.limit).toBe(20);
     expect(response.body.items).toHaveLength(1);
     expect(response.body.items[0]).toMatchObject({
       title: "Curso de Libras",
@@ -55,22 +55,56 @@ describe("GET /sigaa-activities", () => {
   });
 
   // ---------- Pagination bounds ----------
-  it("caps limit at 100 instead of letting a client ask for the whole table", async () => {
+  it("accepts limit at the ceiling of 100", async () => {
     const response = await request(app)
       .get("/sigaa-activities")
-      .query({ limit: 500 });
+      .query({ limit: 100 });
 
     expect(response.status).toBe(200);
     expect(response.body.limit).toBe(100);
   });
 
-  it("clamps a page below 1 to the first page", async () => {
+  it.each([
+    ["page=0", "page", "page must be a positive integer."],
+    ["page=abc", "page", "page must be a positive integer."],
+    ["limit=0", "limit", "limit must be a positive integer."],
+    ["limit=-5", "limit", "limit must be a positive integer."],
+    ["limit=10.9", "limit", "limit must be a positive integer."],
+    ["limit=101", "limit", "limit must be at most 100."],
+  ] as const)(
+    "returns 400 for %s instead of clamping it",
+    async (queryString, field, message) => {
+      const response = await request(app).get(
+        `/sigaa-activities?${queryString}`,
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        status: 400,
+        code: "VALIDATION_ERROR",
+        message: "Invalid query parameters.",
+        errors: [{ field, code: "VALIDATION_ERROR", message }],
+      });
+    },
+  );
+
+  it("reports page and limit errors together, one item per parameter", async () => {
     const response = await request(app)
       .get("/sigaa-activities")
-      .query({ page: 0 });
+      .query({ page: 0, limit: 101 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors.map((e: { field: string }) => e.field)).toEqual(
+      ["page", "limit"],
+    );
+  });
+
+  it("ignores unknown parameters", async () => {
+    const response = await request(app)
+      .get("/sigaa-activities")
+      .query({ foo: "bar" });
 
     expect(response.status).toBe(200);
-    expect(response.body.page).toBe(1);
   });
 
   // ---------- 400 - Bad Request ----------
