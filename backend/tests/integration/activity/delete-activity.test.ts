@@ -146,6 +146,33 @@ describe("DELETE /activities/:activityId", () => {
       .expect(404);
   });
 
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (author, manager, and third party)", async () => {
+    const author = await createTeacher();
+    const manager = await createManager();
+    const other = await createStudent();
+    const activity = await createActivity(author.user.id, {
+      removedByModerationAt: new Date(),
+    });
+
+    for (const actor of [author, manager, other]) {
+      const response = await request(app)
+        .delete(`/activities/${activity.id}`)
+        .set(...authCookie(actor.token));
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
+
+    const row = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(row.deletedAt).toBeNull();
+  });
+
   it("preserves linked enrollments after the soft delete (history intact)", async () => {
     // US 2.5: deleting must not destroy enrollment/attendance/certificate history.
     const author = await createTeacher();

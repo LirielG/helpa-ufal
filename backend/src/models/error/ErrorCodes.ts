@@ -4,6 +4,7 @@ export const GENERIC_ERROR_CODES = {
   403: "FORBIDDEN",
   404: "NOT_FOUND",
   409: "CONFLICT",
+  410: "GONE",
   422: "UNPROCESSABLE",
   429: "TOO_MANY_REQUESTS",
   500: "INTERNAL_ERROR",
@@ -15,6 +16,7 @@ export type GenericErrorCode = (typeof GENERIC_ERROR_CODES)[ErrorStatus];
 export type SpecificErrorCode =
   | "SESSION_INVALID"
   | "ACTIVITY_NOT_FOUND"
+  | "ACTIVITY_REMOVED"
   | "ENROLLMENT_NOT_FOUND"
   | "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT"
   | "NO_AVAILABLE_SLOTS"

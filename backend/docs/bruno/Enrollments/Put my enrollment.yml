@@ -263,6 +263,31 @@ examples:
             "message": "Activity is not open for enrollment."
           }
 
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: PUT
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
+
   - name: 500 - Internal error
     description: Internal server error.
     request:
@@ -299,7 +324,7 @@ docs: |-
   | --- | --- | --- |
   | None | — | — |
 
-  - Validation order: authentication (401) → id format (400) → activity existence (404) → activity status (409) → existing enrollment → available slots (409).
+  - Validation order: authentication (401) → id format (400) → activity existence (404) → moderation removal (410 `ACTIVITY_REMOVED`) → activity status (409) → existing enrollment → available slots (409).
   - Only OPEN activities accept this operation. A closed activity returns 409 `ACTIVITY_NOT_OPEN_FOR_ENROLLMENT`, including for a user with an existing enrollment.
   - Creation returns 201. Repeating PUT for a non-CANCELLED enrollment returns 200 with the same canonical representation, without changing status, attendance, hours, enrolledAt, createdAt or updatedAt. This succeeds even if the existing enrollment occupies the last slot.
   - A CANCELLED enrollment is reactivated in the same record with 201: status becomes APPROVED, createdAt stays original, enrolledAt is refreshed, attendanceConfirmed becomes null and confirmedWorkloadHours becomes 0. It requires an available slot. A subsequent PUT returns 200 unchanged.

@@ -65,6 +65,42 @@ describe("GET /activities — area filter", () => {
     expect(response.body.total).toBe(3); // the soft-deleted one stays invisible
   });
 
+  it("excludes moderation-removed activities even when filtering", async () => {
+    const { user: author } = await createTeacher();
+    const visible = await createActivity(author.id, {
+      area: "Saúde",
+      type: "COURSE",
+      status: "OPEN",
+      campus: "ARAPIRACA",
+      format: "ONLINE",
+      title: "Primeiros Socorros",
+    });
+    await createActivity(author.id, {
+      area: "Saúde",
+      type: "COURSE",
+      status: "OPEN",
+      campus: "ARAPIRACA",
+      format: "ONLINE",
+      title: "Primeiros Socorros Removido",
+      removedByModerationAt: new Date(),
+    });
+
+    const response = await request(app).get("/activities").query({
+      area: "Saúde",
+      search: "socorros",
+      type: "COURSE",
+      status: "OPEN",
+      campus: "ARAPIRACA",
+      format: "ONLINE",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items.map((a: { id: string }) => a.id)).toEqual([
+      visible.id,
+    ]);
+  });
+
   it("treats an empty or whitespace-only area as no filter — never a 400", async () => {
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde" });

@@ -24,6 +24,10 @@ import {
 } from "@prisma/client";
 import CustomError from "@/models/error/CustomError.js";
 import {
+  activityRemovedError,
+  assertActivityNotRemoved,
+} from "@/models/activity/activityRules.js";
+import {
   ActivityFullResponse,
   ActivityFilterOptions,
 } from "@/types/activity.js";
@@ -268,7 +272,7 @@ class ActivityService implements IActivityService {
 
   public async findById(
     id: string,
-    userId?: string,
+    user?: Pick<AuthenticatedUser, "id" | "isManager">,
   ): Promise<ActivityFullResponse> {
     const activity = await this._activityRepository.findById(id);
 
@@ -276,11 +280,18 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
+    if (
+      activity.moderation &&
+      (!user || (activity.authorId !== user.id && !user.isManager))
+    ) {
+      throw activityRemovedError();
+    }
+
     // Absent and null mean different things to the client: absent = no
     // session recognized, null = authenticated but never enrolled.
     // reportedByMe is the exception: it is always present, and an anonymous
     // caller simply has no report of their own, so it is false (no lookup).
-    if (!userId) {
+    if (!user) {
       return { ...activity, reportedByMe: false };
     }
 
@@ -288,8 +299,8 @@ class ActivityService implements IActivityService {
     // findByUserAndActivity ignores whether the report was already resolved,
     // which is what "already reported" means for the client.
     const [enrollment, report] = await Promise.all([
-      this._enrollmentRepository.findByUserAndActivity(userId, id),
-      this._activityReportRepository.findByUserAndActivity(userId, id),
+      this._enrollmentRepository.findByUserAndActivity(user.id, id),
+      this._activityReportRepository.findByUserAndActivity(user.id, id),
     ]);
 
     return {
@@ -310,6 +321,8 @@ class ActivityService implements IActivityService {
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
+
+    assertActivityNotRemoved(activity);
 
     const isAuthor = activity.authorId === userId;
     const isManager = user.isManager;
@@ -476,6 +489,8 @@ class ActivityService implements IActivityService {
       throw new CustomError(404, "Activity not found.");
     }
 
+    assertActivityNotRemoved(activity);
+
     const isAuthor = activity.authorId === userId;
     const isManager = user.isManager;
 
@@ -504,7 +519,7 @@ class ActivityService implements IActivityService {
 
     await this._activityRepository.updateStatus(activityId, newStatus as any);
 
-    return this.findById(activityId, user.id);
+    return this.findById(activityId, user);
   }
 
   public async delete(
@@ -516,6 +531,8 @@ class ActivityService implements IActivityService {
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
+
+    assertActivityNotRemoved(activity);
 
     const isAuthor = activity.authorId === user.id;
     const isManager = user.isManager;

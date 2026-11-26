@@ -28,8 +28,18 @@ type Props = {
   prisma?: PrismaClient;
 };
 
+const ACTIVITY_FULL_INCLUDE = {
+  details: { include: { address: true } },
+  moderationDecisions: {
+    where: { verdict: "UPHELD" as const },
+    orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }],
+    take: 1,
+    select: { justification: true },
+  },
+} satisfies Prisma.ActivityInclude;
+
 type ActivityWithDetails = Prisma.ActivityGetPayload<{
-  include: { details: { include: { address: true } } };
+  include: typeof ACTIVITY_FULL_INCLUDE;
 }>;
 
 function userActivityWhere(
@@ -40,6 +50,7 @@ function userActivityWhere(
     case "enrolled":
       return {
         deletedAt: null,
+        removedByModerationAt: null,
         status: { in: ["OPEN", "IN_PROGRESS"] },
         enrollments: { some: { userId, status: ACTIVE_ENROLLMENT_STATUS } },
       };
@@ -49,6 +60,7 @@ function userActivityWhere(
         OR: [
           {
             deletedAt: null,
+            removedByModerationAt: null,
             enrollments: {
               some: {
                 userId,
@@ -64,11 +76,15 @@ function userActivityWhere(
               },
             },
           },
-          // A deleted activity stays only for those it issued a certificate
-          // to: the certificate remains valid and downloadable, and this list
-          // is the only place the client gets its id from.
+          // A deleted or moderation-removed activity stays only for those it
+          // issued a certificate to: the certificate remains valid and
+          // downloadable, and this list is the only place the client gets its
+          // id from.
           {
-            deletedAt: { not: null },
+            OR: [
+              { deletedAt: { not: null } },
+              { removedByModerationAt: { not: null } },
+            ],
             enrollments: {
               some: {
                 userId,
@@ -117,6 +133,12 @@ function toFullResponse(
                 state: activity.details.address.state,
               }
             : null,
+        }
+      : null,
+    moderation: activity.removedByModerationAt
+      ? {
+          removedAt: activity.removedByModerationAt,
+          justification: activity.moderationDecisions[0]?.justification ?? null,
         }
       : null,
   };
@@ -195,6 +217,7 @@ class ActivityRepository implements IActivityRepository {
           workloadHours: data.workloadHours,
           address: createdAddress,
         },
+        moderation: null,
       };
     });
   }
@@ -203,11 +226,7 @@ class ActivityRepository implements IActivityRepository {
     const [result, approvedCount] = await this._prisma.$transaction([
       this._prisma.activity.findUnique({
         where: { id, deletedAt: null },
-        include: {
-          details: {
-            include: { address: true },
-          },
-        },
+        include: ACTIVITY_FULL_INCLUDE,
       }),
       this._prisma.enrollment.count({
         where: {
@@ -246,7 +265,7 @@ class ActivityRepository implements IActivityRepository {
         // id breaks startDate ties, so a page boundary never repeats or skips a row.
         orderBy: [{ startDate: "desc" }, { id: "asc" }],
         include: {
-          details: { include: { address: true } },
+          ...ACTIVITY_FULL_INCLUDE,
           // @@unique([userId, activityId]) makes this at most one row.
           enrollments: {
             where: { userId },
@@ -270,8 +289,16 @@ class ActivityRepository implements IActivityRepository {
       const enrollment = enrollments[0];
       const certificate = enrollment?.certificate;
 
+      const response = toFullResponse(activity, _count.enrollments);
+
       return {
-        ...toFullResponse(activity, _count.enrollments),
+        ...response,
+        // Only the author learns why moderation removed the activity; a
+        // participant who kept a certificate is told only that it happened.
+        moderation:
+          response.moderation && activity.authorId !== userId
+            ? { ...response.moderation, justification: null }
+            : response.moderation,
         deletedAt: activity.deletedAt,
         enrollment: enrollment ? toEnrollmentResponse(enrollment) : null,
         certificate: certificate
@@ -304,7 +331,7 @@ class ActivityRepository implements IActivityRepository {
       order,
     } = filters;
 
-    const whereClause: any = { deletedAt: null };
+    const whereClause: any = { deletedAt: null, removedByModerationAt: null };
 
     if (type) whereClause.type = type;
     if (status) whereClause.status = status;
@@ -366,6 +393,7 @@ class ActivityRepository implements IActivityRepository {
         activity: {
           is: {
             deletedAt: null,
+            removedByModerationAt: null,
             status: { not: "CANCELLED" },
           },
         },
@@ -456,13 +484,7 @@ class ActivityRepository implements IActivityRepository {
             },
           },
         },
-        include: {
-          details: {
-            include: {
-              address: true,
-            },
-          },
-        },
+        include: ACTIVITY_FULL_INCLUDE,
       });
 
       const approvedCount = await tx.enrollment.count({
@@ -494,7 +516,7 @@ class ActivityRepository implements IActivityRepository {
 
   public async softDelete(id: string): Promise<boolean> {
     const result = await this._prisma.activity.updateMany({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, removedByModerationAt: null },
       data: { deletedAt: new Date() },
     });
 

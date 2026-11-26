@@ -139,6 +139,30 @@ examples:
             "status": 404,
             "message": "Activity not found."
           }
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Neither the author nor a manager can delete it.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: DELETE
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 500 Response
     description: Internal server error.
     request:
@@ -164,7 +188,7 @@ examples:
           }
 
 docs: |-
-  Soft-deletes an activity: it stops showing up in listings and in `GET /activities/:activityId`. Deleting it a second time answers 404.
+  Soft-deletes an activity: it stops showing up in listings and in `GET /activities/:activityId`. Deleting it a second time answers 404. Activities removed by moderation cannot be deleted and answer `410 ACTIVITY_REMOVED` for any user, including the author and managers.
 
   **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can delete.
 

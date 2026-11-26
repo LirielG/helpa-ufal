@@ -213,6 +213,30 @@ examples:
             "status": 409,
             "message": "Activity is not open for cancellation."
           }
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments/me"
+      method: DELETE
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 500 - Internal error
     description: Internal server error.
     request:
@@ -249,7 +273,7 @@ docs: |-
   | --- | --- | --- |
   | None | — | — |
 
-  - Validation order: authentication (401) → id format (400) → activity existence (404) → activity status (409) → active enrollment (404).
+  - Validation order: authentication (401) → id format (400) → activity existence (404) → moderation removal (410 `ACTIVITY_REMOVED`) → activity status (409) → active enrollment (404).
   - Only OPEN activities accept cancellation. IN_PROGRESS, COMPLETED and CANCELLED activities return 409 `CONFLICT`, preserving homologated attendance and hours on completed activities.
   - Success returns 204 with an empty body. APPROVED and PENDING enrollments become CANCELLED in the same record, preserving participation history.
   - The lookup is scoped to the session user and activity. A missing, already cancelled or another user's enrollment returns 404 `ENROLLMENT_NOT_FOUND`.

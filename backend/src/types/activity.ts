@@ -48,8 +48,14 @@ export type ActivityDetailsResponse = {
   address: AddressResponse | null;
 };
 
+export type ActivityModerationResponse = {
+  removedAt: Date;
+  justification: string | null;
+};
+
 export type ActivityFullResponse = ActivityResponse & {
   details: ActivityDetailsResponse | null;
+  moderation: ActivityModerationResponse | null;
   enrollmentStatus?: EnrollmentStatus | null;
   /**
    * Whether the token owner has a report on this activity, still open or

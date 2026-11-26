@@ -6,6 +6,7 @@ import type { ActivityReportResponse } from "@/types/activityReport.js";
 import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import CustomError from "@/models/error/CustomError.js";
+import { assertActivityNotRemoved } from "@/models/activity/activityRules.js";
 
 type Props = {
   activityReportRepository?: IActivityReportRepository;
@@ -32,6 +33,8 @@ class ActivityReportService implements IActivityReportService {
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
+
+    assertActivityNotRemoved(activity);
 
     if (activity.authorId === requesterId) {
       throw new CustomError(

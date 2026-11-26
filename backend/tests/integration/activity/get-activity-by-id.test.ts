@@ -9,6 +9,7 @@ import {
   createManager,
   createActivity,
   createEnrollment,
+  createModerationDecision,
   createReport,
   anAddress,
 } from "../../helpers/factories.js";
@@ -43,6 +44,7 @@ describe("GET /activities/:activityId", () => {
       campus: "ARAPIRACA",
       slots: 40,
       status: "OPEN",
+      moderation: null,
       details: {
         description: "Introdução à lógica de programação para iniciantes.",
         area: "Tecnologia",
@@ -126,6 +128,72 @@ describe("GET /activities/:activityId", () => {
       status: 404,
       code: "NOT_FOUND",
       message: "Activity not found.",
+    });
+  });
+
+  describe("moderation removal", () => {
+    it("returns 410 ACTIVITY_REMOVED with no activity data for anonymous and regular users", async () => {
+      const author = await createTeacher();
+      const manager = await createManager();
+      const regularUser = await createStudent();
+      const removedAt = new Date("2026-09-10T15:00:00.000Z");
+      const activity = await createActivity(author.user.id, {
+        title: "Título que não pode vazar",
+        status: "OPEN",
+        removedByModerationAt: removedAt,
+      });
+      await createModerationDecision(activity.id, manager.user.id, {
+        verdict: "UPHELD",
+        justification: "Violou as regras.",
+      });
+
+      for (const res of [
+        await request(app).get(`/activities/${activity.id}`),
+        await request(app)
+          .get(`/activities/${activity.id}`)
+          .set(...authCookie(regularUser.token)),
+      ]) {
+        expect(res.status).toBe(410);
+        expect(res.body).toEqual({
+          status: 410,
+          code: "ACTIVITY_REMOVED",
+          message: "This activity was removed by moderation.",
+        });
+        expect(JSON.stringify(res.body)).not.toContain(
+          "Título que não pode vazar",
+        );
+      }
+    });
+
+    it("returns 200 with moderation populated for the author and for a manager", async () => {
+      const author = await createTeacher();
+      const manager = await createManager();
+      const removedAt = new Date("2026-09-10T15:00:00.000Z");
+      const activity = await createActivity(author.user.id, {
+        status: "OPEN",
+        removedByModerationAt: removedAt,
+      });
+      await createModerationDecision(activity.id, manager.user.id, {
+        verdict: "UPHELD",
+        justification: "Ação viola as diretrizes.",
+      });
+
+      for (const actor of [author, manager]) {
+        const res = await request(app)
+          .get(`/activities/${activity.id}`)
+          .set(...authCookie(actor.token));
+
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({
+          id: activity.id,
+          title: activity.title,
+          moderation: {
+            removedAt: removedAt.toISOString(),
+            justification: "Ação viola as diretrizes.",
+          },
+          enrollmentStatus: null,
+        });
+      }
     });
   });
 
@@ -297,9 +365,14 @@ describe("GET /activities/:activityId", () => {
       const student = await createStudent();
       const manager = await createManager();
       const activity = await createActivity(author.user.id, { status: "OPEN" });
+      // REJECTED keeps the activity visible; UPHELD would answer 410 instead.
+      const decision = await createModerationDecision(
+        activity.id,
+        manager.user.id,
+        { verdict: "REJECTED" },
+      );
       await createReport(activity.id, student.user.id, {
-        resolvedAt: new Date(),
-        resolvedById: manager.user.id,
+        decisionId: decision.id,
       });
 
       const response = await request(app)

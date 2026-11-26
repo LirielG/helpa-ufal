@@ -18,7 +18,10 @@ export interface IActivityService {
     data: CreateActivityInput,
   ): Promise<ActivityFullResponse>;
   list(filters: IListActivitiesFilters): Promise<IListActivitiesResponse>;
-  findById(id: string, userId?: string): Promise<ActivityFullResponse>;
+  findById(
+    id: string,
+    user?: Pick<AuthenticatedUser, "id" | "isManager">,
+  ): Promise<ActivityFullResponse>;
   update(
     id: string,
     user: Pick<AuthenticatedUser, "id" | "isManager">,

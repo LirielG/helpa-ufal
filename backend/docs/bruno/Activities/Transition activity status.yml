@@ -79,6 +79,7 @@ examples:
                 "state": "AL"
               }
             },
+            "moderation": null,
             "enrollmentStatus": null,
             "reportedByMe": false
           }
@@ -306,6 +307,36 @@ examples:
             "code": "CONFLICT",
             "message": "Cannot transition from OPEN to COMPLETED."
           }
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/status"
+      method: PUT
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "status": "IN_PROGRESS"
+          }
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 500 Response
     description: Internal server error.
     request:
@@ -346,7 +377,7 @@ docs: |-
   - `OPEN => IN_PROGRESS | CANCELLED`
   - `IN_PROGRESS => COMPLETED | CANCELLED`
 
-  `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further.
+  `COMPLETED` and `CANCELLED` are terminal states and cannot be transitioned further. Activities removed by moderation cannot be transitioned either and answer `410 ACTIVITY_REMOVED` for any user, including managers.
 
   **Response:** the complete activity, identical to `GET /activities/:activityId` with the same session after the transition. It includes `details` (nullable), its `address` (nullable), `availableSlots` calculated from approved enrollments, the requester's `enrollmentStatus` (null when never enrolled) and `reportedByMe` (whether the requester has reported the activity).
 

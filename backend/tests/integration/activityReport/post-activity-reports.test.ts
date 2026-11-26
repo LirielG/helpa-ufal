@@ -5,6 +5,7 @@ import { app } from "@/app.js";
 import {
   createTeacher,
   createStudent,
+  createManager,
   createActivity,
 } from "../../helpers/factories.js";
 import { authCookie } from "../../helpers/auth.js";
@@ -159,5 +160,29 @@ describe("POST /activities/:activityId/reports", () => {
       code: "FORBIDDEN",
       message: "Activity authors cannot report their own activity.",
     });
+  });
+
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (including author and manager)", async () => {
+    const author = await createTeacher();
+    const manager = await createManager();
+    const reporter = await createStudent();
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      removedByModerationAt: new Date(),
+    });
+
+    for (const actor of [reporter, author, manager]) {
+      const response = await request(app)
+        .post(`/activities/${activity.id}/reports`)
+        .set(...authCookie(actor.token))
+        .send({ category: "SPAM", description: "Moderation removed." });
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
   });
 });

@@ -351,6 +351,37 @@ examples:
             "status": 404,
             "message": "Enrollment not found."
           }
+  - name: 410 - Activity removed
+    description: The enrollment's activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/enrollments/:enrollmentId/attendance"
+      method: PUT
+      params:
+        - name: enrollmentId
+          value: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+          type: path
+          description: Enrollment UUID
+      body:
+        type: json
+        data: |-
+          {
+            "attended": true,
+            "workloadHours": 4
+          }
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 409 - Activity not completed
     description: Homologation only makes sense on COMPLETED activities. OPEN, IN_PROGRESS or CANCELLED activities return 409 — otherwise hours could be granted for activities that never happened.
     request:
@@ -484,7 +515,7 @@ docs: |-
   - Route: PUT /enrollments/:enrollmentId/attendance. The enrollment has its own id, so it has a single top-level URL; the activity is resolved from the enrollment. The target is identified exclusively by the path — the body carries only the homologation outcome.
   - Body: { attended: boolean, workloadHours?: number }. attended=true requires workloadHours (integer, 1..activity's workloadHours); attended=false forbids it and stores 0.
   - The homologating user is resolved exclusively from the session (never from params, query or body), and must still exist and be active in the database (light hybrid authentication).
-  - Validation order: authentication (401) → path format, body shape and attended/workloadHours combination (400, aggregated errors[]) → existence of the enrollment and its activity (404) → authorization (403) → business rules (409/422).
+  - Validation order: authentication (401) → path format, body shape and attended/workloadHours combination (400, aggregated errors[]) → existence of the enrollment and its activity (404) → moderation removal of its activity (410 `ACTIVITY_REMOVED`) → authorization (403) → business rules (409/422).
   - Authorization: only the creator of the enrollment's activity or a manager (isManager). The enrolled volunteer can never homologate their own attendance (403).
   - Only COMPLETED activities accept homologation; only APPROVED enrollments can be homologated. Both violations return 409.
   - The pair (attendanceConfirmed, confirmedWorkloadHours) is written together, in a single atomic operation: (true, n >= 1) or (false, 0). Validation and write run in the same transaction.

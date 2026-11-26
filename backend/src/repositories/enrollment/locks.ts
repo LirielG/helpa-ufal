@@ -14,11 +14,21 @@ import type { ActivityStatus, Prisma } from "@prisma/client";
 export async function lockActivityForCapacity(
   tx: Prisma.TransactionClient,
   activityId: string,
-): Promise<{ slots: number; status: ActivityStatus; startDate: Date } | null> {
+): Promise<{
+  slots: number;
+  status: ActivityStatus;
+  startDate: Date;
+  removedByModerationAt: Date | null;
+} | null> {
   const rows = await tx.$queryRaw<
-    { slots: number; status: ActivityStatus; startDate: Date }[]
+    {
+      slots: number;
+      status: ActivityStatus;
+      startDate: Date;
+      removedByModerationAt: Date | null;
+    }[]
   >`
-    SELECT slots, status, "startDate"
+    SELECT slots, status, "startDate", "removedByModerationAt"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL
@@ -39,11 +49,19 @@ export async function lockActivityForCapacity(
 export async function lockActivityForAttendance(
   tx: Prisma.TransactionClient,
   activityId: string,
-): Promise<{ status: ActivityStatus; workloadHours: number } | null> {
+): Promise<{
+  status: ActivityStatus;
+  workloadHours: number;
+  removedByModerationAt: Date | null;
+} | null> {
   const rows = await tx.$queryRaw<
-    { status: ActivityStatus; workloadHours: number }[]
+    {
+      status: ActivityStatus;
+      workloadHours: number;
+      removedByModerationAt: Date | null;
+    }[]
   >`
-    SELECT a.status, d."workloadHours"
+    SELECT a.status, d."workloadHours", a."removedByModerationAt"
     FROM "Activity" a
     JOIN "activity_details" d ON d."activityId" = a.id
     WHERE a.id = ${activityId}

@@ -9,6 +9,7 @@ import type {
 } from "@/repositories/enrollment/IEnrollmentRepository.js";
 import type { IEnrollmentService } from "@/services/enrollment/IEnrollmentService.js";
 import CustomError from "@/models/error/CustomError.js";
+import { assertActivityNotRemoved } from "@/models/activity/activityRules.js";
 import ValidationError, {
   type ValidationErrorItem,
 } from "@/models/error/ValidationError.js";
@@ -79,6 +80,8 @@ class EnrollmentService implements IEnrollmentService {
       });
     }
 
+    assertActivityNotRemoved(activity);
+
     if (activity.status !== "OPEN" || activity.startDate <= new Date()) {
       throw new CustomError(409, "Activity is not open for enrollment.", {
         code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
@@ -100,6 +103,8 @@ class EnrollmentService implements IEnrollmentService {
         code: "ACTIVITY_NOT_FOUND",
       });
     }
+
+    assertActivityNotRemoved(activity);
 
     if (activity.status !== "OPEN") {
       throw new CustomError(409, "Activity is not open for cancellation.");
@@ -137,6 +142,8 @@ class EnrollmentService implements IEnrollmentService {
     if (!activity) {
       throw new CustomError(404, "Activity not found.");
     }
+
+    assertActivityNotRemoved(activity);
 
     if (activity.authorId !== userId && !user.isManager) {
       throw new CustomError(
@@ -186,6 +193,8 @@ class EnrollmentService implements IEnrollmentService {
     if (!activity) {
       throw new CustomError(404, "Enrollment not found.");
     }
+
+    assertActivityNotRemoved(activity);
 
     // Order is the contract: existence (404) is decided before authorization
     // (403), which is decided before the business rules (409/422).

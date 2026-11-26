@@ -489,6 +489,27 @@ describe("GET /activities/:activityId/enrollments", () => {
     });
   });
 
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (author, manager, and third party)", async () => {
+    const { author, activity } = await anActivityWithAuthor({
+      removedByModerationAt: new Date(),
+    });
+    const manager = await createManager();
+    const outsider = await createStudent();
+
+    for (const actor of [author, manager, outsider]) {
+      const response = await request(app)
+        .get(listUrl(activity.id))
+        .set(...authCookie(actor.token));
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
+  });
+
   it("returns 400 INVALID_UUID for a non-UUID activity id", async () => {
     const user = await createStudent();
 

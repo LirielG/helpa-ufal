@@ -6,6 +6,7 @@ import { prisma } from "@/database/prisma.js";
 import {
   createActivity,
   createEnrollment,
+  createManager,
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
@@ -200,6 +201,29 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
       code: "ACTIVITY_NOT_FOUND",
       message: "Activity not found.",
     });
+  });
+
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (including manager)", async () => {
+    const { activity } = await anOpenActivity();
+    const student = await createStudent();
+    const manager = await createManager();
+    await prisma.activity.update({
+      where: { id: activity.id },
+      data: { removedByModerationAt: new Date() },
+    });
+
+    for (const actor of [student, manager]) {
+      const response = await request(app)
+        .put(enrollUrl(activity.id))
+        .set(...authCookie(actor.token));
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
   });
 
   // ---------- 409 - Conflict ----------

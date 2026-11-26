@@ -59,8 +59,9 @@ docs: |-
 
   ## Source and eligibility
   - Values come from `ActivityDetails.area`, considering only activities whose
-    parent `Activity` has `deletedAt: null` **and** `status != CANCELLED`.
-  - Removed or cancelled activities never contribute areas: the filter is a
+    parent `Activity` has `deletedAt: null`, `removedByModerationAt: null` **and**
+    `status != CANCELLED`.
+  - Soft-deleted, moderation-removed or cancelled activities never contribute areas: the filter is a
     discovery tool, and an option that only leads to unavailable activities is
     a dead end in the UI.
   - Reads only persisted data — no sync, scraping or side effects.

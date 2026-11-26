@@ -229,6 +229,23 @@ describe("GET /activities", () => {
     expect(ids).toContain(visible.id);
     expect(ids).not.toContain(deleted.id);
   });
+
+  it("does not list a moderation-removed activity and excludes it from total", async () => {
+    const author = await createTeacher();
+    const removed = await createActivity(author.user.id, {
+      status: "OPEN",
+      removedByModerationAt: new Date(),
+    });
+    const visible = await createActivity(author.user.id, { status: "OPEN" });
+
+    const response = await request(app).get("/activities");
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    const ids = response.body.items.map((a: { id: string }) => a.id);
+    expect(ids).toEqual([visible.id]);
+    expect(ids).not.toContain(removed.id);
+  });
 });
 
 /**

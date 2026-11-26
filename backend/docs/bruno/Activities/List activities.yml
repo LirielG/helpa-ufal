@@ -296,7 +296,7 @@ docs: |-
   # GET /activities — List activities
 
   Returns the paginated list of activities. Removed activities (soft delete,
-  `deletedAt`) never appear.
+  `deletedAt`, or moderation removal, `removedByModerationAt`) never appear.
 
   **Authentication:** public.
 
