@@ -5,6 +5,7 @@ import { assertCanModerateActivity } from "@/models/moderation/moderationRules.j
 import { lockActivityForModeration } from "@/repositories/enrollment/locks.js";
 import type {
   ActivityModerationState,
+  CreatedModerationDecision,
   IModerationRepository,
 } from "./IModerationRepository.js";
 import type {
@@ -170,7 +171,7 @@ class ModerationRepository implements IModerationRepository {
     activityId: string,
     managerId: string,
     data: CreateModerationDecisionInput,
-  ): Promise<ModerationDecisionResponse> {
+  ): Promise<CreatedModerationDecision> {
     return this._prisma.$transaction(async (tx) => {
       // Lock Activity first (LOCK ORDERING RULE in locks.ts) and re-check all
       // business rules under the lock so concurrent decisions, enrollments,
@@ -180,7 +181,10 @@ class ModerationRepository implements IModerationRepository {
         activity && activity.authorId !== managerId
           ? await tx.activityReport.findMany({
               where: { activityId, decisionId: null },
-              select: { id: true },
+              select: {
+                id: true,
+                user: { select: { email: true } },
+              },
             })
           : [];
       const openReportIds = openReports.map((report) => report.id);
@@ -220,6 +224,17 @@ class ModerationRepository implements IModerationRepository {
         data: { decisionId: created.id },
       });
 
+      const reporterEmails = [
+        ...new Set(
+          openReports
+            .map((report) => report.user?.email)
+            .filter((email): email is string => Boolean(email)),
+        ),
+      ];
+
+      let authorEmail: string | null = null;
+      let cancelledEnrolleeEmails: string[] = [];
+
       if (data.verdict === "UPHELD") {
         // Preserve the original removal timestamp if the activity was already
         // marked as removed before write-blocking lands in the follow-up issue.
@@ -230,16 +245,33 @@ class ModerationRepository implements IModerationRepository {
           });
         }
 
+        const author = await tx.user.findUnique({
+          where: { id: state.authorId },
+          select: { email: true },
+        });
+        authorEmail = author?.email ?? null;
+
         // Cancel active/pending enrollments except those backed by a
         // certificate, which must remain valid and downloadable.
-        await tx.enrollment.updateMany({
+        const cancelledEnrollments = await tx.enrollment.updateManyAndReturn({
           where: {
             activityId,
             status: { in: ["PENDING", "APPROVED"] },
             certificate: { is: null },
           },
           data: { status: "CANCELLED" },
+          select: {
+            user: { select: { email: true } },
+          },
         });
+
+        cancelledEnrolleeEmails = [
+          ...new Set(
+            cancelledEnrollments
+              .map((enrollment) => enrollment.user?.email)
+              .filter((email): email is string => Boolean(email)),
+          ),
+        ];
       }
 
       const decision = await tx.moderationDecision.findUniqueOrThrow({
@@ -247,7 +279,15 @@ class ModerationRepository implements IModerationRepository {
         select: MODERATION_DECISION_SELECT,
       });
 
-      return toModerationDecisionResponse(decision);
+      return {
+        decision: toModerationDecisionResponse(decision),
+        notifications: {
+          activityTitle: state.title,
+          authorEmail,
+          reporterEmails,
+          cancelledEnrolleeEmails,
+        },
+      };
     });
   }
 }

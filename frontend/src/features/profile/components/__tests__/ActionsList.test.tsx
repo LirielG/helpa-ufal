@@ -689,9 +689,8 @@ describe("ActionsList pagination", () => {
     await user.click(screen.getByRole("button", { name: "Página 3" }));
     await screen.findByText("Ação 41");
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
-    await user.click(await screen.findByRole("button", { name: "Fechar" }));
 
     expect(await screen.findByText("Ação 40")).toBeInTheDocument();
     expect(screen.queryByText("Ação 41")).not.toBeInTheDocument();
@@ -844,7 +843,7 @@ describe("ActionsList deletion", () => {
     return view;
   }
 
-  it("reloads the list after the deletion success modal is dismissed", async () => {
+  it("reloads the list and shows a toast after the deletion", async () => {
     signIn();
     const { deleted, remove } = mockManagedActions();
 
@@ -861,13 +860,13 @@ describe("ActionsList deletion", () => {
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
       "button",
       {
-        name: "Excluir atividade",
+        name: "Excluir",
       },
     );
     await user.click(deleteButton);
     await user.click(screen.getByRole("button", { name: "Sim" }));
-    await user.click(await screen.findByRole("button", { name: "Fechar" }));
 
+    expect(await screen.findByText("Ação excluída.")).toBeInTheDocument();
     expect(await screen.findByText(KEPT_TITLE)).toBeInTheDocument();
     expect(screen.queryByText(DELETED_TITLE)).not.toBeInTheDocument();
   });
@@ -889,7 +888,7 @@ describe("ActionsList deletion", () => {
     const deleteButton = within(cardWithTitle(DELETED_TITLE)).getByRole(
       "button",
       {
-        name: "Excluir atividade",
+        name: "Excluir",
       },
     );
     await user.click(deleteButton);

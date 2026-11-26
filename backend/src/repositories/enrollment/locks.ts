@@ -17,16 +17,18 @@ export async function lockActivityForCapacity(
 ): Promise<{
   slots: number;
   status: ActivityStatus;
+  startDate: Date;
   removedByModerationAt: Date | null;
 } | null> {
   const rows = await tx.$queryRaw<
     {
       slots: number;
       status: ActivityStatus;
+      startDate: Date;
       removedByModerationAt: Date | null;
     }[]
   >`
-    SELECT slots, status, "removedByModerationAt"
+    SELECT slots, status, "startDate", "removedByModerationAt"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL
@@ -86,6 +88,7 @@ export async function lockActivityForModeration(
 ): Promise<{
   id: string;
   authorId: string;
+  title: string;
   status: ActivityStatus;
   removedByModerationAt: Date | null;
 } | null> {
@@ -93,11 +96,12 @@ export async function lockActivityForModeration(
     {
       id: string;
       authorId: string;
+      title: string;
       status: ActivityStatus;
       removedByModerationAt: Date | null;
     }[]
   >`
-    SELECT id, "authorId", status, "removedByModerationAt"
+    SELECT id, "authorId", title, status, "removedByModerationAt"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL

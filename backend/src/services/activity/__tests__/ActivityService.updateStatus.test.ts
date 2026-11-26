@@ -3,6 +3,7 @@ import ActivityService from "../ActivityService.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import { allowedTransitions } from "@/schemas/activity/ActivitySchemas.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { ActivityFullResponse, ActivityStatus } from "@/types/activity.js";
 import { expectHttpError } from "@/utils/tests.js";
 
@@ -50,6 +51,7 @@ function mockRepositories(
   overrides: {
     activity?: Partial<IActivityRepository>;
     enrollment?: Partial<IEnrollmentRepository>;
+    report?: Partial<IActivityReportRepository>;
   } = {},
 ) {
   const activityRepository = {
@@ -63,7 +65,12 @@ function mockRepositories(
     ...overrides.enrollment,
   } as unknown as IEnrollmentRepository;
 
-  return { activityRepository, enrollmentRepository };
+  const activityReportRepository = {
+    findByUserAndActivity: vi.fn().mockResolvedValue(null),
+    ...overrides.report,
+  } as unknown as IActivityReportRepository;
+
+  return { activityRepository, enrollmentRepository, activityReportRepository };
 }
 
 describe("ActivityService.updateStatus", () => {
@@ -71,10 +78,15 @@ describe("ActivityService.updateStatus", () => {
 
   // Existence is verified before any user query.
   it("throws 404 when the activity does not exist or was deleted", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories();
+    const {
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    } = mockRepositories();
     const service = new ActivityService({
       activityRepository,
       enrollmentRepository,
+      activityReportRepository,
     });
 
     await expectHttpError(
@@ -119,12 +131,17 @@ describe("ActivityService.updateStatus", () => {
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories({
+    const {
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    } = mockRepositories({
       activity: { findById: vi.fn().mockResolvedValue(makeActivityRecord()) },
     });
     const service = new ActivityService({
       activityRepository,
       enrollmentRepository,
+      activityReportRepository,
     });
 
     await expectHttpError(
@@ -139,7 +156,11 @@ describe("ActivityService.updateStatus", () => {
   });
 
   it("an authenticated manager can transition another author's activity", async () => {
-    const { activityRepository, enrollmentRepository } = mockRepositories({
+    const {
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    } = mockRepositories({
       activity: {
         findById: vi
           .fn()
@@ -153,6 +174,7 @@ describe("ActivityService.updateStatus", () => {
     const service = new ActivityService({
       activityRepository,
       enrollmentRepository,
+      activityReportRepository,
     });
 
     await service.updateStatus(ACTIVITY_ID, "IN_PROGRESS", {
@@ -171,7 +193,11 @@ describe("ActivityService.updateStatus", () => {
   it.each(transitionCases.filter((c) => c.allowed))(
     "accepts transition $from ->$to",
     async ({ from, to }) => {
-      const { activityRepository, enrollmentRepository } = mockRepositories({
+      const {
+        activityRepository,
+        enrollmentRepository,
+        activityReportRepository,
+      } = mockRepositories({
         activity: {
           findById: vi
             .fn()
@@ -185,6 +211,7 @@ describe("ActivityService.updateStatus", () => {
       const service = new ActivityService({
         activityRepository,
         enrollmentRepository,
+        activityReportRepository,
       });
 
       const result = await service.updateStatus(ACTIVITY_ID, to, {
@@ -204,7 +231,11 @@ describe("ActivityService.updateStatus", () => {
   it.each(transitionCases.filter((c) => !c.allowed))(
     "rejects transition $from ->$to with 409",
     async ({ from, to }) => {
-      const { activityRepository, enrollmentRepository } = mockRepositories({
+      const {
+        activityRepository,
+        enrollmentRepository,
+        activityReportRepository,
+      } = mockRepositories({
         activity: {
           findById: vi
             .fn()
@@ -214,6 +245,7 @@ describe("ActivityService.updateStatus", () => {
       const service = new ActivityService({
         activityRepository,
         enrollmentRepository,
+        activityReportRepository,
       });
       const expectedMessage = TERMINAL.includes(from)
         ? `Activity is already ${from} and cannot be transitioned.`
@@ -244,7 +276,11 @@ describe("ActivityService.updateStatus", () => {
         address: null,
       },
     });
-    const { activityRepository, enrollmentRepository } = mockRepositories({
+    const {
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    } = mockRepositories({
       activity: {
         findById: vi
           .fn()
@@ -260,6 +296,7 @@ describe("ActivityService.updateStatus", () => {
     const service = new ActivityService({
       activityRepository,
       enrollmentRepository,
+      activityReportRepository,
     });
 
     const result = await service.updateStatus(updated.id, "IN_PROGRESS", {
@@ -267,6 +304,46 @@ describe("ActivityService.updateStatus", () => {
       isManager: false,
     });
 
-    expect(result).toEqual({ ...updated, enrollmentStatus: "APPROVED" });
+    // Same lookups as GET /activities/:activityId: the response is identical.
+    expect(result).toEqual({
+      ...updated,
+      enrollmentStatus: "APPROVED",
+      reportedByMe: false,
+    });
+  });
+
+  it("reports reportedByMe true when the requester already reported the activity", async () => {
+    const updated = makeActivityRecord({ status: "IN_PROGRESS" });
+    const {
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    } = mockRepositories({
+      activity: {
+        findById: vi
+          .fn()
+          .mockResolvedValueOnce(makeActivityRecord({ authorId: "author-1" }))
+          .mockResolvedValue(updated),
+      },
+      report: {
+        findByUserAndActivity: vi.fn().mockResolvedValue({ id: "report-1" }),
+      },
+    });
+    const service = new ActivityService({
+      activityRepository,
+      enrollmentRepository,
+      activityReportRepository,
+    });
+
+    const result = await service.updateStatus(ACTIVITY_ID, "IN_PROGRESS", {
+      id: "author-1",
+      isManager: false,
+    });
+
+    expect(result.reportedByMe).toBe(true);
+    expect(activityReportRepository.findByUserAndActivity).toHaveBeenCalledWith(
+      "author-1",
+      ACTIVITY_ID,
+    );
   });
 });

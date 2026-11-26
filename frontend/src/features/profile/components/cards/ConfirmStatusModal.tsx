@@ -1,19 +1,36 @@
-import { Calendar, MapPin, Clock, Check, X } from "lucide-react";
+import { Calendar, MapPin, Clock, Check, X, Play } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 import { formatWorkloadHours } from "@/utils";
 
-// The cancel title must not be "Confirmar cancelamento", which the enrollment
-// cancellation modal uses.
-const CANCEL_COPY = {
-  title: "Cancelar ação",
-  body: "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
-  backOut: "Manter ação",
-};
-
-const COMPLETE_COPY = {
-  title: "Concluir ação",
-  body: "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
-  backOut: "Voltar",
+const STATUS_MODAL_COPY: Record<
+  ActivityStatusTransition,
+  {
+    title: string;
+    subtitle: string;
+    body: string;
+    backOut: string;
+  }
+> = {
+  IN_PROGRESS: {
+    title: "Iniciar ação",
+    subtitle: "Você está prestes a iniciar a ação:",
+    body: "A ação passa a constar como em andamento. Novas inscrições deixam de ser aceitas.",
+    backOut: "Voltar",
+  },
+  COMPLETED: {
+    title: "Concluir ação",
+    subtitle: "Você está prestes a confirmar a conclusão da ação:",
+    body: "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
+    backOut: "Voltar",
+  },
+  CANCELLED: {
+    // The cancel title must not be "Confirmar cancelamento", which the enrollment
+    // cancellation modal uses.
+    title: "Cancelar ação",
+    subtitle: "Você está prestes a cancelar a ação:",
+    body: "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
+    backOut: "Manter ação",
+  },
 };
 
 type ConfirmStatusModalProps = {
@@ -31,8 +48,7 @@ export function ConfirmStatusModal({
   onConfirm,
   onCancel,
 }: ConfirmStatusModalProps) {
-  const isCompleted = pendingStatus === "COMPLETED";
-  const copy = isCompleted ? COMPLETE_COPY : CANCEL_COPY;
+  const copy = STATUS_MODAL_COPY[pendingStatus];
   const workloadHours = activity.action.details?.workloadHours;
 
   return (
@@ -42,11 +58,19 @@ export function ConfirmStatusModal({
       className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 p-4 backdrop-blur-xs"
     >
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl gap-4">
-        {isCompleted ? (
+        {pendingStatus === "IN_PROGRESS" && (
+          <div className="bg-[#1B75BB] rounded-md p-1.5 flex items-center justify-center">
+            <Play className="size-6 text-white fill-white" />
+          </div>
+        )}
+
+        {pendingStatus === "COMPLETED" && (
           <div className="bg-green-600 rounded-md p-1.5 flex items-center justify-center">
             <Check className="size-6 text-white stroke-[3]" />
           </div>
-        ) : (
+        )}
+
+        {pendingStatus === "CANCELLED" && (
           <div className="border-2 border-red-600 rounded-full p-1.5 flex items-center justify-center">
             <X className="size-6 text-red-600 stroke-[3]" />
           </div>
@@ -54,11 +78,7 @@ export function ConfirmStatusModal({
 
         <div>
           <h3 className="text-xl font-bold text-[#0A2540]">{copy.title}</h3>
-          <p className="text-xs text-gray-600 mt-1">
-            {isCompleted
-              ? "Você está prestes a confirmar a conclusão da ação:"
-              : "Você está prestes a cancelar a ação:"}
-          </p>
+          <p className="text-xs text-gray-600 mt-1">{copy.subtitle}</p>
         </div>
 
         <div className="bg-gray-100/80 rounded-xl p-4 w-full text-left flex flex-col gap-2">
@@ -100,9 +120,9 @@ export function ConfirmStatusModal({
             onClick={onConfirm}
             disabled={isLoading}
             className={`${
-              isCompleted
-                ? "bg-[#0066FF] hover:bg-blue-700"
-                : "bg-[#C81A17] hover:bg-red-700"
+              pendingStatus === "CANCELLED"
+                ? "bg-[#C81A17] hover:bg-red-700"
+                : "bg-[#0066FF] hover:bg-blue-700"
             } text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors disabled:opacity-50 cursor-pointer`}
           >
             {copy.title}

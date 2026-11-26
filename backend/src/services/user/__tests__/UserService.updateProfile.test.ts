@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import UserService from "../UserService.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IEmailService } from "@/services/email/IEmailService.js";
 import { expectCustomError } from "@/utils/tests.js";
 
 const USER_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -59,15 +60,20 @@ function setup(
   const enrollmentRepository = {
     sumConfirmedHoursByUserId: sumHours,
   } as unknown as IEnrollmentRepository;
+  // Always injected: without it the service would build a real EmailService.
+  const send = vi.fn().mockResolvedValue(undefined);
+  const emailService = { send } as unknown as IEmailService;
 
   return {
     service: new UserService({
       userRepository: repository,
       enrollmentRepository,
+      emailService,
     }),
     findById,
     update,
     sumHours,
+    send,
   };
 }
 
@@ -228,6 +234,204 @@ describe("UserService.updateProfile", () => {
       );
       expect(data.fullName).toBe("Ricardo Editado");
       expect(data.course).toBeNull();
+    });
+  });
+
+  // ---------- Password changed e-mail ----------
+
+  describe("password changed e-mail", () => {
+    const passwordChange = {
+      currentPassword: CURRENT_PASSWORD,
+      newPassword: NEW_PASSWORD,
+    };
+
+    it("sends passwordChanged to the account's e-mail with the first name only", async () => {
+      const { service, send } = setup(aStudentRow());
+
+      await service.updateProfile(USER_ID, passwordChange);
+
+      // Exactly these vars: no password, plain or hashed, ever reaches the e-mail.
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        "maria@aluno.ufal.br",
+        "passwordChanged",
+        { firstName: "Maria" },
+      );
+    });
+
+    it("uses the teacher's own e-mail and first name", async () => {
+      const { service, send } = setup(aTeacherRow());
+
+      await service.updateProfile(USER_ID, passwordChange);
+
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        "ricardo.almeida@ufal.br",
+        "passwordChanged",
+        { firstName: "Ricardo" },
+      );
+    });
+
+    it.each([
+      { fullName: "Maria", firstName: "Maria" },
+      { fullName: "Maria Silva Souza", firstName: "Maria" },
+      { fullName: "  Maria   Silva ", firstName: "Maria" },
+    ])("greets %j as $firstName", async ({ fullName, firstName }) => {
+      const { service, send } = setup(aStudentRow({ fullName }));
+
+      await service.updateProfile(USER_ID, passwordChange);
+
+      expect(send).toHaveBeenCalledWith(expect.any(String), "passwordChanged", {
+        firstName,
+      });
+    });
+
+    it("greets by the name saved in the same request, not the old one", async () => {
+      const { service, send } = setup(
+        aStudentRow({ fullName: "Maria Silva" }),
+        aStudentRow({ fullName: "Joana Souza" }),
+      );
+
+      await service.updateProfile(USER_ID, {
+        ...passwordChange,
+        fullName: "Joana Souza",
+      });
+
+      expect(send).toHaveBeenCalledWith(
+        "maria@aluno.ufal.br",
+        "passwordChanged",
+        { firstName: "Joana" },
+      );
+    });
+
+    it.each([
+      { label: "only fullName", input: { fullName: "Maria Nova" } },
+      { label: "only course", input: { course: "Engenharia" } },
+      {
+        label: "fullName and course",
+        input: { fullName: "Maria", course: null },
+      },
+    ])(
+      "does not send anything when the request changes $label",
+      async ({ input }) => {
+        const { service, send } = setup(aTeacherRow());
+
+        await service.updateProfile(USER_ID, input);
+
+        expect(send).not.toHaveBeenCalled();
+      },
+    );
+
+    it("does not send anything when currentPassword is wrong (403)", async () => {
+      const { service, send } = setup(aStudentRow());
+
+      await expectCustomError(
+        service.updateProfile(USER_ID, {
+          currentPassword: "Wrong@1234",
+          newPassword: NEW_PASSWORD,
+        }),
+        403,
+        "Current password is incorrect.",
+      );
+
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("does not send anything when newPassword equals the current one (422)", async () => {
+      const { service, send } = setup(aStudentRow());
+
+      await expectCustomError(
+        service.updateProfile(USER_ID, {
+          currentPassword: CURRENT_PASSWORD,
+          newPassword: CURRENT_PASSWORD,
+        }),
+        422,
+        "New password must be different from the current password.",
+      );
+
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("sends only after the repository finished the update", async () => {
+      const { service, update, send } = setup(aStudentRow());
+
+      await service.updateProfile(USER_ID, passwordChange);
+
+      expect(update.mock.invocationCallOrder[0]).toBeLessThan(
+        send.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("does not send when the repository update fails, since nothing changed", async () => {
+      const { service, update, send } = setup(aStudentRow());
+      update.mockRejectedValue(new Error("db down"));
+
+      await expect(
+        service.updateProfile(USER_ID, passwordChange),
+      ).rejects.toThrow("db down");
+
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("still returns the profile when the e-mail fails, and logs the failure", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      try {
+        const { service, send } = setup(aStudentRow(), aStudentRow(), 12);
+        send.mockRejectedValue(new Error("smtp down"));
+
+        const profile = await service.updateProfile(USER_ID, passwordChange);
+
+        expect(profile).toMatchObject({ id: USER_ID, totalWorkloadHours: 12 });
+        // The rejection is handled on a later microtask than the return.
+        await vi.waitFor(() => expect(consoleError).toHaveBeenCalledOnce());
+        // Fixed prefix, so the failure can be searched in the logs.
+        expect(consoleError.mock.calls[0][0]).toBe(
+          "[UserService] Password changed email failed:",
+        );
+        expect(String(consoleError.mock.calls[0])).toContain("smtp down");
+        // The recipient's address stays out of the logs.
+        expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+          "maria@aluno.ufal.br",
+        );
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+    it("does not wait for the e-mail: a send that never settles does not hold the response", async () => {
+      const { service, send } = setup(aStudentRow());
+      send.mockReturnValue(new Promise<void>(() => undefined));
+
+      const profile = await service.updateProfile(USER_ID, passwordChange);
+
+      expect(profile.id).toBe(USER_ID);
+      expect(send).toHaveBeenCalledOnce();
+    });
+
+    it("still tells the owner when reading the workload hours fails after the write", async () => {
+      const { service, sumHours, send } = setup(aStudentRow());
+      sumHours.mockRejectedValue(new Error("db down"));
+
+      await expect(
+        service.updateProfile(USER_ID, passwordChange),
+      ).rejects.toThrow("db down");
+
+      expect(send).toHaveBeenCalledOnce();
+    });
+
+    it("still tells the owner when the updated profile cannot be built (500)", async () => {
+      const { service, send } = setup(
+        aStudentRow(),
+        aStudentRow({ student: null }),
+      );
+
+      await expectCustomError(
+        service.updateProfile(USER_ID, passwordChange),
+        500,
+        "Profile data is inconsistent.",
+      );
+
+      expect(send).toHaveBeenCalledOnce();
     });
   });
 

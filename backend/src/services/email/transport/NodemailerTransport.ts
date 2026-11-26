@@ -115,10 +115,11 @@ class NodemailerTransport implements IEmailTransport {
     }
 
     const { host, port, secure, user, pass } = this._smtp;
+    const resolvedPort = port ?? DEFAULT_SMTP_PORT;
     return nodemailer.createTransport({
       host,
-      port: port ?? DEFAULT_SMTP_PORT,
-      secure: secure ?? false,
+      port: resolvedPort,
+      secure: secure ?? resolvedPort === 465,
       // Local catchers such as Mailpit accept mail without a login.
       ...(user !== undefined && { auth: { user, pass } }),
       ...TIMEOUTS,

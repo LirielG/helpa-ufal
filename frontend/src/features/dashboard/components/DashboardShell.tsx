@@ -15,6 +15,12 @@ type DashboardShellProps = {
   footer?: ReactNode;
   containerStyle?: React.CSSProperties;
   showCreateAction?: boolean;
+  /**
+   * Fresh copy of the signed-in user's profile from a page that reads or saves
+   * it itself. The sidebar shows it, and the cache keeps it, instead of what
+   * was cached before.
+   */
+  syncedProfile?: UserProfile | null;
 };
 
 let cachedProfileUserId: string | null = null;
@@ -27,6 +33,7 @@ export function DashboardShell({
   footer,
   containerStyle,
   showCreateAction = true,
+  syncedProfile = null,
 }: DashboardShellProps) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -41,6 +48,19 @@ export function DashboardShell({
     useActionRegister();
 
   useEffect(() => closeRegisterModal, [closeRegisterModal]);
+
+  const syncedProfileOfUser =
+    syncedProfile && user && syncedProfile.id === user.id
+      ? syncedProfile
+      : null;
+  const sidebarProfile = syncedProfileOfUser ?? profile;
+
+  useEffect(() => {
+    if (!user || !syncedProfileOfUser) return;
+
+    cachedProfileUserId = user.id;
+    cachedProfileData = syncedProfileOfUser;
+  }, [user, syncedProfileOfUser]);
 
   const loadProfile = useCallback(
     async (force = false) => {
@@ -116,7 +136,7 @@ export function DashboardShell({
           <DashboardSidebar
             isOpenMobile={mobileSidebarOpen}
             onCloseMobile={() => setMobileSidebarOpen(false)}
-            profile={profile}
+            profile={sidebarProfile}
             profileError={profileError}
             onRetryProfile={() => void loadProfile(true)}
           />

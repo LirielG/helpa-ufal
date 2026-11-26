@@ -148,7 +148,7 @@ export function EnrollmentModal({
                   disabled={step === "loading" || isSubmitting}
                   onClick={onClose}
                 >
-                  ✕ Cancelar
+                  Cancelar
                 </Button>
                 <Button
                   variant="navy"
@@ -159,7 +159,7 @@ export function EnrollmentModal({
                   isLoading={step === "loading"}
                   onClick={handleConfirm}
                 >
-                  ✓ Confirmar
+                  Confirmar
                 </Button>
               </div>
             </>

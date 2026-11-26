@@ -1,3 +1,4 @@
+import { Routes, Route, useLocation } from "react-router";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test";
 import { ActionCard } from "../ActionCard";
@@ -22,6 +23,11 @@ function makeAction(
     type: "COURSE",
     ...overrides,
   } as ActivityListItem;
+}
+
+function LocationDisplay() {
+  const location = useLocation();
+  return <div data-testid="current-path">{location.pathname}</div>;
 }
 
 describe("ActionCard", () => {
@@ -167,5 +173,78 @@ describe("ActionCard", () => {
         .getAttribute("data-cover-variant"),
     ).toBe(cardVariant);
     expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("renders a single link on the title and displays 'Ver detalhes' hidden from accessibility tree", () => {
+    render(<ActionCard action={makeAction()} />);
+
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAccessibleName("Oficina de Robótica");
+    expect(links[0]).toHaveAttribute("href", "/activity/action-42");
+
+    const detailsLabel = screen.getByText("Ver detalhes");
+    expect(detailsLabel).toBeInTheDocument();
+    expect(detailsLabel).toHaveAttribute("aria-hidden", "true");
+    expect(detailsLabel).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("stretches the title link across the entire card and navigates to the action on click", async () => {
+    const { container, user } = render(
+      <Routes>
+        <Route path="/" element={<ActionCard action={makeAction()} />} />
+        <Route path="/activity/:id" element={<LocationDisplay />} />
+      </Routes>,
+    );
+
+    const cardRoot = container.firstElementChild;
+    expect(cardRoot).toHaveClass("relative", "hover:shadow-lg");
+    expect(cardRoot?.className).not.toMatch(/scale/);
+
+    const titleLink = screen.getByRole("link", {
+      name: "Oficina de Robótica",
+    });
+    expect(titleLink).toHaveClass("after:absolute", "after:inset-0");
+
+    const cover = screen.getByRole("img", { name: "Oficina de Robótica" });
+    expect(cover.parentElement).not.toHaveClass("z-10");
+
+    await user.click(titleLink);
+    expect(screen.getByTestId("current-path")).toHaveTextContent(
+      "/activity/action-42",
+    );
+  });
+
+  it("focuses the title link with a single Tab stop and navigates on Enter", async () => {
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <ActionCard action={makeAction()} />
+              <button type="button">Próximo elemento</button>
+            </>
+          }
+        />
+        <Route path="/activity/:id" element={<LocationDisplay />} />
+      </Routes>,
+    );
+
+    await user.tab();
+    expect(
+      screen.getByRole("link", { name: "Oficina de Robótica" }),
+    ).toHaveFocus();
+
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Próximo elemento" }),
+    ).toHaveFocus();
+
+    await user.tab({ shift: true });
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("current-path")).toHaveTextContent(
+      "/activity/action-42",
+    );
   });
 });

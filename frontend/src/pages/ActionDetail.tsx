@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Users } from "lucide-react";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -192,17 +191,16 @@ export function ActionDetail() {
           >
             <div className="page-container py-10">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 flex flex-col gap-8">
                   <ActionDescription
                     description={
                       action.details?.description || "Descrição não informada."
                     }
                   />
+                  <ActionInfoCard action={action} />
                 </div>
 
                 <div className="lg:col-span-1 flex flex-col gap-4">
-                  <ActionInfoCard action={action} />
-
                   {isAuthenticated ? (
                     <EnrollmentActions
                       action={action}
@@ -222,9 +220,8 @@ export function ActionDetail() {
                       onClick={() =>
                         navigate(`/activity/${action.id}/enrollments`)
                       }
-                      className="flex items-center justify-center gap-3 rounded-xl"
+                      className="rounded-xl"
                     >
-                      <Users className="size-6" />
                       Ver inscritos
                     </Button>
                   )}

@@ -324,6 +324,7 @@ class ActivityRepository implements IActivityRepository {
       search,
       campus,
       area,
+      startDateAfter,
       page,
       limit,
       orderBy,
@@ -335,6 +336,7 @@ class ActivityRepository implements IActivityRepository {
     if (type) whereClause.type = type;
     if (status) whereClause.status = status;
     if (campus) whereClause.campus = campus;
+    if (startDateAfter) whereClause.startDate = { gt: startDateAfter };
 
     if (format || area) {
       whereClause.details = {

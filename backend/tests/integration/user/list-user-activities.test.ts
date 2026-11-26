@@ -810,7 +810,7 @@ describe("GET /users/me/activities", () => {
       },
     );
 
-    it("returns each activity as GET /activities/:activityId does, plus deletedAt, the enrollment and the certificate", async () => {
+    it("returns each activity as GET /activities/:activityId does (bar reportedByMe), plus deletedAt, the enrollment and the certificate", async () => {
       const user = await createTeacher();
       const activity = await createActivity(user.user.id, {
         title: "Oficina de Testes",
@@ -824,14 +824,19 @@ describe("GET /users/me/activities", () => {
       ]);
 
       expect(detail.status).toBe(200);
+      // reportedByMe exists only on the detail route: a history item is the
+      // detail MINUS that field, plus the extras below.
+      const { reportedByMe, ...sharedWithDetail } = detail.body;
+      expect(reportedByMe).toBe(false);
       expect(history.body.items).toEqual([
         {
-          ...detail.body,
+          ...sharedWithDetail,
           deletedAt: null,
           enrollment: null,
           certificate: null,
         },
       ]);
+      expect(history.body.items[0]).not.toHaveProperty("reportedByMe");
     });
 
     it("serializes the user's enrollment in its canonical form", async () => {

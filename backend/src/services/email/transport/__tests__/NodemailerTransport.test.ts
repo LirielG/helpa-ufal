@@ -184,6 +184,57 @@ describe("NodemailerTransport", () => {
       });
     });
 
+    it.each([
+      { port: 465, expected: true },
+      { port: 587, expected: false },
+    ])(
+      "derives secure=$expected from port $port when SMTP_SECURE is not set",
+      async ({ port, expected }) => {
+        const NodemailerTransport = await loadTransport();
+
+        await new NodemailerTransport({
+          smtp: { host: "smtp.helpa.test", port },
+        }).send(message);
+
+        expect(nodemailerMock.createTransport).toHaveBeenCalledWith({
+          host: "smtp.helpa.test",
+          port,
+          secure: expected,
+          ...timeouts,
+        });
+      },
+    );
+
+    it("falls back to port 587 without TLS when neither port nor secure is set", async () => {
+      const NodemailerTransport = await loadTransport();
+
+      await new NodemailerTransport({
+        smtp: { host: "smtp.helpa.test" },
+      }).send(message);
+
+      expect(nodemailerMock.createTransport).toHaveBeenCalledWith({
+        host: "smtp.helpa.test",
+        port: 587,
+        secure: false,
+        ...timeouts,
+      });
+    });
+
+    it("keeps an explicit secure=false on port 465", async () => {
+      const NodemailerTransport = await loadTransport();
+
+      await new NodemailerTransport({
+        smtp: { host: "smtp.helpa.test", port: 465, secure: false },
+      }).send(message);
+
+      expect(nodemailerMock.createTransport).toHaveBeenCalledWith({
+        host: "smtp.helpa.test",
+        port: 465,
+        secure: false,
+        ...timeouts,
+      });
+    });
+
     it("rejects when the server refuses the message", async () => {
       const NodemailerTransport = await loadTransport();
       sendMail.mockRejectedValueOnce(new Error("550 rejected"));

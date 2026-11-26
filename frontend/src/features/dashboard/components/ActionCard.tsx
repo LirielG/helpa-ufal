@@ -53,7 +53,7 @@ export function ActionCard({ action }: ActionCardProps) {
   const slotsBadge = getSlotsBadge();
 
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
+    <div className="relative bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden group flex flex-col">
       <div className="relative h-48 overflow-hidden shrink-0">
         <ActionCover
           id={action.id}
@@ -68,7 +68,12 @@ export function ActionCard({ action }: ActionCardProps) {
           className="text-lg font-bold text-gray-900 line-clamp-2"
           title={action.title}
         >
-          {action.title}
+          <Link
+            to={`/activity/${action.id}`}
+            className="after:absolute after:inset-0 focus:outline-none focus-visible:underline"
+          >
+            {action.title}
+          </Link>
         </h3>
 
         <div className="flex items-start gap-2 text-sm text-gray-600">
@@ -105,23 +110,13 @@ export function ActionCard({ action }: ActionCardProps) {
           </span>
         </div>
 
-        <Link
-          to={`/activity/${action.id}`}
-          className="mt-auto block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors"
-          style={{ border: "1px solid #00579A", color: "#00579A" }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
-              "#00579A";
-            (e.currentTarget as HTMLAnchorElement).style.color = "#fff";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.backgroundColor =
-              "transparent";
-            (e.currentTarget as HTMLAnchorElement).style.color = "#00579A";
-          }}
+        <span
+          tabIndex={-1}
+          aria-hidden="true"
+          className="mt-auto block w-full text-center py-2.5 rounded-lg text-sm font-semibold border border-[#00579A] text-[#00579A] group-hover:bg-[#00579A] group-hover:text-white transition-colors"
         >
-          Ver Detalhes
-        </Link>
+          Ver detalhes
+        </span>
       </div>
     </div>
   );

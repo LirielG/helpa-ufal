@@ -2,8 +2,8 @@ import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.j
 import {
   button,
   codeBox,
-  escapeHtml,
   layout,
+  paragraph,
 } from "@/services/email/templates/layout.js";
 
 type PasswordResetCodeVars = {
@@ -24,8 +24,6 @@ const IGNORE =
 const passwordResetCode: IEmailTemplate<PasswordResetCodeVars> = {
   render({ firstName, code, resetUrl }) {
     const greeting = `Olá, ${firstName}!`;
-    const paragraph = (text: string) =>
-      `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
 
     return {
       subject: SUBJECT,

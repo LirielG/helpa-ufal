@@ -14,6 +14,7 @@ import type { ActivityStatus } from "@/services/contracts/activity";
 import type { UserActivity } from "../../../types";
 import { ManagedCard } from "../ManagedCard";
 import { EnrolledCard } from "../EnrolledCard";
+import { toast } from "react-toastify";
 
 const ACTION_ID = "act-managed";
 
@@ -27,8 +28,6 @@ const RELOAD_FAILED_MESSAGE =
   "Não foi possível carregar o status atual. Recarregue a página.";
 const COMMUNICATION_MESSAGE =
   "Não foi possível alterar o status. Verifique sua conexão e tente novamente.";
-const STATUS_HINT_MESSAGE =
-  "Para concluir, primeiro marque a ação como Em andamento.";
 
 function managed(activityStatus: ActivityStatus): UserActivity {
   return makeManagedActivity({
@@ -60,16 +59,6 @@ function renderCard(
     </>,
     { route: "/profile" },
   );
-}
-
-function statusSelect() {
-  return screen.getByRole("combobox", { name: "Status" });
-}
-
-function optionLabels() {
-  return within(statusSelect())
-    .getAllByRole("option")
-    .map((option) => option.textContent);
 }
 
 /** Records PUT bodies to verify that confirmation sends each transition once. */
@@ -108,81 +97,107 @@ function respondWithError(status: number, message: string) {
 }
 
 describe("ManagedCard status control", () => {
-  describe("options offered for each status", () => {
-    it("offers starting and cancelling an OPEN action, but not completing it", () => {
+  describe("badge and action buttons for each status", () => {
+    it("shows 'Inscrições Abertas' badge with 'Iniciar ação' and 'Cancelar ação' for OPEN", () => {
       renderCard(managed("OPEN"));
 
-      expect(statusSelect()).toBeEnabled();
-      expect(statusSelect()).toHaveDisplayValue("Aberta");
-      expect(optionLabels()).toEqual(["Aberta", "Em andamento", "Cancelada"]);
-      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
-      expect(statusSelect()).toHaveAttribute(
-        "aria-describedby",
-        `status-hint-${ACTION_ID}`,
-      );
+      expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Iniciar ação" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Cancelar ação" }),
+      ).toBeEnabled();
+      expect(
+        screen.queryByRole("button", { name: "Concluir ação" }),
+      ).not.toBeInTheDocument();
     });
 
-    it("offers completing and cancelling an IN_PROGRESS action", () => {
+    it("shows 'Em Andamento' badge with 'Concluir ação' and 'Cancelar ação' for IN_PROGRESS", () => {
       renderCard(managed("IN_PROGRESS"));
 
-      expect(statusSelect()).toBeEnabled();
-      expect(statusSelect()).toHaveDisplayValue("Em andamento");
-      expect(optionLabels()).toEqual([
-        "Em andamento",
-        "Concluída",
-        "Cancelada",
-      ]);
-      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
-      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
+      expect(screen.getByText("Em Andamento")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Concluir ação" }),
+      ).toBeEnabled();
+      expect(
+        screen.getByRole("button", { name: "Cancelar ação" }),
+      ).toBeEnabled();
+      expect(
+        screen.queryByRole("button", { name: "Iniciar ação" }),
+      ).not.toBeInTheDocument();
     });
 
     it.each([
-      ["COMPLETED", "Concluída"],
+      ["COMPLETED", "Finalizada"],
       ["CANCELLED", "Cancelada"],
     ] as const)(
-      "shows a %s action's status without offering any transition",
+      "shows only the '%s' badge without status action buttons",
       (status, label) => {
         renderCard(managed(status));
 
-        expect(statusSelect()).toBeDisabled();
-        expect(statusSelect()).toHaveDisplayValue(label);
-        expect(optionLabels()).toEqual([label]);
-        expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
-        expect(statusSelect()).not.toHaveAttribute("aria-describedby");
+        expect(screen.getByText(label)).toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Iniciar ação" }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Concluir ação" }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Cancelar ação" }),
+        ).not.toBeInTheDocument();
       },
     );
   });
 
   describe("starting an action", () => {
-    it("applies IN_PROGRESS right away and shows it without reloading", async () => {
+    it("asks for confirmation, then updates the badge to 'Em Andamento' without reloading", async () => {
       const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
       const { user } = renderCard(managed("OPEN"));
 
-      expect(screen.getByText(STATUS_HINT_MESSAGE)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      const dialog = screen.getByRole("dialog", { name: "Iniciar ação" });
+      expect(bodies).toHaveLength(0);
+
+      await user.click(
+        within(dialog).getByRole("button", { name: "Iniciar ação" }),
+      );
+
+      expect(await screen.findByText("Em Andamento")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Iniciar ação" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Concluir ação" }),
+      ).toBeEnabled();
+      expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
+    });
+
+    it("sends nothing and keeps 'Inscrições Abertas' when the user backs out", async () => {
+      const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
+      const { user } = renderCard(managed("OPEN"));
+
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Voltar",
+        }),
+      );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      await waitFor(() =>
-        expect(statusSelect()).toHaveDisplayValue("Em andamento"),
-      );
-      expect(optionLabels()).toEqual([
-        "Em andamento",
-        "Concluída",
-        "Cancelada",
-      ]);
-      expect(screen.queryByText(STATUS_HINT_MESSAGE)).not.toBeInTheDocument();
-      expect(statusSelect()).not.toHaveAttribute("aria-describedby");
-      expect(bodies).toStrictEqual([{ status: "IN_PROGRESS" }]);
+      expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
+      expect(bodies).toHaveLength(0);
     });
   });
 
   describe("completing an action", () => {
-    it("asks for confirmation, then shows the new status without reloading", async () => {
+    it("asks for confirmation, then updates the badge to 'Finalizada' without reloading", async () => {
       const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
-      await user.selectOptions(statusSelect(), "Concluída");
+      await user.click(screen.getByRole("button", { name: "Concluir ação" }));
 
       const dialog = screen.getByRole("dialog", { name: "Concluir ação" });
       expect(bodies).toHaveLength(0);
@@ -191,17 +206,22 @@ describe("ManagedCard status control", () => {
         within(dialog).getByRole("button", { name: "Concluir ação" }),
       );
 
-      await waitFor(() => expect(statusSelect()).toBeDisabled());
-      expect(statusSelect()).toHaveDisplayValue("Concluída");
+      expect(await screen.findByText("Finalizada")).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Concluir ação" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Cancelar ação" }),
+      ).not.toBeInTheDocument();
       expect(bodies).toStrictEqual([{ status: "COMPLETED" }]);
     });
 
-    it("sends nothing and keeps the current status when the user backs out", async () => {
+    it("sends nothing and keeps 'Em Andamento' when the user backs out", async () => {
       const bodies = recordPuts(respondWithStatus("COMPLETED"));
       const { user } = renderCard(managed("IN_PROGRESS"));
 
-      await user.selectOptions(statusSelect(), "Concluída");
+      await user.click(screen.getByRole("button", { name: "Concluir ação" }));
       await user.click(
         within(screen.getByRole("dialog")).getByRole("button", {
           name: "Voltar",
@@ -209,7 +229,7 @@ describe("ManagedCard status control", () => {
       );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(statusSelect()).toHaveDisplayValue("Em andamento");
+      expect(screen.getByText("Em Andamento")).toBeInTheDocument();
       expect(bodies).toHaveLength(0);
     });
   });
@@ -218,31 +238,36 @@ describe("ManagedCard status control", () => {
     it.each([
       [
         "OPEN",
-        "Cancelada",
+        "Iniciar ação",
+        "Iniciar ação",
+        "Voltar",
+        "A ação passa a constar como em andamento. Novas inscrições deixam de ser aceitas.",
+      ],
+      [
+        "OPEN",
+        "Cancelar ação",
         "Cancelar ação",
         "Manter ação",
         "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
       ],
       [
         "IN_PROGRESS",
-        "Concluída",
+        "Concluir ação",
         "Concluir ação",
         "Voltar",
         "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
       ],
     ] as const)(
-      "shows the %s → %s copy and buttons whose visible text matches their name",
-      async (status, option, confirm, backOut, body) => {
+      "shows the %s -> %s copy and buttons whose visible text matches their name",
+      async (status, triggerButton, confirm, backOut, body) => {
         const { user } = renderCard(managed(status));
 
-        await user.selectOptions(statusSelect(), option);
+        await user.click(screen.getByRole("button", { name: triggerButton }));
 
         const dialog = screen.getByRole("dialog", { name: confirm });
         expect(
           within(dialog).getByText(body, { exact: false }),
         ).toBeInTheDocument();
-        // Voice control users say what they see; a button reading "Cancelar"
-        // that keeps the action would do the opposite of what they asked.
         expect(
           within(dialog).getByRole("button", { name: confirm }),
         ).toHaveTextContent(new RegExp(`^${confirm}$`));
@@ -259,12 +284,13 @@ describe("ManagedCard status control", () => {
         }),
       );
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
 
       expect(
         within(screen.getByRole("dialog")).queryByText(/horas/),
       ).not.toBeInTheDocument();
     });
+
     it("displays workload in singular inside the confirmation modal when action has 1 hour", async () => {
       const activity = makeManagedActivity({
         action: {
@@ -276,7 +302,7 @@ describe("ManagedCard status control", () => {
 
       const { user } = renderCard(activity);
 
-      await user.selectOptions(statusSelect(), "Concluída");
+      await user.click(screen.getByRole("button", { name: "Concluir ação" }));
 
       const dialog = screen.getByRole("dialog", { name: "Concluir ação" });
       expect(within(dialog).getByText("1 hora")).toBeInTheDocument();
@@ -288,33 +314,35 @@ describe("ManagedCard status control", () => {
       recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
 
       const dialog = screen.getByRole("dialog", { name: "Cancelar ação" });
-      // The enrollment cancellation modal (#181) uses this title; the two
-      // must not be confused.
       expect(
         screen.queryByText("Confirmar cancelamento"),
       ).not.toBeInTheDocument();
-      // The backend notifies nobody, so the copy must not promise it does.
       expect(
         within(dialog).getByText(/não serão avisados automaticamente/),
       ).toBeInTheDocument();
     });
 
-    it("cancels after confirmation and shows the new status without reloading", async () => {
+    it("cancels after confirmation and updates the badge to 'Cancelada' without reloading", async () => {
       const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
       await user.click(
         within(screen.getByRole("dialog")).getByRole("button", {
           name: "Cancelar ação",
         }),
       );
 
-      await waitFor(() => expect(statusSelect()).toBeDisabled());
-      expect(statusSelect()).toHaveDisplayValue("Cancelada");
+      expect(await screen.findByText("Cancelada")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Iniciar ação" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Cancelar ação" }),
+      ).not.toBeInTheDocument();
       expect(bodies).toStrictEqual([{ status: "CANCELLED" }]);
     });
 
@@ -322,7 +350,7 @@ describe("ManagedCard status control", () => {
       const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
       await user.click(
         within(screen.getByRole("dialog")).getByRole("button", {
           name: "Manter ação",
@@ -330,7 +358,7 @@ describe("ManagedCard status control", () => {
       );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(statusSelect()).toHaveDisplayValue("Aberta");
+      expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
       expect(bodies).toHaveLength(0);
     });
   });
@@ -340,16 +368,19 @@ describe("ManagedCard status control", () => {
     const bodies = recordPuts(respondWithStatus("IN_PROGRESS"));
     const { user } = renderCard(managed("OPEN"));
 
-    await user.selectOptions(statusSelect(), "Em andamento");
-
-    await waitFor(() =>
-      expect(statusSelect()).toHaveDisplayValue("Em andamento"),
+    await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Iniciar ação",
+      }),
     );
+
+    expect(await screen.findByText("Em Andamento")).toBeInTheDocument();
     expect(bodies).toHaveLength(1);
   });
 
   describe("while the request is pending", () => {
-    it("disables the control so a second change cannot fire another transition", async () => {
+    it("disables the status buttons so a second change cannot fire another transition", async () => {
       let release!: () => void;
       const pending = new Promise<void>((resolve) => {
         release = resolve;
@@ -362,14 +393,28 @@ describe("ManagedCard status control", () => {
       });
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
-      await waitFor(() => expect(statusSelect()).toBeDisabled());
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Iniciar ação" }),
+        ).toBeDisabled(),
+      );
+      expect(
+        screen.getByRole("button", { name: "Cancelar ação" }),
+      ).toBeDisabled();
 
       release();
 
-      await waitFor(() => expect(statusSelect()).toBeEnabled());
-      expect(statusSelect()).toHaveDisplayValue("Em andamento");
+      expect(await screen.findByText("Em Andamento")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Concluir ação" }),
+      ).toBeEnabled();
       expect(bodies).toHaveLength(1);
     });
 
@@ -377,16 +422,14 @@ describe("ManagedCard status control", () => {
       const bodies = recordPuts(respondWithStatus("CANCELLED"));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
       await user.dblClick(
         within(screen.getByRole("dialog")).getByRole("button", {
           name: "Cancelar ação",
         }),
       );
 
-      await waitFor(() =>
-        expect(statusSelect()).toHaveDisplayValue("Cancelada"),
-      );
+      expect(await screen.findByText("Cancelada")).toBeInTheDocument();
       expect(bodies).toHaveLength(1);
     });
   });
@@ -401,24 +444,39 @@ describe("ManagedCard status control", () => {
       );
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         FORBIDDEN_MESSAGE,
       );
-      expect(statusSelect()).toHaveDisplayValue("Aberta");
+      expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
     });
 
-    it("shows a not-found message on 404 and stops offering transitions", async () => {
+    it("shows a not-found message on 404 and disables status transitions", async () => {
       recordPuts(respondWithError(404, "Activity not found."));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         NOT_FOUND_MESSAGE,
       );
-      expect(statusSelect()).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Iniciar ação" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Cancelar ação" }),
+      ).toBeDisabled();
     });
 
     it("reloads the real status on 409 so no stale option stays on screen", async () => {
@@ -438,16 +496,20 @@ describe("ManagedCard status control", () => {
       );
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         CONFLICT_MESSAGE,
       );
-      await waitFor(() =>
-        expect(statusSelect()).toHaveDisplayValue("Cancelada"),
-      );
-      expect(statusSelect()).toBeDisabled();
-      expect(optionLabels()).toEqual(["Cancelada"]);
+      expect(await screen.findByText("Cancelada")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Iniciar ação" }),
+      ).not.toBeInTheDocument();
     });
 
     it("shows the not-found message when the reload after a 409 finds the action removed", async () => {
@@ -468,15 +530,22 @@ describe("ManagedCard status control", () => {
       );
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       await waitFor(() =>
         expect(screen.getByRole("alert")).toHaveTextContent(NOT_FOUND_MESSAGE),
       );
-      expect(statusSelect()).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Iniciar ação" }),
+      ).toBeDisabled();
     });
 
-    it("stops offering transitions when the reload after a 409 fails", async () => {
+    it("disables status transitions when the reload after a 409 fails", async () => {
       recordPuts(
         respondWithError(
           409,
@@ -488,23 +557,36 @@ describe("ManagedCard status control", () => {
       );
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       await waitFor(() =>
         expect(screen.getByRole("alert")).toHaveTextContent(
           RELOAD_FAILED_MESSAGE,
         ),
       );
-      // The displayed status is stale, so offering its transitions again
-      // would only lead to another 409.
-      expect(statusSelect()).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Iniciar ação" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Cancelar ação" }),
+      ).toBeDisabled();
     });
 
     it("sends the user to the login screen on 401", async () => {
       recordPuts(respondWithError(401, "No token provided."));
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Em andamento");
+      await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Iniciar ação",
+        }),
+      );
 
       await waitFor(() =>
         expect(screen.getByTestId("location")).toHaveTextContent("/login"),
@@ -520,12 +602,17 @@ describe("ManagedCard status control", () => {
         recordPuts(respond);
         const { user } = renderCard(managed("OPEN"));
 
-        await user.selectOptions(statusSelect(), "Em andamento");
+        await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+        await user.click(
+          within(screen.getByRole("dialog")).getByRole("button", {
+            name: "Iniciar ação",
+          }),
+        );
 
         expect(await screen.findByRole("alert")).toHaveTextContent(
           COMMUNICATION_MESSAGE,
         );
-        expect(statusSelect()).toHaveDisplayValue("Aberta");
+        expect(screen.getByText("Inscrições Abertas")).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: "Tentar novamente" }),
         ).toBeInTheDocument();
@@ -544,7 +631,7 @@ describe("ManagedCard status control", () => {
       });
       const { user } = renderCard(managed("OPEN"));
 
-      await user.selectOptions(statusSelect(), "Cancelada");
+      await user.click(screen.getByRole("button", { name: "Cancelar ação" }));
       await user.click(
         within(screen.getByRole("dialog")).getByRole("button", {
           name: "Cancelar ação",
@@ -555,9 +642,7 @@ describe("ManagedCard status control", () => {
       );
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      await waitFor(() =>
-        expect(statusSelect()).toHaveDisplayValue("Cancelada"),
-      );
+      expect(await screen.findByText("Cancelada")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(bodies).toStrictEqual([
         { status: "CANCELLED" },
@@ -570,21 +655,22 @@ describe("ManagedCard status control", () => {
     const onEdit = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit);
 
-    await user.click(screen.getByRole("button", { name: "Editar atividade" }));
+    await user.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
   });
 });
 
 describe("ManagedCard deletion", () => {
-  it("shows the success modal after a 204 and reports the deletion only once it is closed", async () => {
+  it("closes the modal, removes the card and shows a toast after a 204 without a second modal", async () => {
     const onDelete = vi.fn();
+    const toastSuccess = vi.spyOn(toast, "success");
     const requests = recordDeletes(
       () => new HttpResponse(null, { status: 204 }),
     );
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
 
     expect(
       screen.getByRole("heading", { name: "Confirmar exclusão" }),
@@ -592,15 +678,15 @@ describe("ManagedCard deletion", () => {
 
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
-    expect(
-      await screen.findByText("Sua ação foi excluída"),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
     expect(requests).toHaveLength(1);
-    expect(onDelete).not.toHaveBeenCalled();
+    expect(toastSuccess).toHaveBeenCalledWith("Ação excluída.");
+    expect(
+      screen.queryByRole("heading", { name: "Confirmar exclusão" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Sua ação foi excluída")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Fechar" }));
-
-    expect(onDelete).toHaveBeenCalledWith(ACTION_ID);
+    toastSuccess.mockRestore();
   });
 
   it("does not send DELETE request when cancelling the confirmation modal", async () => {
@@ -608,7 +694,7 @@ describe("ManagedCard deletion", () => {
     const requests = recordDeletes();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Não" }));
 
     expect(
@@ -621,7 +707,7 @@ describe("ManagedCard deletion", () => {
   it("includes confirmation copy distinguishing deletion from cancellation with no notification promise", async () => {
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
 
     expect(
       screen.getByText(/será completamente excluída e não terá como recorrer/i),
@@ -639,7 +725,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     expect(
@@ -655,7 +741,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(ACTION_ID));
@@ -670,7 +756,7 @@ describe("ManagedCard deletion", () => {
     );
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() =>
@@ -683,7 +769,7 @@ describe("ManagedCard deletion", () => {
     const onDelete = vi.fn();
     const { user } = renderCard(managed("OPEN"), vi.fn(), vi.fn(), onDelete);
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.click(screen.getByRole("button", { name: "Sim" }));
 
     expect(
@@ -700,22 +786,41 @@ describe("ManagedCard deletion", () => {
     );
     const { user } = renderCard(managed("OPEN"));
 
-    await user.click(screen.getByRole("button", { name: "Excluir atividade" }));
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
     await user.dblClick(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() => expect(requests).toHaveLength(1));
   });
 });
 
-describe("ManagedCard enrollments entry point", () => {
+describe("ManagedCard action buttons", () => {
+  it("renders Editar, Inscritos and Excluir in order with danger styling only on Excluir", () => {
+    renderCard(managed("OPEN"));
+
+    const editButton = screen.getByRole("button", { name: "Editar" });
+    const enrollmentsButton = screen.getByRole("button", { name: "Inscritos" });
+    const deleteButton = screen.getByRole("button", { name: "Excluir" });
+
+    expect(
+      editButton.compareDocumentPosition(enrollmentsButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      enrollmentsButton.compareDocumentPosition(deleteButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    expect(deleteButton).toHaveClass("bg-red-800");
+    expect(editButton).not.toHaveClass("bg-red-800");
+    expect(enrollmentsButton).not.toHaveClass("bg-red-800");
+  });
+
   it("opens the enrollment list without triggering edit", async () => {
     const onEdit = vi.fn();
     const onManageEnrollments = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
 
-    await user.click(
-      screen.getByRole("button", { name: "Gerenciar inscritos" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Inscritos" }));
 
     expect(onManageEnrollments).toHaveBeenCalledWith(ACTION_ID);
     expect(onEdit).not.toHaveBeenCalled();
@@ -726,7 +831,7 @@ describe("ManagedCard enrollments entry point", () => {
     const onManageEnrollments = vi.fn();
     const { user } = renderCard(managed("OPEN"), onEdit, onManageEnrollments);
 
-    await user.click(screen.getByRole("button", { name: "Editar atividade" }));
+    await user.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(onEdit).toHaveBeenCalledWith(ACTION_ID);
     expect(onManageEnrollments).not.toHaveBeenCalled();
@@ -742,7 +847,7 @@ describe("EnrolledCard", () => {
     render(<EnrolledCard activity={activity} onCancelled={vi.fn()} />);
 
     expect(
-      screen.queryByRole("button", { name: "Gerenciar inscritos" }),
+      screen.queryByRole("button", { name: "Inscritos" }),
     ).not.toBeInTheDocument();
   });
 

@@ -181,7 +181,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
     await user.click(enrollButton);
 
     const confirmButton = await screen.findByRole("button", {
-      name: /✓ Confirmar/i,
+      name: /^Confirmar$/i,
     });
     await user.click(confirmButton);
 
@@ -236,7 +236,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
       await user.click(enrollButton);
 
       const confirmButton = await screen.findByRole("button", {
-        name: /✓ Confirmar/i,
+        name: /^Confirmar$/i,
       });
       await user.click(confirmButton);
 
@@ -293,7 +293,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
       await user.click(enrollButton);
 
       const confirmButton = await screen.findByRole("button", {
-        name: /✓ Confirmar/i,
+        name: /^Confirmar$/i,
       });
       await user.click(confirmButton);
 
@@ -330,7 +330,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
     });
     await user.click(enrollButton);
 
-    const cancelButton = screen.getByRole("button", { name: /✕ Cancelar/i });
+    const cancelButton = screen.getByRole("button", { name: /^Cancelar$/i });
     await user.click(cancelButton);
 
     await waitFor(() => {

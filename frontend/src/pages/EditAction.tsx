@@ -41,6 +41,7 @@ import { useAuthStore } from "../stores/authStore";
 import { deleteActivity } from "../features/profile/services";
 import { DeleteActionModal } from "../features/profile/components/cards/DeleteActionModal";
 import { ApiError } from "../services/apiError";
+import { toast } from "react-toastify";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -206,6 +207,7 @@ export function EditAction() {
 
     try {
       await deleteActivity(id);
+      toast.success("Ação excluída.");
       setShowDeleteModal(false);
       navigate("/dashboard", { replace: true });
     } catch (error: unknown) {
@@ -657,7 +659,6 @@ export function EditAction() {
       />
       {showDeleteModal && (
         <DeleteActionModal
-          isSuccess={false}
           isLoading={isDeleting}
           errorMessage={deleteError}
           onConfirmDelete={handleDeleteConfirm}

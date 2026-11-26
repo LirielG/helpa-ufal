@@ -9,6 +9,7 @@ import {
   createManager,
   createActivity,
   createEnrollment,
+  createReport,
   anAddress,
 } from "../../helpers/factories.js";
 import { authCookie } from "../../helpers/auth.js";
@@ -88,6 +89,25 @@ describe("PUT /activities/:activityId/status", () => {
       expect(response.body.status).toBe("CANCELLED");
     },
   );
+
+  it("returns reportedByMe true when the manager had reported the activity, same as the GET", async () => {
+    const author = await createTeacher();
+    const manager = await createManager();
+    const activity = await createActivity(author.user.id);
+    await createReport(activity.id, manager.user.id);
+
+    const response = await request(app)
+      .put(`/activities/${activity.id}/status`)
+      .set(...authCookie(manager.token))
+      .send({ status: "CANCELLED" });
+    const retrieved = await request(app)
+      .get(`/activities/${activity.id}`)
+      .set(...authCookie(manager.token));
+
+    expect(response.status).toBe(200);
+    expect(response.body.reportedByMe).toBe(true);
+    expect(response.body).toEqual(retrieved.body);
+  });
 
   it.each([
     { slots: 40, approved: 13, available: 27 },
