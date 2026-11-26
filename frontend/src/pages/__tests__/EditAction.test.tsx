@@ -717,6 +717,121 @@ describe("EditAction", () => {
     expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
   });
 
+  describe("switching to another action without leaving the screen", () => {
+    const SECOND_ACTION_ID = "action-2";
+
+    function renderWithLinkToSecondAction() {
+      return render(
+        <Routes>
+          <Route
+            path="/activity/:id/edit"
+            element={
+              <>
+                <Link to={`/activity/${SECOND_ACTION_ID}/edit`}>
+                  Editar outra ação
+                </Link>
+                <EditAction />
+              </>
+            }
+          />
+          <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+        </Routes>,
+        { route: `/activity/${ACTION_ID}/edit` },
+      );
+    }
+
+    function serveSecondAction(respond: () => Promise<Response> | Response) {
+      server.use(http.get(`${API}/activities/${SECOND_ACTION_ID}`, respond));
+    }
+
+    function recordUpdates() {
+      const updates: { id: string; body: unknown }[] = [];
+      server.use(
+        http.patch(`${API}/activities/:id`, async ({ params, request }) => {
+          updates.push({ id: String(params.id), body: await request.json() });
+          return HttpResponse.json(editableAction());
+        }),
+      );
+      return updates;
+    }
+
+    it("shows loading and no save button while the new action loads", async () => {
+      mockAction(editableAction({}, { title: "Alfa" }));
+      serveSecondAction(async () => {
+        await delay("infinite");
+        return HttpResponse.json(null);
+      });
+      const updates = recordUpdates();
+      const { user } = renderWithLinkToSecondAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Alfa editado");
+      await user.click(screen.getByRole("link", { name: "Editar outra ação" }));
+
+      expect(await screen.findByText("Carregando...")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Salvar" }),
+      ).not.toBeInTheDocument();
+      expect(updates).toEqual([]);
+    });
+
+    it("drops the edits of the previous action and sends only what changed in the new one", async () => {
+      mockAction(editableAction({}, { title: "Alfa", slots: 10 }));
+      serveSecondAction(async () => {
+        await delay(50);
+        return HttpResponse.json(
+          editableAction(
+            {},
+            { id: SECOND_ACTION_ID, title: "Beta", slots: 20 },
+          ),
+        );
+      });
+      const updates = recordUpdates();
+      const { user } = renderWithLinkToSecondAction();
+
+      const title = await findTitleField();
+      await user.clear(title);
+      await user.type(title, "Alfa editado");
+      await user.click(screen.getByRole("link", { name: "Editar outra ação" }));
+
+      await waitFor(() =>
+        expect(screen.getByLabelText("Título")).toHaveValue("Beta"),
+      );
+      const slots = screen.getByLabelText("Número de vagas");
+      expect(slots).toHaveValue(20);
+      await user.clear(slots);
+      await user.type(slots, "45");
+      await user.click(getSaveButton());
+
+      expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+      expect(updates).toEqual([{ id: SECOND_ACTION_ID, body: { slots: 45 } }]);
+    });
+
+    it("shows the form of the new action when the previous one failed to load", async () => {
+      server.use(
+        http.get(
+          `${API}/activities/${ACTION_ID}`,
+          () => new HttpResponse(null, { status: 500 }),
+        ),
+      );
+      serveSecondAction(() =>
+        HttpResponse.json(
+          editableAction({}, { id: SECOND_ACTION_ID, title: "Beta" }),
+        ),
+      );
+      const { user } = renderWithLinkToSecondAction();
+      const message =
+        "Não foi possível carregar a ação. Verifique sua conexão e tente novamente.";
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      await user.click(screen.getByRole("link", { name: "Editar outra ação" }));
+
+      expect(await findTitleField()).toHaveValue("Beta");
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    });
+  });
+
   describe("description saved before the length rule", () => {
     it("saves another field without touching the short description", async () => {
       mockAction(editableAction({ description: "Oficina" }));
