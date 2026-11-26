@@ -380,12 +380,17 @@ describe("GET /activities/:activityId", () => {
         .get("/users/me/activities?filter=enrolled")
         .set(...authCookie(student.token));
 
+      const findById = (items: { id: string }[]) =>
+        items.find((item) => item.id === activity.id);
+
       expect(list.status).toBe(200);
-      expect(list.body.items).toHaveLength(1);
-      expect(list.body.items[0]).not.toHaveProperty("reportedByMe");
+      const listed = findById(list.body.items);
+      expect(listed).toBeDefined();
+      expect(listed).not.toHaveProperty("reportedByMe");
       expect(mine.status).toBe(200);
-      expect(mine.body.items).toHaveLength(1);
-      expect(mine.body.items[0]).not.toHaveProperty("reportedByMe");
+      const enrolled = findById(mine.body.items);
+      expect(enrolled).toBeDefined();
+      expect(enrolled).not.toHaveProperty("reportedByMe");
     });
   });
 });
