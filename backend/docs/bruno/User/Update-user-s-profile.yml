@@ -296,6 +296,15 @@ docs: |-
   - The `tokenVersion` column, the claim signed at login and the middleware check belong to a
     separate issue; this route only increments it.
 
+  ## Password changed e-mail
+  - A successful password change sends the `passwordChanged` e-mail to the address of the
+    account, greeting the user by first name. The e-mail says the open sessions were ended,
+    which is what the `tokenVersion` increment above does.
+  - It is sent **only when `newPassword` was applied**. Changing just `fullName` or `course`, and
+    any 400, 401, 403 or 422, send nothing.
+  - It is not awaited: a slow or failing SMTP server is logged and does not change the response,
+    and the password change still holds.
+
   ## Errors
   | Status | When |
   |--------|------|
