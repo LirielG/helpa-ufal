@@ -16,6 +16,18 @@ export type ActivityModerationState = {
   openReportIds: string[];
 };
 
+export type ModerationDecisionNotifications = {
+  activityTitle: string;
+  authorEmail: string | null;
+  reporterEmails: string[];
+  cancelledEnrolleeEmails: string[];
+};
+
+export type CreatedModerationDecision = {
+  decision: ModerationDecisionResponse;
+  notifications: ModerationDecisionNotifications;
+};
+
 export interface IModerationRepository {
   listReportedActivities(
     query: ListReportedActivitiesQuery,
@@ -29,5 +41,5 @@ export interface IModerationRepository {
     activityId: string,
     managerId: string,
     data: CreateModerationDecisionInput,
-  ): Promise<ModerationDecisionResponse>;
+  ): Promise<CreatedModerationDecision>;
 }
