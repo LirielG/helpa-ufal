@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LogOut } from "lucide-react";
 import { Alert, Button, Input } from "../../../components";
 import { PasswordField } from "../../auth/components/PasswordField";
 import { PasswordGuidelines } from "../../auth/components/PasswordGuidelines";
@@ -26,19 +25,22 @@ type PersonalDataFormProps = {
   user: UserProfile;
   /** Saves the changes; rejects with the API error when the save fails. */
   onSave: (data: UpdateProfileRequest) => Promise<void>;
-  onLogout: () => void;
 };
 
-export function PersonalDataForm({
-  user,
-  onSave,
-  onLogout,
-}: PersonalDataFormProps) {
+export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
   // The current password has its own toggle: checking what was typed in the
   // new one must not put the current one on screen too.
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const headingId = useId();
+  // `isSubmitting` goes back to false when a second submit returns early, with
+  // the first request still pending, so the button follows its own state. The
+  // ref blocks a second submit before that state has rendered.
+  const [isSending, setIsSending] = useState(false);
+  const isSendingRef = useRef(false);
+
+  const schemaResolver = zodResolver(editProfileSchemaFor(user.fullName));
 
   const {
     register,
@@ -47,7 +49,14 @@ export function PersonalDataForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<EditProfileFields>({
-    resolver: zodResolver(editProfileSchemaFor(user.fullName)),
+    resolver: (values, context, options) =>
+      schemaResolver(
+        values.newPassword || values.confirmNewPassword
+          ? values
+          : { ...values, currentPassword: "" },
+        context,
+        options,
+      ),
     mode: "onSubmit",
     defaultValues: {
       fullName: user.fullName,
@@ -57,9 +66,21 @@ export function PersonalDataForm({
     },
   });
 
-  const newPasswordValue = useWatch({ control, name: "newPassword" }) ?? "";
+  const [fullName, newPassword, confirmNewPassword] = useWatch({
+    control,
+    name: ["fullName", "newPassword", "confirmNewPassword"],
+  });
 
-  const submit = handleSubmit(async (data) => {
+  // The name is compared trimmed, as the submit does, so a stray space is not
+  // a change the user made. The current password alone is not a change either
+  // (see the resolver above).
+  const hasChanges =
+    (fullName ?? "").trim() !== user.fullName.trim() ||
+    Boolean(newPassword || confirmNewPassword);
+
+  const onValidSubmit = async (data: EditProfileFields) => {
+    if (isSendingRef.current) return;
+
     setFeedback(null);
 
     // The API answers 400 to a body without changes, and rejects fields it
@@ -79,6 +100,8 @@ export function PersonalDataForm({
       return;
     }
 
+    isSendingRef.current = true;
+    setIsSending(true);
     try {
       await onSave(changes);
       setFeedback({
@@ -88,15 +111,21 @@ export function PersonalDataForm({
     } catch (error) {
       const message = handleProfileApiErrors(error, setError);
       if (message) setFeedback({ type: "error", message });
+    } finally {
+      isSendingRef.current = false;
+      setIsSending(false);
     }
-  });
+  };
 
   const initials = getInitials(user.fullName) || "P";
 
   return (
-    <form onSubmit={submit} className="space-y-5" noValidate>
-      <h3 className="text-xl font-bold text-gray-900">Editar Perfil</h3>
-
+    <form
+      onSubmit={(event) => void handleSubmit(onValidSubmit)(event)}
+      aria-labelledby={headingId}
+      className="space-y-6"
+      noValidate
+    >
       {feedback && (
         <Alert
           type={feedback.type}
@@ -105,14 +134,24 @@ export function PersonalDataForm({
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-start">
-        <div className="flex justify-center md:justify-start md:pt-2">
-          <div className="size-28 rounded-full bg-[#3B82F6] text-white flex items-center justify-center font-medium text-3xl leading-none shrink-0 select-none">
+      <div className="grid grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)] gap-6 md:gap-x-12 items-start">
+        <div className="flex flex-col items-center md:items-start gap-6">
+          <h2
+            id={headingId}
+            className="text-xl md:text-2xl font-bold text-[#000A1E]"
+          >
+            Editar Perfil
+          </h2>
+
+          <div
+            aria-hidden="true"
+            className="size-28 md:size-44 rounded-full bg-[#002147] text-white flex items-center justify-center font-bold text-4xl md:text-6xl leading-none shrink-0 select-none"
+          >
             <span>{initials}</span>
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <AuthField
             label="Nome completo"
             placeholder="Nome Exemplo"
@@ -123,13 +162,6 @@ export function PersonalDataForm({
           <Input label="Email" value={user.email} disabled readOnly />
 
           <Input
-            label="Tipo de perfil"
-            value={USER_TYPE_LABELS[user.userType]}
-            disabled
-            readOnly
-          />
-
-          <Input
             label="Matrícula"
             value={user.registrationCode ?? ""}
             disabled
@@ -138,56 +170,70 @@ export function PersonalDataForm({
 
           <Input label="Curso" value={user.course ?? ""} disabled readOnly />
 
-          <div className="space-y-5 pt-2">
-            <h4 className="text-base font-semibold text-gray-900">
-              Alterar senha
-            </h4>
+          <Input
+            label="Tipo de conta"
+            value={USER_TYPE_LABELS[user.userType]}
+            disabled
+            readOnly
+          />
 
-            <PasswordField
-              label="Senha atual"
-              placeholder="********"
-              error={errors.currentPassword?.message}
-              registration={register("currentPassword")}
-              showPassword={showCurrentPassword}
-              onTogglePassword={() => setShowCurrentPassword((value) => !value)}
-            />
+          <fieldset className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-5 min-w-0 border-0 p-0 m-0">
+            <legend className="sr-only">Alterar senha</legend>
 
-            <PasswordField
-              label="Nova senha"
-              placeholder="********"
-              error={errors.newPassword?.message}
-              registration={register("newPassword")}
-              showPassword={showNewPassword}
-              onTogglePassword={() => setShowNewPassword((value) => !value)}
-            />
+            <div className="min-w-0 lg:col-start-1">
+              <PasswordField
+                label="Senha atual"
+                placeholder="********"
+                error={errors.currentPassword?.message}
+                registration={register("currentPassword")}
+                showPassword={showCurrentPassword}
+                onTogglePassword={() =>
+                  setShowCurrentPassword((value) => !value)
+                }
+              />
+            </div>
 
-            <PasswordGuidelines password={newPasswordValue} />
+            <div className="min-w-0 lg:col-start-1">
+              <PasswordField
+                label="Nova senha"
+                placeholder="********"
+                error={errors.newPassword?.message}
+                registration={register("newPassword")}
+                showPassword={showNewPassword}
+                onTogglePassword={() => setShowNewPassword((value) => !value)}
+              />
+            </div>
 
-            <PasswordField
-              label="Confirmar nova senha"
-              placeholder="********"
-              error={errors.confirmNewPassword?.message}
-              registration={register("confirmNewPassword")}
-              showPassword={showNewPassword}
-              onTogglePassword={() => setShowNewPassword((value) => !value)}
-            />
-          </div>
+            {/* Beside the fields on wide screens, between "Nova senha" and
+                the confirmation on narrow ones. */}
+            <div className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:pt-8">
+              <PasswordGuidelines password={newPassword ?? ""} />
+            </div>
+
+            <div className="min-w-0 lg:col-start-1">
+              <PasswordField
+                label="Confirmação da senha"
+                placeholder="********"
+                error={errors.confirmNewPassword?.message}
+                registration={register("confirmNewPassword")}
+                showPassword={showNewPassword}
+                onTogglePassword={() => setShowNewPassword((value) => !value)}
+              />
+            </div>
+          </fieldset>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 pt-2">
-        <Button type="submit" variant="navy" size="md" isLoading={isSubmitting}>
-          Salvar alterações
-        </Button>
-
-        <button
-          type="button"
-          onClick={onLogout}
-          className="flex items-center gap-2 px-3 py-2 text-red-600 font-semibold rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+      <div className="flex justify-end [&>button]:w-full sm:[&>button]:w-auto">
+        <Button
+          type="submit"
+          variant="navy"
+          size="md"
+          isLoading={isSubmitting || isSending}
+          disabled={isSubmitting || isSending || !hasChanges}
         >
-          <LogOut className="size-5" />
-          SAIR
-        </button>
+          Salvar Alterações
+        </Button>
       </div>
     </form>
   );

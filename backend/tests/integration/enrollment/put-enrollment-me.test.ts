@@ -10,6 +10,7 @@ import {
   createTeacher,
 } from "../../helpers/factories.js";
 import { authCookie, invalidToken } from "../../helpers/auth.js";
+import { daysFromNow } from "../../helpers/dates.js";
 
 const enrollUrl = (activityId: string) =>
   `/activities/${activityId}/enrollments/me`;
@@ -222,6 +223,27 @@ describe("PUT /activities/:activityId/enrollments/me", () => {
       });
     },
   );
+
+  it("returns 409 when the activity is OPEN but has already started", async () => {
+    const author = await createTeacher();
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      startDate: daysFromNow(-1),
+      endDate: daysFromNow(7),
+    });
+    const student = await createStudent();
+
+    const response = await request(app)
+      .put(enrollUrl(activity.id))
+      .set(...authCookie(student.token));
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 409,
+      code: "ACTIVITY_NOT_OPEN_FOR_ENROLLMENT",
+      message: "Activity is not open for enrollment.",
+    });
+  });
 
   it("returns the same enrollment without writing when it already occupies the last slot", async () => {
     const { activity } = await anOpenActivity(1);

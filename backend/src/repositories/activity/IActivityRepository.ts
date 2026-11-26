@@ -48,6 +48,7 @@ export interface IRepositoryListActivitiesFilters {
   search?: string;
   campus?: string;
   area?: string;
+  startDateAfter?: Date;
   page: number;
   limit: number;
   orderBy: string;

@@ -146,13 +146,14 @@ describe("GET /activities — area filter", () => {
 
   it("still lists CANCELLED activities when filtering by area", async () => {
     // The CANCELLED exclusion applies ONLY to GET /activities/filters (the
-    // options route). The listing filter must not hide them.
+    // options route); the listing must not hide them. status=ALL lifts the
+    // default [OPEN, not started], which would hide them here.
     const { user: author } = await createTeacher();
     await createActivity(author.id, { area: "Saúde", status: "CANCELLED" });
 
     const response = await request(app)
       .get("/activities")
-      .query({ area: "Saúde" });
+      .query({ area: "Saúde", status: "ALL" });
 
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);

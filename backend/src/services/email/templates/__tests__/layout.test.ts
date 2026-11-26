@@ -4,6 +4,7 @@ import {
   codeBox,
   escapeHtml,
   layout,
+  paragraph,
 } from "@/services/email/templates/layout.js";
 
 describe("escapeHtml", () => {
@@ -41,6 +42,16 @@ describe("layout", () => {
 
   it("inserts the content as HTML", () => {
     expect(html).toContain("<p>Trusted content</p>");
+  });
+});
+
+describe("paragraph", () => {
+  it("renders a styled paragraph with escaped text", () => {
+    const html = paragraph("Texto <b>importante</b> & seguro.");
+
+    expect(html).toBe(
+      '<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Texto &lt;b&gt;importante&lt;/b&gt; &amp; seguro.</p>',
+    );
   });
 });
 

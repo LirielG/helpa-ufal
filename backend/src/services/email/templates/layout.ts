@@ -54,6 +54,10 @@ ${content}
 </html>`;
 }
 
+export function paragraph(text: string): string {
+  return `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
+}
+
 export function button(href: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
 <tr>

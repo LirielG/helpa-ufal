@@ -246,4 +246,43 @@ describe("ActionDetail Integration", () => {
     });
     expect(enrollButton).toBeDisabled();
   });
+
+  it("renders description, information card and enrollment button in order", async () => {
+    const actionId = "act-layout-order";
+    const action = makeActionDetail({
+      id: actionId,
+      details: {
+        ...makeActionDetail().details!,
+        description: "Descrição detalhada da atividade.",
+      },
+    });
+
+    server.use(
+      http.get(`${API}/activities/${actionId}`, () =>
+        HttpResponse.json(action),
+      ),
+    );
+
+    render(<ActionDetail />, {
+      route: `/activity/${actionId}`,
+      path: "/activity/:id",
+    });
+
+    const description = await screen.findByText(
+      "Descrição detalhada da atividade.",
+    );
+    const infoHeading = screen.getByRole("heading", { name: "Informações" });
+    const enrollButton = screen.getByRole("button", {
+      name: /Inscrever-se/i,
+    });
+
+    expect(
+      description.compareDocumentPosition(infoHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      infoHeading.compareDocumentPosition(enrollButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

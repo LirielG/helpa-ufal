@@ -29,7 +29,7 @@ function setupFeaturedServer(activities = mockActions) {
       const status = url.searchParams.get("status");
       const limit = url.searchParams.get("limit");
 
-      if (status === "OPEN" && limit === "4") {
+      if (!status && limit === "4") {
         return HttpResponse.json(makePage(activities));
       }
 
@@ -103,7 +103,27 @@ describe("HeroBanner", () => {
       "/activity/2",
     );
   });
-  it("does not render when there are no OPEN actions available", async () => {
+
+  it("renders 'Saiba mais' with link styling and arrow on every slide", async () => {
+    render(<HeroBanner />);
+    await screen.findByRole("heading");
+
+    const links = screen.getAllByRole("link", {
+      name: "Saiba mais",
+      hidden: true,
+    });
+    expect(links).toHaveLength(4);
+
+    links.forEach((link) => {
+      expect(link).toHaveTextContent("Saiba mais →");
+      expect(link).toHaveClass("underline");
+      expect(link).toHaveClass("underline-offset-4");
+      expect(link).toHaveClass("hover:decoration-2");
+      expect(link).toHaveClass("text-white");
+    });
+  });
+
+  it("does not render when the feed returns no actions", async () => {
     setupFeaturedServer([]);
     render(<HeroBanner />);
 
@@ -128,7 +148,84 @@ describe("HeroBanner", () => {
     });
   });
 
-  it("sends the correct query parameters (status=OPEN, orderBy=start_date, order=asc, limit=4)", async () => {
+  it("renders a single banner without controls when only one action is returned", async () => {
+    setupFeaturedServer([mockActions[0]]);
+    render(<HeroBanner />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+    expect(
+      screen.queryByRole("button", { name: "Próximo slide" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Slide anterior" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Ir para slide/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows controls when two or more actions are returned", async () => {
+    setupFeaturedServer(mockActions.slice(0, 2));
+    render(<HeroBanner />);
+
+    expect(await getVisibleSlideTitle()).toBe("Slide 1");
+    expect(
+      screen.getByRole("button", { name: "Próximo slide" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Slide anterior" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ir para slide 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ir para slide 2" }),
+    ).toBeInTheDocument();
+  });
+
+  it("positions arrows at the bottom-6 row on mobile and centers vertically on md+", async () => {
+    setupFeaturedServer(mockActions.slice(0, 2));
+    render(<HeroBanner />);
+
+    await screen.findByRole("heading");
+
+    const prevButton = screen.getByRole("button", { name: "Slide anterior" });
+    const nextButton = screen.getByRole("button", { name: "Próximo slide" });
+    const dotsContainer = screen.getByRole("button", {
+      name: "Ir para slide 1",
+    }).parentElement;
+
+    expect(prevButton).toHaveClass(
+      "absolute",
+      "left-4",
+      "bottom-6",
+      "md:bottom-auto",
+      "md:top-1/2",
+      "md:-translate-y-1/2",
+      "size-10",
+    );
+    expect(nextButton).toHaveClass(
+      "absolute",
+      "right-4",
+      "bottom-6",
+      "md:bottom-auto",
+      "md:top-1/2",
+      "md:-translate-y-1/2",
+      "size-10",
+    );
+    expect(dotsContainer).toHaveClass(
+      "absolute",
+      "bottom-6",
+      "left-1/2",
+      "-translate-x-1/2",
+      "h-10",
+      "flex",
+      "items-center",
+      "gap-2",
+    );
+  });
+
+  it("sends the correct query parameters (orderBy=start_date, order=asc, limit=4 without status)", async () => {
     let params: URLSearchParams | null = null;
     server.use(
       http.get(`${API}/activities`, ({ request }) => {
@@ -140,7 +237,7 @@ describe("HeroBanner", () => {
     render(<HeroBanner />);
 
     await waitFor(() => {
-      expect(params?.get("status")).toBe("OPEN");
+      expect(params?.get("status")).toBeNull();
       expect(params?.get("orderBy")).toBe("start_date");
       expect(params?.get("order")).toBe("asc");
       expect(params?.get("limit")).toBe("4");
@@ -153,7 +250,7 @@ describe("HeroBanner", () => {
       http.get(`${API}/activities`, ({ request }) => {
         const url = new URL(request.url);
         if (
-          url.searchParams.get("status") === "OPEN" &&
+          !url.searchParams.get("status") &&
           url.searchParams.get("limit") === "4"
         ) {
           attempts += 1;

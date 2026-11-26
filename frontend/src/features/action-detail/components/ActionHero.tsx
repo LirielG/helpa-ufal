@@ -21,7 +21,7 @@ export function ActionHero({
   titleRef,
 }: ActionHeroProps) {
   return (
-    <div className="relative w-full h-[55vh] min-h-80 flex flex-col justify-end">
+    <div className="relative w-full min-h-[clamp(16rem,35vh,24rem)] flex flex-col justify-end">
       {/* No title: the <h1> below already names the action. */}
       <div className="absolute inset-0">
         <ActionCover
@@ -35,7 +35,7 @@ export function ActionHero({
 
       <div className="absolute inset-0 bg-linear-to-b from-black/20 via-black/30 to-black/70" />
 
-      <div className="relative z-10 page-container pb-8">
+      <div className="relative z-10 page-container pt-6 pb-8">
         <div className="max-w-4xl">
           <button
             type="button"

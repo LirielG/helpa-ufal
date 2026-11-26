@@ -14,9 +14,11 @@ import type { ActivityStatus, Prisma } from "@prisma/client";
 export async function lockActivityForCapacity(
   tx: Prisma.TransactionClient,
   activityId: string,
-): Promise<{ slots: number; status: ActivityStatus } | null> {
-  const rows = await tx.$queryRaw<{ slots: number; status: ActivityStatus }[]>`
-    SELECT slots, status
+): Promise<{ slots: number; status: ActivityStatus; startDate: Date } | null> {
+  const rows = await tx.$queryRaw<
+    { slots: number; status: ActivityStatus; startDate: Date }[]
+  >`
+    SELECT slots, status, "startDate"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL
@@ -68,6 +70,7 @@ export async function lockActivityForModeration(
 ): Promise<{
   id: string;
   authorId: string;
+  title: string;
   status: ActivityStatus;
   removedByModerationAt: Date | null;
 } | null> {
@@ -75,11 +78,12 @@ export async function lockActivityForModeration(
     {
       id: string;
       authorId: string;
+      title: string;
       status: ActivityStatus;
       removedByModerationAt: Date | null;
     }[]
   >`
-    SELECT id, "authorId", status, "removedByModerationAt"
+    SELECT id, "authorId", title, status, "removedByModerationAt"
     FROM "Activity"
     WHERE id = ${activityId}
       AND "deletedAt" IS NULL

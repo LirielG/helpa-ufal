@@ -97,8 +97,9 @@ const BaseEnvSchema = z.object({
   ADMIN_COURSE: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  // true for implicit TLS (port 465); false upgrades with STARTTLS.
-  SMTP_SECURE: z.stringbool().default(false),
+  // true for implicit TLS (port 465); false upgrades with STARTTLS. When
+  // omitted, the transport derives it from the port.
+  SMTP_SECURE: z.stringbool().optional(),
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASS: z.string().min(1).optional(),
   // Kept apart from SMTP_USER: providers such as Brevo log in with an
