@@ -69,9 +69,10 @@ class ModerationService implements IModerationService {
         data,
       );
 
-    // Dispatched strictly after commit; delivery failures are logged and never
-    // roll back the decision or change the HTTP response.
-    await this.notifyDecision(decision, notifications);
+    // Dispatched strictly after commit without blocking the HTTP response;
+    // delivery failures are logged inside sendNotification and never roll back
+    // the decision.
+    void this.notifyDecision(decision, notifications);
 
     return decision;
   }
@@ -86,44 +87,35 @@ class ModerationService implements IModerationService {
       reporterEmails,
       cancelledEnrolleeEmails,
     } = notifications;
-    const deliveries: Promise<void>[] = [];
 
     for (const email of new Set(reporterEmails)) {
-      deliveries.push(
-        this.sendNotification(
-          email,
-          "reportReviewed",
-          { activityTitle, verdict: decision.verdict },
-          decision.id,
-        ),
+      await this.sendNotification(
+        email,
+        "reportReviewed",
+        { activityTitle, verdict: decision.verdict },
+        decision.id,
       );
     }
 
     if (decision.verdict === "UPHELD") {
       if (authorEmail) {
-        deliveries.push(
-          this.sendNotification(
-            authorEmail,
-            "activityRemovedByModeration",
-            { activityTitle, justification: decision.justification },
-            decision.id,
-          ),
+        await this.sendNotification(
+          authorEmail,
+          "activityRemovedByModeration",
+          { activityTitle, justification: decision.justification },
+          decision.id,
         );
       }
 
       for (const email of new Set(cancelledEnrolleeEmails)) {
-        deliveries.push(
-          this.sendNotification(
-            email,
-            "enrollmentCancelledByModeration",
-            { activityTitle },
-            decision.id,
-          ),
+        await this.sendNotification(
+          email,
+          "enrollmentCancelledByModeration",
+          { activityTitle },
+          decision.id,
         );
       }
     }
-
-    await Promise.allSettled(deliveries);
   }
 
   private async sendNotification<K extends EmailTemplateCode>(

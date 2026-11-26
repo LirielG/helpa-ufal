@@ -448,7 +448,7 @@ describe("ModerationService.createDecision", () => {
     expect(transport.send).not.toHaveBeenCalled();
   });
 
-  // ---------- Post-commit notification emails (#445) ----------
+  // ---------- Post-commit notification emails ----------
 
   it("sends emails to reporters, author (with justification), and cancelled enrollees (without justification) on UPHELD", async () => {
     const createdDecision = aDecision({
@@ -488,7 +488,9 @@ describe("ModerationService.createDecision", () => {
     );
 
     expect(response).toBe(createdDecision);
-    expect(sentEmails).toHaveLength(5);
+    await vi.waitFor(() => {
+      expect(sentEmails).toHaveLength(5);
+    });
 
     const byRecipient = new Map(sentEmails.map((email) => [email.to, email]));
 
@@ -547,7 +549,9 @@ describe("ModerationService.createDecision", () => {
 
     await service.createDecision(ACTIVITY_ID, MANAGER_ID, rejectInput);
 
-    expect(sentEmails).toHaveLength(2);
+    await vi.waitFor(() => {
+      expect(sentEmails).toHaveLength(2);
+    });
     expect(sentEmails.map((email) => email.to)).toEqual([
       REPORTER_1_EMAIL,
       REPORTER_2_EMAIL,
@@ -590,6 +594,7 @@ describe("ModerationService.createDecision", () => {
         ],
       });
 
+      const expectedCount = verdict === "UPHELD" ? 4 : 2;
       const { service, sentEmails } = setup({
         createdDecision,
         notifications: aNotificationSet({
@@ -606,7 +611,9 @@ describe("ModerationService.createDecision", () => {
         verdict === "UPHELD" ? upholdInput : rejectInput,
       );
 
-      expect(sentEmails.length).toBeGreaterThan(0);
+      await vi.waitFor(() => {
+        expect(sentEmails).toHaveLength(expectedCount);
+      });
 
       const forbiddenTokens = [
         "Gestora Confidencial",
@@ -641,7 +648,9 @@ describe("ModerationService.createDecision", () => {
 
     await service.createDecision(ACTIVITY_ID, MANAGER_ID, upholdInput);
 
-    expect(sentEmails).toHaveLength(1);
+    await vi.waitFor(() => {
+      expect(sentEmails).toHaveLength(1);
+    });
     expect(sentEmails[0]?.to).toBe(ENROLLEE_1_EMAIL);
   });
 
@@ -672,7 +681,63 @@ describe("ModerationService.createDecision", () => {
 
     await service.createDecision(ACTIVITY_ID, MANAGER_ID, rejectInput);
 
-    expect(events).toEqual(["repo:commit", "email:send"]);
+    await vi.waitFor(() => {
+      expect(events).toEqual(["repo:commit", "email:send"]);
+    });
+  });
+
+  it("returns the committed decision without waiting for a hung email delivery", async () => {
+    const createdDecision = aDecision({ verdict: "UPHELD" });
+    const { service, transport } = setup({
+      createdDecision,
+      notifications: aNotificationSet({
+        authorEmail: AUTHOR_EMAIL,
+        reporterEmails: [REPORTER_1_EMAIL],
+        cancelledEnrolleeEmails: [ENROLLEE_1_EMAIL],
+      }),
+      transportSend: () => new Promise<void>(() => undefined),
+    });
+
+    const response = await service.createDecision(
+      ACTIVITY_ID,
+      MANAGER_ID,
+      upholdInput,
+    );
+
+    expect(response).toBe(createdDecision);
+    await vi.waitFor(() => {
+      expect(transport.send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("sends emails sequentially rather than opening concurrent SMTP deliveries", async () => {
+    const createdDecision = aDecision({ verdict: "UPHELD" });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const deliveredTo: string[] = [];
+
+    const { service } = setup({
+      createdDecision,
+      notifications: aNotificationSet({
+        authorEmail: AUTHOR_EMAIL,
+        reporterEmails: [REPORTER_1_EMAIL, REPORTER_2_EMAIL],
+        cancelledEnrolleeEmails: [ENROLLEE_1_EMAIL],
+      }),
+      transportSend: async (message) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        deliveredTo.push(message.to);
+        inFlight -= 1;
+      },
+    });
+
+    await service.createDecision(ACTIVITY_ID, MANAGER_ID, upholdInput);
+
+    await vi.waitFor(() => {
+      expect(deliveredTo).toHaveLength(4);
+    });
+    expect(maxInFlight).toBe(1);
   });
 
   it("logs delivery failures and still notifies other recipients and returns the committed decision", async () => {
@@ -705,10 +770,13 @@ describe("ModerationService.createDecision", () => {
     );
 
     expect(response).toBe(createdDecision);
+    await vi.waitFor(() => {
+      expect(deliveredTo).toHaveLength(3);
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    });
     expect(deliveredTo.sort()).toEqual(
       [REPORTER_2_EMAIL, AUTHOR_EMAIL, ENROLLEE_1_EMAIL].sort(),
     );
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining(DECISION_ID),
       deliveryError,

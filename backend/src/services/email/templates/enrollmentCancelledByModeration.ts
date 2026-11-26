@@ -1,5 +1,5 @@
 import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.js";
-import { escapeHtml, layout } from "@/services/email/templates/layout.js";
+import { layout, paragraph } from "@/services/email/templates/layout.js";
 
 type EnrollmentCancelledByModerationVars = {
   activityTitle: string;
@@ -7,9 +7,6 @@ type EnrollmentCancelledByModerationVars = {
 
 const SUBJECT = "Ação removida e inscrição cancelada";
 const GREETING = "Olá!";
-
-const paragraph = (text: string) =>
-  `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
 
 const enrollmentCancelledByModeration: IEmailTemplate<EnrollmentCancelledByModerationVars> =
   {

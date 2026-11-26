@@ -1,5 +1,5 @@
 import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.js";
-import { escapeHtml, layout } from "@/services/email/templates/layout.js";
+import { layout, paragraph } from "@/services/email/templates/layout.js";
 
 type PasswordChangedVars = {
   firstName: string;
@@ -18,8 +18,6 @@ const WARNING =
 const passwordChanged: IEmailTemplate<PasswordChangedVars> = {
   render({ firstName }) {
     const greeting = `Olá, ${firstName}!`;
-    const paragraph = (text: string) =>
-      `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
 
     return {
       subject: SUBJECT,

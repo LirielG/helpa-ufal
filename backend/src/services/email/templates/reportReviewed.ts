@@ -1,6 +1,6 @@
 import type { ModerationVerdict } from "@prisma/client";
 import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.js";
-import { escapeHtml, layout } from "@/services/email/templates/layout.js";
+import { layout, paragraph } from "@/services/email/templates/layout.js";
 
 type ReportReviewedVars = {
   activityTitle: string;
@@ -19,9 +19,6 @@ const REJECTED_NOTE =
   "A decisão considera o conjunto das denúncias recebidas e a análise da " +
   "moderação, e não indica necessariamente que o motivo que você apontou " +
   "foi descartado.";
-
-const paragraph = (text: string) =>
-  `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
 
 const reportReviewed: IEmailTemplate<ReportReviewedVars> = {
   render({ activityTitle, verdict }) {

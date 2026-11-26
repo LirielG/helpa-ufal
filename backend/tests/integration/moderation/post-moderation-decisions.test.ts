@@ -817,7 +817,7 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     );
   });
 
-  // ---------- Post-commit e-mail notifications (#445) ----------
+  // ---------- Post-commit e-mail notifications ----------
 
   it("sends UPHELD emails to active reporters, author, and non-certified cancelled enrollees without leaking identities or reasons", async () => {
     const sendSpy = vi.spyOn(EmailService.prototype, "send");
@@ -887,7 +887,9 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(sendSpy).toHaveBeenCalledTimes(5);
+    await vi.waitFor(() => {
+      expect(sendSpy).toHaveBeenCalledTimes(5);
+    });
 
     const calls = sendSpy.mock.calls.map(([to, templateCode, vars]) => ({
       to,
@@ -995,7 +997,9 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(sendSpy).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => {
+      expect(sendSpy).toHaveBeenCalledTimes(2);
+    });
     expect(
       sendSpy.mock.calls.map(([to, templateCode, vars]) => ({
         to,
@@ -1072,6 +1076,8 @@ describe("POST /activities/:activityId/moderation-decisions", () => {
     expect(storedEnrollment.status).toBe("CANCELLED");
 
     // One error logged per failed recipient (reporter + author + enrollee).
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(3);
+    await vi.waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(3);
+    });
   });
 });

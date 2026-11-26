@@ -1,5 +1,5 @@
 import type { IEmailTemplate } from "@/services/email/templates/IEmailTemplate.js";
-import { escapeHtml, layout } from "@/services/email/templates/layout.js";
+import { layout, paragraph } from "@/services/email/templates/layout.js";
 
 type ActivityRemovedByModerationVars = {
   activityTitle: string;
@@ -10,9 +10,6 @@ const SUBJECT = "Sua ação foi removida pela moderação";
 const GREETING = "Olá!";
 const EFFECTS =
   "As inscrições ativas foram canceladas. Certificados já emitidos continuam válidos.";
-
-const paragraph = (text: string) =>
-  `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(text)}</p>`;
 
 const activityRemovedByModeration: IEmailTemplate<ActivityRemovedByModerationVars> =
   {
