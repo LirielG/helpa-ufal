@@ -43,6 +43,32 @@ describe("ActivityService.delete", () => {
     );
   });
 
+  it("throws 410 ACTIVITY_REMOVED when the activity was removed by moderation, even for the author or a manager", async () => {
+    const { activityRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue({
+          id: "act-1",
+          authorId: "author-1",
+          moderation: { removedAt: new Date(), justification: "Spam." },
+        }),
+      },
+    });
+    const service = new ActivityService({ activityRepository });
+
+    for (const user of [
+      { id: "author-1", isManager: false },
+      { id: "manager-9", isManager: true },
+    ]) {
+      await expectHttpError(
+        service.delete("act-1", user),
+        410,
+        "This activity was removed by moderation.",
+        "ACTIVITY_REMOVED",
+      );
+    }
+    expect(activityRepository.softDelete).not.toHaveBeenCalled();
+  });
+
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {

@@ -319,6 +319,35 @@ describe("PUT /activities/:activityId/status", () => {
     });
   });
 
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (author, manager, and third party)", async () => {
+    const author = await createTeacher();
+    const manager = await createManager();
+    const other = await createStudent();
+    const activity = await createActivity(author.user.id, {
+      status: "OPEN",
+      removedByModerationAt: new Date(),
+    });
+
+    for (const actor of [author, manager, other]) {
+      const response = await request(app)
+        .put(`/activities/${activity.id}/status`)
+        .set(...authCookie(actor.token))
+        .send({ status: "IN_PROGRESS" });
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
+
+    const stored = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(stored.status).toBe("OPEN");
+  });
+
   it("returns 401 for a valid token of a deleted user (ghost user)", async () => {
     const author = await createTeacher();
     const activity = await createActivity(author.user.id, { status: "OPEN" });

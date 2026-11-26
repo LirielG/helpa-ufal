@@ -90,6 +90,30 @@ describe("EnrollmentService.enroll", () => {
     expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
   });
 
+  it("throws 410 ACTIVITY_REMOVED when the activity was removed by moderation", async () => {
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          anActivity({
+            moderation: { removedAt: new Date(), justification: "Spam." },
+          }),
+        ),
+      },
+    });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
+
+    await expectHttpError(
+      service.enroll(USER_ID, ACTIVITY_ID),
+      410,
+      "This activity was removed by moderation.",
+      "ACTIVITY_REMOVED",
+    );
+    expect(enrollmentRepository.enroll).not.toHaveBeenCalled();
+  });
+
   it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
     "throws 409 when the activity status is %s (not open for enrollment)",
     async (status) => {

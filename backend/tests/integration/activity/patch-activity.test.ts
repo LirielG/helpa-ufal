@@ -236,6 +236,7 @@ describe("PATCH /activities/:activityId", () => {
             }
           : null,
       },
+      moderation: null,
     });
   });
 
@@ -330,6 +331,35 @@ describe("PATCH /activities/:activityId", () => {
       code: "NOT_FOUND",
       message: "Activity not found.",
     });
+  });
+
+  it("returns 410 ACTIVITY_REMOVED for a moderation-removed activity (author, manager, and third party)", async () => {
+    const author = await createTeacher();
+    const manager = await createManager();
+    const other = await createStudent();
+    const activity = await createActivity(author.user.id, {
+      slots: 10,
+      removedByModerationAt: new Date(),
+    });
+
+    for (const actor of [author, manager, other]) {
+      const response = await request(app)
+        .patch(`/activities/${activity.id}`)
+        .set(...authCookie(actor.token))
+        .send({ title: "Tentativa em ação removida pela moderação" });
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
+
+    const stored = await prisma.activity.findUniqueOrThrow({
+      where: { id: activity.id },
+    });
+    expect(stored.title).toBe(activity.title);
   });
 
   it.each(["COMPLETED", "CANCELLED"] as const)(

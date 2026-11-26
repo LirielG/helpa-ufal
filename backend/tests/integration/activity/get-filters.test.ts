@@ -137,6 +137,34 @@ describe("GET /activities/filters", () => {
     expect(response.body).toEqual({ areas: ["Saúde"] });
   });
 
+  it("omits areas that only exist in moderation-removed activities", async () => {
+    const { user: author } = await createTeacher();
+    await createActivity(author.id, { area: "Saúde" });
+    await createActivity(author.id, {
+      area: "Veterinária",
+      removedByModerationAt: new Date(),
+    });
+
+    const response = await request(app).get("/activities/filters");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ areas: ["Saúde"] });
+  });
+
+  it("keeps an area present in both a moderation-removed and an eligible activity", async () => {
+    const { user: author } = await createTeacher();
+    await createActivity(author.id, { area: "Saúde" });
+    await createActivity(author.id, {
+      area: "Saúde",
+      removedByModerationAt: new Date(),
+    });
+
+    const response = await request(app).get("/activities/filters");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ areas: ["Saúde"] });
+  });
+
   it("omits areas that only exist in CANCELLED activities", async () => {
     // Product decision (#158): the filter is a discovery tool — announcing an
     // area whose only activities were cancelled leads to a dead end in the UI.

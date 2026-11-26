@@ -236,6 +236,29 @@ describe("ActivityReportService.createReport", () => {
     expect(reportRepository.create).not.toHaveBeenCalled();
   });
 
+  it("throws 410 ACTIVITY_REMOVED when the activity was removed by moderation", async () => {
+    const activityRepository = mockActivityRepository({
+      findById: vi.fn().mockResolvedValue({
+        ...activityFrom(AUTHOR_ID),
+        moderation: { removedAt: new Date(), justification: "Spam." },
+      }),
+    });
+    const reportRepository = mockReportRepository();
+    const service = new ActivityReportService({
+      activityReportRepository: reportRepository,
+      activityRepository,
+    });
+
+    await expectCustomError(
+      service.createReport(ACTIVITY_ID, AUTHOR_ID, validInput()),
+      410,
+      "This activity was removed by moderation.",
+      "ACTIVITY_REMOVED",
+    );
+    expect(reportRepository.findByUserAndActivity).not.toHaveBeenCalled();
+    expect(reportRepository.create).not.toHaveBeenCalled();
+  });
+
   it("throws 403 when the author reports their own activity", async () => {
     const activityRepository = mockActivityRepository({
       findById: vi.fn().mockResolvedValue(activityFrom(AUTHOR_ID)),

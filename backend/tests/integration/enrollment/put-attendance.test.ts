@@ -546,6 +546,35 @@ describe("PUT /enrollments/:enrollmentId/attendance", () => {
     });
   });
 
+  it("returns 410 ACTIVITY_REMOVED when its activity was removed by moderation (author, manager, and third party)", async () => {
+    const { author, activity, enrollment } = await aHomologableEnrollment();
+    const manager = await createManager();
+    const outsider = await createStudent();
+    await prisma.activity.update({
+      where: { id: activity.id },
+      data: { removedByModerationAt: new Date() },
+    });
+
+    for (const actor of [author, manager, outsider]) {
+      const response = await request(app)
+        .put(attendanceUrl(enrollment.id))
+        .set(...authCookie(actor.token))
+        .send({ attended: true, workloadHours: 4 });
+
+      expect(response.status).toBe(410);
+      expect(response.body).toEqual({
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      });
+    }
+
+    await expect(attendanceOf(enrollment.id)).resolves.toEqual({
+      attendanceConfirmed: null,
+      confirmedWorkloadHours: 0,
+    });
+  });
+
   it("returns 400 INVALID_UUID for a non-UUID enrollmentId", async () => {
     const { author } = await aHomologableEnrollment();
 

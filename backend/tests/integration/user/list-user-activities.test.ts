@@ -8,7 +8,10 @@ import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository
 import {
   anAddress,
   createActivity,
+  createCertificate,
   createEnrollment,
+  createManager,
+  createModerationDecision,
   createStudent,
   createTeacher,
 } from "../../helpers/factories.js";
@@ -1122,6 +1125,116 @@ describe("GET /users/me/activities", () => {
         expect(response.status).toBe(200);
         expect(response.body.limit).toBe(100);
       });
+    });
+  });
+
+  // ---------- Moderation-removed activities ----------
+
+  describe("moderation-removed activities", () => {
+    it("filter=managed includes moderation-removed activities of the author with moderation populated", async () => {
+      const author = await createTeacher();
+      const manager = await createManager();
+      const removedAt = new Date("2026-09-10T15:00:00.000Z");
+      const active = await createActivity(author.user.id, { title: "Ativa" });
+      const removed = await createActivity(author.user.id, {
+        title: "Removida",
+        removedByModerationAt: removedAt,
+      });
+      await createModerationDecision(removed.id, manager.user.id, {
+        verdict: "UPHELD",
+        justification: "Conteúdo impróprio.",
+      });
+
+      const response = await listActivities(author.token, "?filter=managed");
+
+      expect(response.status).toBe(200);
+      expect(sorted(idsOf(response))).toEqual(sorted([active.id, removed.id]));
+      expect(itemOf(response, active.id).moderation).toBeNull();
+      expect(itemOf(response, removed.id).moderation).toEqual({
+        removedAt: removedAt.toISOString(),
+        justification: "Conteúdo impróprio.",
+      });
+    });
+
+    it("filter=enrolled excludes moderation-removed activities", async () => {
+      const author = await createTeacher();
+      const student = await createStudent();
+      const visible = await createActivity(author.user.id, { status: "OPEN" });
+      const removed = await createActivity(author.user.id, {
+        status: "OPEN",
+        removedByModerationAt: new Date(),
+      });
+      await createEnrollment(student.user.id, visible.id);
+      await createEnrollment(student.user.id, removed.id);
+
+      const response = await listActivities(student.token, "?filter=enrolled");
+
+      expect(response.status).toBe(200);
+      expect(idsOf(response)).toEqual([visible.id]);
+    });
+
+    it("filter=completed keeps a moderation-removed activity only when the user has a certificate", async () => {
+      const author = await createTeacher();
+      const manager = await createManager();
+      const certifiedStudent = await createStudent();
+      const uncertifiedStudent = await createStudent();
+      const absentStudent = await createStudent();
+      const removedAt = new Date("2026-09-10T15:00:00.000Z");
+      const activity = await createActivity(author.user.id, {
+        status: "COMPLETED",
+        removedByModerationAt: removedAt,
+      });
+      await createModerationDecision(activity.id, manager.user.id, {
+        verdict: "UPHELD",
+        justification: "Irregularidade posterior.",
+      });
+
+      const certifiedEnrollment = await createEnrollment(
+        certifiedStudent.user.id,
+        activity.id,
+        { attendanceConfirmed: true, confirmedWorkloadHours: 8 },
+      );
+      const certificate = await createCertificate(certifiedEnrollment.id);
+
+      await createEnrollment(uncertifiedStudent.user.id, activity.id, {
+        attendanceConfirmed: null,
+      });
+      await createEnrollment(absentStudent.user.id, activity.id, {
+        attendanceConfirmed: false,
+      });
+
+      const certifiedRes = await listActivities(
+        certifiedStudent.token,
+        "?filter=completed",
+      );
+      expect(certifiedRes.status).toBe(200);
+      expect(idsOf(certifiedRes)).toEqual([activity.id]);
+      expect(certifiedRes.body.items[0]).toMatchObject({
+        deletedAt: null,
+        moderation: {
+          removedAt: removedAt.toISOString(),
+          justification: "Irregularidade posterior.",
+        },
+        certificate: {
+          id: certificate.id,
+          validationCode: certificate.validationCode,
+          issuedAt: certificate.issuedAt.toISOString(),
+        },
+      });
+
+      const uncertifiedRes = await listActivities(
+        uncertifiedStudent.token,
+        "?filter=completed",
+      );
+      expect(uncertifiedRes.status).toBe(200);
+      expect(uncertifiedRes.body.items).toEqual([]);
+
+      const absentRes = await listActivities(
+        absentStudent.token,
+        "?filter=completed",
+      );
+      expect(absentRes.status).toBe(200);
+      expect(absentRes.body.items).toEqual([]);
     });
   });
 });

@@ -16,6 +16,7 @@ describe("CustomError", () => {
     [403, "FORBIDDEN"],
     [404, "NOT_FOUND"],
     [409, "CONFLICT"],
+    [410, "GONE"],
     [422, "UNPROCESSABLE"],
     [429, "TOO_MANY_REQUESTS"],
     [500, "INTERNAL_ERROR"],

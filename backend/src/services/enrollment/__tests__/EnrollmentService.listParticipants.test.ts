@@ -465,6 +465,36 @@ describe("EnrollmentService.listParticipants", () => {
     expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
   });
 
+  it("throws 410 ACTIVITY_REMOVED when the activity was removed by moderation, even for the author or a manager", async () => {
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue({
+          id: ACTIVITY_ID,
+          authorId: AUTHOR_ID,
+          status: "OPEN",
+          moderation: { removedAt: new Date(), justification: "Spam." },
+        }),
+      },
+    });
+    const service = new EnrollmentService({
+      activityRepository,
+      enrollmentRepository,
+    });
+
+    for (const user of [
+      { id: AUTHOR_ID, isManager: false },
+      { id: OUTSIDER_ID, isManager: true },
+    ]) {
+      await expectHttpError(
+        service.listParticipants(user, ACTIVITY_ID, 1, 10),
+        410,
+        "This activity was removed by moderation.",
+        "ACTIVITY_REMOVED",
+      );
+    }
+    expect(enrollmentRepository.findByActivityId).not.toHaveBeenCalled();
+  });
+
   // ---------- Authorization ----------
 
   it("throws 403 for an authenticated user who is neither author nor manager, without querying enrollments", async () => {

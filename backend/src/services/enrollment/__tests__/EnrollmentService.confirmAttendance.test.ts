@@ -432,6 +432,30 @@ describe("EnrollmentService.confirmAttendance", () => {
     expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
   });
 
+  it("throws 410 ACTIVITY_REMOVED when its activity was removed by moderation, even for a manager", async () => {
+    const { service, enrollmentRepository } = aService({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          anActivity({
+            moderation: { removedAt: new Date(), justification: "Spam." },
+          }),
+        ),
+      },
+    });
+
+    await expectCustomError(
+      service.confirmAttendance(
+        { id: MANAGER_ID, isManager: true },
+        ENROLLMENT_ID,
+        { attended: true, workloadHours: 4 },
+      ),
+      410,
+      "This activity was removed by moderation.",
+      "ACTIVITY_REMOVED",
+    );
+    expect(enrollmentRepository.confirmAttendance).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the enrollment does not exist", async () => {
     const { service, enrollmentRepository } = aService({
       enrollment: { findById: vi.fn().mockResolvedValue(null) },

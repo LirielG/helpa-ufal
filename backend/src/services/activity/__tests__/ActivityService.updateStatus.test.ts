@@ -89,6 +89,33 @@ describe("ActivityService.updateStatus", () => {
     expect(activityRepository.updateStatus).not.toHaveBeenCalled();
   });
 
+  it("throws 410 ACTIVITY_REMOVED when the activity was removed by moderation, even for a manager", async () => {
+    const { activityRepository, enrollmentRepository } = mockRepositories({
+      activity: {
+        findById: vi.fn().mockResolvedValue(
+          makeActivityRecord({
+            moderation: { removedAt: new Date(), justification: "Spam." },
+          }),
+        ),
+      },
+    });
+    const service = new ActivityService({
+      activityRepository,
+      enrollmentRepository,
+    });
+
+    await expectHttpError(
+      service.updateStatus(ACTIVITY_ID, "IN_PROGRESS", {
+        id: "manager-9",
+        isManager: true,
+      }),
+      410,
+      "This activity was removed by moderation.",
+      "ACTIVITY_REMOVED",
+    );
+    expect(activityRepository.updateStatus).not.toHaveBeenCalled();
+  });
+
   // ---------- Authorization ----------
 
   it("throws 403 when the requester is neither the author nor a manager", async () => {

@@ -244,6 +244,7 @@ describe("ErrorHandler.defaultHandler", () => {
     [403, "FORBIDDEN"],
     [404, "NOT_FOUND"],
     [409, "CONFLICT"],
+    [410, "GONE"],
     [422, "UNPROCESSABLE"],
     [429, "TOO_MANY_REQUESTS"],
     [500, "INTERNAL_ERROR"],
@@ -367,7 +368,7 @@ describe("ErrorHandler.defaultHandler", () => {
     });
   });
 
-  it.each([400, 401, 403, 404, 409, 422] as const)(
+  it.each([400, 401, 403, 404, 409, 410, 422] as const)(
     "does not call console.error for CustomError(%i)",
     (status) => {
       const res = aResponse();
