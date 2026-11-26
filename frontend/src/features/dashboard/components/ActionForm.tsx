@@ -8,7 +8,7 @@ import {
   ACTION_FORMAT_OPTIONS,
   ACTION_CAMPUS_OPTIONS,
 } from "../constants";
-import { X, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { X, ArrowLeft, Loader2 } from "lucide-react";
 import { api } from "../../../services/api";
 import { ApiError } from "../../../services/apiError";
 import {
@@ -721,7 +721,7 @@ export function ActionRegister({
               disabled={isSubmitting}
               className="inline-flex items-center justify-center gap-1.5 px-5"
             >
-              <X className="size-3.5" /> Cancelar
+              Cancelar
             </Button>
 
             <div className="flex items-center gap-3">
@@ -752,7 +752,7 @@ export function ActionRegister({
                   onClick={handleStep1Next}
                   className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-6"
                 >
-                  Próximo <ArrowRight className="size-3.5" />
+                  Próximo
                 </Button>
               ) : (
                 <Button
@@ -768,9 +768,7 @@ export function ActionRegister({
                       <Loader2 className="size-4 animate-spin" /> Criando...
                     </>
                   ) : (
-                    <>
-                      Criar ação <Check className="size-3.5 stroke-[3]" />
-                    </>
+                    "Criar ação"
                   )}
                 </Button>
               )}

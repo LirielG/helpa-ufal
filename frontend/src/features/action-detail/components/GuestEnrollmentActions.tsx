@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Button } from "../../../components/Button";
 import { getUnavailableEnrollmentLabel } from "../enrollment";
@@ -33,9 +32,8 @@ export function GuestEnrollmentActions({
         variant="navy"
         size="lg"
         onClick={() => navigate("/login", { state: returnTo })}
-        className="flex items-center justify-center gap-3 rounded-xl"
+        className="rounded-xl"
       >
-        <Users className="size-6" />
         Entrar para se inscrever
       </Button>
       <p className="text-sm text-gray-600 text-center">

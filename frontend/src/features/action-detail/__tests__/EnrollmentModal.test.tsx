@@ -391,7 +391,7 @@ describe("EnrollmentModal", () => {
       );
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /✕ Cancelar/ }),
+          screen.getByRole("button", { name: /^Cancelar$/i }),
         ).toHaveFocus(),
       );
       await user.tab();
@@ -422,7 +422,7 @@ describe("EnrollmentModal", () => {
           expect(document.body.style.overflow).toBe("hidden");
           await waitFor(() =>
             expect(
-              screen.getByRole("button", { name: /✕ Cancelar/ }),
+              screen.getByRole("button", { name: /^Cancelar$/i }),
             ).toHaveFocus(),
           );
           await view.user.keyboard("{Escape}");
@@ -499,7 +499,7 @@ describe("EnrollmentModal", () => {
         <EnrollmentModal action={action} onClose={onClose} />,
       );
 
-      const cancelButton = screen.getByRole("button", { name: /Cancelar/i });
+      const cancelButton = screen.getByRole("button", { name: /^Cancelar$/i });
       await user.click(cancelButton);
 
       expect(onClose).toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, Check, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { REPORT_REASONS } from "@/features/report/constants/reportReasons";
 import type { Report, ReportReason } from "@/services/contracts/report";
 import { formatDate } from "@/utils/date";
@@ -176,10 +176,6 @@ export function ReportList({ reports, onResolve }: ReportListProps) {
                       onClick={() => onResolve(report)}
                       className="inline-flex items-center gap-1.5 rounded-full bg-[#0055CC] hover:bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0055CC]"
                     >
-                      <Check
-                        className="size-3.5 stroke-[2.5]"
-                        aria-hidden="true"
-                      />
                       Resolver
                     </button>
                   )}
