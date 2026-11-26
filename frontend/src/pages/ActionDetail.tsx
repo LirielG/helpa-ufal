@@ -192,17 +192,16 @@ export function ActionDetail() {
           >
             <div className="page-container py-10">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 flex flex-col gap-8">
                   <ActionDescription
                     description={
                       action.details?.description || "Descrição não informada."
                     }
                   />
+                  <ActionInfoCard action={action} />
                 </div>
 
                 <div className="lg:col-span-1 flex flex-col gap-4">
-                  <ActionInfoCard action={action} />
-
                   {isAuthenticated ? (
                     <EnrollmentActions
                       action={action}
