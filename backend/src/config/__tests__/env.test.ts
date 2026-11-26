@@ -250,49 +250,71 @@ describe("EnvSchema — SIGAA_CACHE_TTL_HOURS", () => {
   );
 });
 
-describe("EnvSchema — ADMIN_FULL_NAME", () => {
+describe("EnvSchema — APP_ADMIN_FULL_NAME", () => {
   it("accepts a name at the length limit", () => {
     const name = "a".repeat(FULL_NAME_MAX_LENGTH);
 
-    const parsed = EnvSchema.parse({ ...minimalEnv, ADMIN_FULL_NAME: name });
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      APP_ADMIN_FULL_NAME: name,
+    });
 
-    expect(parsed.ADMIN_FULL_NAME).toBe(name);
+    expect(parsed.APP_ADMIN_FULL_NAME).toBe(name);
   });
 
   it("rejects a name one character over the limit, naming the variable", () => {
     const result = EnvSchema.safeParse({
       ...minimalEnv,
-      ADMIN_FULL_NAME: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
+      APP_ADMIN_FULL_NAME: "a".repeat(FULL_NAME_MAX_LENGTH + 1),
     });
 
     expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(["ADMIN_FULL_NAME"]);
+    expect(result.error?.issues[0]?.path).toEqual(["APP_ADMIN_FULL_NAME"]);
   });
 });
 
-describe("EnvSchema — ADMIN teacher fields", () => {
-  it("leaves ADMIN_REGISTRATION_CODE, ADMIN_CNDB, and ADMIN_COURSE undefined when unset", () => {
-    const parsed = EnvSchema.parse({ ...minimalEnv });
-
-    expect(parsed.ADMIN_REGISTRATION_CODE).toBeUndefined();
-    expect(parsed.ADMIN_CNDB).toBeUndefined();
-    expect(parsed.ADMIN_COURSE).toBeUndefined();
-  });
-
-  it("accepts non-empty strings for ADMIN_REGISTRATION_CODE, ADMIN_CNDB, and ADMIN_COURSE", () => {
+describe("EnvSchema — legacy ADMIN_ names", () => {
+  it("ignores the unprefixed names, leaving the APP_ADMIN_ fields undefined", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      ADMIN_REGISTRATION_CODE: "SIAPE123456",
-      ADMIN_CNDB: "CNDB123456",
-      ADMIN_COURSE: "Ciência da Computação",
+      ADMIN_EMAIL: "admin@helpa.ufal.br",
+      ADMIN_PASSWORD: "Admin@123",
+      ADMIN_FULL_NAME: "Administrador",
     });
 
-    expect(parsed.ADMIN_REGISTRATION_CODE).toBe("SIAPE123456");
-    expect(parsed.ADMIN_CNDB).toBe("CNDB123456");
-    expect(parsed.ADMIN_COURSE).toBe("Ciência da Computação");
+    expect(parsed.APP_ADMIN_EMAIL).toBeUndefined();
+    expect(parsed.APP_ADMIN_PASSWORD).toBeUndefined();
+    expect(parsed.APP_ADMIN_FULL_NAME).toBeUndefined();
+  });
+});
+
+describe("EnvSchema — APP_ADMIN teacher fields", () => {
+  it("leaves APP_ADMIN_REGISTRATION_CODE, APP_ADMIN_CNDB, and APP_ADMIN_COURSE undefined when unset", () => {
+    const parsed = EnvSchema.parse({ ...minimalEnv });
+
+    expect(parsed.APP_ADMIN_REGISTRATION_CODE).toBeUndefined();
+    expect(parsed.APP_ADMIN_CNDB).toBeUndefined();
+    expect(parsed.APP_ADMIN_COURSE).toBeUndefined();
   });
 
-  it.each(["ADMIN_REGISTRATION_CODE", "ADMIN_CNDB", "ADMIN_COURSE"] as const)(
+  it("accepts non-empty strings for APP_ADMIN_REGISTRATION_CODE, APP_ADMIN_CNDB, and APP_ADMIN_COURSE", () => {
+    const parsed = EnvSchema.parse({
+      ...minimalEnv,
+      APP_ADMIN_REGISTRATION_CODE: "SIAPE123456",
+      APP_ADMIN_CNDB: "CNDB123456",
+      APP_ADMIN_COURSE: "Ciência da Computação",
+    });
+
+    expect(parsed.APP_ADMIN_REGISTRATION_CODE).toBe("SIAPE123456");
+    expect(parsed.APP_ADMIN_CNDB).toBe("CNDB123456");
+    expect(parsed.APP_ADMIN_COURSE).toBe("Ciência da Computação");
+  });
+
+  it.each([
+    "APP_ADMIN_REGISTRATION_CODE",
+    "APP_ADMIN_CNDB",
+    "APP_ADMIN_COURSE",
+  ] as const)(
     "rejects an empty string for %s, naming the variable in the error",
     (variable) => {
       const result = EnvSchema.safeParse({
