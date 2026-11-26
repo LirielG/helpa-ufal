@@ -91,7 +91,8 @@ examples:
                 "city": "Arapiraca",
                 "state": "AL"
               }
-            }
+            },
+            "moderation": null
           }
   - name: 400 - Invalid body
     description: A field fails schema validation.
@@ -399,6 +400,36 @@ examples:
             "status": 409,
             "message": "Activity cannot be updated because it is already CANCELLED."
           }
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: PATCH
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+      body:
+        type: json
+        data: |-
+          {
+            "title": "Nova oficina"
+          }
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 500 Response
     description: Internal server error.
     request:
@@ -435,7 +466,7 @@ docs: |-
 
   **Authentication:** `requireAuth()` on the router. A missing `token` cookie answers 401 `No token provided.`; an invalid or expired cookie answers 401 `Token malformatted, expired or invalid.`. Authentication runs before validating params or body. Removed users and revoked sessions answer 401 with code `SESSION_INVALID`. Only the author or a manager can update.
 
-  - Activities with status `COMPLETED` or `CANCELLED`, or that have been soft-deleted, cannot be updated.
+  - Activities with status `COMPLETED` or `CANCELLED`, soft-deleted (`deletedAt != null`, answering `404`), or removed by moderation (`removedByModerationAt != null`, answering `410 ACTIVITY_REMOVED` for any user, including managers) cannot be updated.
   - The 200 body has the same shape as `GET /activities/:activityId`, including `availableSlots` (slots minus the approved enrollments, never below zero). It carries no internal columns such as `createdAt`, `updatedAt` or `deletedAt`.
 
   The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.

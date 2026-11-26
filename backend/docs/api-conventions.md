@@ -120,6 +120,7 @@ partir de `code` e `field` e, quando não há tradução, cai num texto genéric
 | 403    | `FORBIDDEN`         |
 | 404    | `NOT_FOUND`         |
 | 409    | `CONFLICT`          |
+| 410    | `GONE`              |
 | 422    | `UNPROCESSABLE`     |
 | 429    | `TOO_MANY_REQUESTS` |
 | 500    | `INTERNAL_ERROR`    |
@@ -179,6 +180,7 @@ específicos de cada rota ficam documentados no Bruno, no exemplo do erro.
  → 403 papel (userTypes / manager, declarado no router)
  → 400 formato (path, query e corpo, num só errors[])
  → 404 existência
+ → 410 removido (ação removida pela moderação)
  → 403 posse (autor, titular, gestor da ação)
  → 409 / 422 regras de negócio
 ```

@@ -321,6 +321,35 @@ examples:
             "message": "Activity not found."
           }
 
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation. Rejected for all users, including the author and managers.
+    request:
+      url: "{{baseUrl}}/activities/:activityId/enrollments"
+      method: GET
+      params:
+        - name: activityId
+          value: "2448a310-6c92-4db2-8389-2fbee52e81e9"
+          type: path
+          description: Activity UUID
+        - name: page
+          value: "1"
+          type: query
+          description: Page number
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
+
   - name: 500 - Internal error
     description: Internal server error.
     request:
@@ -362,7 +391,7 @@ docs: |-
   - Collection route: GET /activities/:activityId/enrollments, paginated with `page` and `limit`.
   - The identified user must still exist and be active in the database (light hybrid authentication); otherwise 401.
   - The requesting user is resolved exclusively from the session cookie — never from params, query or body.
-  - Validation order: authentication (401) → path and query format (400, aggregated errors[]) → activity existence (404) → authorization (403).
+  - Validation order: authentication (401) → path and query format (400, aggregated errors[]) → activity existence (404) → moderation removal (410 `ACTIVITY_REMOVED`) → authorization (403).
   - Authorization: only the activity creator (Activity.authorId === token user) OR a manager (user.isManager). Any other authenticated user — including volunteers enrolled in the activity — receives 403 with no data.
   - Only active enrollments (APPROVED) are listed; CANCELLED enrollments are hidden and count neither in total nor in totalPresent. PENDING is out of the MVP scope.
   - Each item exposes the canonical enrollment format ({ id, activityId, userId, status, attendanceConfirmed, confirmedWorkloadHours, createdAt, updatedAt }) plus user: { id, fullName, email, registrationCode }. Email is kept by team decision (the user story justifies participant contact). registrationCode exposes only Student.registrationCode (by data minimization, enrolled professors receive null even though Teacher.registrationCode exists).

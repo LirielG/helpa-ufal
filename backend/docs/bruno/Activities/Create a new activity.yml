@@ -100,7 +100,8 @@ examples:
                 "city": "Arapiraca",
                 "state": "AL"
               }
-            }
+            },
+            "moderation": null
           }
   - name: 400 - Invalid body
     description: The body fails schema validation.

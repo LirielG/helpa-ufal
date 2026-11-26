@@ -65,7 +65,8 @@ examples:
                 "city": "Arapiraca",
                 "state": "AL"
               }
-            }
+            },
+            "moderation": null
           }
   - name: 200 Response (authenticated, not enrolled)
     description: Valid token and the user never enrolled, so enrollmentStatus is null.
@@ -112,6 +113,7 @@ examples:
                 "state": "AL"
               }
             },
+            "moderation": null,
             "enrollmentStatus": null
           }
   - name: 200 Response (authenticated, enrolled)
@@ -159,6 +161,7 @@ examples:
                 "state": "AL"
               }
             },
+            "moderation": null,
             "enrollmentStatus": "APPROVED"
           }
   - name: 200 Response (authenticated, cancelled)
@@ -206,7 +209,59 @@ examples:
                 "state": "AL"
               }
             },
+            "moderation": null,
             "enrollmentStatus": "CANCELLED"
+          }
+  - name: 200 Response (removed by moderation — author or manager)
+    description: Activity removed by moderation is still visible to its author and to managers, with the moderation field populated.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      params:
+        - name: activityId
+          value: ""
+          type: path
+          description: Activity UUID
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "id": "a1b2c3d4-0000-4000-8000-000000000001",
+            "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+            "title": "Oficina de Introdução à Programação",
+            "type": "COURSE",
+            "campus": "ARAPIRACA",
+            "startDate": "2026-08-01T08:00:00.000Z",
+            "endDate": "2026-08-15T12:00:00.000Z",
+            "slots": 40,
+            "availableSlots": 40,
+            "status": "OPEN",
+            "details": {
+              "description": "Introdução à lógica de programação para iniciantes.",
+              "area": "Tecnologia",
+              "format": "HYBRID",
+              "url": "https://meet.example.com/oficina",
+              "workloadHours": 20,
+              "address": {
+                "id": "a1b2c3d4-0000-4000-8000-000000000002",
+                "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                "district": "Bom Sucesso",
+                "zipCode": "57309005",
+                "city": "Arapiraca",
+                "state": "AL"
+              }
+            },
+            "moderation": {
+              "removedAt": "2026-07-25T14:30:00.000Z",
+              "justification": "Ação viola as diretrizes da instituição."
+            },
+            "enrollmentStatus": null
           }
   - name: 400 Response
     description: The activityId in the path must be a UUID v4.
@@ -289,6 +344,30 @@ examples:
             "status": 404,
             "message": "Activity not found."
           }
+  - name: 410 - Activity removed
+    description: Activity was removed by moderation and the requester is anonymous or neither the author nor a manager. Returns no activity data.
+    request:
+      url: "{{baseUrl}}/activities/:activityId"
+      method: GET
+      params:
+        - name: activityId
+          value: "a1b2c3d4-0000-4000-8000-000000000001"
+          type: path
+          description: Activity UUID
+    response:
+      status: 410
+      statusText: Gone
+      headers:
+        - name: Content-Type
+          value: application/json
+      body:
+        type: json
+        data: |-
+          {
+            "status": 410,
+            "code": "ACTIVITY_REMOVED",
+            "message": "This activity was removed by moderation."
+          }
   - name: 500 Response
     description: Internal server error.
     request:
@@ -334,6 +413,8 @@ docs: |-
   - The user is resolved exclusively from the JWT token (never from params, query or body).
   - Removed users and revoked sessions answer 401 with code `SESSION_INVALID`.
   - Database failures propagate as server errors rather than anonymous access.
+  - `moderation` is `null` on active activities, or `{ removedAt, justification }` when the activity was removed by an `UPHELD` moderation decision.
+  - When an activity was removed by moderation, anonymous callers and regular users (neither the author nor a manager) receive `410 ACTIVITY_REMOVED` with no activity data. Only the author and managers receive `200` with `moderation` populated.
 
   The `activityId` path parameter must be a UUID v4. `validateParams` runs after authentication, before existence and ownership checks. A malformed or non-v4 id returns 400 with `INVALID_UUID` in `errors[]`; a valid id with no resource returns 404. Path, query and body format errors validated by the route are collected in one `errors[]`.
 
