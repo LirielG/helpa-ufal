@@ -143,7 +143,7 @@ export class CertificatePdfRenderer implements ICertificatePdfRenderer {
   private readonly _appPublicUrl: string;
 
   constructor(props?: Props) {
-    this._appPublicUrl = props?.appPublicUrl ?? env.APP_PUBLIC_URL;
+    this._appPublicUrl = props?.appPublicUrl ?? env.HELPA_PUBLIC_URL;
   }
 
   public async render(data: CertificatePdfData): Promise<Uint8Array> {

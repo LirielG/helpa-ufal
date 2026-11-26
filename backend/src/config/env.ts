@@ -62,16 +62,16 @@ const BaseEnvSchema = z.object({
   // Kept apart from CORS_ORIGIN on purpose: if CORS ever accepts a second
   // origin, the printed link must not change with it. Unlike CORS_ORIGIN the
   // path is kept (the frontend may live under one); only the trailing slash
-  // is dropped so `${APP_PUBLIC_URL}/validate` never doubles it. Query and
+  // is dropped so `${HELPA_PUBLIC_URL}/validate` never doubles it. Query and
   // fragment are refused, since the appended path would land inside them.
-  APP_PUBLIC_URL: z
+  HELPA_PUBLIC_URL: z
     .url({ protocol: /^https?$/ })
     .transform((value, ctx) => {
       const url = new URL(value);
       if (url.search || url.hash) {
         ctx.addIssue({
           code: "custom",
-          message: "APP_PUBLIC_URL must not have a query string or fragment.",
+          message: "HELPA_PUBLIC_URL must not have a query string or fragment.",
         });
         return z.NEVER;
       }
@@ -89,12 +89,12 @@ const BaseEnvSchema = z.object({
       "https://sigaa.sig.ufal.br/sigaa/public/extensao/consulta_extensao.jsf",
     ),
   SIGAA_CACHE_TTL_HOURS: z.coerce.number().int().positive().default(12),
-  APP_ADMIN_EMAIL: z.email().optional(),
-  APP_ADMIN_PASSWORD: z.string().min(8).optional(),
-  APP_ADMIN_FULL_NAME: z.string().min(1).max(FULL_NAME_MAX_LENGTH).optional(),
-  APP_ADMIN_REGISTRATION_CODE: z.string().min(1).optional(),
-  APP_ADMIN_CNDB: z.string().min(1).optional(),
-  APP_ADMIN_COURSE: z.string().min(1).optional(),
+  HELPA_ADMIN_EMAIL: z.email().optional(),
+  HELPA_ADMIN_PASSWORD: z.string().min(8).optional(),
+  HELPA_ADMIN_FULL_NAME: z.string().min(1).max(FULL_NAME_MAX_LENGTH).optional(),
+  HELPA_ADMIN_REGISTRATION_CODE: z.string().min(1).optional(),
+  HELPA_ADMIN_CNDB: z.string().min(1).optional(),
+  HELPA_ADMIN_COURSE: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   // true for implicit TLS (port 465); false upgrades with STARTTLS. When
