@@ -9,6 +9,9 @@ import ValidationError from "@/models/error/ValidationError.js";
 import { env } from "@/config/env.js";
 import { hashUserCode } from "@/utils/userCode.js";
 
+const CODE = "ABCDEFGH";
+const WRONG_CODE = "ZZZZZZZZ";
+
 const USER: User = {
   id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   fullName: "Maria  da Silva",
@@ -21,11 +24,16 @@ const USER: User = {
   updatedAt: new Date("2026-08-26T21:00:00.000Z"),
 };
 
+const PENDING_CODE = {
+  id: "0b6c2f4e-1d3a-4c5b-9e8f-7a6b5c4d3e2f",
+  tokenHash: hashUserCode(CODE),
+};
+
 function uniqueViolation(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError("Unique constraint", {
     code: "P2002",
     clientVersion: "test",
-    meta: { target: ["tokenHash"] },
+    meta: { target: ["userId", "type"] },
   });
 }
 
@@ -37,7 +45,10 @@ function setup() {
   };
   const userCodeRepository = {
     save: vi.fn().mockResolvedValue(undefined),
-    existsValid: vi.fn().mockResolvedValue(true),
+    findValid: vi.fn().mockResolvedValue(PENDING_CODE),
+    reserveAttempt: vi.fn().mockResolvedValue(true),
+    releaseAttempt: vi.fn().mockResolvedValue(undefined),
+    deleteIfExhausted: vi.fn().mockResolvedValue(undefined),
     resetPassword: vi.fn().mockResolvedValue(USER),
   };
   const emailService = { send: vi.fn().mockResolvedValue(undefined) };
@@ -98,7 +109,7 @@ describe("AuthService.requestPasswordReset", () => {
     expect(saved.tokenHash).not.toContain(plain);
   });
 
-  it("e-mails the formatted code, the first name and a link with the code in the fragment", async () => {
+  it("e-mails the formatted code, the first name and a link with the e-mail and the code in the fragment", async () => {
     const { service, emailService } = setup();
 
     await service.requestPasswordReset({ email: "maria@ufal.br" });
@@ -110,8 +121,21 @@ describe("AuthService.requestPasswordReset", () => {
     expect(vars.firstName).toBe("Maria");
     expect(vars.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
     expect(vars.resetUrl).toBe(
-      `${env.APP_PUBLIC_URL}/reset-password#code=${vars.code.replace("-", "")}`,
+      `${env.APP_PUBLIC_URL}/reset-password#email=maria%40ufal.br&code=${vars.code.replace("-", "")}`,
     );
+  });
+
+  it("encodes the e-mail in the link", async () => {
+    const { service, userRepository, emailService } = setup();
+    userRepository.findByEmail.mockResolvedValue({
+      ...USER,
+      email: "maria+helpa@ufal.br",
+    });
+
+    await service.requestPasswordReset({ email: "maria+helpa@ufal.br" });
+
+    const { resetUrl } = emailService.send.mock.calls[0][2];
+    expect(resetUrl).toContain("#email=maria%2Bhelpa%40ufal.br&code=");
   });
 
   it("does nothing for an e-mail without an account", async () => {
@@ -139,50 +163,97 @@ describe("AuthService.requestPasswordReset", () => {
     consoleError.mockRestore();
   });
 
-  it("draws another code when the hash collides, up to three attempts", async () => {
-    const { service, userCodeRepository } = setup();
-    userCodeRepository.save
-      .mockRejectedValueOnce(uniqueViolation())
-      .mockRejectedValueOnce(uniqueViolation())
-      .mockResolvedValueOnce(undefined);
-
-    await service.requestPasswordReset({ email: "maria@ufal.br" });
-
-    expect(userCodeRepository.save).toHaveBeenCalledTimes(3);
-  });
-
-  it("gives up after three collisions", async () => {
+  it("does not retry when saving the code fails", async () => {
     const { service, userCodeRepository, emailService } = setup();
     userCodeRepository.save.mockRejectedValue(uniqueViolation());
 
     await expect(
       service.requestPasswordReset({ email: "maria@ufal.br" }),
     ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
-    expect(userCodeRepository.save).toHaveBeenCalledTimes(3);
+    expect(userCodeRepository.save).toHaveBeenCalledOnce();
     expect(emailService.send).not.toHaveBeenCalled();
   });
 });
 
 describe("AuthService.verifyResetCode", () => {
-  it("looks the code up by its HMAC among unexpired password reset codes", async () => {
-    const { service, userCodeRepository } = setup();
+  it("looks up the pending code of the account with that e-mail", async () => {
+    const { service, userRepository, userCodeRepository } = setup();
 
-    await service.verifyResetCode({ code: "ABCDEFGH" });
+    await service.verifyResetCode({ email: "maria@ufal.br", code: CODE });
 
-    expect(userCodeRepository.existsValid).toHaveBeenCalledWith(
+    expect(userRepository.findByEmail).toHaveBeenCalledWith("maria@ufal.br");
+    expect(userCodeRepository.findValid).toHaveBeenCalledWith(
+      USER.id,
       "PASSWORD_RESET",
-      hashUserCode("ABCDEFGH"),
       expect.any(Date),
     );
+    expect(userCodeRepository.reserveAttempt).toHaveBeenCalledWith(
+      PENDING_CODE.id,
+      PENDING_CODE.tokenHash,
+      5,
+    );
+    expect(userCodeRepository.releaseAttempt).toHaveBeenCalledWith(
+      PENDING_CODE.id,
+      PENDING_CODE.tokenHash,
+    );
+    expect(userCodeRepository.deleteIfExhausted).not.toHaveBeenCalled();
   });
 
-  it("rejects an unknown, expired or used code with 422", async () => {
+  it("rejects the right code with 422 when no attempt is left", async () => {
     const { service, userCodeRepository } = setup();
-    userCodeRepository.existsValid.mockResolvedValue(false);
+    userCodeRepository.reserveAttempt.mockResolvedValue(false);
 
     expectInvalidResetCode(
-      await captureError(service.verifyResetCode({ code: "ABCDEFGH" })),
+      await captureError(
+        service.verifyResetCode({ email: "maria@ufal.br", code: CODE }),
+      ),
     );
+    expect(userCodeRepository.releaseAttempt).not.toHaveBeenCalled();
+  });
+
+  it("rejects an e-mail without an account with 422", async () => {
+    const { service, userRepository, userCodeRepository } = setup();
+    userRepository.findByEmail.mockResolvedValue(null);
+
+    expectInvalidResetCode(
+      await captureError(
+        service.verifyResetCode({ email: "nobody@ufal.br", code: CODE }),
+      ),
+    );
+    expect(userCodeRepository.findValid).not.toHaveBeenCalled();
+  });
+
+  it("rejects an account without a pending code with 422", async () => {
+    const { service, userCodeRepository } = setup();
+    userCodeRepository.findValid.mockResolvedValue(null);
+
+    expectInvalidResetCode(
+      await captureError(
+        service.verifyResetCode({ email: "maria@ufal.br", code: CODE }),
+      ),
+    );
+    expect(userCodeRepository.reserveAttempt).not.toHaveBeenCalled();
+  });
+
+  it("counts a wrong code against the pending one, allowing five, and rejects it with 422", async () => {
+    const { service, userCodeRepository } = setup();
+
+    expectInvalidResetCode(
+      await captureError(
+        service.verifyResetCode({ email: "maria@ufal.br", code: WRONG_CODE }),
+      ),
+    );
+    expect(userCodeRepository.reserveAttempt).toHaveBeenCalledWith(
+      PENDING_CODE.id,
+      PENDING_CODE.tokenHash,
+      5,
+    );
+    expect(userCodeRepository.deleteIfExhausted).toHaveBeenCalledWith(
+      PENDING_CODE.id,
+      PENDING_CODE.tokenHash,
+      5,
+    );
+    expect(userCodeRepository.releaseAttempt).not.toHaveBeenCalled();
   });
 });
 
@@ -191,13 +262,15 @@ describe("AuthService.resetPassword", () => {
     const { service, userCodeRepository } = setup();
 
     await service.resetPassword({
-      code: "ABCDEFGH",
+      email: "maria@ufal.br",
+      code: CODE,
       newPassword: "Nova@Senha1",
     });
 
-    const [tokenHash, passwordHash] =
+    const [id, tokenHash, passwordHash] =
       userCodeRepository.resetPassword.mock.calls[0];
-    expect(tokenHash).toBe(hashUserCode("ABCDEFGH"));
+    expect(id).toBe(PENDING_CODE.id);
+    expect(tokenHash).toBe(PENDING_CODE.tokenHash);
     expect(await bcryptjs.compare("Nova@Senha1", passwordHash)).toBe(true);
   });
 
@@ -205,7 +278,8 @@ describe("AuthService.resetPassword", () => {
     const { service, emailService } = setup();
 
     await service.resetPassword({
-      code: "ABCDEFGH",
+      email: "maria@ufal.br",
+      code: CODE,
       newPassword: "Nova@Senha1",
     });
 
@@ -217,19 +291,46 @@ describe("AuthService.resetPassword", () => {
   });
 
   // bcrypt is costly on purpose; a guessed code must not make the server pay it.
-  it("rejects an invalid code with 422 before hashing the new password", async () => {
+  it("rejects a wrong code with 422, counting it, before hashing the new password", async () => {
     const { service, userCodeRepository, emailService } = setup();
-    userCodeRepository.existsValid.mockResolvedValue(false);
     const hash = vi.spyOn(bcryptjs, "hash");
 
     expectInvalidResetCode(
       await captureError(
-        service.resetPassword({ code: "ABCDEFGH", newPassword: "Nova@Senha1" }),
+        service.resetPassword({
+          email: "maria@ufal.br",
+          code: WRONG_CODE,
+          newPassword: "Nova@Senha1",
+        }),
       ),
+    );
+    expect(userCodeRepository.deleteIfExhausted).toHaveBeenCalledWith(
+      PENDING_CODE.id,
+      PENDING_CODE.tokenHash,
+      5,
     );
     expect(hash).not.toHaveBeenCalled();
     expect(userCodeRepository.resetPassword).not.toHaveBeenCalled();
     expect(emailService.send).not.toHaveBeenCalled();
+    hash.mockRestore();
+  });
+
+  it("rejects the right code with 422 before hashing when no attempt is left", async () => {
+    const { service, userCodeRepository } = setup();
+    userCodeRepository.reserveAttempt.mockResolvedValue(false);
+    const hash = vi.spyOn(bcryptjs, "hash");
+
+    expectInvalidResetCode(
+      await captureError(
+        service.resetPassword({
+          email: "maria@ufal.br",
+          code: CODE,
+          newPassword: "Nova@Senha1",
+        }),
+      ),
+    );
+    expect(hash).not.toHaveBeenCalled();
+    expect(userCodeRepository.resetPassword).not.toHaveBeenCalled();
     hash.mockRestore();
   });
 
@@ -239,7 +340,11 @@ describe("AuthService.resetPassword", () => {
 
     expectInvalidResetCode(
       await captureError(
-        service.resetPassword({ code: "ABCDEFGH", newPassword: "Nova@Senha1" }),
+        service.resetPassword({
+          email: "maria@ufal.br",
+          code: CODE,
+          newPassword: "Nova@Senha1",
+        }),
       ),
     );
     expect(emailService.send).not.toHaveBeenCalled();

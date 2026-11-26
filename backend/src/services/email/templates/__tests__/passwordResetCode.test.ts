@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import passwordResetCode from "@/services/email/templates/passwordResetCode.js";
 
-const RESET_URL = "https://helpa.example/reset-password#code=ABCDEFGH";
+const RESET_URL =
+  "https://helpa.example/reset-password#email=maria%40ufal.br&code=ABCDEFGH";
 
 describe("passwordResetCode template", () => {
   const email = passwordResetCode.render({
@@ -30,7 +31,9 @@ describe("passwordResetCode template", () => {
     expect(email.html).toContain("Redefinir senha");
     expect(email.html).toContain("Olá, Maria!");
     expect(email.html).toContain(">ABCD-EFGH</p>");
-    expect(email.html).toContain(`href="${RESET_URL}"`);
+    // The & between the fragment parameters is escaped in the attribute and
+    // read back as & by the client.
+    expect(email.html).toContain(`href="${RESET_URL.replace("&", "&amp;")}"`);
   });
 
   it("escapes the name in the HTML and keeps it literal in the text", () => {

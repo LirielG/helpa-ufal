@@ -1,18 +1,21 @@
 import UserRepository from "@/repositories/auth/UserRepository.js";
 import type { IUserRepository } from "@/repositories/auth/IUserRepository.js";
 import UserCodeRepository from "@/repositories/auth/UserCodeRepository.js";
-import type { IUserCodeRepository } from "@/repositories/auth/IUserCodeRepository.js";
+import type {
+  IUserCodeRepository,
+  PendingUserCode,
+} from "@/repositories/auth/IUserCodeRepository.js";
 import type { IAuthService } from "@/services/auth/IAuthService.js";
 import EmailService from "@/services/email/EmailService.js";
 import type { IEmailService } from "@/services/email/IEmailService.js";
 import CustomError from "@/models/error/CustomError.js";
 import ValidationError from "@/models/error/ValidationError.js";
 import bcryptjs from "bcryptjs";
+import { timingSafeEqual } from "node:crypto";
 import { env } from "@/config/env.js";
 import { signJwt } from "@/utils/jwt.js";
 import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
 import { firstName } from "@/utils/user.js";
-import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 import { hashUserCode, USER_CODE_LENGTH } from "@/utils/userCode.js";
 import {
   formatValidationCode,
@@ -34,12 +37,15 @@ type Props = {
 };
 
 const RESET_CODE_TTL_MS = 30 * 60_000;
-const MAX_CODE_ATTEMPTS = 3;
+// With 40 bits, five guesses per code leave an attacker no real chance even
+// across many IPs, and still forgive a few typos.
+const MAX_FAILED_RESET_ATTEMPTS = 5;
 const INVALID_RESET_CODE_MESSAGE =
   "The reset code is invalid, expired or already used.";
 
-// The same answer for an unknown, expired or used code, so a response never
-// tells which of them it was.
+// The same answer for an unknown e-mail and for a missing, expired, wrong or
+// exhausted code, so the response body never tells which of them it was, nor
+// whether the e-mail has an account.
 function invalidResetCode(): ValidationError {
   return new ValidationError(
     [
@@ -145,15 +151,21 @@ class AuthService implements IAuthService {
     const user = await this._userRepository.findByEmail(email);
     if (!user) return;
 
-    const code = await this._savePasswordResetCode(user.id);
+    const code = generateValidationCode(USER_CODE_LENGTH);
+    await this._userCodeRepository.save({
+      userId: user.id,
+      type: "PASSWORD_RESET",
+      tokenHash: hashUserCode(code),
+      expiresAt: new Date(Date.now() + RESET_CODE_TTL_MS),
+    });
 
     void this._emailService
       .send(user.email, "passwordResetCode", {
         firstName: firstName(user.fullName),
         code: formatValidationCode(code),
-        // In the fragment, the code is never sent to a server nor leaked in
-        // the Referer header.
-        resetUrl: `${env.APP_PUBLIC_URL}/reset-password#code=${code}`,
+        // In the fragment, the e-mail and the code are never sent to a server
+        // nor leaked in the Referer header.
+        resetUrl: `${env.APP_PUBLIC_URL}/reset-password#email=${encodeURIComponent(user.email)}&code=${code}`,
       })
       .catch((error) =>
         console.error("[AuthService] Password reset email failed:", error),
@@ -161,37 +173,30 @@ class AuthService implements IAuthService {
   }
 
   // Checks without consuming: the code is only used up by resetPassword.
-  public async verifyResetCode({ code }: VerifyResetCodeInput): Promise<void> {
-    const isValid = await this._userCodeRepository.existsValid(
-      "PASSWORD_RESET",
-      hashUserCode(code),
-      new Date(),
-    );
-    if (!isValid) throw invalidResetCode();
+  public async verifyResetCode({
+    email,
+    code,
+  }: VerifyResetCodeInput): Promise<void> {
+    await this._checkResetCode(email, code);
   }
 
   // Sessions are not created here: after the reset the user signs in again.
   public async resetPassword({
+    email,
     code,
     newPassword,
   }: ResetPasswordInput): Promise<void> {
-    const tokenHash = hashUserCode(code);
-
     // Checked before bcrypt, so a guessed code does not cost the server a
     // hash. The check does not replace the one in the transaction below,
     // which is what stops two requests from using the same code.
-    const isValid = await this._userCodeRepository.existsValid(
-      "PASSWORD_RESET",
-      tokenHash,
-      new Date(),
-    );
-    if (!isValid) throw invalidResetCode();
+    const pending = await this._checkResetCode(email, code);
 
     // Hashed before the transaction, so bcrypt does not hold it open.
     const passwordHash = await bcryptjs.hash(newPassword, BCRYPT_SALT_ROUNDS);
 
     const user = await this._userCodeRepository.resetPassword(
-      tokenHash,
+      pending.id,
+      pending.tokenHash,
       passwordHash,
       new Date(),
     );
@@ -206,26 +211,52 @@ class AuthService implements IAuthService {
       );
   }
 
-  // A unique violation means the hash collided with another user's pending
-  // code, or a concurrent request for the same user created the row first;
-  // either way a fresh code fixes it.
-  private async _savePasswordResetCode(userId: string): Promise<string> {
-    for (let attempt = 1; ; attempt++) {
-      const code = generateValidationCode(USER_CODE_LENGTH);
-      try {
-        await this._userCodeRepository.save({
-          userId,
-          type: "PASSWORD_RESET",
-          tokenHash: hashUserCode(code),
-          expiresAt: new Date(Date.now() + RESET_CODE_TTL_MS),
-        });
-        return code;
-      } catch (error) {
-        if (attempt >= MAX_CODE_ATTEMPTS || !uniqueViolationFields(error)) {
-          throw error;
-        }
-      }
+  // The code is matched only against the pending code of the account with
+  // that e-mail, so a guess tests a single account. The attempt is taken
+  // before comparing, so guesses in flight already count and concurrent
+  // requests cannot test more than MAX_FAILED_RESET_ATTEMPTS codes; a right
+  // guess gives its attempt back. A wrong guess that took the last attempt
+  // may also delete the code under a right guess still in flight, which then
+  // fails too: on a race the limit wins.
+  private async _checkResetCode(
+    email: string,
+    code: string,
+  ): Promise<PendingUserCode> {
+    const user = await this._userRepository.findByEmail(email);
+    if (!user) throw invalidResetCode();
+
+    const pending = await this._userCodeRepository.findValid(
+      user.id,
+      "PASSWORD_RESET",
+      new Date(),
+    );
+    if (!pending) throw invalidResetCode();
+
+    const reserved = await this._userCodeRepository.reserveAttempt(
+      pending.id,
+      pending.tokenHash,
+      MAX_FAILED_RESET_ATTEMPTS,
+    );
+    if (!reserved) throw invalidResetCode();
+
+    const isMatch = timingSafeEqual(
+      Buffer.from(pending.tokenHash, "hex"),
+      Buffer.from(hashUserCode(code), "hex"),
+    );
+    if (!isMatch) {
+      await this._userCodeRepository.deleteIfExhausted(
+        pending.id,
+        pending.tokenHash,
+        MAX_FAILED_RESET_ATTEMPTS,
+      );
+      throw invalidResetCode();
     }
+
+    await this._userCodeRepository.releaseAttempt(
+      pending.id,
+      pending.tokenHash,
+    );
+    return pending;
   }
 }
 export default AuthService;
