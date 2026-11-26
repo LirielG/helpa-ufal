@@ -20,7 +20,7 @@ import { type Paginated, toPaginated } from "@/types/pagination.js";
 import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
-import { firstName } from "@/utils/firstName.js";
+import { firstName } from "@/utils/user.js";
 
 type Props = {
   userRepository?: IUserRepository;
