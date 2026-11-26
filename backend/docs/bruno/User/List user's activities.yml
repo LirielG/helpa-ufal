@@ -325,7 +325,7 @@ docs: |-
 
   | Field        | Description |
   |--------------|-------------|
-  | `moderation` | `{ removedAt, justification }` when the activity was removed by moderation (`UPHELD`), or `null` otherwise |
+  | `moderation` | `{ removedAt, justification }` when the activity was removed by moderation (`UPHELD`), or `null` otherwise; `justification` is `null` unless the user is the activity's author |
   | `deletedAt`  | When the activity was deleted, or `null`. Always present, in every filter. Only `completed` can bring a non-null value |
   | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled` and `completed`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
   | `certificate` | The certificate of that enrollment: `{ id, validationCode, issuedAt }`, or `null` when there is none. Always present, in every filter. A certificate exists exactly when `enrollment.attendanceConfirmed` is `true` |
@@ -346,7 +346,8 @@ docs: |-
   - In `completed`, a soft-deleted or moderation-removed activity appears only when the user's
     enrollment has a certificate (`attendanceConfirmed = true`): the certificate stays valid
     and downloadable, and this list is where the client gets its `id`. One where the user was
-    absent or never homologated stays out.
+    absent or never homologated stays out. There `moderation.justification` is `null`: only
+    the author is told why moderation removed the activity.
   - Ordering: `startDate` descending, ties broken by `id`, so pagination is deterministic.
 
   ## Validation order

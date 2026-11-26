@@ -289,8 +289,16 @@ class ActivityRepository implements IActivityRepository {
       const enrollment = enrollments[0];
       const certificate = enrollment?.certificate;
 
+      const response = toFullResponse(activity, _count.enrollments);
+
       return {
-        ...toFullResponse(activity, _count.enrollments),
+        ...response,
+        // Only the author learns why moderation removed the activity; a
+        // participant who kept a certificate is told only that it happened.
+        moderation:
+          response.moderation && activity.authorId !== userId
+            ? { ...response.moderation, justification: null }
+            : response.moderation,
         deletedAt: activity.deletedAt,
         enrollment: enrollment ? toEnrollmentResponse(enrollment) : null,
         certificate: certificate

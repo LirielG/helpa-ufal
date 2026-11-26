@@ -1173,7 +1173,7 @@ describe("GET /users/me/activities", () => {
       expect(idsOf(response)).toEqual([visible.id]);
     });
 
-    it("filter=completed keeps a moderation-removed activity only when the user has a certificate", async () => {
+    it("filter=completed keeps a moderation-removed activity only when the user has a certificate, without the justification", async () => {
       const author = await createTeacher();
       const manager = await createManager();
       const certifiedStudent = await createStudent();
@@ -1213,7 +1213,7 @@ describe("GET /users/me/activities", () => {
         deletedAt: null,
         moderation: {
           removedAt: removedAt.toISOString(),
-          justification: "Irregularidade posterior.",
+          justification: null,
         },
         certificate: {
           id: certificate.id,
