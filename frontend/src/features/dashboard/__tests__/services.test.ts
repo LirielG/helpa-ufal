@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { API, http, HttpResponse, makeAction, makePage, server } from "@/test";
-import { fetchActions } from "../services";
+import { fetchActions, fetchFeaturedActions } from "../services";
 import type { FilterOptions } from "../types";
 
 const NO_FILTERS: FilterOptions = {
@@ -86,5 +86,30 @@ describe("fetchActions", () => {
     await expect(fetchActions(NO_FILTERS, 1, 20)).resolves.toMatchObject({
       totalPages: 7,
     });
+  });
+});
+
+describe("fetchFeaturedActions", () => {
+  it("requests activities with default feed cutout (no status, orderBy=start_date, order=asc, limit=4)", async () => {
+    const requests: URLSearchParams[] = [];
+    server.use(
+      http.get(`${API}/activities`, ({ request }) => {
+        requests.push(new URL(request.url).searchParams);
+        return HttpResponse.json(
+          makePage([makeAction({ id: "1" }), makeAction({ id: "2" })]),
+        );
+      }),
+    );
+
+    const items = await fetchFeaturedActions();
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].get("status")).toBeNull();
+    expect(requests[0].get("orderBy")).toBe("start_date");
+    expect(requests[0].get("order")).toBe("asc");
+    expect(requests[0].get("limit")).toBe("4");
+    expect(items).toHaveLength(2);
+    expect(items[0].id).toBe("1");
+    expect(items[1].id).toBe("2");
   });
 });
