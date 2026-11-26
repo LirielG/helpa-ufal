@@ -43,7 +43,8 @@ describe("ActivityService.list", () => {
     expect(repository.list).toHaveBeenCalledWith({
       type: undefined,
       format: undefined,
-      status: undefined,
+      status: "OPEN",
+      startDateAfter: expect.any(Date),
       search: undefined,
       campus: undefined,
       page: 1,
@@ -78,7 +79,7 @@ describe("ActivityService.list", () => {
       {
         field: "status",
         message:
-          "status must be one of the following: OPEN, IN_PROGRESS, COMPLETED, CANCELLED.",
+          "status must be one of the following: OPEN, IN_PROGRESS, COMPLETED, CANCELLED, ALL.",
       },
     ]);
     expect(repository.list).not.toHaveBeenCalled();
@@ -208,7 +209,7 @@ describe("ActivityService.list", () => {
       {
         field: "status",
         message:
-          "status must be one of the following: OPEN, IN_PROGRESS, COMPLETED, CANCELLED.",
+          "status must be one of the following: OPEN, IN_PROGRESS, COMPLETED, CANCELLED, ALL.",
       },
     ]);
     expect(repository.list).not.toHaveBeenCalled();
@@ -445,7 +446,8 @@ describe("ActivityService.list", () => {
     expect(repository.list).toHaveBeenCalledWith({
       type: undefined,
       format: undefined,
-      status: undefined,
+      status: "OPEN",
+      startDateAfter: expect.any(Date),
       search: undefined,
       campus: undefined,
       page: 1,
@@ -535,5 +537,44 @@ describe("ActivityService.list", () => {
       limit: 20,
       totalPages: 1,
     });
+  });
+
+  it("defaults to OPEN activities that have not started when no status is given", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({});
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "OPEN",
+        startDateAfter: expect.any(Date),
+      }),
+    );
+  });
+
+  it("status=ALL removes the status filter and the date restriction", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ status: "ALL" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: undefined,
+        startDateAfter: undefined,
+      }),
+    );
+  });
+
+  it("an explicit status is passed through with no date restriction", async () => {
+    const repository = mockRepository();
+    const service = new ActivityService({ activityRepository: repository });
+
+    await service.list({ status: "OPEN" });
+
+    expect(repository.list).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "OPEN", startDateAfter: undefined }),
+    );
   });
 });

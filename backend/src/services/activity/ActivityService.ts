@@ -168,7 +168,10 @@ class ActivityService implements IActivityService {
     // accepted and listed in the error message without editing this service.
     const validTypes: readonly string[] = Object.values(ActivityType);
     const validFormats: readonly string[] = Object.values(ActivityFormat);
-    const validStatuses: readonly string[] = Object.values(ActivityStatus);
+    const validStatuses: readonly string[] = [
+      ...Object.values(ActivityStatus),
+      "ALL",
+    ];
 
     // Derived from the Prisma enum (never hand-written): campus is a DB enum
     // column, so an unknown value would otherwise blow up in the driver (500).
@@ -232,10 +235,20 @@ class ActivityService implements IActivityService {
       sortField = "createdAt";
     }
     const trimmedArea = filters.area?.trim();
+
+    const isDefault = filters.status === undefined;
+    const status = isDefault
+      ? "OPEN"
+      : filters.status === "ALL"
+        ? undefined
+        : filters.status;
+    const startDateAfter = isDefault ? new Date() : undefined;
+
     const result = await this._activityRepository.list({
       type: filters.type,
       format: filters.format,
-      status: filters.status,
+      status,
+      startDateAfter,
       search: filters.search,
       campus: filters.campus,
       area: trimmedArea ? trimmedArea : undefined,
