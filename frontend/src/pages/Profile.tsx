@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
 import { User } from "lucide-react";
@@ -47,14 +47,17 @@ export function Profile() {
     navigate(`/my-activities?filter=${filter}`, { replace: true });
   }, [isLegacyActionsUrl, legacyFilter, navigate]);
 
-  const handleRetry = () => {
-    setIsLoading(true);
-    setLoadError(null);
-
+  const loadProfile = useCallback(() => {
     getProfile()
       .then((data) => setProfile(data))
       .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
       .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    loadProfile();
   };
 
   // Keyed on the id, not the user object: saving the name replaces the stored
@@ -66,11 +69,8 @@ export function Profile() {
   useEffect(() => {
     if (!userId || isLegacyActionsUrl) return;
 
-    getProfile()
-      .then((data) => setProfile(data))
-      .catch(() => setLoadError("Erro ao carregar o perfil. Tente novamente."))
-      .finally(() => setIsLoading(false));
-  }, [userId, isLegacyActionsUrl]);
+    loadProfile();
+  }, [userId, isLegacyActionsUrl, loadProfile]);
 
   const handleSave = async (data: UpdateProfileRequest) => {
     const updated = await updateProfile(data);
