@@ -93,6 +93,8 @@ export function ActionDetail() {
     setLoadAttempt((attempt) => attempt + 1);
   };
 
+  const restoreEnrollmentFocus = useRef(false);
+
   // The server is the source of the slots and of enrollmentStatus, so both
   // enrolling and cancelling refetch instead of patching the local copy.
   const refreshAction = async () => {
@@ -101,9 +103,23 @@ export function ActionDetail() {
       const updatedAction = await getActionById(id);
       setAction(updatedAction);
     } catch {
+      restoreEnrollmentFocus.current = false;
       // A failed refresh must not erase the action after a completed enrollment change.
     }
   };
+
+  const handleEnrollmentSuccess = () => {
+    restoreEnrollmentFocus.current = true;
+    void refreshAction();
+  };
+
+  useEffect(() => {
+    if (!restoreEnrollmentFocus.current || !action) return;
+    restoreEnrollmentFocus.current = false;
+    if (document.activeElement === document.body) {
+      getFallbackFocus()?.focus();
+    }
+  }, [action, getFallbackFocus]);
 
   const handleCancelled = () => {
     setShowCancelModal(false);
@@ -230,7 +246,7 @@ export function ActionDetail() {
             <EnrollmentModal
               action={action}
               onClose={() => setShowModal(false)}
-              onSuccess={refreshAction}
+              onSuccess={handleEnrollmentSuccess}
               getFallbackFocus={getFallbackFocus}
             />
           )}

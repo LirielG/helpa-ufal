@@ -46,7 +46,16 @@ const routes = [
     field: "enrollmentId",
     body: { attended: false },
   },
-  { method: "put", path: "/reports/:id/resolution", field: "reportId" },
+  {
+    method: "post",
+    path: "/activities/:id/moderation-decisions",
+    field: "activityId",
+    body: {
+      verdict: "REJECTED",
+      justification: "Sem indícios.",
+      reportIds: ["b2c3d4e5-0000-4000-8000-000000000007"],
+    },
+  },
 ] as const;
 
 function invalidIdResponse(field: string) {
@@ -150,11 +159,12 @@ describe("path parameter validation", () => {
     },
   );
 
-  it("checks the manager role before a malformed reportId", async () => {
+  it("checks the manager role before a malformed activityId on moderation decisions", async () => {
     const student = await createStudent();
     const response = await request(app)
-      .put("/reports/not-a-uuid/resolution")
-      .set(...authCookie(student.token));
+      .post("/activities/not-a-uuid/moderation-decisions")
+      .set(...authCookie(student.token))
+      .send({ verdict: "REJECTED", justification: "Sem indícios." });
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({
@@ -167,7 +177,7 @@ describe("path parameter validation", () => {
   it("combines invalid activityId and pagination before checking existence or ownership", async () => {
     const student = await createStudent();
     const response = await request(app)
-      .get("/activities/not-a-uuid/enrollments?page=0&limit=51")
+      .get("/activities/not-a-uuid/enrollments?page=0&limit=101")
       .set(...authCookie(student.token));
 
     expect(response.status).toBe(400);
@@ -183,7 +193,7 @@ describe("path parameter validation", () => {
         {
           field: "limit",
           code: "VALIDATION_ERROR",
-          message: "limit must be at most 50.",
+          message: "limit must be at most 100.",
         },
       ],
     });

@@ -20,7 +20,7 @@ export function ProfileSelector({
             key={config.type}
             type="button"
             onClick={() => onSelect(config.type)}
-            className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl hover:scale-105 transition-all duration-300 group cursor-pointer"
+            className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 hover:shadow-md hover:scale-[1.02] transition-all duration-300 group cursor-pointer"
           >
             <div
               className={`size-20 ${

@@ -15,6 +15,12 @@ type DashboardShellProps = {
   footer?: ReactNode;
   containerStyle?: React.CSSProperties;
   showCreateAction?: boolean;
+  /**
+   * Fresh copy of the signed-in user's profile from a page that reads or saves
+   * it itself. The sidebar shows it, and the cache keeps it, instead of what
+   * was cached before.
+   */
+  syncedProfile?: UserProfile | null;
 };
 
 let cachedProfileUserId: string | null = null;
@@ -27,10 +33,10 @@ export function DashboardShell({
   footer,
   containerStyle,
   showCreateAction = true,
+  syncedProfile = null,
 }: DashboardShellProps) {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [wasCreated, setWasCreated] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(() =>
@@ -42,6 +48,19 @@ export function DashboardShell({
     useActionRegister();
 
   useEffect(() => closeRegisterModal, [closeRegisterModal]);
+
+  const syncedProfileOfUser =
+    syncedProfile && user && syncedProfile.id === user.id
+      ? syncedProfile
+      : null;
+  const sidebarProfile = syncedProfileOfUser ?? profile;
+
+  useEffect(() => {
+    if (!user || !syncedProfileOfUser) return;
+
+    cachedProfileUserId = user.id;
+    cachedProfileData = syncedProfileOfUser;
+  }, [user, syncedProfileOfUser]);
 
   const loadProfile = useCallback(
     async (force = false) => {
@@ -94,22 +113,13 @@ export function DashboardShell({
     void loadProfile(false);
   }, [isAuthenticated, loadProfile]);
 
-  const handleSuccess = () => {
-    setWasCreated(true);
-
-    if (onSuccessCallback) {
-      onSuccessCallback();
-    }
+  const handleSuccess = (createdId: string) => {
+    onSuccessCallback?.();
+    navigate(`/activity/${createdId}`);
   };
 
   const handleClose = () => {
-    const shouldGoToFeed = wasCreated && !onSuccessCallback;
     closeRegisterModal();
-    setWasCreated(false);
-
-    if (shouldGoToFeed) {
-      navigate("/dashboard");
-    }
   };
 
   return (
@@ -126,7 +136,7 @@ export function DashboardShell({
           <DashboardSidebar
             isOpenMobile={mobileSidebarOpen}
             onCloseMobile={() => setMobileSidebarOpen(false)}
-            profile={profile}
+            profile={sidebarProfile}
             profileError={profileError}
             onRetryProfile={() => void loadProfile(true)}
           />
@@ -141,7 +151,7 @@ export function DashboardShell({
               onClick={openRegisterModal}
               aria-label="Criar uma ação"
               title="Criar uma ação"
-              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
+              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
             >
               <Plus className="size-7 md:size-5 lg:size-6 stroke-[2.5]" />
               <span className="hidden md:inline font-semibold text-sm lg:text-base tracking-wide whitespace-nowrap">

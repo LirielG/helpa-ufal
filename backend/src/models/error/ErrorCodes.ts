@@ -21,7 +21,11 @@ export type SpecificErrorCode =
   | "ACTIVITY_NOT_COMPLETED"
   | "ENROLLMENT_NOT_APPROVED"
   | "ALREADY_IN_USE"
-  | "SLOTS_BELOW_APPROVED_ENROLLMENTS";
+  | "SLOTS_BELOW_APPROVED_ENROLLMENTS"
+  | "NO_OPEN_REPORTS"
+  | "REPORTS_CHANGED"
+  | "ACTIVITY_COMPLETED"
+  | "INVALID_RESET_CODE";
 
 export type ErrorCode = GenericErrorCode | SpecificErrorCode;
 
@@ -30,6 +34,7 @@ export type ErrorItemCode =
   | "UNKNOWN_PARAMETER"
   | "INVALID_UUID"
   | "INVALID_DATETIME"
-  | "BELOW_APPROVED_ENROLLMENTS";
+  | "BELOW_APPROVED_ENROLLMENTS"
+  | "INVALID_RESET_CODE";
 
 export type ErrorDetails = Record<string, unknown>;

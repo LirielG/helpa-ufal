@@ -8,8 +8,11 @@ import { IActivityReportController } from "@/controllers/activityReport/IActivit
 import EnrollmentController from "@/controllers/enrollment/EnrollmentController.js";
 import type { IEnrollmentController } from "@/controllers/enrollment/IEnrollmentController.js";
 import { validateParams } from "@/middlewares/validation/validateParams.js";
+import { validateQuery } from "@/middlewares/validation/validateQuery.js";
+import { INVALID_QUERY_MESSAGE } from "@/schemas/common/PaginationSchemas.js";
 import { ActivityPathParamsSchema } from "@/schemas/common/PathParamsSchemas.js";
 import {
+  ListActivitiesQuerySchema,
   UpdateActivitySchema,
   UpdateActivityStatusSchema,
 } from "@/schemas/activity/ActivitySchemas.js";
@@ -26,7 +29,11 @@ router.post("/activities", authMiddleware.requireAuth(), (req, res) =>
   activityController.create(req, res),
 );
 
-router.get("/activities", (req, res) => activityController.list(req, res));
+router.get(
+  "/activities",
+  validateQuery(ListActivitiesQuerySchema, INVALID_QUERY_MESSAGE),
+  (req, res) => activityController.list(req, res),
+);
 
 router.get("/activities/filters", (req, res) =>
   activityController.listFilters(req, res),

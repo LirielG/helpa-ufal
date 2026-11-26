@@ -13,6 +13,7 @@ import {
   submitLoginForm,
   submitStudentSignUpForm,
   waitFor,
+  within,
 } from "@/test";
 import type { Activity } from "@/services/contracts/activity";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
@@ -116,10 +117,11 @@ describe("ActionDetail enrollment states", () => {
     expect(
       await screen.findByRole("button", { name: "Entrar para se inscrever" }),
     ).toBeEnabled();
-    expect(screen.getByRole("link", { name: "Criar conta" })).toHaveAttribute(
-      "href",
-      "/register",
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("link", {
+        name: "Criar conta",
+      }),
+    ).toHaveAttribute("href", "/register");
     expect(
       screen.queryByRole("button", { name: /Inscrever-se|Cancelar inscrição/ }),
     ).not.toBeInTheDocument();
@@ -151,7 +153,11 @@ describe("ActionDetail enrollment states", () => {
     );
     const { user } = renderPageWithAuthPages();
 
-    await user.click(await screen.findByRole("link", { name: "Criar conta" }));
+    await user.click(
+      await within(screen.getByRole("main")).findByRole("link", {
+        name: "Criar conta",
+      }),
+    );
     await submitStudentSignUpForm(user);
     await submitLoginForm(user);
 
@@ -169,7 +175,11 @@ describe("ActionDetail enrollment states", () => {
     await user.click(
       await screen.findByRole("button", { name: "Entrar para se inscrever" }),
     );
-    await user.click(screen.getByRole("link", { name: "Criar conta" }));
+    await user.click(
+      within(screen.getByRole("main")).getByRole("link", {
+        name: "Criar conta",
+      }),
+    );
     await submitStudentSignUpForm(user);
     await submitLoginForm(user);
 
@@ -191,7 +201,9 @@ describe("ActionDetail enrollment states", () => {
       screen.queryByRole("button", { name: "Entrar para se inscrever" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Criar conta" }),
+      within(screen.getByRole("main")).queryByRole("link", {
+        name: "Criar conta",
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -500,9 +512,7 @@ describe("ActionDetail enrollment cancellation", () => {
       await screen.findByRole("button", { name: /Inscrever-se/ }),
     );
     await user.click(screen.getByRole("button", { name: /Confirmar/ }));
-    expect(
-      await screen.findByText("Oba! Você está dentro!"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Inscrição realizada.")).toBeInTheDocument();
 
     expect(await screen.findByText("Inscrito")).toBeInTheDocument();
   });

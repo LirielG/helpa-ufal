@@ -48,7 +48,6 @@ export async function fetchAreaSuggestions(): Promise<string[]> {
 export async function fetchFeaturedActions(): Promise<ActivityListItem[]> {
   const response = await api.get<ListActivitiesResponse>("/activities", {
     params: {
-      status: "OPEN",
       orderBy: "start_date",
       order: "asc",
       limit: 4,

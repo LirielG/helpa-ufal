@@ -1,8 +1,10 @@
 import type { AuthenticatedUser } from "@/types/auth.js";
 import ActivityRepository from "@/repositories/activity/ActivityRepository.js";
 import EnrollmentRepository from "@/repositories/enrollment/EnrollmentRepository.js";
+import ActivityReportRepository from "@/repositories/activityReport/ActivityReportRepository.js";
 import type { IActivityRepository } from "@/repositories/activity/IActivityRepository.js";
 import type { IEnrollmentRepository } from "@/repositories/enrollment/IEnrollmentRepository.js";
+import type { IActivityReportRepository } from "@/repositories/activityReport/IActivityReportRepository.js";
 import type { IActivityService } from "@/services/activity/IActivityService.js";
 import type {
   CreateActivityInput,
@@ -35,14 +37,6 @@ const MAX_SLOTS = 10_000;
 const MAX_WORKLOAD_HOURS = 8_760; // hours in a year
 const MAX_FUTURE_START_DAYS = 365; // 1 years ahead
 
-// `page` and `limit` accept only plain digits. parseInt() alone is too
-// lenient: it turns "10.9" into 10 and "20abc" into 20 without any warning.
-const STRICT_INTEGER_PATTERN = /^\d+$/;
-
-function isStrictIntegerString(value: unknown): value is string {
-  return typeof value === "string" && STRICT_INTEGER_PATTERN.test(value);
-}
-
 // A filter is invalid when it is PRESENT but not one of the accepted values.
 // "Present" means anything other than `undefined`: an empty `?type=` is a
 // present-and-invalid value (400), not an absent filter. A non-string value
@@ -58,17 +52,21 @@ function isInvalidFilterValue(
 type Props = {
   activityRepository?: IActivityRepository;
   enrollmentRepository?: IEnrollmentRepository;
+  activityReportRepository?: IActivityReportRepository;
 };
 
 class ActivityService implements IActivityService {
   private _activityRepository: IActivityRepository;
   private _enrollmentRepository: IEnrollmentRepository;
+  private _activityReportRepository: IActivityReportRepository;
 
   constructor(props?: Props) {
     this._activityRepository =
       props?.activityRepository ?? new ActivityRepository();
     this._enrollmentRepository =
       props?.enrollmentRepository ?? new EnrollmentRepository();
+    this._activityReportRepository =
+      props?.activityReportRepository ?? new ActivityReportRepository();
   }
 
   public async create(
@@ -164,45 +162,16 @@ class ActivityService implements IActivityService {
   public async list(
     filters: IListActivitiesFilters,
   ): Promise<IListActivitiesResponse> {
-    // Absent -> default. Present (even empty) -> must be a plain integer.
-    const pageRaw: unknown = filters.page ?? "1";
-    const limitRaw: unknown = filters.limit ?? "20";
-
-    const pageNum = isStrictIntegerString(pageRaw) ? Number(pageRaw) : NaN;
-    const limitNum = isStrictIntegerString(limitRaw) ? Number(limitRaw) : NaN;
-
-    const paginationErrors = [];
-
-    if (isNaN(pageNum) || pageNum < 1) {
-      paginationErrors.push({
-        field: "page",
-        message: "page must be a positive integer.",
-      } as ValidationErrorItem);
-    }
-
-    if (isNaN(limitNum) || limitNum < 1) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit must be a positive integer.",
-      } as ValidationErrorItem);
-    } else if (limitNum > 100) {
-      paginationErrors.push({
-        field: "limit",
-        message: "limit can not exceed 100.",
-      } as ValidationErrorItem);
-    }
-
-    if (paginationErrors.length > 0) {
-      throw new ValidationError(paginationErrors);
-    }
-
     const filterErrors = [];
 
     // Derived from the Prisma enums, so a value added to schema.prisma is
     // accepted and listed in the error message without editing this service.
     const validTypes: readonly string[] = Object.values(ActivityType);
     const validFormats: readonly string[] = Object.values(ActivityFormat);
-    const validStatuses: readonly string[] = Object.values(ActivityStatus);
+    const validStatuses: readonly string[] = [
+      ...Object.values(ActivityStatus),
+      "ALL",
+    ];
 
     // Derived from the Prisma enum (never hand-written): campus is a DB enum
     // column, so an unknown value would otherwise blow up in the driver (500).
@@ -266,20 +235,30 @@ class ActivityService implements IActivityService {
       sortField = "createdAt";
     }
     const trimmedArea = filters.area?.trim();
+
+    const isDefault = filters.status === undefined;
+    const status = isDefault
+      ? "OPEN"
+      : filters.status === "ALL"
+        ? undefined
+        : filters.status;
+    const startDateAfter = isDefault ? new Date() : undefined;
+
     const result = await this._activityRepository.list({
       type: filters.type,
       format: filters.format,
-      status: filters.status,
+      status,
+      startDateAfter,
       search: filters.search,
       campus: filters.campus,
       area: trimmedArea ? trimmedArea : undefined,
-      page: pageNum,
-      limit: limitNum,
+      page: filters.page,
+      limit: filters.limit,
       orderBy: sortField,
       order: (filters.order ?? "desc") as "asc" | "desc",
     });
 
-    return toPaginated(result.items, result.total, pageNum, limitNum);
+    return toPaginated(result.items, result.total, filters.page, filters.limit);
   }
 
   public async listFilterOptions(): Promise<ActivityFilterOptions> {
@@ -299,16 +278,25 @@ class ActivityService implements IActivityService {
 
     // Absent and null mean different things to the client: absent = no
     // session recognized, null = authenticated but never enrolled.
+    // reportedByMe is the exception: it is always present, and an anonymous
+    // caller simply has no report of their own, so it is false (no lookup).
     if (!userId) {
-      return activity;
+      return { ...activity, reportedByMe: false };
     }
 
-    const enrollment = await this._enrollmentRepository.findByUserAndActivity(
-      userId,
-      id,
-    );
+    // Both lookups hang off the token user and are independent of each other.
+    // findByUserAndActivity ignores whether the report was already resolved,
+    // which is what "already reported" means for the client.
+    const [enrollment, report] = await Promise.all([
+      this._enrollmentRepository.findByUserAndActivity(userId, id),
+      this._activityReportRepository.findByUserAndActivity(userId, id),
+    ]);
 
-    return { ...activity, enrollmentStatus: enrollment?.status ?? null };
+    return {
+      ...activity,
+      enrollmentStatus: enrollment?.status ?? null,
+      reportedByMe: report !== null,
+    };
   }
 
   public async update(

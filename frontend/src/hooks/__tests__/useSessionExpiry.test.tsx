@@ -49,12 +49,37 @@ describe("useSessionExpiry", () => {
   it("drops the user but stays on the certificate validation page", () => {
     useAuthStore.getState().setUser(makeUser());
 
-    render(<LocationProbe />, { route: "/validar/7KQ4MX9T2R" });
+    render(<LocationProbe />, { route: "/validate/7KQ4MX9T2R" });
 
     act(() => notifySessionExpired());
 
     expect(useAuthStore.getState().user).toBeNull();
-    expect(screen.getByText("/validar/7KQ4MX9T2R")).toBeInTheDocument();
+    expect(screen.getByText("/validate/7KQ4MX9T2R")).toBeInTheDocument();
+  });
+
+  // The router matches paths in any letter case, so these all open the page.
+  it.each(["/Validate", "/VALIDATE/7KQ4MX9T2R", "/validate/"])(
+    "stays on the certificate validation page reached as %s",
+    (route) => {
+      useAuthStore.getState().setUser(makeUser());
+
+      render(<LocationProbe />, { route });
+
+      act(() => notifySessionExpired());
+
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(screen.getByText(route)).toBeInTheDocument();
+    },
+  );
+
+  it("goes to login from a path that only starts like the validation page", () => {
+    useAuthStore.getState().setUser(makeUser());
+
+    render(<LocationProbe />, { route: "/validateur" });
+
+    act(() => notifySessionExpired());
+
+    expect(screen.getByText("/login")).toBeInTheDocument();
   });
 
   it("stops reacting after being unmounted", () => {

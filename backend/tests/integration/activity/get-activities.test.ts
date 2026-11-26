@@ -12,11 +12,6 @@ import {
  * Scope of this file: checklist items for issue #126 regarding the GET
  * /activities endpoint, excluding the `area` filter (which is already fully
  * covered by list-activities.test.ts and is not duplicated here).
- *
- * Limits and messages confirmed in ActivityService.list: the actual maximum
- * `limit` is 100 (not 50, as the Bruno contract documented prior to the fix
- * recorded in List-activities.yml); invalid `page`/`limit` values ​​trigger
- * "page must be a positive integer." / "limit can not exceed 100.".
  */
 
 describe("GET /activities", () => {
@@ -80,14 +75,46 @@ describe("GET /activities", () => {
       .query({ limit: 101 });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe("Validation error.");
+    expect(response.body.message).toBe("Invalid query parameters.");
     expect(response.body.errors).toEqual([
       {
         field: "limit",
         code: "VALIDATION_ERROR",
-        message: "limit can not exceed 100.",
+        message: "limit must be at most 100.",
       },
     ]);
+  });
+
+  it("accepts limit at the ceiling of 100", async () => {
+    const response = await request(app)
+      .get("/activities")
+      .query({ limit: 100 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.limit).toBe(100);
+  });
+
+  it("reports only the pagination error when pagination and filters are invalid", async () => {
+    const response = await request(app)
+      .get("/activities")
+      .query({ page: 0, type: "INVALIDO" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual([
+      {
+        field: "page",
+        code: "VALIDATION_ERROR",
+        message: "page must be a positive integer.",
+      },
+    ]);
+  });
+
+  it("ignores unknown parameters", async () => {
+    const response = await request(app)
+      .get("/activities")
+      .query({ foo: "bar" });
+
+    expect(response.status).toBe(200);
   });
 
   it("returns 400 when page is 0", async () => {

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, X } from "lucide-react";
 import { Alert, Button, Textarea } from "../../components";
@@ -55,7 +55,6 @@ function ReportActionDialog({
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors, isValid },
   } = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -64,9 +63,6 @@ function ReportActionDialog({
     },
     mode: "onChange",
   });
-
-  const descriptionLength =
-    useWatch({ control, name: "description" })?.length ?? 0;
 
   const submitForm = async ({ category, description }: ReportFormValues) => {
     if (submittingRef.current) return;
@@ -198,18 +194,14 @@ function ReportActionDialog({
                 ) : null}
               </fieldset>
 
-              <div>
-                <Textarea
-                  label="Descreva o motivo (opcional)"
-                  placeholder="Digite aqui o motivo do qual está denunciando a ação"
-                  rows={5}
-                  error={errors.description?.message}
-                  {...register("description")}
-                />
-                <p className="mt-1 text-right text-xs text-gray-500">
-                  {descriptionLength}/{REPORT_DESCRIPTION_MAX_LENGTH}
-                </p>
-              </div>
+              <Textarea
+                label="Descreva o motivo (opcional)"
+                placeholder="Digite aqui o motivo do qual está denunciando a ação"
+                rows={5}
+                maxLength={REPORT_DESCRIPTION_MAX_LENGTH}
+                error={errors.description?.message}
+                {...register("description")}
+              />
             </div>
 
             <div className="flex gap-4 px-6 pb-6">

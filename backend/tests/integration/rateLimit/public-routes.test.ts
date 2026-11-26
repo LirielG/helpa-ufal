@@ -88,6 +88,67 @@ describe("public route rate limits", () => {
       .expect(400);
   });
 
+  it("limits password reset requests to five per IP in 15 minutes", async () => {
+    const app = await importApp();
+
+    for (let count = 0; count < 5; count++) {
+      await request(app)
+        .post("/auth/forgot-password")
+        .send({ email: `ip-${count}@ufal.br` })
+        .expect(204);
+    }
+    const response = await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: "ip-5@ufal.br" });
+
+    expect(response.status).toBe(429);
+    expect(response.body.code).toBe("TOO_MANY_REQUESTS");
+    expect(Number(response.headers["retry-after"])).toBeLessThanOrEqual(900);
+    await request(app).post("/auth/login").send({}).expect(400);
+  });
+
+  it("limits password reset requests to three per e-mail in an hour, across IPs", async () => {
+    const app = await importApp();
+
+    for (let count = 0; count < 3; count++) {
+      await request(app)
+        .post("/auth/forgot-password")
+        .set("X-Forwarded-For", `192.0.2.${count + 1}`)
+        .send({ email: count === 0 ? "target@ufal.br" : " Target@UFAL.br " })
+        .expect(204);
+    }
+    const response = await request(app)
+      .post("/auth/forgot-password")
+      .set("X-Forwarded-For", "192.0.2.9")
+      .send({ email: "target@ufal.br" });
+
+    expect(response.status).toBe(429);
+    expect(Number(response.headers["retry-after"])).toBeGreaterThan(900);
+    expect(Number(response.headers["retry-after"])).toBeLessThanOrEqual(3600);
+    await request(app)
+      .post("/auth/forgot-password")
+      .set("X-Forwarded-For", "192.0.2.9")
+      .send({ email: "someone-else@ufal.br" })
+      .expect(204);
+  });
+
+  it.each(["/auth/forgot-password/verify", "/auth/reset-password"])(
+    "limits %s to ten requests per IP in 15 minutes",
+    async (url) => {
+      const app = await importApp();
+
+      for (let count = 0; count < 10; count++) {
+        await request(app).post(url).send({}).expect(400);
+      }
+      const response = await request(app).post(url).send({});
+
+      expect(response.status).toBe(429);
+      expect(response.body.code).toBe("TOO_MANY_REQUESTS");
+      expect(Number(response.headers["retry-after"])).toBeLessThanOrEqual(900);
+      await request(app).post("/auth/login").send({}).expect(400);
+    },
+  );
+
   it("applies only the general policies to authenticated routes, public listings and logout", async () => {
     const { token } = await createStudent();
     const app = await importApp();

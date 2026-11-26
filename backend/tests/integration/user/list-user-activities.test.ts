@@ -807,7 +807,7 @@ describe("GET /users/me/activities", () => {
       },
     );
 
-    it("returns each activity as GET /activities/:activityId does, plus deletedAt, the enrollment and the certificate", async () => {
+    it("returns each activity as GET /activities/:activityId does (bar reportedByMe), plus deletedAt, the enrollment and the certificate", async () => {
       const user = await createTeacher();
       const activity = await createActivity(user.user.id, {
         title: "Oficina de Testes",
@@ -821,14 +821,19 @@ describe("GET /users/me/activities", () => {
       ]);
 
       expect(detail.status).toBe(200);
+      // reportedByMe exists only on the detail route: a history item is the
+      // detail MINUS that field, plus the extras below.
+      const { reportedByMe, ...sharedWithDetail } = detail.body;
+      expect(reportedByMe).toBe(false);
       expect(history.body.items).toEqual([
         {
-          ...detail.body,
+          ...sharedWithDetail,
           deletedAt: null,
           enrollment: null,
           certificate: null,
         },
       ]);
+      expect(history.body.items[0]).not.toHaveProperty("reportedByMe");
     });
 
     it("serializes the user's enrollment in its canonical form", async () => {
@@ -1067,7 +1072,7 @@ describe("GET /users/me/activities", () => {
 
         const response = await listActivities(
           user.token,
-          "?filter=managed&page=99999999999999999999",
+          `?filter=managed&page=${Number.MAX_SAFE_INTEGER}`,
         );
 
         expect(response.status).toBe(200);
@@ -1076,6 +1081,24 @@ describe("GET /users/me/activities", () => {
           total: 1,
           totalPages: 1,
         });
+      });
+
+      it("answers 400 when page exceeds safe integer range", async () => {
+        const user = await createTeacher();
+
+        const response = await listActivities(
+          user.token,
+          `?filter=managed&page=1${"0".repeat(310)}`,
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.errors).toEqual([
+          {
+            field: "page",
+            code: "VALIDATION_ERROR",
+            message: "page must be a positive integer.",
+          },
+        ]);
       });
 
       it("defaults to page 1 and limit 20", async () => {

@@ -5,7 +5,7 @@ import {
   ActivityPathParamsSchema,
   EnrollmentPathParamsSchema,
 } from "@/schemas/common/PathParamsSchemas.js";
-import { ListReportsQuerySchema } from "@/schemas/activityReport/activityReportSchemas.js";
+import { ListReportedActivitiesQuerySchema } from "@/schemas/moderation/moderationSchemas.js";
 import { ListParticipantsQuerySchema } from "@/schemas/enrollment/EnrollmentSchemas.js";
 import { UpdateActivitySchema } from "@/schemas/activity/ActivitySchemas.js";
 import { validateParams } from "../validateParams.js";
@@ -115,7 +115,7 @@ describe("validateParams", () => {
     expect(next).toHaveBeenCalledWith();
     expect(res.locals).toEqual({
       validatedParams: { activityId },
-      validatedQuery: { page: 2, limit: 10 },
+      validatedQuery: { page: 2, limit: 20 },
       validatedBody: {
         startDate: new Date("2026-12-01T10:00:00Z"),
         title: "Updated",
@@ -161,7 +161,7 @@ describe("validateParams", () => {
     const next = vi.fn();
 
     validateParams(ActivityPathParamsSchema, {
-      query: ListReportsQuerySchema,
+      query: ListReportedActivitiesQuerySchema,
       body: UpdateActivitySchema,
     })(req, res, next);
 
