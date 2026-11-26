@@ -1,4 +1,3 @@
-import { userEvent } from "@testing-library/user-event";
 import { Routes, Route, useLocation } from "react-router";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@/test";
@@ -24,6 +23,11 @@ function makeAction(
     type: "COURSE",
     ...overrides,
   } as ActivityListItem;
+}
+
+function LocationDisplay() {
+  const location = useLocation();
+  return <div data-testid="current-path">{location.pathname}</div>;
 }
 
 describe("ActionCard", () => {
@@ -186,14 +190,7 @@ describe("ActionCard", () => {
   });
 
   it("stretches the title link across the entire card and navigates to the action on click", async () => {
-    const user = userEvent.setup();
-
-    function LocationDisplay() {
-      const location = useLocation();
-      return <div data-testid="current-path">{location.pathname}</div>;
-    }
-
-    const { container } = render(
+    const { container, user } = render(
       <Routes>
         <Route path="/" element={<ActionCard action={makeAction()} />} />
         <Route path="/activity/:id" element={<LocationDisplay />} />
@@ -219,14 +216,7 @@ describe("ActionCard", () => {
   });
 
   it("focuses the title link with a single Tab stop and navigates on Enter", async () => {
-    const user = userEvent.setup();
-
-    function LocationDisplay() {
-      const location = useLocation();
-      return <div data-testid="current-path">{location.pathname}</div>;
-    }
-
-    render(
+    const { user } = render(
       <Routes>
         <Route
           path="/"
