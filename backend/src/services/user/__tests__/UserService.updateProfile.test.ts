@@ -237,7 +237,7 @@ describe("UserService.updateProfile", () => {
     });
   });
 
-  // ---------- Password changed e-mail (issue #432) ----------
+  // ---------- Password changed e-mail ----------
 
   describe("password changed e-mail", () => {
     const passwordChange = {
@@ -384,7 +384,7 @@ describe("UserService.updateProfile", () => {
         expect(profile).toMatchObject({ id: USER_ID, totalWorkloadHours: 12 });
         // The rejection is handled on a later microtask than the return.
         await vi.waitFor(() => expect(consoleError).toHaveBeenCalledOnce());
-        // The prefix is the one the issue prescribes, so it can be searched in logs.
+        // Fixed prefix, so the failure can be searched in the logs.
         expect(consoleError.mock.calls[0][0]).toBe(
           "[UserService] Password changed email failed:",
         );

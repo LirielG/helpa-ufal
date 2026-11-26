@@ -20,6 +20,7 @@ import { type Paginated, toPaginated } from "@/types/pagination.js";
 import CustomError from "@/models/error/CustomError.js";
 import bcryptjs from "bcryptjs";
 import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
+import { firstName } from "@/utils/firstName.js";
 
 type Props = {
   userRepository?: IUserRepository;
@@ -27,12 +28,6 @@ type Props = {
   enrollmentRepository?: IEnrollmentRepository;
   emailService?: IEmailService;
 };
-
-// The e-mail greets by first name. fullName is already trimmed on the way in,
-// but splitting on any run of whitespace keeps this safe for stored data too.
-function firstNameOf(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0];
-}
 
 class UserService implements IUserService {
   private _userRepository: IUserRepository;
@@ -133,7 +128,7 @@ class UserService implements IUserService {
    */
   private notifyPasswordChanged(email: string, fullName: string): void {
     void this._emailService
-      .send(email, "passwordChanged", { firstName: firstNameOf(fullName) })
+      .send(email, "passwordChanged", { firstName: firstName(fullName) })
       .catch((error: unknown) => {
         console.error("[UserService] Password changed email failed:", error);
       });

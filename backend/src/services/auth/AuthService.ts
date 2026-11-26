@@ -11,6 +11,7 @@ import bcryptjs from "bcryptjs";
 import { env } from "@/config/env.js";
 import { signJwt } from "@/utils/jwt.js";
 import { BCRYPT_SALT_ROUNDS } from "@/utils/password.js";
+import { firstName } from "@/utils/firstName.js";
 import { uniqueViolationFields } from "@/utils/prismaErrors.js";
 import { hashUserCode, USER_CODE_LENGTH } from "@/utils/userCode.js";
 import {
@@ -51,10 +52,6 @@ function invalidResetCode(): ValidationError {
     INVALID_RESET_CODE_MESSAGE,
     { status: 422, code: "INVALID_RESET_CODE" },
   );
-}
-
-function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
 class AuthService implements IAuthService {

@@ -899,7 +899,7 @@ describe("PATCH /users/me", () => {
     );
   });
 
-  // ---------- Password changed e-mail (issue #432) ----------
+  // ---------- Password changed e-mail ----------
   //
   // integrationSetup replaces the SMTP transport, so no e-mail leaves the
   // process. These tests read what the route handed to EmailService.send.
