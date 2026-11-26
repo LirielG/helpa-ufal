@@ -66,8 +66,18 @@ function toAddressPayload(
 }
 
 export function EditAction() {
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  // A route change from one action's edit to another's keeps this element
+  // mounted. The key remounts the form so nothing from the previous action
+  // (its values, a load error, the "Salvar" button) survives until the new
+  // one loads; otherwise a save in between would patch the new action with
+  // the old one's edits.
+  return <EditActionForm key={id} id={id} />;
+}
+
+function EditActionForm({ id }: { id: string | undefined }) {
+  const navigate = useNavigate();
 
   const user = useAuthStore((state) => state.user);
   const [actionAuthorId, setActionAuthorId] = useState<string | null>(null);
