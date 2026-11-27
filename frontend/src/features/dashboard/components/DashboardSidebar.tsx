@@ -100,7 +100,7 @@ export function DashboardSidebar({
       className={`w-[260px] sm:w-[280px] lg:w-[300px] xl:w-[340px] max-w-[82vw] shrink-0 bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] flex flex-col justify-between select-none z-20 ${
         isMobileDrawer
           ? "h-dvh max-h-dvh overflow-y-auto overscroll-contain"
-          : "h-full"
+          : ""
       }`}
     >
       {/* On desktop only the upper block scrolls, so Ajuda and Sair stay on
@@ -334,8 +334,9 @@ export function DashboardSidebar({
     <>
       <aside
         aria-label="Menu lateral do usuário"
-        // Pinned below the header, which is h-20 from md up.
-        className="hidden lg:flex shrink-0 sticky top-20 self-start h-[calc(100dvh-5rem)]"
+        // Pinned below the header, which is h-20 from md up. A cap rather
+        // than a fixed height, so a short page still fits with its footer.
+        className="hidden lg:flex shrink-0 sticky top-20 max-h-[calc(100dvh-5rem)]"
       >
         {renderSidebarBody(false)}
       </aside>
