@@ -45,17 +45,17 @@ type SigaaFetch = typeof undiciFetch;
 const sigaaFetch: SigaaFetch = (input, init) =>
   undiciFetch(input, { ...init, dispatcher: getSigaaAgent() });
 
-// Values of the buscaTipoAcao select in the SIGAA search form. Searching all
-// types at once ("0") now exceeds SIGAA's result limit, so each type is
-// searched on its own.
-const SIGAA_ACTION_TYPES = [
-  { value: "3", label: "Curso" },
-  { value: "4", label: "Evento" },
-  { value: "5", label: "Prestação de serviços" },
-  { value: "6", label: "Produto" },
-  { value: "1", label: "Programa" },
-  { value: "2", label: "Projeto" },
-] as const;
+type SigaaActionType = { value: string; label: string };
+
+// A search form session: each POST needs the cookies and ViewState of a fresh GET.
+type SigaaSearchForm = {
+  cookies: string;
+  viewState: string;
+  actionTypes: SigaaActionType[];
+};
+
+// "0" is the "select a type" placeholder, which searches every type at once.
+const ALL_ACTION_TYPES_VALUE = "0";
 
 const EXCESSIVE_RESULTS_TEXT = "resultados excessivos";
 const NO_RESULTS_TEXT = "Nenhuma ação de extensão localizada";
@@ -82,13 +82,23 @@ export class SigaaScraperService implements ISigaaScraperService {
     const currentYear = new Date().getFullYear();
     const activitiesById = new Map<string, ScrapedSigaaActivity>();
 
+    // Searching every type at once exceeds SIGAA's result limit, so each type
+    // is searched on its own. The types come from the form itself, so a type
+    // SIGAA adds is picked up without a code change.
+    const firstForm = await this.openSearchForm();
+    if (firstForm.actionTypes.length === 0) {
+      throw new Error("SIGAA search form lists no action type.");
+    }
+
     // Sequential on purpose, to keep the load on SIGAA down. Any failure aborts
     // the whole scrape: a partial list would make the sync deactivate every
     // action of the types that did not come back.
-    for (const actionType of SIGAA_ACTION_TYPES) {
+    for (const [index, actionType] of firstForm.actionTypes.entries()) {
       let activities: ScrapedSigaaActivity[];
       try {
-        activities = await this.searchByActionType(
+        const form = index === 0 ? firstForm : await this.openSearchForm();
+        activities = await this.submitSearch(
+          form,
           currentYear,
           actionType.value,
         );
@@ -108,11 +118,7 @@ export class SigaaScraperService implements ISigaaScraperService {
     return [...activitiesById.values()];
   }
 
-  private async searchByActionType(
-    year: number,
-    actionType: string,
-  ): Promise<ScrapedSigaaActivity[]> {
-    // 1. Initial GET to obtain session/cookies and ViewState
+  private async openSearchForm(): Promise<SigaaSearchForm> {
     const initialResponse = await this._fetch(this._searchUrl, {
       method: "GET",
       headers: {
@@ -147,7 +153,24 @@ export class SigaaScraperService implements ISigaaScraperService {
       );
     }
 
-    // 2. POST with validated JSF parameters
+    const actionTypes: SigaaActionType[] = $initial(
+      'select[name="formBuscaAtividade:buscaTipoAcao"] option',
+    )
+      .toArray()
+      .map((option) => ({
+        value: ($initial(option).attr("value") ?? "").trim(),
+        label: $initial(option).text().replace(/\s+/g, " ").trim(),
+      }))
+      .filter(({ value }) => value && value !== ALL_ACTION_TYPES_VALUE);
+
+    return { cookies, viewState, actionTypes };
+  }
+
+  private async submitSearch(
+    form: SigaaSearchForm,
+    year: number,
+    actionType: string,
+  ): Promise<ScrapedSigaaActivity[]> {
     const formParams = new URLSearchParams();
     formParams.append("formBuscaAtividade", "formBuscaAtividade");
     formParams.append("formBuscaAtividade:selectBuscaAno", "on");
@@ -156,14 +179,14 @@ export class SigaaScraperService implements ISigaaScraperService {
     formParams.append("formBuscaAtividade:buscaTipoAcao", actionType);
     formParams.append("formBuscaAtividade:buscaUnidade", "0");
     formParams.append("formBuscaAtividade:btBuscar", "Buscar");
-    formParams.append("javax.faces.ViewState", viewState);
+    formParams.append("javax.faces.ViewState", form.viewState);
 
     const postResponse = await this._fetch(this._searchUrl, {
       method: "POST",
       headers: {
         "User-Agent": USER_AGENT,
         "Content-Type": "application/x-www-form-urlencoded",
-        Cookie: cookies,
+        Cookie: form.cookies,
         Referer: this._searchUrl,
         Accept: HTML_ACCEPT,
       },

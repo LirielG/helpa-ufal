@@ -53,12 +53,31 @@ const excessiveResultsPage = `
     ${NO_RESULTS_BLOCK}
   </body></html>`;
 
-const formPage = `
+// The action types SIGAA offers in the search form, in the order it lists them.
+const SIGAA_FORM_TYPES = [
+  ["3", "CURSO"],
+  ["4", "EVENTO"],
+  ["5", "PRESTA&Ccedil;&Atilde;O DE SERVI&Ccedil;OS"],
+  ["6", "PRODUTO"],
+  ["1", "PROGRAMA"],
+  ["2", "PROJETO"],
+];
+
+function formPage(actionTypes: string[][] = SIGAA_FORM_TYPES) {
+  const options = actionTypes
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join("");
+  return `
   <html><body>
     <form id="formBuscaAtividade">
+      <select name="formBuscaAtividade:buscaTipoAcao">
+        <option value="0" selected="selected">-- SELECIONE UM TIPO DE A&Ccedil;&Atilde;O --</option>
+        ${options}
+      </select>
       <input type="hidden" name="javax.faces.ViewState" value="j_id42" />
     </form>
   </body></html>`;
+}
 
 function fakeResponse(html: string) {
   return {
@@ -74,10 +93,13 @@ function fakeResponse(html: string) {
 }
 
 // Serves the form on every GET and the page for the requested action type on every POST.
-function fakeSigaa(pagesByActionType: Record<string, string>) {
+function fakeSigaa(
+  pagesByActionType: Record<string, string>,
+  form: string = formPage(),
+) {
   return vi.fn(
     async (_url: unknown, init?: { method?: string; body?: unknown }) => {
-      if (init?.method === "GET") return fakeResponse(formPage);
+      if (init?.method === "GET") return fakeResponse(form);
       const params = new URLSearchParams(String(init?.body));
       const actionType = params.get("formBuscaAtividade:buscaTipoAcao") ?? "";
       return fakeResponse(pagesByActionType[actionType] ?? noResultsPage);
@@ -242,6 +264,39 @@ describe("SigaaScraperService", () => {
       }
     });
 
+    it("searches the action types the SIGAA form offers, not a fixed list", async () => {
+      const fetchFn = fakeSigaa(
+        {},
+        formPage([
+          ["4", "EVENTO"],
+          ["7", "NOVO TIPO"],
+        ]),
+      );
+
+      await scraperWith(fetchFn).scrapeCurrentYearActivities();
+
+      const searchedTypes = fetchFn.mock.calls
+        .map(([, init]) => init)
+        .filter((init) => init?.method === "POST")
+        .map((init) =>
+          new URLSearchParams(String(init?.body)).get(
+            "formBuscaAtividade:buscaTipoAcao",
+          ),
+        );
+      expect(searchedTypes).toEqual(["4", "7"]);
+    });
+
+    it("rejects when the SIGAA form lists no action type", async () => {
+      const fetchFn = fakeSigaa({}, formPage([]));
+
+      await expect(
+        scraperWith(fetchFn).scrapeCurrentYearActivities(),
+      ).rejects.toThrow(/action type/);
+      expect(
+        fetchFn.mock.calls.filter(([, init]) => init?.method === "POST"),
+      ).toHaveLength(0);
+    });
+
     it("merges the results of every search without repeating a sigaaId", async () => {
       const fetchFn = fakeSigaa({
         "3": resultsPage([
@@ -276,7 +331,7 @@ describe("SigaaScraperService", () => {
 
       await expect(
         scraperWith(fetchFn).scrapeCurrentYearActivities(),
-      ).rejects.toThrow(/Produto/);
+      ).rejects.toThrow(/PRODUTO/);
     });
   });
 
