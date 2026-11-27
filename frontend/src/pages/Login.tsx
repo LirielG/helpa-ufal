@@ -12,6 +12,7 @@ import { AuthFooterLink } from "../features/auth/components/AuthFooterLink";
 import { AuthShell } from "../features/auth/components/AuthShell";
 import { PasswordField } from "../features/auth/components/PasswordField";
 import type { ReturnToState } from "../routes/GuestRoute";
+import { PageTitle } from "../components/PageTitle";
 
 type LoginFields = {
   email: string;
@@ -72,6 +73,7 @@ export function Login() {
         />
       }
     >
+      <PageTitle title="Entrar" />
       {successMessage && !authError && (
         <div className="mb-6">
           <Alert type="success" message={successMessage} />

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router";
-import { render, screen, signIn, within } from "@/test";
+import { fireEvent, render, screen, signIn, within } from "@/test";
 import { DashboardSidebar } from "../DashboardSidebar";
 
 function renderSidebarAt(
@@ -104,6 +104,65 @@ describe("DashboardSidebar", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it("closes the mobile sidebar and opens Como Funciona when Ajuda is chosen", async () => {
+    signIn();
+    const onCloseMobile = vi.fn();
+    const { user } = render(
+      <Routes>
+        <Route path="/how-it-works" element={<h1>Como Funciona</h1>} />
+        <Route
+          path="*"
+          element={
+            <DashboardSidebar isOpenMobile onCloseMobile={onCloseMobile} />
+          }
+        />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /Ajuda/i,
+      }),
+    );
+
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("heading", { name: "Como Funciona" }),
+    ).toBeInTheDocument();
+  });
+
+  it("highlights only Ajuda on /how-it-works", () => {
+    signIn({ isManager: true });
+    renderSidebarAt("/how-it-works");
+
+    const aside = screen.getByRole("complementary", {
+      name: "Menu lateral do usuário",
+    });
+    const current = within(aside)
+      .getAllByRole("button")
+      .filter((button) => button.getAttribute("aria-current") === "page");
+    expect(current).toEqual([
+      within(aside).getByRole("button", { name: /Ajuda/i }),
+    ]);
+  });
+
+  it("keeps its scroll position when the next page mounts a new sidebar", () => {
+    signIn();
+    const desktopScrollArea = () =>
+      screen.getByRole("complementary", { name: "Menu lateral do usuário" })
+        .firstElementChild!.firstElementChild as HTMLElement;
+
+    const { unmount } = renderSidebarAt("/dashboard");
+    desktopScrollArea().scrollTop = 120;
+    fireEvent.scroll(desktopScrollArea());
+    unmount();
+
+    renderSidebarAt("/profile");
+
+    expect(desktopScrollArea().scrollTop).toBe(120);
   });
 
   it("links the avatar and name block to /profile", async () => {

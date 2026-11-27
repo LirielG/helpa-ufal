@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -11,6 +11,7 @@ import {
   signIn,
   userEvent,
   waitFor,
+  within,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
@@ -20,6 +21,19 @@ type TestUser = ReturnType<typeof userEvent.setup>;
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="pathname">{location.pathname}</div>;
+}
+
+function BackButton() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Voltar
+    </button>
+  );
+}
+
+function findHowItWorks() {
+  return screen.findByRole("heading", { name: /como o helpa funciona/i });
 }
 
 function findHome() {
@@ -143,19 +157,121 @@ describe("AppRoutes", () => {
       expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
     });
 
-    it("lets a guest open the feed from the home page tabs", async () => {
-      const { user } = render(<AppRoutes />, { route: "/" });
+    it("gives each home page tab its own route, so Back returns to the previous tab", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+          <BackButton />
+        </>,
+        { route: "/" },
+      );
 
       await user.click(
         await screen.findByRole("button", { name: "Como Funciona" }),
       );
-      expect(
-        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
-      ).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Ações" }));
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/how-it-works");
+
+      await user.click(screen.getByRole("button", { name: "Voltar" }));
+
+      expect(await findHome()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
+    });
+
+    it("opens Como Funciona at /how-it-works with its header tab active", async () => {
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      const navigation = screen.getByRole("navigation", {
+        name: /navegação da página inicial/i,
+      });
+      expect(
+        within(navigation).getByRole("button", { name: "Como Funciona" }),
+      ).toHaveAttribute("aria-current", "page");
+      expect(
+        within(navigation).getByRole("button", { name: "Sobre o Projeto" }),
+      ).not.toHaveAttribute("aria-current");
+    });
+
+    it("sends a guest from the Ações tab of the home page to the feed", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/" },
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Ações" }));
 
       expect(await findDashboard()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/dashboard");
+    });
+
+    it("sends a guest from the feed header to Como Funciona", async () => {
+      const { user } = render(<AppRoutes />, { route: "/dashboard" });
+
+      await findDashboard();
+      await user.click(screen.getByRole("button", { name: "Como Funciona" }));
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+    });
+
+    it("sends Ir para o Feed de Ações from Como Funciona to the feed", async () => {
+      const { user } = render(<AppRoutes />, { route: "/how-it-works" });
+
+      await user.click(
+        await screen.findByRole("button", { name: "Ir para o Feed de Ações" }),
+      );
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("lets a signed-in user open /how-it-works without being sent to the feed", async () => {
+      signIn();
+
+      render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/how-it-works" },
+      );
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/how-it-works");
+    });
+
+    it("opens /how-it-works inside the signed-in shell, with the sidebar and without Criar uma ação", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(
+        screen.getByRole("complementary", { name: "Menu lateral do usuário" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("navigation", {
+          name: /navegação da página inicial/i,
+        }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Criar uma ação" }),
+      ).toBeNull();
+    });
+
+    it("keeps the institutional header for a guest at /how-it-works", async () => {
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(
+        screen.queryByRole("complementary", {
+          name: "Menu lateral do usuário",
+        }),
+      ).toBeNull();
     });
 
     it("lets a guest reach the dashboard", async () => {
@@ -289,6 +405,137 @@ describe("AppRoutes", () => {
       expect(
         await screen.findByText("Página não encontrada"),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("browser tab titles", () => {
+    it.each([
+      { route: "/", signedIn: false, title: "Sobre o Projeto | Helpa" },
+      {
+        route: "/how-it-works",
+        signedIn: false,
+        title: "Como Funciona | Helpa",
+      },
+      { route: "/login", signedIn: false, title: "Entrar | Helpa" },
+      { route: "/register", signedIn: false, title: "Cadastrar-se | Helpa" },
+      { route: "/dashboard", signedIn: false, title: "Ações | Helpa" },
+      {
+        route: "/activity/1",
+        signedIn: false,
+        title: "Oficina de Programação | Helpa",
+      },
+      {
+        route: "/activity/1/edit",
+        signedIn: true,
+        title: "Editar ação | Helpa",
+      },
+      {
+        route: "/activity/1/enrollments",
+        signedIn: true,
+        title: "Inscritos | Helpa",
+      },
+      { route: "/profile", signedIn: true, title: "Dados Pessoais | Helpa" },
+      {
+        route: "/my-activities?filter=enrolled",
+        signedIn: true,
+        title: "Atividades Inscritas | Helpa",
+      },
+      {
+        route: "/my-activities?filter=completed",
+        signedIn: true,
+        title: "Atividades Concluídas | Helpa",
+      },
+      {
+        route: "/my-activities?filter=managed",
+        signedIn: true,
+        title: "Atividades Gerenciadas | Helpa",
+      },
+      { route: "/moderation", signedIn: true, title: "Denúncias | Helpa" },
+      {
+        route: "/validate",
+        signedIn: false,
+        title: "Validar certificado | Helpa",
+      },
+      {
+        route: "/validate/7KQ4MX9T2R",
+        signedIn: false,
+        title: "Validar certificado | Helpa",
+      },
+      {
+        route: "/rota-inexistente",
+        signedIn: false,
+        title: "Página não encontrada | Helpa",
+      },
+    ])("titles $route as $title", async ({ route, signedIn, title }) => {
+      if (signedIn) signIn({ isManager: true });
+
+      render(<AppRoutes />, { route });
+
+      await waitFor(() => expect(document.title).toBe(title));
+    });
+
+    it("titles an action detail Ação until the action loads", async () => {
+      server.use(
+        http.get(`${API}/activities/:id`, () => new Promise<never>(() => {})),
+      );
+
+      render(<AppRoutes />, { route: "/activity/1" });
+
+      await waitFor(() => expect(document.title).toBe("Ação | Helpa"));
+    });
+
+    it("titles an action detail Ação when it fails to load", async () => {
+      server.use(
+        http.get(`${API}/activities/:id`, () =>
+          HttpResponse.json({ message: "Não encontrada" }, { status: 404 }),
+        ),
+      );
+
+      render(<AppRoutes />, { route: "/activity/1" });
+
+      expect(
+        await screen.findByText("Ação não encontrada."),
+      ).toBeInTheDocument();
+      expect(document.title).toBe("Ação | Helpa");
+    });
+
+    it("drops the previous action's title while another action loads", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <Link to="/activity/2">Outra ação</Link>
+        </>,
+        { route: "/activity/1" },
+      );
+      await waitFor(() =>
+        expect(document.title).toBe("Oficina de Programação | Helpa"),
+      );
+      server.use(
+        http.get(`${API}/activities/:id`, () => new Promise<never>(() => {})),
+      );
+
+      await user.click(screen.getByRole("link", { name: "Outra ação" }));
+
+      await waitFor(() => expect(document.title).toBe("Ação | Helpa"));
+      expect(screen.queryByText("Oficina de Programação")).toBeNull();
+    });
+
+    it("changes the title when the sidebar switches to another list", async () => {
+      signIn();
+      const { user } = render(<AppRoutes />, {
+        route: "/my-activities?filter=enrolled",
+      });
+      await waitFor(() =>
+        expect(document.title).toBe("Atividades Inscritas | Helpa"),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "Atividades Gerenciadas" }),
+      );
+
+      await waitFor(() =>
+        expect(document.title).toBe("Atividades Gerenciadas | Helpa"),
+      );
     });
   });
 });

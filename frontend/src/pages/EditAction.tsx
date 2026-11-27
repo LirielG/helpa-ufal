@@ -42,6 +42,7 @@ import { deleteActivity } from "../features/profile/services";
 import { DeleteActionModal } from "../features/profile/components/cards/DeleteActionModal";
 import { ApiError } from "../services/apiError";
 import { toast } from "react-toastify";
+import { PageTitle } from "../components/PageTitle";
 
 const EMPTY_ADDRESS = {
   addressLine: "",
@@ -73,7 +74,12 @@ export function EditAction() {
   // (its values, a load error, the "Salvar" button) survives until the new
   // one loads; otherwise a save in between would patch the new action with
   // the old one's edits.
-  return <EditActionForm key={id} id={id} />;
+  return (
+    <>
+      <PageTitle title="Editar ação" />
+      <EditActionForm key={id} id={id} />
+    </>
+  );
 }
 
 function EditActionForm({ id }: { id: string | undefined }) {

@@ -12,6 +12,7 @@ import {
   CertificateValidation,
   ModerationPage,
   MyActivities,
+  HowItWorks,
 } from "../pages";
 
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
@@ -19,6 +20,7 @@ import { useSessionCheck } from "../hooks/useSessionCheck";
 import { PublicRoute } from "./PublicRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { GuestRoute } from "./GuestRoute";
+import { ScrollToTop } from "./ScrollToTop";
 
 export function AppRoutes() {
   useSessionExpiry();
@@ -27,110 +29,123 @@ export function AppRoutes() {
   useSessionCheck();
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <GuestRoute>
-            <Login />
-          </GuestRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <GuestRoute>
-            <Register />
-          </GuestRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <PublicRoute>
-            <Dashboard />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/activity/:id"
-        element={
-          <PublicRoute>
-            <ActionDetail />
-          </PublicRoute>
-        }
-      />
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PublicRoute>
+              <Dashboard />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/activity/:id"
+          element={
+            <PublicRoute>
+              <ActionDetail />
+            </PublicRoute>
+          }
+        />
 
-      <Route
-        path="/activity/:id/edit"
-        element={
-          <ProtectedRoute>
-            <EditAction />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/activity/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditAction />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/activity/:id/enrollments"
-        element={
-          <ProtectedRoute>
-            <EnrollmentsPage />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/activity/:id/enrollments"
+          element={
+            <ProtectedRoute>
+              <EnrollmentsPage />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/my-activities"
-        element={
-          <ProtectedRoute>
-            <MyActivities />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/moderation"
-        element={
-          <ProtectedRoute>
-            <ModerationPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Both paths are printed on issued certificates: never rename them. */}
-      <Route
-        path="/validate"
-        element={
-          <PublicRoute>
-            <CertificateValidation />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/validate/:validationCode"
-        element={
-          <PublicRoute>
-            <CertificateValidation />
-          </PublicRoute>
-        }
-      />
-      {/* The home page explains the project to visitors; a signed-in user
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-activities"
+          element={
+            <ProtectedRoute>
+              <MyActivities />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/moderation"
+          element={
+            <ProtectedRoute>
+              <ModerationPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Both paths are printed on issued certificates: never rename them. */}
+        <Route
+          path="/validate"
+          element={
+            <PublicRoute>
+              <CertificateValidation />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/validate/:validationCode"
+          element={
+            <PublicRoute>
+              <CertificateValidation />
+            </PublicRoute>
+          }
+        />
+        {/* Unlike /, open to a signed-in user too: the sidebar's Ajuda
+            leads here. */}
+        <Route
+          path="/how-it-works"
+          element={
+            <PublicRoute>
+              <HowItWorks />
+            </PublicRoute>
+          }
+        />
+        {/* The home page explains the project to visitors; a signed-in user
           already knows it and goes straight to the feed. */}
-      <Route
-        path="/"
-        element={
-          <GuestRoute>
-            <Home />
-          </GuestRoute>
-        }
-      />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route
+          path="/"
+          element={
+            <GuestRoute>
+              <Home />
+            </GuestRoute>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }

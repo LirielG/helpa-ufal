@@ -13,6 +13,7 @@ import {
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
+import { PageTitle } from "../../../components/PageTitle";
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -124,6 +125,7 @@ export function ActionsList() {
 
   return (
     <div className="space-y-6">
+      <PageTitle title={ACTIVITY_LIST_TITLES[activeSubTab]} />
       <h1 className="text-xl sm:text-2xl font-bold text-[#000A1E]">
         {ACTIVITY_LIST_TITLES[activeSubTab]}
       </h1>
