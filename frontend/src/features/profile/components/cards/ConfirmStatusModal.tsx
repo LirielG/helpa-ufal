@@ -112,7 +112,7 @@ export function ConfirmStatusModal({
           <button
             type="button"
             onClick={onCancel}
-            className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium px-3 py-2 rounded-lg text-sm flex-1 transition-colors cursor-pointer"
           >
             {copy.backOut}
           </button>

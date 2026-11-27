@@ -4,6 +4,27 @@ import { makeActionDetail, makeManagedActivity } from "@/test/factories";
 import { ConfirmStatusModal } from "../ConfirmStatusModal";
 
 describe("ConfirmStatusModal", () => {
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
+    "gives the back-out and confirm buttons of %s the same size",
+    (pendingStatus) => {
+      render(
+        <ConfirmStatusModal
+          activity={makeManagedActivity()}
+          pendingStatus={pendingStatus}
+          isLoading={false}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+
+      for (const button of within(screen.getByRole("dialog")).getAllByRole(
+        "button",
+      )) {
+        expect(button).toHaveClass("px-3", "py-2", "text-sm", "rounded-lg");
+      }
+    },
+  );
+
   it.each([
     [
       "IN_PROGRESS",
