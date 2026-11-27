@@ -244,6 +244,36 @@ describe("AppRoutes", () => {
       expect(screen.getByTestId("pathname")).toHaveTextContent("/how-it-works");
     });
 
+    it("opens /how-it-works inside the signed-in shell, with the sidebar and without Criar uma ação", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(
+        screen.getByRole("complementary", { name: "Menu lateral do usuário" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("navigation", {
+          name: /navegação da página inicial/i,
+        }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Criar uma ação" }),
+      ).toBeNull();
+    });
+
+    it("keeps the institutional header for a guest at /how-it-works", async () => {
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(
+        screen.queryByRole("complementary", {
+          name: "Menu lateral do usuário",
+        }),
+      ).toBeNull();
+    });
+
     it("lets a guest reach the dashboard", async () => {
       render(<AppRoutes />, { route: "/dashboard" });
 

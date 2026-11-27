@@ -69,6 +69,8 @@ export function DashboardSidebar({
 
   const isModerationActive = location.pathname === "/moderation";
 
+  const isHelpActive = location.pathname === "/how-it-works";
+
   const handleNavigate = (path: string) => {
     onCloseMobile?.();
     navigate(path);
@@ -297,10 +299,13 @@ export function DashboardSidebar({
       <div className="p-3 sm:p-3.5 lg:p-4 bg-white border-t border-gray-100 flex flex-col gap-1 shrink-0">
         <button
           type="button"
-          onClick={() => handleNavigate("/#como-funciona")}
-          className="w-full flex items-center gap-3 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] font-medium text-[#44474E] hover:bg-gray-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+          onClick={() => handleNavigate("/how-it-works")}
+          aria-current={isHelpActive ? "page" : undefined}
+          className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
+            isHelpActive ? activeMainItemClass : inactiveMainItemClass
+          }`}
         >
-          <HelpCircle className="size-4 lg:size-[17px] text-[#44474E] shrink-0" />
+          <HelpCircle className="size-4 lg:size-[17px] shrink-0" />
           <span>{SIDEBAR_LABELS.help}</span>
         </button>
 

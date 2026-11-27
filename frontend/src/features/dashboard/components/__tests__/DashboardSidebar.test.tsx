@@ -106,6 +106,49 @@ describe("DashboardSidebar", () => {
     );
   });
 
+  it("closes the mobile sidebar and opens Como Funciona when Ajuda is chosen", async () => {
+    signIn();
+    const onCloseMobile = vi.fn();
+    const { user } = render(
+      <Routes>
+        <Route path="/how-it-works" element={<h1>Como Funciona</h1>} />
+        <Route
+          path="*"
+          element={
+            <DashboardSidebar isOpenMobile onCloseMobile={onCloseMobile} />
+          }
+        />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /Ajuda/i,
+      }),
+    );
+
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("heading", { name: "Como Funciona" }),
+    ).toBeInTheDocument();
+  });
+
+  it("highlights only Ajuda on /how-it-works", () => {
+    signIn({ isManager: true });
+    renderSidebarAt("/how-it-works");
+
+    const aside = screen.getByRole("complementary", {
+      name: "Menu lateral do usuário",
+    });
+    const current = within(aside)
+      .getAllByRole("button")
+      .filter((button) => button.getAttribute("aria-current") === "page");
+    expect(current).toEqual([
+      within(aside).getByRole("button", { name: /Ajuda/i }),
+    ]);
+  });
+
   it("links the avatar and name block to /profile", async () => {
     signIn({ fullName: "Liriel Gomes", email: "liriel@ufal.br" });
     const { user } = render(
