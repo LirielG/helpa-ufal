@@ -100,10 +100,18 @@ export function DashboardSidebar({
       className={`w-[260px] sm:w-[280px] lg:w-[300px] xl:w-[340px] max-w-[82vw] shrink-0 bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] flex flex-col justify-between select-none z-20 ${
         isMobileDrawer
           ? "h-dvh max-h-dvh overflow-y-auto overscroll-contain"
-          : "min-h-full"
+          : "h-full"
       }`}
     >
-      <div className="flex flex-col">
+      {/* On desktop only the upper block scrolls, so Ajuda and Sair stay on
+          screen even when the expanded Ações submenu doesn't fit. */}
+      <div
+        className={`flex flex-col ${
+          isMobileDrawer
+            ? ""
+            : "flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        }`}
+      >
         <div className="bg-[#F2F4F6] p-4 sm:p-5 lg:p-6 flex flex-col gap-3 lg:gap-4">
           <div className="flex items-center justify-between gap-2.5 pt-0.5 lg:pt-1">
             <Link
@@ -326,7 +334,8 @@ export function DashboardSidebar({
     <>
       <aside
         aria-label="Menu lateral do usuário"
-        className="hidden lg:flex shrink-0"
+        // Pinned below the header, which is h-20 from md up.
+        className="hidden lg:flex shrink-0 sticky top-20 self-start h-[calc(100dvh-5rem)]"
       >
         {renderSidebarBody(false)}
       </aside>
