@@ -4,6 +4,7 @@ import { MapPin, Calendar } from "lucide-react";
 import { CancelEnrollmentModal } from "@/features/action-detail/components/CancelEnrollmentModal";
 import type { UserActivity } from "../../types";
 import { ActionCover } from "@/components/ActionCover";
+import { Button } from "@/components/Button";
 
 type EnrolledCardProps = {
   activity: UserActivity;
@@ -61,13 +62,15 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
           </Link>
 
           {canCancel && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => setShowCancelModal(true)}
-              className="relative z-10 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+              className="relative z-10"
             >
               Cancelar inscrição
-            </button>
+            </Button>
           )}
         </div>
 

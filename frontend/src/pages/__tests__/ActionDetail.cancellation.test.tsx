@@ -241,6 +241,18 @@ describe("ActionDetail enrollment states", () => {
     },
   );
 
+  it("offers the cancellation with the neutral secondary button, not the red one", async () => {
+    signIn();
+    serveSnapshots(enrolledAction());
+    renderPage();
+
+    const cancelButton = await screen.findByRole("button", {
+      name: "Cancelar inscrição",
+    });
+    expect(cancelButton).toHaveClass("bg-gray-200");
+    expect(cancelButton).not.toHaveClass("bg-red-800");
+  });
+
   it("tells an enrolled user that cancellation is closed when the action is not open", async () => {
     signIn();
     serveSnapshots(enrolledAction({ status: "IN_PROGRESS" }));

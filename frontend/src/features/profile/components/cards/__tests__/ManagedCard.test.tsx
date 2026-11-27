@@ -872,6 +872,34 @@ describe("EnrolledCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("styles 'Cancelar inscrição' like the managed card's 'Cancelar ação', not like 'Excluir'", () => {
+    render(
+      <>
+        <EnrolledCard
+          activity={makeUserActivity({ action: { status: "OPEN" } })}
+          onCancelled={vi.fn()}
+        />
+        <ManagedCard
+          activity={managed("OPEN")}
+          onEdit={vi.fn()}
+          onManageEnrollments={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </>,
+    );
+
+    const cancelEnrollment = screen.getByRole("button", {
+      name: "Cancelar inscrição",
+    });
+    const cancelAction = screen.getByRole("button", { name: "Cancelar ação" });
+
+    for (const token of cancelAction.className.split(/\s+/).filter(Boolean)) {
+      expect(cancelEnrollment).toHaveClass(token);
+    }
+    expect(cancelEnrollment).toHaveClass("bg-gray-200", "text-sm");
+    expect(cancelEnrollment).not.toHaveClass("bg-red-600", "bg-red-800");
+  });
+
   it("renders the title as a link to /activity/:id with stretched link covering the card", () => {
     const activity = makeUserActivity({
       action: { id: "act-2", title: "Plantio de Árvores" },
