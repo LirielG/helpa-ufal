@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router";
 import { MapPin, Calendar, Trash2 } from "lucide-react";
 import type { ActivityStatus } from "@/services/contracts/activity";
-import { ApiError } from "@/services/apiError";
+import {
+  ACTIVITY_REMOVED_MESSAGE,
+  ApiError,
+  isActivityRemoved,
+} from "@/services/apiError";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 import {
   updateActivityStatus,
@@ -30,6 +35,8 @@ type ManagedCardProps = {
   onEdit: (id: string) => void;
   onManageEnrollments: (id: string) => void;
   onDelete: (id: string) => void;
+  /** A write answered 410: the toast is shown; the list should reload. */
+  onActivityRemoved: () => void;
 };
 
 export function ManagedCard({
@@ -37,6 +44,7 @@ export function ManagedCard({
   onEdit,
   onManageEnrollments,
   onDelete,
+  onActivityRemoved,
 }: ManagedCardProps) {
   const [currentStatus, setCurrentStatus] = useState<ActivityStatus>(
     activity.action.status,
@@ -61,6 +69,14 @@ export function ManagedCard({
   const isLocked = errorState?.isLocked === true;
   const canTransition =
     currentStatus === "OPEN" || currentStatus === "IN_PROGRESS";
+  // The API refuses every write on an action moderation removed.
+  const isModerated = Boolean(activity.action.moderation);
+
+  const handleRemovedByModeration = () => {
+    toast.error(ACTIVITY_REMOVED_MESSAGE);
+    setShowDeleteModal(false);
+    onActivityRemoved();
+  };
 
   const reloadAfterConflict = async () => {
     setErrorState({
@@ -102,7 +118,9 @@ export function ManagedCard({
       // The HTTP client already ends the session and redirects to /login.
       if (status === 401) return;
 
-      if (status === 403) {
+      if (isActivityRemoved(err)) {
+        handleRemovedByModeration();
+      } else if (status === 403) {
         setErrorState({
           message: "Você não tem permissão para alterar o status desta ação.",
         });
@@ -138,6 +156,11 @@ export function ManagedCard({
       const status = err instanceof ApiError ? err.status : undefined;
 
       if (status === 401) return;
+
+      if (isActivityRemoved(err)) {
+        handleRemovedByModeration();
+        return;
+      }
 
       // Already removed elsewhere: the outcome the user wanted has happened.
       if (status === 404) {
@@ -190,84 +213,101 @@ export function ManagedCard({
             </div>
           </div>
 
-          <span
-            className={`shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_BADGE_CLASSES[currentStatus]}`}
-          >
-            {ACTION_STATUS_LABELS[currentStatus]}
-          </span>
+          {isModerated ? (
+            <span className="shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
+              Removida pela moderação
+            </span>
+          ) : (
+            <span
+              className={`shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_BADGE_CLASSES[currentStatus]}`}
+            >
+              {ACTION_STATUS_LABELS[currentStatus]}
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100">
-          {canTransition && (
-            <div className="flex flex-wrap items-center gap-2">
-              {currentStatus === "OPEN" && (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={isLoading || isLocked}
-                  onClick={() => setPendingStatus("IN_PROGRESS")}
-                >
-                  Iniciar ação
-                </Button>
-              )}
+        {isModerated ? (
+          <div className="flex items-center pt-3 border-t border-gray-100">
+            <Link
+              to={`/activity/${activity.action.id}`}
+              className="px-4 py-2 border border-[#00579A] text-[#00579A] hover:bg-[#00579A] hover:text-white rounded-lg text-sm font-semibold transition-colors text-center"
+            >
+              Ver detalhes
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100">
+            {canTransition && (
+              <div className="flex flex-wrap items-center gap-2">
+                {currentStatus === "OPEN" && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={isLoading || isLocked}
+                    onClick={() => setPendingStatus("IN_PROGRESS")}
+                  >
+                    Iniciar ação
+                  </Button>
+                )}
 
-              {currentStatus === "IN_PROGRESS" && (
+                {currentStatus === "IN_PROGRESS" && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={isLoading || isLocked}
+                    onClick={() => setPendingStatus("COMPLETED")}
+                  >
+                    Concluir ação
+                  </Button>
+                )}
+
                 <Button
                   type="button"
-                  variant="primary"
+                  variant="secondary"
                   size="sm"
                   disabled={isLoading || isLocked}
-                  onClick={() => setPendingStatus("COMPLETED")}
+                  onClick={() => setPendingStatus("CANCELLED")}
                 >
-                  Concluir ação
+                  Cancelar ação
                 </Button>
-              )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => onEdit(activity.action.id)}
+              >
+                Editar
+              </Button>
 
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled={isLoading || isLocked}
-                onClick={() => setPendingStatus("CANCELLED")}
+                onClick={() => onManageEnrollments(activity.action.id)}
               >
-                Cancelar ação
+                Inscritos
+              </Button>
+
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Trash2 className="size-4 shrink-0" />
+                  Excluir
+                </span>
               </Button>
             </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onEdit(activity.action.id)}
-            >
-              Editar
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onManageEnrollments(activity.action.id)}
-            >
-              Inscritos
-            </Button>
-
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                <Trash2 className="size-4 shrink-0" />
-                Excluir
-              </span>
-            </Button>
           </div>
-        </div>
+        )}
 
         {errorState && (
           <div

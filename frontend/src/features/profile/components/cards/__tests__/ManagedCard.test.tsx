@@ -46,6 +46,7 @@ function renderCard(
   onEdit = vi.fn(),
   onManageEnrollments = vi.fn(),
   onDelete = vi.fn(),
+  onActivityRemoved = vi.fn(),
 ) {
   return render(
     <>
@@ -55,6 +56,7 @@ function renderCard(
         onEdit={onEdit}
         onManageEnrollments={onManageEnrollments}
         onDelete={onDelete}
+        onActivityRemoved={onActivityRemoved}
       />
     </>,
     { route: "/profile" },
@@ -884,6 +886,7 @@ describe("EnrolledCard", () => {
           onEdit={vi.fn()}
           onManageEnrollments={vi.fn()}
           onDelete={vi.fn()}
+          onActivityRemoved={vi.fn()}
         />
       </>,
     );
@@ -923,5 +926,100 @@ describe("EnrolledCard", () => {
     expect(detailsLink).toHaveAttribute("href", "/activity/act-2");
     expect(detailsLink).toHaveTextContent("Ver detalhes");
     expect(detailsLink.querySelector("svg")).toBeNull();
+  });
+});
+
+describe("ManagedCard of an action removed by moderation", () => {
+  const REMOVED_MESSAGE = "Esta ação foi removida pela moderação.";
+
+  function removedResponse() {
+    return HttpResponse.json(
+      {
+        status: 410,
+        code: "ACTIVITY_REMOVED",
+        message: "This activity was removed by moderation.",
+      },
+      { status: 410 },
+    );
+  }
+
+  it("shows the moderation badge and only a link to the details", () => {
+    renderCard(
+      makeManagedActivity({
+        action: {
+          id: ACTION_ID,
+          status: "OPEN",
+          moderation: {
+            removedAt: "2026-09-10T15:00:00.000Z",
+            justification: "Ação viola as diretrizes.",
+          },
+        },
+      }),
+    );
+
+    expect(screen.getByText("Removida pela moderação")).toBeInTheDocument();
+    expect(screen.queryByText("Inscrições Abertas")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver detalhes" })).toHaveAttribute(
+      "href",
+      `/activity/${ACTION_ID}`,
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("keeps the status badge and the controls for an action not removed", () => {
+    renderCard(managed("OPEN"));
+
+    expect(
+      screen.queryByText("Removida pela moderação"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+  });
+
+  it("shows the toast and asks for a reload when a status change answers 410", async () => {
+    const onActivityRemoved = vi.fn();
+    server.use(
+      http.put(`${API}/activities/${ACTION_ID}/status`, removedResponse),
+    );
+    const { user } = renderCard(
+      managed("OPEN"),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      onActivityRemoved,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Iniciar ação" }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Iniciar ação",
+      }),
+    );
+
+    await waitFor(() => expect(onActivityRemoved).toHaveBeenCalledOnce());
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows the toast and asks for a reload when a deletion answers 410", async () => {
+    const onActivityRemoved = vi.fn();
+    const onDelete = vi.fn();
+    server.use(http.delete(`${API}/activities/${ACTION_ID}`, removedResponse));
+    const { user } = renderCard(
+      managed("OPEN"),
+      vi.fn(),
+      vi.fn(),
+      onDelete,
+      onActivityRemoved,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Excluir" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    await waitFor(() => expect(onActivityRemoved).toHaveBeenCalledOnce());
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Confirmar exclusão" }),
+    ).not.toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });

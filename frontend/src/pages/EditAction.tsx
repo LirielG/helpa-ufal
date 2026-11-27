@@ -44,7 +44,11 @@ import { useAuthStore } from "../stores/authStore";
 import { useIsMounted } from "../hooks/useIsMounted";
 import { deleteActivity } from "../features/profile/services";
 import { DeleteActionModal } from "../features/profile/components/cards/DeleteActionModal";
-import { ApiError } from "../services/apiError";
+import {
+  ACTIVITY_REMOVED_MESSAGE,
+  ApiError,
+  isActivityRemoved,
+} from "../services/apiError";
 import { toast } from "react-toastify";
 import { PageTitle } from "../components/PageTitle";
 
@@ -252,6 +256,15 @@ function EditActionForm({ id }: { id: string | undefined }) {
     user && (user.id === actionAuthorId || user.isManager),
   );
 
+  // A removed action accepts no edit, so reloading the form would only lead
+  // to another 410; the detail shows the author why.
+  const handleRemovedByModeration = () => {
+    toast.error(ACTIVITY_REMOVED_MESSAGE);
+    if (!isMounted()) return;
+    setShowDeleteModal(false);
+    navigate(`/activity/${id}`, { replace: true });
+  };
+
   const handleDeleteConfirm = async () => {
     if (!id || isDeleting) return;
     setIsDeleting(true);
@@ -267,6 +280,11 @@ function EditActionForm({ id }: { id: string | undefined }) {
       const status = error instanceof ApiError ? error.status : undefined;
 
       if (status === 401) return;
+
+      if (isActivityRemoved(error)) {
+        handleRemovedByModeration();
+        return;
+      }
 
       // Already deleted elsewhere: the outcome the user wanted, so a user who
       // left gets nothing, and one who stayed goes where a deletion leads.
@@ -355,7 +373,9 @@ function EditActionForm({ id }: { id: string | undefined }) {
       await updateAction(id, payload);
       if (isMounted()) navigate(`/activity/${id}`, { replace: true });
     } catch (error) {
-      if (isMounted()) {
+      if (isActivityRemoved(error)) {
+        handleRemovedByModeration();
+      } else if (isMounted()) {
         handleActionApiErrors(error, setError, setGeneralError);
       } else {
         toastLateSaveError(error);

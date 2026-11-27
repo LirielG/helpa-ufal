@@ -80,6 +80,7 @@ export function EnrolledCard({ activity, onCancelled }: EnrolledCardProps) {
             onClose={() => setShowCancelModal(false)}
             onCancelled={handleGone}
             onActivityRemoved={handleGone}
+            onRemovedByModeration={handleGone}
             onActivityClosed={() => setIsClosed(true)}
           />
         )}

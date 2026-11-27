@@ -58,9 +58,21 @@ export interface ActivityDetails {
   address: ActivityAddress | null;
 }
 
+/**
+ * Why and when moderation removed an activity. Only its author and managers
+ * still receive the activity; `justification` is null when the decision
+ * carried none, and in `/users/me/activities` for anyone but the author.
+ */
+export interface ActivityModeration {
+  removedAt: string;
+  justification: string | null;
+}
+
 /** `GET /activities/:activityId` — the canonical representation. */
 export interface Activity extends ActivityHeader {
   details: ActivityDetails | null;
+  /** null unless moderation removed the activity. */
+  moderation: ActivityModeration | null;
   /**
    * The signed-in user's enrollment in this activity: absent when the request
    * carries no recognized session, null when the user never enrolled.

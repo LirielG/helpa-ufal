@@ -2041,3 +2041,41 @@ describe("EditAction leaving the screen with a request pending", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/outra-tela");
   });
 });
+
+describe("EditAction of an action removed by moderation", () => {
+  const REMOVED_MESSAGE = "Esta ação foi removida pela moderação.";
+  const removedBody = {
+    status: 410,
+    code: "ACTIVITY_REMOVED",
+    message: "This activity was removed by moderation.",
+  };
+
+  it("shows the toast and goes to the detail when saving answers 410", async () => {
+    mockAction();
+    failUpdate(410, removedBody);
+    const { user } = renderEditAction();
+
+    await findTitleField();
+    const slots = screen.getByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+  });
+
+  it("shows the toast and goes to the detail when deleting answers 410", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    recordDeletes(() => HttpResponse.json(removedBody, { status: 410 }));
+    const { user } = renderEditAction();
+
+    await findTitleField();
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+  });
+});

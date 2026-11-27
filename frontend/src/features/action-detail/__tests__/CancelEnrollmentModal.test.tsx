@@ -33,6 +33,7 @@ function renderModal() {
   const onClose = vi.fn();
   const onCancelled = vi.fn();
   const onActivityRemoved = vi.fn();
+  const onRemovedByModeration = vi.fn();
   const onActivityClosed = vi.fn();
   const action = makeActionDetail({
     id: ACTION_ID,
@@ -46,11 +47,19 @@ function renderModal() {
       onClose={onClose}
       onCancelled={onCancelled}
       onActivityRemoved={onActivityRemoved}
+      onRemovedByModeration={onRemovedByModeration}
       onActivityClosed={onActivityClosed}
     />,
   );
 
-  return { ...view, onClose, onCancelled, onActivityRemoved, onActivityClosed };
+  return {
+    ...view,
+    onClose,
+    onCancelled,
+    onActivityRemoved,
+    onRemovedByModeration,
+    onActivityClosed,
+  };
 }
 
 function getConfirmButton() {
@@ -72,6 +81,7 @@ function CancellationDialogExample() {
           onClose={() => setOpen(false)}
           onCancelled={() => setOpen(false)}
           onActivityRemoved={() => setOpen(false)}
+          onRemovedByModeration={() => setOpen(false)}
           onActivityClosed={vi.fn()}
         />
       )}
@@ -181,6 +191,7 @@ describe("CancelEnrollmentModal", () => {
         onClose={onClose}
         onCancelled={onCancelled}
         onActivityRemoved={onActivityRemoved}
+        onRemovedByModeration={vi.fn()}
         onActivityClosed={onActivityClosed}
       />,
     );
@@ -265,6 +276,30 @@ describe("CancelEnrollmentModal", () => {
     await user.click(getConfirmButton());
 
     await waitFor(() => expect(onActivityRemoved).toHaveBeenCalledOnce());
+    expect(onCancelled).not.toHaveBeenCalled();
+  });
+
+  it("shows the toast and reports a moderation removal on 410", async () => {
+    recordCancellations(() =>
+      HttpResponse.json(
+        {
+          status: 410,
+          code: "ACTIVITY_REMOVED",
+          message: "This activity was removed by moderation.",
+        },
+        { status: 410 },
+      ),
+    );
+    const { user, onRemovedByModeration, onActivityRemoved, onCancelled } =
+      renderModal();
+
+    await user.click(getConfirmButton());
+
+    await waitFor(() => expect(onRemovedByModeration).toHaveBeenCalledOnce());
+    expect(
+      await screen.findByText("Esta ação foi removida pela moderação."),
+    ).toBeInTheDocument();
+    expect(onActivityRemoved).not.toHaveBeenCalled();
     expect(onCancelled).not.toHaveBeenCalled();
   });
 
