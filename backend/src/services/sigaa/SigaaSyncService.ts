@@ -64,10 +64,15 @@ export class SigaaSyncService implements ISigaaSyncService {
         const scraped =
           await this._scraperService.scrapeCurrentYearActivities();
 
-        if (scraped.length > 0) {
-          await this._activityRepository.upsertMany(scraped, syncTimestamp);
-          await this._activityRepository.markInactiveBefore(syncTimestamp);
+        if (scraped.length === 0) {
+          console.warn(
+            "[SigaaSyncService] Sync finished with zero activities; nothing was stored or deactivated.",
+          );
+          return;
         }
+
+        await this._activityRepository.upsertMany(scraped, syncTimestamp);
+        await this._activityRepository.markInactiveBefore(syncTimestamp);
       } catch (error) {
         console.error("[SigaaSyncService] Error during forceSync:", error);
       } finally {

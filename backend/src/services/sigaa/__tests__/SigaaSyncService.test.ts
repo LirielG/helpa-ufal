@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import SigaaSyncService from "../SigaaSyncService.js";
 import type { ISigaaScraperService } from "../ISigaaScraperService.js";
 import type { ISigaaActivityRepository } from "@/repositories/sigaa/ISigaaActivityRepository.js";
@@ -30,6 +30,10 @@ function mockRepository(
 describe("SigaaSyncService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("syncIfNeeded — failure handling", () => {
@@ -80,6 +84,7 @@ describe("SigaaSyncService", () => {
 
       await syncService.syncIfNeeded();
       expect(repository.upsertMany).not.toHaveBeenCalled();
+      expect(repository.markInactiveBefore).not.toHaveBeenCalled();
     });
 
     it("still returns existing data from repository when scraper fails", async () => {
@@ -176,6 +181,27 @@ describe("SigaaSyncService", () => {
 
       await syncService.forceSync();
       expect(scraper.scrapeCurrentYearActivities).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("forceSync — empty result", () => {
+    it("logs a warning and neither stores nor deactivates anything", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const scraper = mockScraper();
+      const repository = mockRepository();
+      const syncService = new SigaaSyncService({
+        scraperService: scraper,
+        activityRepository: repository,
+        cacheTtlMs: 0,
+      });
+
+      await syncService.forceSync();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("zero activities"),
+      );
+      expect(repository.upsertMany).not.toHaveBeenCalled();
+      expect(repository.markInactiveBefore).not.toHaveBeenCalled();
     });
   });
 
