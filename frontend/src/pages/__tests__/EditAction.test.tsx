@@ -2050,6 +2050,40 @@ describe("EditAction of an action removed by moderation", () => {
     message: "This activity was removed by moderation.",
   };
 
+  it("sends the author to the detail instead of a form when the action loads removed", async () => {
+    mockAction(
+      editableAction(
+        {},
+        {
+          moderation: {
+            removedAt: "2026-09-10T15:00:00.000Z",
+            justification: "Ação viola as diretrizes.",
+          },
+        },
+      ),
+    );
+    renderEditAction();
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+  });
+
+  it("sends the user to the detail instead of a connection error when loading answers 410", async () => {
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, () =>
+        HttpResponse.json(removedBody, { status: 410 }),
+      ),
+    );
+    renderEditAction();
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the toast and goes to the detail when saving answers 410", async () => {
     mockAction();
     failUpdate(410, removedBody);

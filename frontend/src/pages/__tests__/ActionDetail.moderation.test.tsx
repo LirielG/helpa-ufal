@@ -252,6 +252,37 @@ describe("ActionDetail of an action removed by moderation", () => {
       await waitFor(() => expect(detailCalls()).toBe(2));
     });
 
+    it("drops the controls even when the reload after the 410 fails", async () => {
+      signIn(makeUser({ id: "regular-user" }));
+      serveDetail(
+        () => HttpResponse.json(openAction()),
+        () => HttpResponse.error(),
+      );
+      server.use(
+        http.put(
+          `${API}/activities/${ACTION_ID}/enrollments/me`,
+          removedActivityResponse,
+        ),
+      );
+      const { user } = renderPage();
+
+      await user.click(
+        await screen.findByRole("button", { name: /Inscrever-se/ }),
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Confirmar",
+        }),
+      );
+
+      expect(
+        await screen.findByRole("link", { name: "Explorar ações" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Inscrever-se/ }),
+      ).not.toBeInTheDocument();
+    });
+
     it("shows the author the notice after a write refused while the page was open", async () => {
       signIn(makeUser({ id: AUTHOR_ID }));
       serveDetail(

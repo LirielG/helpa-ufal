@@ -122,6 +122,7 @@ function ActionDetailView({ id }: { id: string | undefined }) {
     try {
       const updatedAction = await getActionById(id);
       setAction(updatedAction);
+      setIsRemoved(false);
     } catch (error) {
       restoreEnrollmentFocus.current = false;
       if (isActivityRemoved(error)) {
@@ -132,12 +133,16 @@ function ActionDetailView({ id }: { id: string | undefined }) {
     }
   };
 
-  // The modal already told the user; the refetch shows the author the
-  // notice and everyone else the removed page.
+  // The modal already told the user. The page turns into the removed one
+  // right away, so a failed refetch cannot leave controls that only answer
+  // 410 again; a refetch that succeeds brings the author and managers back
+  // to the action with its moderation notice.
   const handleRemovedByModeration = () => {
     setShowModal(false);
     setShowCancelModal(false);
     setShowReportModal(false);
+    setAction(null);
+    setIsRemoved(true);
     void refreshAction();
   };
 
@@ -165,10 +170,11 @@ function ActionDetailView({ id }: { id: string | undefined }) {
     setError("Esta ação não existe mais.");
   };
 
-  // Convenience only: GET /activities/:id/enrollments still enforces this on
-  // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
   const isModerated = Boolean(action?.moderation);
 
+  // Convenience only: GET /activities/:id/enrollments still enforces this on
+  // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
+  // It also answers 410 for a removed action, even to its author.
   const canViewEnrollments = Boolean(
     action &&
     !isModerated &&

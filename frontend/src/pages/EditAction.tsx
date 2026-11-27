@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -166,9 +166,18 @@ function EditActionForm({ id }: { id: string | undefined }) {
 
   // A save or deletion keeps running after the user leaves the screen: the
   // server already has it, and aborting would only hide the outcome. Once the
-  // form is gone the result must not drag the user back, so it arrives as a
-  // toast instead of a redirect or an inline message.
-  const isMounted = useIsMounted();
+  // form is gone the result must not drag the user back: a deletion or an
+  // error arrives as a toast, and a successful save, which has no toast on
+  // screen either, arrives silently.
+  const isScreenMounted = useIsMounted();
+
+  // A removed action accepts no edit, so a form for it would only lead to
+  // another 410; the detail shows the author why, and anyone else that it
+  // was removed.
+  const leaveRemovedAction = useCallback(() => {
+    toast.error(ACTIVITY_REMOVED_MESSAGE);
+    if (isScreenMounted()) navigate(`/activity/${id}`, { replace: true });
+  }, [id, isScreenMounted, navigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -189,6 +198,13 @@ function EditActionForm({ id }: { id: string | undefined }) {
     getActionById(id)
       .then((action) => {
         if (!isMounted) return;
+
+        // The author and managers still receive a removed action, but every
+        // write on it answers 410: the detail explains why instead.
+        if (action.moderation) {
+          leaveRemovedAction();
+          return;
+        }
 
         setActionAuthorId(action.authorId);
         setSavedAction({
@@ -231,6 +247,10 @@ function EditActionForm({ id }: { id: string | undefined }) {
       .catch((error: unknown) => {
         if (!isMounted) return;
         if (error instanceof ApiError && error.status === 401) return;
+        if (isActivityRemoved(error)) {
+          leaveRemovedAction();
+          return;
+        }
         setLoadError(
           error instanceof ApiError && error.status === 404
             ? "notFound"
@@ -244,7 +264,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
     return () => {
       isMounted = false;
     };
-  }, [id, reset, loadAttempt]);
+  }, [id, reset, loadAttempt, leaveRemovedAction]);
 
   const retryLoad = () => {
     setLoadError(null);
@@ -256,13 +276,9 @@ function EditActionForm({ id }: { id: string | undefined }) {
     user && (user.id === actionAuthorId || user.isManager),
   );
 
-  // A removed action accepts no edit, so reloading the form would only lead
-  // to another 410; the detail shows the author why.
   const handleRemovedByModeration = () => {
-    toast.error(ACTIVITY_REMOVED_MESSAGE);
-    if (!isMounted()) return;
     setShowDeleteModal(false);
-    navigate(`/activity/${id}`, { replace: true });
+    leaveRemovedAction();
   };
 
   const handleDeleteConfirm = async () => {
@@ -273,7 +289,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
     try {
       await deleteActivity(id);
       toast.success("Ação excluída.");
-      if (!isMounted()) return;
+      if (!isScreenMounted()) return;
       setShowDeleteModal(false);
       navigate("/dashboard", { replace: true });
     } catch (error: unknown) {
@@ -289,7 +305,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
       // Already deleted elsewhere: the outcome the user wanted, so a user who
       // left gets nothing, and one who stayed goes where a deletion leads.
       if (status === 404) {
-        if (!isMounted()) return;
+        if (!isScreenMounted()) return;
         setShowDeleteModal(false);
         navigate("/dashboard", { replace: true });
         return;
@@ -300,7 +316,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
           ? "Você não tem permissão para excluir esta ação."
           : "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.";
 
-      if (isMounted()) {
+      if (isScreenMounted()) {
         setDeleteError(message);
       } else {
         toast.error(message);
@@ -371,11 +387,11 @@ function EditActionForm({ id }: { id: string | undefined }) {
 
     try {
       await updateAction(id, payload);
-      if (isMounted()) navigate(`/activity/${id}`, { replace: true });
+      if (isScreenMounted()) navigate(`/activity/${id}`, { replace: true });
     } catch (error) {
       if (isActivityRemoved(error)) {
         handleRemovedByModeration();
-      } else if (isMounted()) {
+      } else if (isScreenMounted()) {
         handleActionApiErrors(error, setError, setGeneralError);
       } else {
         toastLateSaveError(error);
