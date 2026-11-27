@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   Clock,
@@ -34,6 +34,10 @@ const ACTION_SUB_ITEMS: Array<{ id: ActionSubTab; label: string }> = [
   { id: "managed", label: SIDEBAR_LABELS.managedActivities },
 ];
 
+// Each page mounts its own DashboardShell, so the sidebar is rebuilt on every
+// navigation; the scroll of its desktop list is kept here to survive that.
+let desktopScrollTop = 0;
+
 export function DashboardSidebar({
   isOpenMobile = false,
   onCloseMobile,
@@ -45,6 +49,13 @@ export function DashboardSidebar({
   const location = useLocation();
   const { user, logout } = useAuth();
   const [actionsExpanded, setActionsExpanded] = useState(true);
+  const desktopScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (desktopScrollRef.current) {
+      desktopScrollRef.current.scrollTop = desktopScrollTop;
+    }
+  }, []);
 
   const fullName = user?.fullName || profile?.fullName || "Usuário";
   const email = user?.email || profile?.email || "";
@@ -106,6 +117,14 @@ export function DashboardSidebar({
       {/* On desktop only the upper block scrolls, so Ajuda and Sair stay on
           screen even when the expanded Ações submenu doesn't fit. */}
       <div
+        ref={isMobileDrawer ? undefined : desktopScrollRef}
+        onScroll={
+          isMobileDrawer
+            ? undefined
+            : (event) => {
+                desktopScrollTop = event.currentTarget.scrollTop;
+              }
+        }
         className={`flex flex-col ${
           isMobileDrawer
             ? ""

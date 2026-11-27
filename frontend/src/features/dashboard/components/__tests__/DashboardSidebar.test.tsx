@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router";
-import { render, screen, signIn, within } from "@/test";
+import { fireEvent, render, screen, signIn, within } from "@/test";
 import { DashboardSidebar } from "../DashboardSidebar";
 
 function renderSidebarAt(
@@ -147,6 +147,22 @@ describe("DashboardSidebar", () => {
     expect(current).toEqual([
       within(aside).getByRole("button", { name: /Ajuda/i }),
     ]);
+  });
+
+  it("keeps its scroll position when the next page mounts a new sidebar", () => {
+    signIn();
+    const desktopScrollArea = () =>
+      screen.getByRole("complementary", { name: "Menu lateral do usuário" })
+        .firstElementChild!.firstElementChild as HTMLElement;
+
+    const { unmount } = renderSidebarAt("/dashboard");
+    desktopScrollArea().scrollTop = 120;
+    fireEvent.scroll(desktopScrollArea());
+    unmount();
+
+    renderSidebarAt("/profile");
+
+    expect(desktopScrollArea().scrollTop).toBe(120);
   });
 
   it("links the avatar and name block to /profile", async () => {
