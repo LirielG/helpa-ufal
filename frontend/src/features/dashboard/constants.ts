@@ -69,7 +69,7 @@ export const FILTER_OPTIONS = {
 
 export const HEADER_NAV_ITEMS = [
   { id: "sobre", label: "Sobre o Projeto", path: "/" },
-  { id: "como-funciona", label: "Como Funciona", path: "/#como-funciona" },
+  { id: "como-funciona", label: "Como Funciona", path: "/how-it-works" },
   { id: "acoes", label: "Ações", path: "/dashboard" },
 ] as const;
 

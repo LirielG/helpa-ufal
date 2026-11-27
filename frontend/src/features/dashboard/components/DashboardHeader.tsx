@@ -26,24 +26,10 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
       state: { from: location } satisfies ReturnToState,
     });
 
-  const isNavItemActive = (itemPath: string) => {
-    if (itemPath === "/") {
-      return location.pathname === "/" && !location.hash;
-    }
-    if (itemPath.startsWith("/#")) {
-      return location.pathname === "/" && location.hash === itemPath.slice(1);
-    }
-    return location.pathname.startsWith(itemPath);
-  };
-
-  const handleNavClick = (itemPath: string) => {
-    if (itemPath.startsWith("/#")) {
-      const hash = itemPath.slice(1);
-      navigate({ pathname: "/", hash });
-      return;
-    }
-    navigate(itemPath);
-  };
+  const isNavItemActive = (itemPath: string) =>
+    itemPath === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(itemPath);
 
   const isVerifyingInitialSession = !isSessionVerified && user === null && localStorage.getItem("help_auth_token") !== null;
 
@@ -135,7 +121,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => handleNavClick(item.path)}
+                onClick={() => navigate(item.path)}
                 aria-current={active ? "page" : undefined}
                 className={`py-1 text-sm lg:text-[15px] font-medium rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                   active
@@ -192,7 +178,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
                   type="button"
                   onClick={() => {
                     setMobileGuestMenuOpen(false);
-                    handleNavClick(item.path);
+                    navigate(item.path);
                   }}
                   aria-current={active ? "page" : undefined}
                   className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium ${

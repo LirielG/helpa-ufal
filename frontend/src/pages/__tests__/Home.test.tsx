@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@/test";
+import { render, screen, within } from "@/test";
 import { Home } from "../Home";
 
 describe("Home", () => {
@@ -14,6 +14,20 @@ describe("Home", () => {
       screen.getByRole("heading", { name: /como nasceu o helpa/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  });
+
+  it("marks Sobre o Projeto as the current page of the header", () => {
+    render(<Home />);
+
+    const navigation = screen.getByRole("navigation", {
+      name: /navegação da página inicial/i,
+    });
+    expect(
+      within(navigation).getByRole("button", { name: "Sobre o Projeto" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(navigation).getByRole("button", { name: "Como Funciona" }),
+    ).not.toHaveAttribute("aria-current");
   });
 
   it("is keyboard navigable and the first Tab reaches a visible target", async () => {

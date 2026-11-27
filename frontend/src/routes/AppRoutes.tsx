@@ -12,6 +12,7 @@ import {
   CertificateValidation,
   ModerationPage,
   MyActivities,
+  HowItWorks,
 } from "../pages";
 
 import { useSessionExpiry } from "../hooks/useSessionExpiry";
@@ -120,6 +121,16 @@ export function AppRoutes() {
           element={
             <PublicRoute>
               <CertificateValidation />
+            </PublicRoute>
+          }
+        />
+        {/* Unlike /, open to a signed-in user too: the sidebar's Ajuda
+            leads here. */}
+        <Route
+          path="/how-it-works"
+          element={
+            <PublicRoute>
+              <HowItWorks />
             </PublicRoute>
           }
         />

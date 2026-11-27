@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -11,6 +11,7 @@ import {
   signIn,
   userEvent,
   waitFor,
+  within,
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { AppRoutes } from "../AppRoutes";
@@ -20,6 +21,19 @@ type TestUser = ReturnType<typeof userEvent.setup>;
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="pathname">{location.pathname}</div>;
+}
+
+function BackButton() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Voltar
+    </button>
+  );
+}
+
+function findHowItWorks() {
+  return screen.findByRole("heading", { name: /como o helpa funciona/i });
 }
 
 function findHome() {
@@ -143,19 +157,91 @@ describe("AppRoutes", () => {
       expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
     });
 
-    it("lets a guest open the feed from the home page tabs", async () => {
-      const { user } = render(<AppRoutes />, { route: "/" });
+    it("gives each home page tab its own route, so Back returns to the previous tab", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+          <BackButton />
+        </>,
+        { route: "/" },
+      );
 
       await user.click(
         await screen.findByRole("button", { name: "Como Funciona" }),
       );
-      expect(
-        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
-      ).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Ações" }));
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/how-it-works");
+
+      await user.click(screen.getByRole("button", { name: "Voltar" }));
+
+      expect(await findHome()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/);
+    });
+
+    it("opens Como Funciona at /how-it-works with its header tab active", async () => {
+      render(<AppRoutes />, { route: "/how-it-works" });
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      const navigation = screen.getByRole("navigation", {
+        name: /navegação da página inicial/i,
+      });
+      expect(
+        within(navigation).getByRole("button", { name: "Como Funciona" }),
+      ).toHaveAttribute("aria-current", "page");
+      expect(
+        within(navigation).getByRole("button", { name: "Sobre o Projeto" }),
+      ).not.toHaveAttribute("aria-current");
+    });
+
+    it("sends a guest from the Ações tab of the home page to the feed", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/" },
+      );
+
+      await user.click(await screen.findByRole("button", { name: "Ações" }));
 
       expect(await findDashboard()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/dashboard");
+    });
+
+    it("sends a guest from the feed header to Como Funciona", async () => {
+      const { user } = render(<AppRoutes />, { route: "/dashboard" });
+
+      await findDashboard();
+      await user.click(screen.getByRole("button", { name: "Como Funciona" }));
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+    });
+
+    it("sends Ir para o Feed de Ações from Como Funciona to the feed", async () => {
+      const { user } = render(<AppRoutes />, { route: "/how-it-works" });
+
+      await user.click(
+        await screen.findByRole("button", { name: "Ir para o Feed de Ações" }),
+      );
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("lets a signed-in user open /how-it-works without being sent to the feed", async () => {
+      signIn();
+
+      render(
+        <>
+          <AppRoutes />
+          <LocationProbe />
+        </>,
+        { route: "/how-it-works" },
+      );
+
+      expect(await findHowItWorks()).toBeInTheDocument();
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/how-it-works");
     });
 
     it("lets a guest reach the dashboard", async () => {

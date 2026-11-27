@@ -10,3 +10,4 @@ export { EnrollmentsPage } from "./EnrollmentsPage";
 export { CertificateValidation } from "./CertificateValidation";
 export { ModerationPage } from "./ModerationPage";
 export { MyActivities } from "./MyActivities";
+export { HowItWorks } from "./HowItWorks";
