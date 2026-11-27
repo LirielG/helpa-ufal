@@ -5,6 +5,7 @@ import { DashboardShell } from "../features/dashboard/components/DashboardShell"
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
 import { useAuth } from "../hooks/useAuth";
+import { PageTitle } from "../components/PageTitle";
 
 export function HowItWorks() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export function HowItWorks() {
         footer={<Footer />}
         showCreateAction={false}
       >
+        <PageTitle title="Como Funciona" />
         {section}
       </DashboardShell>
     );
@@ -30,6 +32,7 @@ export function HowItWorks() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FB]">
+      <PageTitle title="Como Funciona" />
       <HomeHeader />
 
       <main className="flex-1 flex flex-col">{section}</main>

@@ -3,6 +3,7 @@ import { Footer } from "@/components/Footer";
 import { HomeLogoLink } from "@/components/HomeLogoLink";
 import helpaBlueLogo from "@/assets/helpa-logo-blue-text.svg";
 import { ValidationPanel } from "@/features/certificate-validation/components/ValidationPanel";
+import { PageTitle } from "@/components/PageTitle";
 
 /**
  * Public page where whoever received a HELPA certificate checks it, reached
@@ -22,6 +23,7 @@ export function CertificateValidation() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <PageTitle title="Validar certificado" />
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <HomeLogoLink

@@ -407,4 +407,114 @@ describe("AppRoutes", () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe("browser tab titles", () => {
+    it.each([
+      { route: "/", signedIn: false, title: "Sobre o Projeto | Helpa" },
+      {
+        route: "/how-it-works",
+        signedIn: false,
+        title: "Como Funciona | Helpa",
+      },
+      { route: "/login", signedIn: false, title: "Entrar | Helpa" },
+      { route: "/register", signedIn: false, title: "Cadastrar-se | Helpa" },
+      { route: "/dashboard", signedIn: false, title: "Ações | Helpa" },
+      {
+        route: "/activity/1",
+        signedIn: false,
+        title: "Oficina de Programação | Helpa",
+      },
+      {
+        route: "/activity/1/edit",
+        signedIn: true,
+        title: "Editar ação | Helpa",
+      },
+      {
+        route: "/activity/1/enrollments",
+        signedIn: true,
+        title: "Inscritos | Helpa",
+      },
+      { route: "/profile", signedIn: true, title: "Dados Pessoais | Helpa" },
+      {
+        route: "/my-activities?filter=enrolled",
+        signedIn: true,
+        title: "Atividades Inscritas | Helpa",
+      },
+      {
+        route: "/my-activities?filter=completed",
+        signedIn: true,
+        title: "Atividades Concluídas | Helpa",
+      },
+      {
+        route: "/my-activities?filter=managed",
+        signedIn: true,
+        title: "Atividades Gerenciadas | Helpa",
+      },
+      { route: "/moderation", signedIn: true, title: "Denúncias | Helpa" },
+      {
+        route: "/validate",
+        signedIn: false,
+        title: "Validar certificado | Helpa",
+      },
+      {
+        route: "/validate/7KQ4MX9T2R",
+        signedIn: false,
+        title: "Validar certificado | Helpa",
+      },
+      {
+        route: "/rota-inexistente",
+        signedIn: false,
+        title: "Página não encontrada | Helpa",
+      },
+    ])("titles $route as $title", async ({ route, signedIn, title }) => {
+      if (signedIn) signIn({ isManager: true });
+
+      render(<AppRoutes />, { route });
+
+      await waitFor(() => expect(document.title).toBe(title));
+    });
+
+    it("titles an action detail Ação until the action loads", async () => {
+      server.use(
+        http.get(`${API}/activities/:id`, () => new Promise<never>(() => {})),
+      );
+
+      render(<AppRoutes />, { route: "/activity/1" });
+
+      await waitFor(() => expect(document.title).toBe("Ação | Helpa"));
+    });
+
+    it("titles an action detail Ação when it fails to load", async () => {
+      server.use(
+        http.get(`${API}/activities/:id`, () =>
+          HttpResponse.json({ message: "Não encontrada" }, { status: 404 }),
+        ),
+      );
+
+      render(<AppRoutes />, { route: "/activity/1" });
+
+      expect(
+        await screen.findByText("Ação não encontrada."),
+      ).toBeInTheDocument();
+      expect(document.title).toBe("Ação | Helpa");
+    });
+
+    it("changes the title when the sidebar switches to another list", async () => {
+      signIn();
+      const { user } = render(<AppRoutes />, {
+        route: "/my-activities?filter=enrolled",
+      });
+      await waitFor(() =>
+        expect(document.title).toBe("Atividades Inscritas | Helpa"),
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "Atividades Gerenciadas" }),
+      );
+
+      await waitFor(() =>
+        expect(document.title).toBe("Atividades Gerenciadas | Helpa"),
+      );
+    });
+  });
 });

@@ -17,6 +17,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useAuthStore } from "../stores/authStore";
 import type { UpdateProfileRequest } from "../types";
 import bgDashboard from "../assets/bg.svg";
+import { PageTitle } from "../components/PageTitle";
 
 const PASSWORD_CHANGED_MESSAGE =
   "Senha alterada. Entre novamente com a nova senha.";
@@ -105,6 +106,7 @@ export function Profile() {
       footer={<Footer />}
       syncedProfile={profile}
     >
+      <PageTitle title="Dados Pessoais" />
       <div
         className="w-full flex-1"
         style={{

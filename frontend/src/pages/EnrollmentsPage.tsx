@@ -12,6 +12,7 @@ import { useEnrollments } from "@/features/enrollment-management/useEnrollments"
 import { useEnrollmentActivity } from "@/features/enrollment-management/useEnrollmentActivity";
 import { AttendanceModal } from "@/features/enrollment-management/components/AttendanceModal";
 import type { EnrollmentListItem } from "@/services/contracts/enrollment";
+import { PageTitle } from "../components/PageTitle";
 
 /**
  * Page that displays the list of volunteers enrolled in an activity.
@@ -64,6 +65,7 @@ export function EnrollmentsPage() {
 
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+      <PageTitle title="Inscritos" />
       <div className="page-container py-10 space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>

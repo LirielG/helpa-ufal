@@ -12,6 +12,7 @@ import { ConfirmResolutionModal } from "@/features/moderation/components/Confirm
 import { useModerationReports } from "@/features/moderation/useModerationReports";
 import type { Report } from "@/services/contracts/report";
 import bgDashboard from "@/assets/bg.svg";
+import { PageTitle } from "../components/PageTitle";
 
 /**
  * Moderation queue restricted to managers (`isManager`).
@@ -78,6 +79,7 @@ export function ModerationPage() {
 
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+      <PageTitle title="Denúncias" />
       <div
         className="w-full flex-1"
         style={{

@@ -19,6 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
 import type { Activity } from "@/services/contracts/activity";
 import { ApiError } from "@/services/apiError";
+import { PageTitle } from "../components/PageTitle";
 
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -139,6 +140,7 @@ export function ActionDetail() {
 
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+      <PageTitle title={action?.title ?? "Ação"} />
       {isLoading && (
         <div className="flex-1 flex items-center justify-center min-h-[60vh]">
           <p className="text-gray-500 text-lg">Carregando...</p>
