@@ -23,6 +23,14 @@ import { PageTitle } from "../components/PageTitle";
 
 export function ActionDetail() {
   const { id } = useParams<{ id: string }>();
+
+  // A link from one action to another keeps this route element mounted; the
+  // key starts the page over, so the previous action (and its title in the
+  // tab) doesn't linger while the new one loads.
+  return <ActionDetailView key={id} id={id} />;
+}
+
+function ActionDetailView({ id }: { id: string | undefined }) {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
 

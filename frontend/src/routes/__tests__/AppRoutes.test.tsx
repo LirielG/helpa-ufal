@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   API,
   HttpResponse,
@@ -497,6 +497,27 @@ describe("AppRoutes", () => {
         await screen.findByText("Ação não encontrada."),
       ).toBeInTheDocument();
       expect(document.title).toBe("Ação | Helpa");
+    });
+
+    it("drops the previous action's title while another action loads", async () => {
+      const { user } = render(
+        <>
+          <AppRoutes />
+          <Link to="/activity/2">Outra ação</Link>
+        </>,
+        { route: "/activity/1" },
+      );
+      await waitFor(() =>
+        expect(document.title).toBe("Oficina de Programação | Helpa"),
+      );
+      server.use(
+        http.get(`${API}/activities/:id`, () => new Promise<never>(() => {})),
+      );
+
+      await user.click(screen.getByRole("link", { name: "Outra ação" }));
+
+      await waitFor(() => expect(document.title).toBe("Ação | Helpa"));
+      expect(screen.queryByText("Oficina de Programação")).toBeNull();
     });
 
     it("changes the title when the sidebar switches to another list", async () => {
