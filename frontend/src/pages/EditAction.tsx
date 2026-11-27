@@ -29,7 +29,10 @@ import {
 } from "../features/action-edit/validators";
 import { normalizeActionUrl } from "../validators/activity";
 import { getActionById } from "../features/action-detail/services";
-import { handleActionApiErrors } from "../features/action-edit/handleApiErrors";
+import {
+  ACTION_UPDATE_ERROR_MESSAGE,
+  handleActionApiErrors,
+} from "../features/action-edit/handleApiErrors";
 import { updateAction } from "../features/action-edit/services";
 import type {
   ActionAddressPayload,
@@ -38,6 +41,7 @@ import type {
 import { toInputDate, toInputTime } from "../utils";
 import { fetchAreaSuggestions } from "../features/dashboard/services";
 import { useAuthStore } from "../stores/authStore";
+import { useIsMounted } from "../hooks/useIsMounted";
 import { deleteActivity } from "../features/profile/services";
 import { DeleteActionModal } from "../features/profile/components/cards/DeleteActionModal";
 import { ApiError } from "../services/apiError";
@@ -80,6 +84,32 @@ export function EditAction() {
       <EditActionForm key={id} id={id} />
     </>
   );
+}
+
+/**
+ * Reports a save that failed after the form unmounted. The mapping is the
+ * form's, but field errors have no field left to sit under, so they collapse
+ * into the generic message.
+ */
+function toastLateSaveError(error: unknown) {
+  let message: string | null = null;
+  let hasFieldError = false;
+
+  handleActionApiErrors(
+    error,
+    () => {
+      hasFieldError = true;
+    },
+    (generalMessage) => {
+      message = generalMessage;
+    },
+  );
+
+  if (message) {
+    toast.error(message);
+  } else if (hasFieldError) {
+    toast.error(ACTION_UPDATE_ERROR_MESSAGE);
+  }
 }
 
 function EditActionForm({ id }: { id: string | undefined }) {
@@ -129,6 +159,12 @@ function EditActionForm({ id }: { id: string | undefined }) {
   });
 
   const currentFormat = useWatch({ control, name: "format" });
+
+  // A save or deletion keeps running after the user leaves the screen: the
+  // server already has it, and aborting would only hide the outcome. Once the
+  // form is gone the result must not drag the user back, so it arrives as a
+  // toast instead of a redirect or an inline message.
+  const isMounted = useIsMounted();
 
   useEffect(() => {
     let isMounted = true;
@@ -224,6 +260,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
     try {
       await deleteActivity(id);
       toast.success("Ação excluída.");
+      if (!isMounted()) return;
       setShowDeleteModal(false);
       navigate("/dashboard", { replace: true });
     } catch (error: unknown) {
@@ -231,15 +268,24 @@ function EditActionForm({ id }: { id: string | undefined }) {
 
       if (status === 401) return;
 
+      // Already deleted elsewhere: the outcome the user wanted, so a user who
+      // left gets nothing, and one who stayed goes where a deletion leads.
       if (status === 404) {
+        if (!isMounted()) return;
         setShowDeleteModal(false);
         navigate("/dashboard", { replace: true });
-      } else if (status === 403) {
-        setDeleteError("Você não tem permissão para excluir esta ação.");
+        return;
+      }
+
+      const message =
+        status === 403
+          ? "Você não tem permissão para excluir esta ação."
+          : "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.";
+
+      if (isMounted()) {
+        setDeleteError(message);
       } else {
-        setDeleteError(
-          "Não foi possível excluir a ação. Verifique sua conexão e tente novamente.",
-        );
+        toast.error(message);
       }
     } finally {
       setIsDeleting(false);
@@ -307,9 +353,13 @@ function EditActionForm({ id }: { id: string | undefined }) {
 
     try {
       await updateAction(id, payload);
-      navigate(`/activity/${id}`, { replace: true });
+      if (isMounted()) navigate(`/activity/${id}`, { replace: true });
     } catch (error) {
-      handleActionApiErrors(error, setError, setGeneralError);
+      if (isMounted()) {
+        handleActionApiErrors(error, setError, setGeneralError);
+      } else {
+        toastLateSaveError(error);
+      }
     }
   };
 
