@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, vi } from "vitest";
 import { prisma } from "@/database/prisma.js";
 import { resetDatabase } from "./resetDatabase.js";
+import "./supertestLoopback.js";
 
 // No integration test may open an SMTP connection or create an Ethereal
 // account. Tests that check an e-mail was sent spy on EmailService.send and
