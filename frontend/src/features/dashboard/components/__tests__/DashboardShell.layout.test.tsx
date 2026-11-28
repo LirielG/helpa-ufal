@@ -311,7 +311,13 @@ describe("DashboardShell as a layout route", () => {
 
       expect(desktopSidebar()).toBeInTheDocument();
 
-      await user.click(desktopToggle("Recolher menu lateral", true));
+      const toggle = desktopToggle("Recolher menu lateral", true);
+      expect(toggle).toHaveAttribute(
+        "aria-controls",
+        desktopSidebar()!.getAttribute("id"),
+      );
+
+      await user.click(toggle);
 
       expect(desktopSidebar()).not.toBeInTheDocument();
       expect(localStorage.getItem("helpa.sidebarCollapsed")).toBe("true");

@@ -5,7 +5,11 @@ import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 import { useAuth } from "../../../hooks/useAuth";
 import { useAuthStore } from "../../../stores/authStore";
 import type { ReturnToState } from "../../../routes/GuestRoute";
-import { HEADER_LABELS, HEADER_NAV_ITEMS } from "../constants";
+import {
+  DESKTOP_SIDEBAR_ID,
+  HEADER_LABELS,
+  HEADER_NAV_ITEMS,
+} from "../constants";
 
 interface DashboardHeaderProps {
   /** Opens the drawer, below lg. */
@@ -102,6 +106,7 @@ export function DashboardHeader({
                 onClick={onToggleDesktopSidebar}
                 className="hidden lg:inline-flex p-2 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
                 aria-expanded={!desktopSidebarCollapsed}
+                aria-controls={DESKTOP_SIDEBAR_ID}
                 aria-label={
                   desktopSidebarCollapsed
                     ? HEADER_LABELS.openSidebarAriaLabel

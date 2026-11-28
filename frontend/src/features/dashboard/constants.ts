@@ -73,6 +73,9 @@ export const HEADER_NAV_ITEMS = [
   { id: "acoes", label: "Ações", path: "/dashboard" },
 ] as const;
 
+/** Lets the header toggle name, with aria-controls, the region it collapses. */
+export const DESKTOP_SIDEBAR_ID = "dashboard-sidebar";
+
 export const HEADER_LABELS = {
   homeAriaLabel: "Ir para a página inicial do Helpa",
   openProfileAriaLabel: "Abrir perfil",
