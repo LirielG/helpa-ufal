@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PASSWORD_REQUIREMENTS } from "../features/auth/constants/passwordRequirements";
 import { FULL_NAME_MAX_LENGTH, FULL_NAME_TOO_LONG_MESSAGE } from "./limits";
 
 export interface ValidationError {
@@ -68,6 +69,58 @@ export const RegisterSchema = z
   });
 
 export type RegisterFields = z.infer<typeof RegisterSchema>;
+
+const resetEmailField = z
+  .string()
+  .trim()
+  .min(1, "E-mail é obrigatório")
+  .email("E-mail inválido");
+
+export const ForgotPasswordSchema = z.object({
+  email: resetEmailField,
+});
+
+export type ForgotPasswordFields = z.infer<typeof ForgotPasswordSchema>;
+
+// Normalization (case, hyphens, O/0, I/L/1) is performed by the backend.
+export const VerifyResetCodeSchema = z.object({
+  email: resetEmailField,
+  code: z.string().trim().min(1, "Código é obrigatório"),
+});
+
+export type VerifyResetCodeFields = z.infer<typeof VerifyResetCodeSchema>;
+
+export const ResetPasswordSchema = z
+  .object({
+    newPassword: z.string(),
+    confirmNewPassword: z.string(),
+  })
+  .superRefine(({ newPassword, confirmNewPassword }, ctx) => {
+    if (!newPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["newPassword"],
+        message: "Informe a nova senha",
+      });
+    } else if (!PASSWORD_REQUIREMENTS.every((req) => req.test(newPassword))) {
+      // Which rule failed is already shown by the checklist under the field.
+      ctx.addIssue({
+        code: "custom",
+        path: ["newPassword"],
+        message: "A nova senha não atende aos requisitos.",
+      });
+    }
+
+    if (confirmNewPassword !== newPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirmNewPassword"],
+        message: "As senhas não coincidem.",
+      });
+    }
+  });
+
+export type ResetPasswordFields = z.infer<typeof ResetPasswordSchema>;
 
 // ---- UTILS PARA TRANSFORMAR ERROS ZOD PARA ValidationError ----
 

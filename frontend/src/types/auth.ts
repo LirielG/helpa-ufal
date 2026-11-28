@@ -43,6 +43,21 @@ export interface RegisterRequest {
 
 export type RegisterResponse = User;
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface VerifyResetCodeRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
 export interface AuthError {
   message: string;
   code?: string;

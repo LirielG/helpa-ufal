@@ -36,6 +36,21 @@ export const handlers = [
     () => new HttpResponse(null, { status: 204 }),
   ),
 
+  http.post(
+    `${API}/auth/forgot-password`,
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  http.post(
+    `${API}/auth/forgot-password/verify`,
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  http.post(
+    `${API}/auth/reset-password`,
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
   // `GET /users/me` answers for the session, so it echoes the user the test
   // signed in instead of minting a new one: the session check must not swap
   // the logged-in user mid-test.

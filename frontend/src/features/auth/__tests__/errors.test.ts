@@ -6,12 +6,20 @@ import {
 } from "@/services/apiError";
 import {
   INVALID_CREDENTIALS_MESSAGE,
+  INVALID_RESET_CODE_MESSAGE,
   LOGIN_GENERIC_ERROR_MESSAGE,
+  PASSWORD_RESET_GENERIC_ERROR_MESSAGE,
   REGISTER_ALREADY_IN_USE_MESSAGE,
   REGISTER_GENERIC_ERROR_MESSAGE,
   REGISTER_INVALID_DATA_MESSAGE,
+  TOO_MANY_REQUESTS_MESSAGE,
 } from "../constants/messages";
-import { getLoginErrorMessage, handleRegisterApiErrors } from "../errors";
+import {
+  getForgotPasswordErrorMessage,
+  getLoginErrorMessage,
+  getResetPasswordError,
+  handleRegisterApiErrors,
+} from "../errors";
 
 // Any text works: the screens must never depend on the API's wording.
 const UNRELATED_MESSAGE = "Some text the backend may change at any time.";
@@ -100,5 +108,81 @@ describe("handleRegisterApiErrors", () => {
     expect(handleRegisterApiErrors(new Error("boom"), vi.fn())).toBe(
       REGISTER_GENERIC_ERROR_MESSAGE,
     );
+  });
+});
+
+describe("getForgotPasswordErrorMessage", () => {
+  it.each([
+    ["rate limit (429)", 429, TOO_MANY_REQUESTS_MESSAGE],
+    ["no response", NETWORK_ERROR_STATUS, CONNECTION_ERROR_MESSAGE],
+    ["a server failure (500)", 500, CONNECTION_ERROR_MESSAGE],
+    ["a server failure (503)", 503, CONNECTION_ERROR_MESSAGE],
+    ["a validation error (400)", 400, PASSWORD_RESET_GENERIC_ERROR_MESSAGE],
+    ["any other status", 422, PASSWORD_RESET_GENERIC_ERROR_MESSAGE],
+  ])("translates %s", (_case, status, expected) => {
+    expect(
+      getForgotPasswordErrorMessage(new ApiError(status, UNRELATED_MESSAGE)),
+    ).toBe(expected);
+  });
+
+  it("falls back to the generic message for an error that is not an ApiError", () => {
+    expect(getForgotPasswordErrorMessage(new Error("boom"))).toBe(
+      PASSWORD_RESET_GENERIC_ERROR_MESSAGE,
+    );
+  });
+});
+
+describe("getResetPasswordError", () => {
+  it("maps 422 INVALID_RESET_CODE to an invalidCode field error", () => {
+    const error = new ApiError(422, UNRELATED_MESSAGE, [], {
+      code: "INVALID_RESET_CODE",
+    });
+
+    expect(getResetPasswordError(error)).toEqual({
+      kind: "invalidCode",
+      message: INVALID_RESET_CODE_MESSAGE,
+    });
+  });
+
+  it("maps 400 VALIDATION_ERROR on the code field to an invalidCode field error", () => {
+    const error = new ApiError(
+      400,
+      UNRELATED_MESSAGE,
+      [{ field: "code", message: "Invalid format" }],
+      { code: "VALIDATION_ERROR" },
+    );
+
+    expect(getResetPasswordError(error)).toEqual({
+      kind: "invalidCode",
+      message: INVALID_RESET_CODE_MESSAGE,
+    });
+  });
+
+  it("maps 400 on other fields to the generic alert", () => {
+    const error = new ApiError(
+      400,
+      UNRELATED_MESSAGE,
+      [{ field: "newPassword", message: "Weak password" }],
+      { code: "VALIDATION_ERROR" },
+    );
+
+    expect(getResetPasswordError(error)).toEqual({
+      kind: "alert",
+      message: PASSWORD_RESET_GENERIC_ERROR_MESSAGE,
+    });
+  });
+
+  it.each([
+    ["rate limit (429)", 429, TOO_MANY_REQUESTS_MESSAGE],
+    ["no response", NETWORK_ERROR_STATUS, CONNECTION_ERROR_MESSAGE],
+    ["a server failure (500)", 500, CONNECTION_ERROR_MESSAGE],
+    ["422 with another code", 422, PASSWORD_RESET_GENERIC_ERROR_MESSAGE],
+  ])("maps %s to an alert", (_case, status, expected) => {
+    expect(
+      getResetPasswordError(new ApiError(status, UNRELATED_MESSAGE)),
+    ).toEqual({
+      kind: "alert",
+      message: expected,
+    });
   });
 });
