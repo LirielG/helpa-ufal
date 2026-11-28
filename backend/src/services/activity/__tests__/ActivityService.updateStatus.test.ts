@@ -43,6 +43,7 @@ function makeActivityRecord(
     availableSlots: 27,
     status: "OPEN",
     details: null,
+    moderation: null,
     ...overrides,
   };
 }

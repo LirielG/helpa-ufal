@@ -30,15 +30,14 @@ function createBody(overrides: Record<string, unknown> = {}) {
 }
 
 const BODIES = {
-  "create ONLINE": (url: string) => [
-    CreateActivitySchema,
-    createBody({ format: "ONLINE", url }),
-  ],
-  "create HYBRID": (url: string) => [
-    CreateActivitySchema,
-    createBody({ format: "HYBRID", url, address: ADDRESS }),
-  ],
-  update: (url: string) => [UpdateActivitySchema, { url }],
+  "create ONLINE": (url: string) =>
+    [CreateActivitySchema, createBody({ format: "ONLINE", url })] as const,
+  "create HYBRID": (url: string) =>
+    [
+      CreateActivitySchema,
+      createBody({ format: "HYBRID", url, address: ADDRESS }),
+    ] as const,
+  update: (url: string) => [UpdateActivitySchema, { url }] as const,
 } as const;
 
 describe.each(Object.entries(BODIES))("url on %s", (_, bodyFor) => {

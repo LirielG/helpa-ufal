@@ -543,7 +543,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({});
+    await service.list(pagination);
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -557,7 +557,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ status: "ALL" });
+    await service.list({ ...pagination, status: "ALL" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -571,7 +571,7 @@ describe("ActivityService.list", () => {
     const repository = mockRepository();
     const service = new ActivityService({ activityRepository: repository });
 
-    await service.list({ status: "OPEN" });
+    await service.list({ ...pagination, status: "OPEN" });
 
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({ status: "OPEN", startDateAfter: undefined }),
