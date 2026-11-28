@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router";
 import { User } from "lucide-react";
-import { DashboardShell } from "../features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
-import { Footer } from "../components/Footer";
+import { useSyncSidebarProfile } from "../features/dashboard/components/DashboardShellContext";
 import { Alert } from "../components/Alert";
 import { PersonalDataForm } from "../features/profile/components/PersonalDataForm";
 import { getProfile, updateProfile } from "../features/profile/services";
@@ -96,16 +94,14 @@ export function Profile() {
     if (user) setUser({ ...user, fullName: updated.fullName });
   };
 
+  useSyncSidebarProfile(profile);
+
   if (isLegacyActionsUrl) {
     return null;
   }
 
   return (
-    <DashboardShell
-      header={<DashboardHeader />}
-      footer={<Footer />}
-      syncedProfile={profile}
-    >
+    <>
       <PageTitle title="Dados Pessoais" />
       <div
         className="w-full flex-1"
@@ -156,6 +152,6 @@ export function Profile() {
           )}
         </div>
       </div>
-    </DashboardShell>
+    </>
   );
 }

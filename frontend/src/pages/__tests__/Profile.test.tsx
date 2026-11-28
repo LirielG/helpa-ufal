@@ -20,6 +20,7 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { FULL_NAME_MAX_LENGTH } from "@/validators/limits";
 import { Profile } from "../Profile";
 import { Login } from "../Login";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 
 const CURRENT_PASSWORD = "Senha@123";
 const NEW_PASSWORD = "Nova@1234";
@@ -73,14 +74,16 @@ function renderProfile() {
 
   return render(
     <Routes>
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
+      <Route element={<DashboardShell />}>
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
       <Route
         path="/login"
         element={
@@ -215,12 +218,14 @@ describe("Profile — personal data", () => {
       const reads = countProfileReads();
       spyOnUpdate();
       const { user } = renderProfile();
+      // The page and the sidebar each read it once on the way in.
+      await waitFor(() => expect(reads()).toBe(2));
 
       await replaceName(user, "Joana Lima");
       await user.click(getSaveButton());
 
       await screen.findByText("Perfil atualizado com sucesso.");
-      expect(reads()).toBe(1);
+      expect(reads()).toBe(2);
     });
 
     it("does not send a name the user left untouched", async () => {

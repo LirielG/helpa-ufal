@@ -210,7 +210,7 @@ describe("Dashboard", () => {
       http.get("*/activities", () => HttpResponse.json(mockApiActivities)),
     );
 
-    const { user } = render(<Dashboard />);
+    const { user } = render(<Dashboard />, { shell: true });
 
     expect(screen.queryByRole("dialog", { name: "Criar uma ação" })).toBeNull();
 

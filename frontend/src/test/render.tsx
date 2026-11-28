@@ -7,11 +7,18 @@ import {
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 
 export type RenderWithProvidersOptions = Omit<RenderOptions, "wrapper"> & {
   /** URL the router starts at. Defaults to "/". */
   route?: string;
   path?: string;
+  /**
+   * Mounts the UI under the DashboardShell layout route, as AppRoutes does
+   * for the pages with the dashboard header and sidebar. Implies a route,
+   * at `path` or "*".
+   */
+  shell?: boolean;
 };
 
 export type RenderWithProvidersResult = RenderResult & {
@@ -21,12 +28,23 @@ export type RenderWithProvidersResult = RenderResult & {
 // When a context provider is added to the app, add it here too.
 export function renderWithProviders(
   ui: ReactElement,
-  { route = "/", path, ...options }: RenderWithProvidersOptions = {},
+  {
+    route = "/",
+    path,
+    shell = false,
+    ...options
+  }: RenderWithProvidersOptions = {},
 ): RenderWithProvidersResult {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter initialEntries={[route]}>
-        {path ? (
+        {shell ? (
+          <Routes>
+            <Route element={<DashboardShell />}>
+              <Route path={path ?? "*"} element={children} />
+            </Route>
+          </Routes>
+        ) : path ? (
           <Routes>
             <Route path={path} element={children} />
           </Routes>

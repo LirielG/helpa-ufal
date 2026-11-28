@@ -10,9 +10,7 @@ import {
   Textarea,
   TimeInput,
 } from "../components";
-import { DashboardShell } from "../features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
-import { Footer } from "../components/Footer";
+import { useDashboardShellOptions } from "../features/dashboard/components/DashboardShellContext";
 import {
   AddressBlock,
   ConfirmFormatModal,
@@ -421,46 +419,41 @@ function EditActionForm({ id }: { id: string | undefined }) {
     }
   };
 
+  const showsForm = !isLoadingAction && loadError !== "connection" && !notFound;
+  // Only the form has the page's own background; loading and errors keep the
+  // shell's default.
+  useDashboardShellOptions({ background: showsForm ? "#E0F6F6" : undefined });
+
   if (isLoadingAction) {
     return (
-      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
-        <div className="flex-1 flex items-center justify-center py-20">
-          <p className="text-gray-500">Carregando...</p>
-        </div>
-      </DashboardShell>
+      <div className="flex-1 flex items-center justify-center py-20">
+        <p className="text-gray-500">Carregando...</p>
+      </div>
     );
   }
 
   if (loadError === "connection") {
     return (
-      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-4">
-          <p role="alert" className="text-gray-500">
-            Não foi possível carregar a ação. Verifique sua conexão e tente
-            novamente.
-          </p>
-          <Button onClick={retryLoad}>Tentar novamente</Button>
-        </div>
-      </DashboardShell>
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-4">
+        <p role="alert" className="text-gray-500">
+          Não foi possível carregar a ação. Verifique sua conexão e tente
+          novamente.
+        </p>
+        <Button onClick={retryLoad}>Tentar novamente</Button>
+      </div>
     );
   }
 
   if (notFound) {
     return (
-      <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
-        <div className="flex-1 flex items-center justify-center py-20">
-          <p className="text-gray-500">Ação não encontrada.</p>
-        </div>
-      </DashboardShell>
+      <div className="flex-1 flex items-center justify-center py-20">
+        <p className="text-gray-500">Ação não encontrada.</p>
+      </div>
     );
   }
 
   return (
-    <DashboardShell
-      header={<DashboardHeader />}
-      footer={<Footer />}
-      containerStyle={{ backgroundColor: "#E0F6F6" }}
-    >
+    <>
       <div className="page-container py-10">
         {generalError && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium flex items-center justify-between shadow-sm">
@@ -770,6 +763,6 @@ function EditActionForm({ id }: { id: string | undefined }) {
           }}
         />
       )}
-    </DashboardShell>
+    </>
   );
 }

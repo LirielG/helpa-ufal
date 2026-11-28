@@ -118,7 +118,7 @@ describe("session verification on load", () => {
 
     render(<AppRoutes />, { route: "/dashboard" });
 
-    expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
+    expect(await screen.findByLabelText("Usuário")).toBeVisible();
     expect(useAuthStore.getState().user).toBeNull();
     expect(persistedUser()).toBeNull();
   });
@@ -129,7 +129,7 @@ describe("session verification on load", () => {
 
     render(<AppRoutes />, { route: "/dashboard" });
 
-    expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
+    expect(await screen.findByLabelText("Usuário")).toBeVisible();
     expect(useAuthStore.getState().user).toBeNull();
     expect(persistedUser()).toBeNull();
   });
@@ -141,7 +141,7 @@ describe("session verification on load", () => {
 
     render(<AppRoutes />, { route: "/profile" });
 
-    expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
+    expect(await screen.findByLabelText("Usuário")).toBeVisible();
     // Profile paints "Carregando..." on mount and "Dados Pessoais" once loaded:
     // neither means the screen never mounted.
     expect(screen.queryByText("Carregando...")).toBeNull();
@@ -280,13 +280,16 @@ describe("session verification on load", () => {
     await waitFor(() =>
       expect(useAuthStore.getState().isSessionVerified).toBe(true),
     );
+    // The same endpoint also feeds the sidebar's profile, once the check
+    // confirms the session: two requests per load, none per navigation.
+    await waitFor(() => expect(calls.count).toBe(2));
 
     await ui.click(screen.getByRole("button", { name: "detalhe" }));
     await screen.findByText("Oficina de Programação");
     await ui.click(screen.getByRole("button", { name: "painel" }));
     await screen.findByRole("combobox", { name: "Status" });
 
-    expect(calls.count).toBe(1);
+    expect(calls.count).toBe(2);
   });
 
   it("does not ask the server when nothing is stored", async () => {

@@ -5,6 +5,7 @@ import {
   makeRegisterRequest,
   makeUser,
   signIn,
+  restoreSession,
   signOut,
 } from "@/test";
 import { setSessionExpiredHandler } from "@/services/session";
@@ -194,7 +195,7 @@ describe("authStore", () => {
     }
 
     it("replaces the stored user with the server's on success", async () => {
-      const stored = signIn({ fullName: "Nome Antigo" });
+      const stored = restoreSession({ fullName: "Nome Antigo" });
       countMeRequests(() =>
         HttpResponse.json({
           ...stored,
@@ -221,7 +222,7 @@ describe("authStore", () => {
 
     // Same path as a 401 during use: the store does not clear anything itself.
     it("hands a 401 to the central session-expired handler", async () => {
-      signIn();
+      restoreSession();
       const onExpired = vi.fn();
       const unsubscribe = setSessionExpiredHandler(onExpired);
       countMeRequests(() => new HttpResponse(null, { status: 401 }));
@@ -234,7 +235,7 @@ describe("authStore", () => {
     });
 
     it("drops the session through the central handler when the account is gone (404)", async () => {
-      signIn();
+      restoreSession();
       const onExpired = vi.fn();
       const unsubscribe = setSessionExpiredHandler(onExpired);
       countMeRequests(() => new HttpResponse(null, { status: 404 }));
@@ -247,7 +248,7 @@ describe("authStore", () => {
     });
 
     it("keeps the user when the request gets no response", async () => {
-      const user = signIn();
+      const user = restoreSession();
       countMeRequests(() => HttpResponse.error());
 
       await store().verifySession();
@@ -268,7 +269,7 @@ describe("authStore", () => {
     });
 
     it("sends a single request for concurrent and repeated calls", async () => {
-      const user = signIn();
+      const user = restoreSession();
       const calls = countMeRequests(() =>
         HttpResponse.json({ ...user, totalWorkloadHours: 0 }),
       );
@@ -280,7 +281,7 @@ describe("authStore", () => {
     });
 
     it("does not bring back a user who logged out during the check", async () => {
-      const user = signIn();
+      const user = restoreSession();
       countMeRequests(() =>
         HttpResponse.json({ ...user, totalWorkloadHours: 0 }),
       );
