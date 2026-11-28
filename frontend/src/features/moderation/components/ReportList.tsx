@@ -174,7 +174,7 @@ export function ReportList({ reports, onResolve }: ReportListProps) {
                       type="button"
                       aria-describedby={headingId}
                       onClick={() => onResolve(report)}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-[#0055CC] hover:bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0055CC]"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-primary hover:bg-primary-hover px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0055CC]"
                     >
                       Resolver
                     </button>

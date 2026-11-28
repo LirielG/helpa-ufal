@@ -125,7 +125,7 @@ export function ConfirmResolutionModal({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting || isConfirmBlocked}
-            className="flex-1 rounded-2xl bg-[#0066FF] hover:bg-blue-700 py-3 px-6 text-sm font-medium text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]"
+            className="flex-1 rounded-2xl bg-primary hover:bg-primary-hover py-3 px-6 text-sm font-medium text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066FF]"
           >
             {isSubmitting ? "Resolvendo..." : "Sim"}
           </button>

@@ -227,7 +227,7 @@ export function PersonalDataForm({ user, onSave }: PersonalDataFormProps) {
       <div className="flex justify-end [&>button]:w-full sm:[&>button]:w-auto">
         <Button
           type="submit"
-          variant="navy"
+          variant="primary"
           size="md"
           isLoading={isSubmitting || isSending}
           disabled={isSubmitting || isSending || !hasChanges}

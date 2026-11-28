@@ -80,7 +80,7 @@ export function HomeHeader() {
                 aria-current={isActive ? "page" : undefined}
                 className={`py-1 text-sm lg:text-[15px] xl:text-[16px] leading-[17px] tracking-[0.5px] font-medium rounded transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-4 ${
                   isActive
-                    ? "text-[#00579A] font-semibold [text-shadow:0px_4px_4px_rgba(0,87,154,0.25)]"
+                    ? "text-[#00579A] font-semibold"
                     : "text-[#44474E] hover:text-[#00579A]"
                 }`}
               >
@@ -102,7 +102,7 @@ export function HomeHeader() {
           <button
             type="button"
             onClick={() => navigate("/register")}
-            className="px-5 lg:px-6 py-2.5 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
+            className="px-5 lg:px-6 py-2.5 text-sm lg:text-[15px] xl:text-[16px] font-semibold tracking-[0.5px] text-white bg-primary rounded-lg shadow-sm hover:bg-primary-hover hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
           >
             Cadastrar-se
           </button>
@@ -178,7 +178,7 @@ export function HomeHeader() {
                 setIsMobileMenuOpen(false);
                 navigate("/register");
               }}
-              className="w-full py-2.5 text-sm font-semibold text-white bg-[#002147] rounded-lg shadow-sm hover:bg-[#00336b] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
+              className="w-full py-2.5 text-sm font-semibold text-white bg-primary rounded-lg shadow-sm hover:bg-primary-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
             >
               Cadastrar-se
             </button>

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #0B4A8B;
+  --color-primary-hover: #083A6E;
+}
+
 @layer base {
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {

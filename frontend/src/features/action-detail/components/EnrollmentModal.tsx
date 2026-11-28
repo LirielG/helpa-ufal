@@ -165,7 +165,7 @@ export function EnrollmentModal({
                   Cancelar
                 </Button>
                 <Button
-                  variant="navy"
+                  variant="primary"
                   size="md"
                   rounded
                   className="flex-1"

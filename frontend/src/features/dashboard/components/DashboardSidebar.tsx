@@ -99,7 +99,7 @@ export function DashboardSidebar({
     navigate("/login");
   };
 
-  const activeMainItemClass = "bg-[#002147] text-white font-medium shadow-xs";
+  const activeMainItemClass = "bg-primary text-white font-medium shadow-xs";
   const inactiveMainItemClass = "text-[#44474E] hover:bg-gray-100 font-medium";
 
   const hoursLabel =

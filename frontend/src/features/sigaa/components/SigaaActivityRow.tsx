@@ -34,7 +34,7 @@ export function SigaaActivityRow({ activity }: SigaaActivityRowProps) {
           href={detailUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg bg-[#072C59] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0a3d78]"
+          className="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
         >
           Ver no SIGAA
           <ExternalLink className="size-4" aria-hidden="true" />
