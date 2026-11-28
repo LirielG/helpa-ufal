@@ -136,6 +136,15 @@ describe("resolveCancellationError", () => {
     });
   });
 
+  it("reports a moderation removal on 410 ACTIVITY_REMOVED", () => {
+    const error = new ApiError(410, "Arbitrary message text", [], {
+      code: "ACTIVITY_REMOVED",
+    });
+    expect(resolveCancellationError(error)).toEqual({
+      kind: "removedByModeration",
+    });
+  });
+
   it("leaves 401 to the session handler", () => {
     const error = new ApiError(401, "Token malformatted, expired or invalid.");
     expect(resolveCancellationError(error)).toEqual({ kind: "sessionExpired" });

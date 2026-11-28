@@ -4,27 +4,48 @@ import { makeActionDetail, makeManagedActivity } from "@/test/factories";
 import { ConfirmStatusModal } from "../ConfirmStatusModal";
 
 describe("ConfirmStatusModal", () => {
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED"] as const)(
+    "gives the back-out and confirm buttons of %s the same size",
+    (pendingStatus) => {
+      render(
+        <ConfirmStatusModal
+          activity={makeManagedActivity()}
+          pendingStatus={pendingStatus}
+          isLoading={false}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+
+      for (const button of within(screen.getByRole("dialog")).getAllByRole(
+        "button",
+      )) {
+        expect(button).toHaveClass("px-3", "py-2", "text-sm", "rounded-lg");
+      }
+    },
+  );
+
   it.each([
     [
       "IN_PROGRESS",
       "Iniciar ação",
       "Voltar",
       "A ação passa a constar como em andamento. Novas inscrições deixam de ser aceitas.",
-      "bg-[#0066FF]",
+      "bg-blue-600",
     ],
     [
       "COMPLETED",
       "Concluir ação",
       "Voltar",
       "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
-      "bg-[#0066FF]",
+      "bg-blue-600",
     ],
     [
       "CANCELLED",
       "Cancelar ação",
       "Manter ação",
       "A ação continuará visível, marcada como cancelada, e não poderá ser reaberta. Os inscritos não serão avisados automaticamente.",
-      "bg-[#C81A17]",
+      "bg-red-800",
     ],
   ] as const)(
     "renders %s copy and triggers confirm/cancel callbacks",

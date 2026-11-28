@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
+import { Link, useParams, useNavigate } from "react-router";
 import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
@@ -12,13 +12,18 @@ import { EnrollmentModal } from "../features/action-detail/components/Enrollment
 import { CancelEnrollmentModal } from "../features/action-detail/components/CancelEnrollmentModal";
 import { EnrollmentActions } from "../features/action-detail/components/EnrollmentActions";
 import { GuestEnrollmentActions } from "../features/action-detail/components/GuestEnrollmentActions";
+import { ModerationNotice } from "../features/action-detail/components/ModerationNotice";
 import { getActionById } from "../features/action-detail/services";
 import { ReportActionButton } from "../features/report/components/ReportActionButton";
 import { ReportActionModal } from "../features/report/ReportActionModal";
 import { useAuth } from "../hooks/useAuth";
 import bgDashboard from "../assets/bg.svg";
 import type { Activity } from "@/services/contracts/activity";
-import { ApiError } from "@/services/apiError";
+import {
+  ACTIVITY_REMOVED_MESSAGE,
+  ApiError,
+  isActivityRemoved,
+} from "@/services/apiError";
 import { PageTitle } from "../components/PageTitle";
 
 export function ActionDetail() {
@@ -37,6 +42,9 @@ function ActionDetailView({ id }: { id: string | undefined }) {
   const [action, setAction] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
+  // The API answers 410 instead of the action to anyone but its author and
+  // managers, so the page has nothing of the action to show.
+  const [isRemoved, setIsRemoved] = useState(false);
   const [canRetry, setCanRetry] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -76,6 +84,10 @@ function ActionDetailView({ id }: { id: string | undefined }) {
       .catch((error: unknown) => {
         if (!isMounted) return;
         if (error instanceof ApiError && error.status === 401) return;
+        if (isActivityRemoved(error)) {
+          setIsRemoved(true);
+          return;
+        }
 
         const notFound = error instanceof ApiError && error.status === 404;
         setCanRetry(!notFound);
@@ -110,10 +122,28 @@ function ActionDetailView({ id }: { id: string | undefined }) {
     try {
       const updatedAction = await getActionById(id);
       setAction(updatedAction);
-    } catch {
+      setIsRemoved(false);
+    } catch (error) {
       restoreEnrollmentFocus.current = false;
-      // A failed refresh must not erase the action after a completed enrollment change.
+      if (isActivityRemoved(error)) {
+        setAction(null);
+        setIsRemoved(true);
+      }
+      // Any other failure must not erase the action after a completed enrollment change.
     }
+  };
+
+  // The modal already told the user. The page turns into the removed one
+  // right away, so a failed refetch cannot leave controls that only answer
+  // 410 again; a refetch that succeeds brings the author and managers back
+  // to the action with its moderation notice.
+  const handleRemovedByModeration = () => {
+    setShowModal(false);
+    setShowCancelModal(false);
+    setShowReportModal(false);
+    setAction(null);
+    setIsRemoved(true);
+    void refreshAction();
   };
 
   const handleEnrollmentSuccess = () => {
@@ -140,18 +170,38 @@ function ActionDetailView({ id }: { id: string | undefined }) {
     setError("Esta ação não existe mais.");
   };
 
+  const isModerated = Boolean(action?.moderation);
+
   // Convenience only: GET /activities/:id/enrollments still enforces this on
   // the server, and EnrollmentsPage handles a 403 if the stored role is stale.
+  // It also answers 410 for a removed action, even to its author.
   const canViewEnrollments = Boolean(
-    action && user && (user.id === action.authorId || user.isManager),
+    action &&
+    !isModerated &&
+    user &&
+    (user.id === action.authorId || user.isManager),
   );
 
   return (
     <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
-      <PageTitle title={action?.title ?? "Ação"} />
+      <PageTitle
+        title={isRemoved ? "Ação removida" : (action?.title ?? "Ação")}
+      />
       {isLoading && (
         <div className="flex-1 flex items-center justify-center min-h-[60vh]">
           <p className="text-gray-500 text-lg">Carregando...</p>
+        </div>
+      )}
+
+      {!isLoading && isRemoved && (
+        <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col items-start gap-4">
+          <Alert type="warning" message={ACTIVITY_REMOVED_MESSAGE} />
+          <Link
+            to="/dashboard"
+            className="px-4 py-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition"
+          >
+            Explorar ações
+          </Link>
         </div>
       )}
 
@@ -199,7 +249,10 @@ function ActionDetailView({ id }: { id: string | undefined }) {
               backgroundSize: "cover",
             }}
           >
-            <div className="page-container py-10">
+            <div className="page-container py-10 flex flex-col gap-8">
+              {action.moderation && (
+                <ModerationNotice moderation={action.moderation} />
+              )}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 flex flex-col gap-8">
                   <ActionDescription
@@ -211,16 +264,18 @@ function ActionDetailView({ id }: { id: string | undefined }) {
                 </div>
 
                 <div className="lg:col-span-1 flex flex-col gap-4">
-                  {isAuthenticated ? (
-                    <EnrollmentActions
-                      action={action}
-                      cancelButtonRef={cancelButtonRef}
-                      onEnroll={() => setShowModal(true)}
-                      onCancel={() => setShowCancelModal(true)}
-                    />
-                  ) : (
-                    <GuestEnrollmentActions action={action} />
-                  )}
+                  {/* Every write on a removed action answers 410. */}
+                  {!isModerated &&
+                    (isAuthenticated ? (
+                      <EnrollmentActions
+                        action={action}
+                        cancelButtonRef={cancelButtonRef}
+                        onEnroll={() => setShowModal(true)}
+                        onCancel={() => setShowCancelModal(true)}
+                      />
+                    ) : (
+                      <GuestEnrollmentActions action={action} />
+                    ))}
 
                   {canViewEnrollments && (
                     <Button
@@ -237,13 +292,15 @@ function ActionDetailView({ id }: { id: string | undefined }) {
                   )}
 
                   {/* The API answers 401 to visitors and 403 to the author. */}
-                  {isAuthenticated && user?.id !== action.authorId && (
-                    <ReportActionButton
-                      reported={isReported}
-                      onClick={() => setShowReportModal(true)}
-                      className="self-center"
-                    />
-                  )}
+                  {!isModerated &&
+                    isAuthenticated &&
+                    user?.id !== action.authorId && (
+                      <ReportActionButton
+                        reported={isReported}
+                        onClick={() => setShowReportModal(true)}
+                        className="self-center"
+                      />
+                    )}
                 </div>
               </div>
             </div>
@@ -254,6 +311,7 @@ function ActionDetailView({ id }: { id: string | undefined }) {
               action={action}
               onClose={() => setShowModal(false)}
               onSuccess={handleEnrollmentSuccess}
+              onRemovedByModeration={handleRemovedByModeration}
               getFallbackFocus={getFallbackFocus}
             />
           )}
@@ -264,6 +322,7 @@ function ActionDetailView({ id }: { id: string | undefined }) {
               onClose={() => setShowCancelModal(false)}
               onCancelled={handleCancelled}
               onActivityRemoved={handleActivityRemoved}
+              onRemovedByModeration={handleRemovedByModeration}
               onActivityClosed={refreshAction}
             />
           )}
@@ -273,6 +332,7 @@ function ActionDetailView({ id }: { id: string | undefined }) {
             actionId={action.id}
             onClose={closeReportModal}
             onReported={markReported}
+            onRemovedByModeration={handleRemovedByModeration}
           />
         </>
       )}

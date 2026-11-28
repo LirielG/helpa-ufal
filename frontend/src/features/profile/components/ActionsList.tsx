@@ -186,6 +186,7 @@ export function ActionsList() {
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
                       onDelete={reloadActivities}
+                      onActivityRemoved={reloadActivities}
                     />
                   );
                 }

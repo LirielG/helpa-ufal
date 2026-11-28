@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { toast } from "react-toastify";
+import { ACTIVITY_REMOVED_MESSAGE } from "@/services/apiError";
 import { UserMinus } from "lucide-react";
 import { Button } from "../../../components/Button";
 import { ActionSummary } from "./ActionSummary";
@@ -14,6 +15,8 @@ interface CancelEnrollmentModalProps {
   /** The enrollment is no longer active, whether by this request or a concurrent one. */
   onCancelled: () => void;
   onActivityRemoved: () => void;
+  /** The API refused with 410: the toast is shown; the caller reloads its data. */
+  onRemovedByModeration: () => void;
   onActivityClosed: () => void;
 }
 
@@ -22,6 +25,7 @@ export function CancelEnrollmentModal({
   onClose,
   onCancelled,
   onActivityRemoved,
+  onRemovedByModeration,
   onActivityClosed,
 }: CancelEnrollmentModalProps) {
   const titleId = useId();
@@ -52,6 +56,10 @@ export function CancelEnrollmentModal({
           break;
         case "activityRemoved":
           onActivityRemoved();
+          break;
+        case "removedByModeration":
+          toast.error(ACTIVITY_REMOVED_MESSAGE);
+          onRemovedByModeration();
           break;
         case "sessionExpired":
           break;
