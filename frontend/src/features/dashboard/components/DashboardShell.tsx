@@ -21,6 +21,8 @@ type ProfileState = {
   userId: string;
   data: UserProfile | null;
   failed: boolean;
+  /** Handed over by a page, so fresher than any read the shell has in flight. */
+  synced?: boolean;
 };
 
 /**
@@ -82,15 +84,25 @@ export function DashboardShell() {
 
     getProfile()
       .then((data) => {
-        if (isCurrent) setProfileState({ userId, data, failed: false });
+        if (!isCurrent) return;
+
+        setProfileState((previous) =>
+          previous?.userId === userId && previous.synced
+            ? previous
+            : { userId, data, failed: false },
+        );
       })
       .catch(() => {
         if (isCurrent) {
-          setProfileState((previous) => ({
-            userId,
-            data: previous?.userId === userId ? previous.data : null,
-            failed: true,
-          }));
+          setProfileState((previous) =>
+            previous?.userId === userId && previous.synced
+              ? previous
+              : {
+                  userId,
+                  data: previous?.userId === userId ? previous.data : null,
+                  failed: true,
+                },
+          );
         }
       });
 
@@ -111,7 +123,12 @@ export function DashboardShell() {
       setOptions,
       // Keyed by the profile's own id: one of another account is never shown.
       syncProfile: (profile: UserProfile) =>
-        setProfileState({ userId: profile.id, data: profile, failed: false }),
+        setProfileState({
+          userId: profile.id,
+          data: profile,
+          failed: false,
+          synced: true,
+        }),
     }),
     [],
   );

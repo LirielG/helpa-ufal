@@ -212,6 +212,45 @@ describe("DashboardShell as a layout route", () => {
       ).toBeInTheDocument();
     });
 
+    it("keeps the profile a page hands it when its own, older read answers later", async () => {
+      const signedIn = signIn();
+      let release: () => void = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.get(`${API}/users/me`, async () => {
+          await gate;
+          return HttpResponse.json(
+            profileOf(signedIn, { course: "Curso antigo" }),
+          );
+        }),
+      );
+
+      renderShell(
+        "/profile",
+        <PageWithSyncedProfile
+          profile={profileOf(signedIn, { course: "Engenharia Civil" })}
+        />,
+      );
+      expect(
+        await within(sidebar()).findByText("Engenharia Civil"),
+      ).toBeInTheDocument();
+
+      release();
+      // Lets the held response reach the shell.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      expect(
+        within(sidebar()).getByText("Engenharia Civil"),
+      ).toBeInTheDocument();
+      expect(
+        within(sidebar()).queryByText("Curso antigo"),
+      ).not.toBeInTheDocument();
+    });
+
     it("shows the new account's profile, never the previous one's, when the user changes", async () => {
       signIn({ fullName: "Ana Souza" });
       server.use(
