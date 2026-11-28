@@ -96,6 +96,20 @@ function userActivityWhere(
           },
         ],
       };
+    // Deleted and moderation-removed activities stay, as in completed: the
+    // certificate remains valid and downloadable.
+    case "certified":
+      return {
+        status: "COMPLETED",
+        enrollments: {
+          some: {
+            userId,
+            status: ACTIVE_ENROLLMENT_STATUS,
+            attendanceConfirmed: true,
+            certificate: { isNot: null },
+          },
+        },
+      };
     case "managed":
       return { deletedAt: null, authorId: userId };
   }
