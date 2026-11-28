@@ -141,6 +141,24 @@ describe("AppRoutes", () => {
 
       expect(await findDashboard()).toBeInTheDocument();
     });
+
+    it("sends a signed-in user from /forgot-password to the dashboard", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/forgot-password" });
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("sends a signed-in user from /reset-password to the dashboard", async () => {
+      signIn();
+
+      render(<AppRoutes />, {
+        route: "/reset-password#email=ana%40ufal.br&code=ABCD1234",
+      });
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
   });
 
   describe("public routes", () => {
@@ -418,6 +436,16 @@ describe("AppRoutes", () => {
       },
       { route: "/login", signedIn: false, title: "Entrar | Helpa" },
       { route: "/register", signedIn: false, title: "Cadastrar-se | Helpa" },
+      {
+        route: "/forgot-password",
+        signedIn: false,
+        title: "Esqueci minha senha | Helpa",
+      },
+      {
+        route: "/reset-password",
+        signedIn: false,
+        title: "Redefinir senha | Helpa",
+      },
       { route: "/dashboard", signedIn: false, title: "Ações | Helpa" },
       {
         route: "/activity/1",

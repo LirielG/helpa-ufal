@@ -2,6 +2,8 @@ import { Routes, Route } from "react-router";
 import {
   Login,
   Register,
+  ForgotPassword,
+  ResetPassword,
   Dashboard,
   Home,
   ActionDetail,
@@ -45,6 +47,22 @@ export function AppRoutes() {
           element={
             <GuestRoute>
               <Register />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <GuestRoute>
+              <ForgotPassword />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <GuestRoute>
+              <ResetPassword />
             </GuestRoute>
           }
         />
