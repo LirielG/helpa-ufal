@@ -12,8 +12,8 @@ import { PageTitle } from "@/components/PageTitle";
  * never change.
  *
  * The readers have no account and are checking someone else's document, so
- * the page shows nothing tied to a session (no Navbar: it links to the
- * profile) and behaves the same for visitors and signed-in users.
+ * the page shows nothing tied to a session and behaves the same for
+ * visitors and signed-in users.
  */
 export function CertificateValidation() {
   const { validationCode = "" } = useParams<{ validationCode: string }>();
