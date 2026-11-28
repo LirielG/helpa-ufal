@@ -1,4 +1,4 @@
-import { useCallback, useState, type SetStateAction } from "react";
+import { useEffect, useState } from "react";
 
 function readFlag(key: string, defaultValue: boolean): boolean {
   try {
@@ -19,20 +19,15 @@ function readFlag(key: string, defaultValue: boolean): boolean {
 export function usePersistedFlag(key: string, defaultValue: boolean) {
   const [value, setValue] = useState(() => readFlag(key, defaultValue));
 
-  const update = useCallback(
-    (next: SetStateAction<boolean>) => {
-      setValue((previous) => {
-        const resolved = typeof next === "function" ? next(previous) : next;
-        try {
-          localStorage.setItem(key, String(resolved));
-        } catch {
-          // Not remembered across reloads, but the toggle still applies.
-        }
-        return resolved;
-      });
-    },
-    [key],
-  );
+  // In an effect rather than in the setter: a state updater must stay pure,
+  // and only a committed value is worth remembering.
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, String(value));
+    } catch {
+      // Not remembered across reloads, but the toggle still applies.
+    }
+  }, [key, value]);
 
-  return [value, update] as const;
+  return [value, setValue] as const;
 }
