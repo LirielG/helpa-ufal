@@ -11,6 +11,7 @@ import type {
 import { SigaaActivityRow } from "./SigaaActivityRow";
 import { FeedFallback } from "../../../components/FeedFallback";
 import { SigaaFilterBar } from "./SigaaFilterBar";
+import { SigaaListSkeleton } from "./SigaaListSkeleton";
 
 interface SigaaFeedProps {
   onExploreHelpa: () => void;
@@ -152,11 +153,9 @@ export function SigaaFeed({
         hasError={hasError}
       />
 
-      {isLoading && (
-        <p className="text-center text-gray-500 py-10 font-medium">
-          Buscando ações do SIGAA...
-        </p>
-      )}
+      <div aria-busy={isLoading} className="flex flex-col gap-8">
+
+      {isLoading && <SigaaListSkeleton />}
 
       {!isLoading && hasError && (
         <FeedFallback
@@ -203,6 +202,7 @@ export function SigaaFeed({
           />
         </>
       )}
+      </div>
     </div>
   );
 }

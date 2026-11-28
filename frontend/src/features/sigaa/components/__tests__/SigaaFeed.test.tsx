@@ -12,6 +12,7 @@ import {
   within,
 } from "@/test";
 import { SigaaFeed } from "../SigaaFeed";
+import { SIGAA_PAGE_SIZE } from "../../constants";
 
 function listResponse(
   items: ReturnType<typeof makeSigaaActivity>[],
@@ -30,6 +31,47 @@ function renderFeed(onExploreHelpa = vi.fn()) {
 }
 
 describe("SigaaFeed", () => {
+    it("shows a skeleton on the first load and on page change", async () => {
+    let release = () => {};
+    const hold = () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    let gate = hold();
+
+    server.use(
+      http.get(`${API}/sigaa-activities`, async () => {
+        await gate;
+        return listResponse([makeSigaaActivity({ title: "Recital Didático" })], {
+          total: 40,
+          totalPages: 4,
+        });
+      }),
+    );
+
+    const { user } = renderFeed();
+
+    const expectSkeleton = () => {
+      const skeleton = screen.getByTestId("sigaa-skeleton");
+      expect(
+        within(skeleton).getAllByRole("listitem", { hidden: true }),
+      ).toHaveLength(SIGAA_PAGE_SIZE);
+      expect(skeleton.parentElement).toHaveAttribute("aria-busy", "true");
+    };
+
+    expectSkeleton();
+    release();
+    await screen.findByRole("heading", { name: "Recital Didático" });
+    expect(screen.queryByTestId("sigaa-skeleton")).not.toBeInTheDocument();
+
+    gate = hold();
+    await user.click(screen.getByRole("button", { name: "Página 2" }));
+    expectSkeleton();
+
+    release();
+    await screen.findByRole("heading", { name: "Recital Didático" });
+  });
+  
   it("renders the activities returned by the API", async () => {
     server.use(
       http.get(`${API}/sigaa-activities`, () =>
