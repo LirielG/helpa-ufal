@@ -209,6 +209,50 @@ describe("AppRoutes", () => {
         "",
       );
     });
+
+    it("lets a guest open /como-funciona and navigate to the feed", async () => {
+      const { user } = render(<AppRoutes />, { route: "/como-funciona" });
+
+      expect(
+        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          name: "Como funcionam as ações e certificados no Helpa?",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /sair/i })).toBeNull();
+
+      await user.click(
+        screen.getByRole("button", { name: /ir para o feed de ações/i }),
+      );
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
+
+    it("lets a signed-in user reach /como-funciona via Ajuda and return to the feed", async () => {
+      signIn();
+      const { user } = render(<AppRoutes />, { route: "/dashboard" });
+
+      expect(await findDashboard()).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /ajuda/i }));
+
+      expect(
+        await screen.findByRole("heading", { name: /como o helpa funciona/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", {
+          name: "Como funcionam as ações e certificados no Helpa?",
+        }),
+      ).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole("button", { name: /ir para o feed de ações/i }),
+      );
+
+      expect(await findDashboard()).toBeInTheDocument();
+    });
   });
 
   describe("expired session", () => {

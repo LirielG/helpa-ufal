@@ -1162,6 +1162,75 @@ describe("ActionsList certificates", () => {
     expect(screen.getByText("20 horas")).toBeInTheDocument();
   });
 
+  it("shows the certificate guidance notice and opens the How It Works overlay in filled and empty states", async () => {
+    signIn();
+    serveByFilter({
+      completed: [
+        makeUserActivityItem({ title: PENDING_TITLE, status: "COMPLETED" }),
+      ],
+    });
+
+    const { user } = await openSubTab("completed");
+
+    expect(await screen.findByText(PENDING_TITLE)).toBeInTheDocument();
+    expect(screen.getByText("Sobre os seus certificados:")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /o certificado aparece no card para download depois que o responsável homologa sua presença e suas horas/i,
+      ),
+    ).toBeInTheDocument();
+
+    const trigger = screen.getByRole("button", { name: "Como funciona" });
+    await user.click(trigger);
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Como funcionam as ações e certificados no Helpa?",
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("1. Inscrição e Participação"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("2. Conclusão da Ação")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("3. Homologação de Presença e Carga Horária"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("4. Emissão Automática do Certificado"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("5. Download no Seu Perfil"),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Fechar" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows the certificate guidance notice and opens the overlay when completed list is empty", async () => {
+    signIn();
+    serveByFilter({});
+
+    const { user } = await openSubTab("completed");
+
+    expect(
+      await screen.findByText("Você ainda não concluiu nenhuma ação."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Sobre os seus certificados:")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /o certificado aparece no card para download depois que o responsável homologa sua presença e suas horas/i,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Como funciona" }));
+
+    expect(
+      screen.getByRole("dialog", {
+        name: "Como funcionam as ações e certificados no Helpa?",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it.each(["enrolled", "managed"] as const)(
     "shows nothing about certificates on the %s sub-tab",
     async (filter) => {

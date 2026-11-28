@@ -13,6 +13,8 @@ import {
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
+import { CompletedCertificatesNotice } from "./CompletedCertificatesNotice";
+import { CertificateFlowModal } from "./CertificateFlowModal";
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ export function ActionsList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
+  const [isCertificateFlowOpen, setIsCertificateFlowOpen] = useState(false);
 
   useEffect(() => {
     if (!filterParam || !isActivityStatus(filterParam)) {
@@ -55,6 +58,7 @@ export function ActionsList() {
     setActivities([]);
     setError(null);
     setIsLoading(true);
+    setIsCertificateFlowOpen(false);
   }
 
   const reloadActivities = useCallback(() => {
@@ -204,8 +208,19 @@ export function ActionsList() {
             totalPages={totalPages}
             onPageChange={selectPage}
           />
+
+          {activeSubTab === "completed" && (
+            <CompletedCertificatesNotice
+              onOpenHowItWorks={() => setIsCertificateFlowOpen(true)}
+            />
+          )}
         </>
       )}
+
+      <CertificateFlowModal
+        open={activeSubTab === "completed" && isCertificateFlowOpen}
+        onClose={() => setIsCertificateFlowOpen(false)}
+      />
     </div>
   );
 }

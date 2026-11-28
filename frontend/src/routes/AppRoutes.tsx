@@ -4,6 +4,7 @@ import {
   Register,
   Dashboard,
   Home,
+  HowItWorks,
   ActionDetail,
   Profile,
   EditAction,
@@ -117,6 +118,14 @@ export function AppRoutes() {
         element={
           <PublicRoute>
             <CertificateValidation />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/como-funciona"
+        element={
+          <PublicRoute>
+            <HowItWorks />
           </PublicRoute>
         }
       />

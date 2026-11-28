@@ -201,4 +201,33 @@ describe("DashboardSidebar", () => {
       screen.getByRole("button", { name: /Atividades Inscritas/i }),
     ).not.toHaveAttribute("aria-current");
   });
+
+  it("navigates to /como-funciona when clicking Ajuda and highlights it on that route", async () => {
+    signIn();
+    const { user } = render(
+      <Routes>
+        <Route
+          path="/como-funciona"
+          element={
+            <>
+              <h1>Como o Helpa Funciona?</h1>
+              <DashboardSidebar />
+            </>
+          }
+        />
+        <Route path="*" element={<DashboardSidebar />} />
+      </Routes>,
+      { route: "/dashboard" },
+    );
+
+    await user.click(screen.getByRole("button", { name: /Ajuda/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Como o Helpa Funciona?" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ajuda/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
 });

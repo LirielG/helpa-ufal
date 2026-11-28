@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router";
 import {
   HomeHeader,
   type HomeTabId,
@@ -9,7 +10,18 @@ import { FeedSection } from "../features/dashboard/components/FeedSection";
 import { Footer } from "../components/Footer";
 
 export function Home() {
-  const [activeTab, setActiveTab] = useState<HomeTabId>("about");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<HomeTabId>(() =>
+    location.hash === "#como-funciona" ? "how-it-works" : "about",
+  );
+  const [trackedHash, setTrackedHash] = useState(location.hash);
+
+  if (trackedHash !== location.hash) {
+    setTrackedHash(location.hash);
+    if (location.hash === "#como-funciona") {
+      setActiveTab("how-it-works");
+    }
+  }
 
   const handleSelectTab = (tab: HomeTabId) => {
     setActiveTab(tab);
