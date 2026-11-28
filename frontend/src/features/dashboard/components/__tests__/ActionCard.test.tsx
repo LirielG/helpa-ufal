@@ -161,7 +161,6 @@ describe("ActionCard", () => {
         type={action.type}
         category="Robótica"
         title={action.title}
-        onBack={() => {}}
       />,
     );
 

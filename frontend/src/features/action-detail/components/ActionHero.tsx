@@ -1,6 +1,6 @@
-import { ArrowLeft } from "lucide-react";
 import type { RefObject } from "react";
 import { ActionCover } from "@/components/ActionCover";
+import { BackLink } from "@/components/BackLink";
 import type { ActivityType } from "@/services/contracts/activity";
 
 interface ActionHeroProps {
@@ -8,7 +8,6 @@ interface ActionHeroProps {
   type: ActivityType;
   category: string;
   title: string;
-  onBack: () => void;
   titleRef?: RefObject<HTMLHeadingElement | null>;
 }
 
@@ -17,7 +16,6 @@ export function ActionHero({
   type,
   category,
   title,
-  onBack,
   titleRef,
 }: ActionHeroProps) {
   return (
@@ -37,18 +35,12 @@ export function ActionHero({
 
       <div className="relative z-10 page-container pt-6 pb-8">
         <div className="max-w-4xl">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-white/90 hover:text-white text-sm mb-3 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="size-4" />
-            Voltar
-          </button>
-
-          <span className="inline-block bg-[#1B75BB] text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
-            {category}
-          </span>
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            <BackLink variant="light" />
+            <span className="inline-block bg-[#1B75BB] text-white text-xs font-semibold px-3 py-1 rounded-full">
+              {category}
+            </span>
+          </div>
 
           <h1
             ref={titleRef}
