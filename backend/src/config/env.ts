@@ -76,6 +76,15 @@ const BaseEnvSchema = z.object({
         });
         return z.NEVER;
       }
+      // url.origin would drop it silently, printing an address other than
+      // the one configured.
+      if (url.username || url.password) {
+        ctx.addIssue({
+          code: "custom",
+          message: "APP_PUBLIC_URL must not have a username or password.",
+        });
+        return z.NEVER;
+      }
       if (url.pathname.replace(/\/+$/, "")) {
         ctx.addIssue({
           code: "custom",

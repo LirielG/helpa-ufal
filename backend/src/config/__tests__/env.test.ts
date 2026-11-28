@@ -155,6 +155,8 @@ describe("EnvSchema — APP_PUBLIC_URL", () => {
     "ftp://helpa.ufal.br",
     "https://helpa.ufal.br/?utm=x",
     "https://helpa.ufal.br/#/",
+    "https://admin:secret@helpa.ufal.br",
+    "https://admin@helpa.ufal.br",
   ])("rejects %s, naming the variable in the error", (value) => {
     const result = EnvSchema.safeParse({
       ...minimalEnv,
