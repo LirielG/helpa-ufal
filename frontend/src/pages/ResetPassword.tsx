@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { KeyRound, Mail } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -128,6 +128,20 @@ export function ResetPassword() {
     defaultValue: "",
   });
 
+  const showResetError = useCallback(
+    (error: unknown) => {
+      const resolved = getResetPasswordError(error);
+      if (resolved.kind === "invalidCode") {
+        setVerifyError("code", { type: "server", message: resolved.message });
+        setShowRequestNewCodeLink(true);
+      } else {
+        setFormError(resolved.message);
+      }
+      return resolved.kind;
+    },
+    [setVerifyError],
+  );
+
   // Strip the fragment as soon as it arrives so the reset code does not linger
   // in the browser address bar or history.
   useEffect(() => {
@@ -176,23 +190,14 @@ export function ResetPassword() {
       })
       .catch((error: unknown) => {
         if (requestId !== latestAutoVerifyRef.current) return;
-        const resolved = getResetPasswordError(error);
-        if (resolved.kind === "invalidCode") {
-          setVerifyError("code", {
-            type: "server",
-            message: resolved.message,
-          });
-          setShowRequestNewCodeLink(true);
-        } else {
-          setFormError(resolved.message);
-        }
+        showResetError(error);
         setIsAutoVerifying(false);
       });
 
     return () => {
       latestAutoVerifyRef.current += 1;
     };
-  }, [initialParams, setVerifyError]);
+  }, [initialParams, showResetError]);
 
   const onVerifySubmit = async (data: VerifyResetCodeFields) => {
     if (isSubmittingRef.current || isAutoVerifying) return;
@@ -210,16 +215,7 @@ export function ResetPassword() {
       resetPasswordForm();
       setVerifiedTarget({ email: data.email, code: data.code });
     } catch (error) {
-      const resolved = getResetPasswordError(error);
-      if (resolved.kind === "invalidCode") {
-        setVerifyError("code", {
-          type: "server",
-          message: resolved.message,
-        });
-        setShowRequestNewCodeLink(true);
-      } else {
-        setFormError(resolved.message);
-      }
+      showResetError(error);
     } finally {
       isSubmittingRef.current = false;
       setIsVerifying(false);
@@ -240,22 +236,15 @@ export function ResetPassword() {
         newPassword: data.newPassword,
       });
     } catch (error) {
-      const resolved = getResetPasswordError(error);
-      if (resolved.kind === "invalidCode") {
-        // The code expired or was invalidated between steps: return to step 1
-        // with the field error and the link to request a fresh code.
-        resetVerifyForm({
-          email: verifiedTarget.email,
-          code: verifiedTarget.code,
-        });
-        setVerifyError("code", {
-          type: "server",
-          message: resolved.message,
-        });
-        setShowRequestNewCodeLink(true);
+      // The code expired or was invalidated between steps: return to step 1
+      // with the field error and the link to request a fresh code. The form is
+      // reset first because reset() would clear the error set afterwards.
+      resetVerifyForm({
+        email: verifiedTarget.email,
+        code: verifiedTarget.code,
+      });
+      if (showResetError(error) === "invalidCode") {
         setVerifiedTarget(null);
-      } else {
-        setFormError(resolved.message);
       }
       return;
     } finally {
@@ -317,6 +306,7 @@ export function ResetPassword() {
           <PasswordField
             label="Nova senha"
             placeholder="Digite a nova senha"
+            autoComplete="new-password"
             error={resetErrors.newPassword?.message}
             registration={registerReset("newPassword")}
             showPassword={showPassword}
@@ -328,6 +318,7 @@ export function ResetPassword() {
           <PasswordField
             label="Confirmar nova senha"
             placeholder="Digite a nova senha novamente"
+            autoComplete="new-password"
             error={resetErrors.confirmNewPassword?.message}
             registration={registerReset("confirmNewPassword")}
             showPassword={showPassword}

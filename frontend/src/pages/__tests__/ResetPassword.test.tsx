@@ -316,6 +316,19 @@ describe("ResetPassword", () => {
       return view;
     }
 
+    it("marks both password fields as new passwords so the saved one is not autofilled", async () => {
+      await enterStep2();
+
+      expect(screen.getByLabelText("Nova senha")).toHaveAttribute(
+        "autocomplete",
+        "new-password",
+      );
+      expect(screen.getByLabelText("Confirmar nova senha")).toHaveAttribute(
+        "autocomplete",
+        "new-password",
+      );
+    });
+
     it("shows PasswordGuidelines and blocks weak passwords and mismatched confirmation", async () => {
       const onReset = vi.fn();
       server.use(
