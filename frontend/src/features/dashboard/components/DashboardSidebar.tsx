@@ -75,6 +75,8 @@ export function DashboardSidebar({
 
   const isPersonalDataActive = location.pathname === "/profile";
 
+  const isCertificatesActive = location.pathname === "/my-certificates";
+
   const isModerationActive = location.pathname === "/moderation";
 
   const isHelpActive = location.pathname === "/how-it-works";
@@ -286,8 +288,13 @@ export function DashboardSidebar({
 
             <button
               type="button"
-              onClick={() => handleActionSubNavigate("completed")}
-              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${inactiveMainItemClass}`}
+              onClick={() => handleNavigate("/my-certificates")}
+              aria-current={isCertificatesActive ? "page" : undefined}
+              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
+                isCertificatesActive
+                  ? activeMainItemClass
+                  : inactiveMainItemClass
+              }`}
             >
               <BadgeCheck className="size-4 lg:size-5 shrink-0" />
               <span>{SIDEBAR_LABELS.certificates}</span>

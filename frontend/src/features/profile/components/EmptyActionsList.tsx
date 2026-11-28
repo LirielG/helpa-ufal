@@ -1,8 +1,8 @@
 import { EMPTY_STATE_CONFIGS } from "../constants";
-import type { ActivityStatus } from "../types";
+import type { UserActivityList } from "../types";
 
 interface EmptyActionsListProps {
-  subTab: ActivityStatus;
+  subTab: UserActivityList;
   onNavigate: (route: string) => void;
   onOpenRegisterModal: () => void;
 }

@@ -8,7 +8,8 @@
 import type { Activity } from "./activity";
 import type { Enrollment } from "./enrollment";
 
-export type UserActivityFilter = "enrolled" | "completed" | "managed";
+export type UserActivityFilter =
+  "enrolled" | "completed" | "managed" | "certified";
 
 /** `validationCode` comes in its stored form; hyphenating it is the screen's job. */
 export interface UserActivityCertificate {

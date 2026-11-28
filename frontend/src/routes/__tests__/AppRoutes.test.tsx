@@ -95,6 +95,39 @@ describe("AppRoutes", () => {
       ).toBeInTheDocument();
     });
 
+    it("returns a guest to /my-certificates after logging in", async () => {
+      const { user } = render(<AppRoutes />, { route: "/my-certificates" });
+
+      await screen.findByLabelText("Usuário");
+      await submitLogin(user);
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Meus certificados",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("opens /my-certificates directly, with only its sidebar item active", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/my-certificates" });
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Meus certificados",
+        }),
+      ).toBeInTheDocument();
+      const aside = screen.getByRole("complementary", {
+        name: "Menu lateral do usuário",
+      });
+      expect(
+        within(aside).getByRole("button", { name: /Certificados/i }),
+      ).toHaveAttribute("aria-current", "page");
+    });
+
     it("lets a signed-in user reach /profile", async () => {
       signIn();
 

@@ -10,4 +10,5 @@ export { EnrollmentsPage } from "./EnrollmentsPage";
 export { CertificateValidation } from "./CertificateValidation";
 export { ModerationPage } from "./ModerationPage";
 export { MyActivities } from "./MyActivities";
+export { MyCertificates } from "./MyCertificates";
 export { HowItWorks } from "./HowItWorks";

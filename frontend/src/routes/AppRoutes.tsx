@@ -12,6 +12,7 @@ import {
   CertificateValidation,
   ModerationPage,
   MyActivities,
+  MyCertificates,
   HowItWorks,
 } from "../pages";
 
@@ -100,6 +101,14 @@ export function AppRoutes() {
             element={
               <ProtectedRoute>
                 <MyActivities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-certificates"
+            element={
+              <ProtectedRoute>
+                <MyCertificates />
               </ProtectedRoute>
             }
           />

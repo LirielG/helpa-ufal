@@ -217,11 +217,11 @@ describe("DashboardSidebar", () => {
     ).toBeInTheDocument();
   });
 
-  it("navigates to /my-activities?filter=completed when clicking Meus certificados", async () => {
+  it("navigates to /my-certificates when clicking Meus certificados", async () => {
     signIn();
     const { user } = render(
       <Routes>
-        <Route path="/my-activities" element={<h1>Minhas Atividades</h1>} />
+        <Route path="/my-certificates" element={<h1>Certificados</h1>} />
         <Route path="*" element={<DashboardSidebar />} />
       </Routes>,
       { route: "/dashboard" },
@@ -229,8 +229,58 @@ describe("DashboardSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: /Certificados/i }));
     expect(
-      screen.getByRole("heading", { name: "Minhas Atividades" }),
+      screen.getByRole("heading", { name: "Certificados" }),
     ).toBeInTheDocument();
+  });
+
+  it("closes the mobile drawer when choosing Meus certificados", async () => {
+    signIn();
+    const onCloseMobile = vi.fn();
+    const { user } = renderSidebarAt("/dashboard", {
+      isOpenMobile: true,
+      onCloseMobile,
+    });
+
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /Certificados/i,
+      }),
+    );
+
+    expect(onCloseMobile).toHaveBeenCalledTimes(1);
+  });
+
+  it("highlights only Meus certificados on /my-certificates", () => {
+    signIn({ isManager: true });
+    renderSidebarAt("/my-certificates");
+
+    const aside = screen.getByRole("complementary", {
+      name: "Menu lateral do usuário",
+    });
+    const current = within(aside)
+      .getAllByRole("button")
+      .filter((button) => button.getAttribute("aria-current") === "page");
+    expect(current).toEqual([
+      within(aside).getByRole("button", { name: /Certificados/i }),
+    ]);
+    expect(within(aside).getByRole("button", { name: "Ações" })).toHaveClass(
+      "text-[#44474E]",
+    );
+  });
+
+  it("leaves Meus certificados off on /my-activities?filter=completed", () => {
+    signIn();
+    renderSidebarAt("/my-activities?filter=completed");
+
+    const aside = screen.getByRole("complementary", {
+      name: "Menu lateral do usuário",
+    });
+    expect(
+      within(aside).getByRole("button", { name: /Certificados/i }),
+    ).not.toHaveAttribute("aria-current");
+    expect(
+      within(aside).getByRole("button", { name: "Atividades Concluídas" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 
   it("highlights Ações and the active subitem on /my-activities?filter=completed", () => {
