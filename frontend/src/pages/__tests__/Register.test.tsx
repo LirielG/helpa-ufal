@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router";
 import { delay } from "msw";
 import { describe, expect, it } from "vitest";
 import type { UserEvent } from "@testing-library/user-event";
-import { render, screen, http, HttpResponse, server } from "@/test";
+import { render, screen, within, http, HttpResponse, server } from "@/test";
 import { makeUser } from "@/test";
 import { config } from "@/config";
 import { REGISTER_SUCCESS_MESSAGE } from "@/features/auth/constants/messages";
@@ -156,7 +156,7 @@ describe("Register page", () => {
       );
 
       await user.click(
-        screen.getByRole("button", {
+        screen.getByRole("link", {
           name: /voltar para a seleção de cadastro/i,
         }),
       );
@@ -169,6 +169,46 @@ describe("Register page", () => {
       expect(
         screen.getByPlaceholderText("Digite seu nome completo"),
       ).toHaveValue("");
+    });
+
+    it("returns to profile selection rather than /login when arriving from login", async () => {
+      const { user } = render(
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <GuestRoute>
+                <Login />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <GuestRoute>
+                <Register />
+              </GuestRoute>
+            }
+          />
+        </Routes>,
+        { route: "/login" },
+      );
+
+      await user.click(
+        within(screen.getByRole("main")).getByRole("link", {
+          name: "Criar conta",
+        }),
+      );
+      await goToStudentForm(user);
+      await user.click(
+        screen.getByRole("link", {
+          name: /voltar para a seleção de cadastro/i,
+        }),
+      );
+
+      expect(
+        screen.getByRole("heading", { name: "Criar conta no helpa" }),
+      ).toBeInTheDocument();
     });
 
     it("toggling one password field's visibility also reveals the other", async () => {

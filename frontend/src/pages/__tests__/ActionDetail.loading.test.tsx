@@ -107,7 +107,10 @@ describe("ActionDetail loading failures", () => {
     expect(
       screen.queryByRole("button", { name: "Tentar novamente" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Voltar/ })).toBeEnabled();
+    expect(screen.getByRole("link", { name: /Voltar/ })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
   });
 
   it("lets the session handler redirect to login on 401", async () => {

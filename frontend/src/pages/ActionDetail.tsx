@@ -4,6 +4,7 @@ import { DashboardShell } from "../features/dashboard/components/DashboardShell"
 import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
 import { Footer } from "../components/Footer";
 import { Button } from "../components/Button";
+import { BackLink } from "../components/BackLink";
 import { Alert } from "../components/Alert";
 import { ActionHero } from "../features/action-detail/components/ActionHero";
 import { ActionDescription } from "../features/action-detail/components/ActionDescription";
@@ -208,24 +209,14 @@ function ActionDetailView({ id }: { id: string | undefined }) {
       {!isLoading && error && (
         <div className="max-w-2xl mx-auto px-4 py-12">
           <Alert type="error" message={error} />
-          {canRetry && (
-            <Button
-              variant="primary"
-              size="md"
-              className="mt-4 mr-3"
-              onClick={retryLoad}
-            >
-              Tentar novamente
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="md"
-            className="mt-4"
-            onClick={() => navigate(-1)}
-          >
-            ← Voltar
-          </Button>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            {canRetry && (
+              <Button variant="primary" size="md" onClick={retryLoad}>
+                Tentar novamente
+              </Button>
+            )}
+            <BackLink />
+          </div>
         </div>
       )}
 
@@ -237,7 +228,6 @@ function ActionDetailView({ id }: { id: string | undefined }) {
             type={action.type}
             category={action.details?.area || action.type}
             title={action.title}
-            onBack={() => navigate(-1)}
           />
 
           <div

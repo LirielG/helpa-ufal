@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { Button, Alert, Tooltip, HomeLogoLink } from "../components";
+import { Button, BackLink, Alert, Tooltip, HomeLogoLink } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -137,12 +137,11 @@ export function Register() {
     <AuthShell
       maxWidthClassName="max-w-[760px]"
       header={
-        <button
+        <BackLink
+          label="Voltar para a Seleção de Cadastro"
+          fallbackTo="/register"
           onClick={() => setSelectedType(null)}
-          className="text-gray-600 hover:text-gray-900 transition font-medium cursor-pointer"
-        >
-          ← Voltar para a Seleção de Cadastro
-        </button>
+        />
       }
       footer={
         <AuthFooterLink

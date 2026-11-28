@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
+import { BackLink } from "@/components/BackLink";
 import { Alert } from "@/components/Alert";
 import { Pagination } from "@/components/Pagination";
 import { EnrollmentTable } from "@/features/enrollment-management/components/EnrollmentTable";
@@ -23,7 +24,6 @@ import { PageTitle } from "../components/PageTitle";
  */
 export function EnrollmentsPage() {
   const { id = "" } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   // Two parallel requests: enrollments list + activity metadata (slots,
   // status and workload).
@@ -68,9 +68,7 @@ export function EnrollmentsPage() {
       <PageTitle title="Inscritos" />
       <div className="page-container py-10 space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
-            ← Voltar
-          </Button>
+          <BackLink fallbackTo={id ? `/activity/${id}` : "/dashboard"} />
           <h1 className="text-2xl font-bold text-gray-900">Inscritos</h1>
         </div>
 

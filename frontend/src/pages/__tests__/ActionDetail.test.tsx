@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Route, Routes } from "react-router";
 import { render, screen, within } from "@/test/render";
 import { API, http, HttpResponse, server } from "@/test/http";
 import { makeActionDetail } from "@/test/factories";
@@ -128,7 +129,7 @@ describe("ActionDetail information", () => {
     expect(screen.queryByText("Carregando...")).not.toBeInTheDocument();
   });
 
-  it("shows a not-found message and a back button on 404", async () => {
+  it("shows a not-found message and a back link on 404", async () => {
     server.use(
       http.get(
         `${API}/activities/${ACTION_ID}`,
@@ -139,7 +140,31 @@ describe("ActionDetail information", () => {
     renderDetail();
 
     expect(await screen.findByText("Ação não encontrada.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Voltar/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Voltar/ })).toBeInTheDocument();
     expect(screen.queryByText("Carregando...")).not.toBeInTheDocument();
+  });
+
+  it("navigates to /dashboard when clicking Voltar after opening a direct link", async () => {
+    const action = makeActionDetail({ id: ACTION_ID });
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, () =>
+        HttpResponse.json(action),
+      ),
+    );
+
+    const { user } = render(
+      <Routes>
+        <Route path="/activity/:id" element={<ActionDetail />} />
+        <Route path="/dashboard" element={<h1>Feed de ações</h1>} />
+      </Routes>,
+      { route: `/activity/${ACTION_ID}` },
+    );
+
+    await screen.findByRole("heading", { name: action.title });
+    await user.click(screen.getByRole("link", { name: "← Voltar" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Feed de ações" }),
+    ).toBeInTheDocument();
   });
 });

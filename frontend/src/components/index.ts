@@ -1,6 +1,7 @@
 export { Input } from "./Input";
 export { SearchField } from "./SearchField";
 export { Button } from "./Button";
+export { BackLink } from "./BackLink";
 export { Select } from "./Select";
 export { Textarea } from "./Textarea";
 export { Checkbox } from "./Checkbox";
