@@ -110,19 +110,10 @@ describe("EnvSchema — APP_PUBLIC_URL", () => {
     expect(parsed.APP_PUBLIC_URL).toBe("http://localhost:5173");
   });
 
-  it("accepts a custom http(s) URL, keeping its path", () => {
-    const parsed = EnvSchema.parse({
-      ...minimalEnv,
-      APP_PUBLIC_URL: "https://helpa.ufal.br/app",
-    });
-
-    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
-  });
-
   it.each([
+    ["https://helpa.ufal.br", "https://helpa.ufal.br"],
     ["https://helpa.ufal.br/", "https://helpa.ufal.br"],
-    ["https://helpa.ufal.br/app/", "https://helpa.ufal.br/app"],
-  ])("removes the trailing slash from %s", (value, expected) => {
+  ])("accepts %s as %s", (value, expected) => {
     const parsed = EnvSchema.parse({ ...minimalEnv, APP_PUBLIC_URL: value });
 
     expect(parsed.APP_PUBLIC_URL).toBe(expected);
@@ -131,11 +122,31 @@ describe("EnvSchema — APP_PUBLIC_URL", () => {
   it("lowercases scheme and host, so the printed address never shows HTTPS://", () => {
     const parsed = EnvSchema.parse({
       ...minimalEnv,
-      APP_PUBLIC_URL: "HTTPS://Helpa.UFAL.br/app",
+      APP_PUBLIC_URL: "HTTPS://Helpa.UFAL.br",
     });
 
-    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br/app");
+    expect(parsed.APP_PUBLIC_URL).toBe("https://helpa.ufal.br");
   });
+
+  // The frontend router only serves the domain root, so a path would print
+  // a link that opens "Página não encontrada".
+  it.each(["https://helpa.ufal.br/app", "https://helpa.ufal.br/app/"])(
+    "rejects the path in %s",
+    (value) => {
+      const result = EnvSchema.safeParse({
+        ...minimalEnv,
+        APP_PUBLIC_URL: value,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({
+          path: ["APP_PUBLIC_URL"],
+          message: "APP_PUBLIC_URL must not have a path.",
+        }),
+      ]);
+    },
+  );
 
   // `/validate/<code>` is appended to the value, which would land inside a
   // query string or fragment.

@@ -226,16 +226,4 @@ describe("buildCertificateContent", () => {
     );
     expect(issued).toBe("Emitido em 15/06/2026");
   });
-
-  it("keeps the frontend path in both the QR URL and the printed address", () => {
-    const content = buildCertificateContent(
-      common,
-      "http://localhost:5173/app",
-    );
-
-    expect(content.qrUrl).toBe("http://localhost:5173/app/validate/7KQ4MX9T2R");
-    expect(content.verifyAt).toBe(
-      "Confira a autenticidade em localhost:5173/app/validate",
-    );
-  });
 });

@@ -60,10 +60,11 @@ const BaseEnvSchema = z.object({
     .default("http://localhost:5173"),
   // Public address of the frontend, printed in the certificate's QR code.
   // Kept apart from CORS_ORIGIN on purpose: if CORS ever accepts a second
-  // origin, the printed link must not change with it. Unlike CORS_ORIGIN the
-  // path is kept (the frontend may live under one); only the trailing slash
-  // is dropped so `${APP_PUBLIC_URL}/validate` never doubles it. Query and
-  // fragment are refused, since the appended path would land inside them.
+  // origin, the printed link must not change with it. The frontend only works
+  // at the domain root, so a path is refused instead of producing printed
+  // links that open a 404; a trailing slash is still accepted and dropped so
+  // `${APP_PUBLIC_URL}/validate` never doubles it. Query and fragment are
+  // refused, since the appended path would land inside them.
   APP_PUBLIC_URL: z
     .url({ protocol: /^https?$/ })
     .transform((value, ctx) => {
@@ -75,8 +76,15 @@ const BaseEnvSchema = z.object({
         });
         return z.NEVER;
       }
-      // Rebuilt from the parsed parts: URL lowercases scheme and host.
-      return `${url.origin}${url.pathname}`.replace(/\/+$/, "");
+      if (url.pathname.replace(/\/+$/, "")) {
+        ctx.addIssue({
+          code: "custom",
+          message: "APP_PUBLIC_URL must not have a path.",
+        });
+        return z.NEVER;
+      }
+      // URL.origin lowercases scheme and host.
+      return url.origin;
     })
     .default("http://localhost:5173"),
   // SameSite policy for the session cookie. "none" only works with
