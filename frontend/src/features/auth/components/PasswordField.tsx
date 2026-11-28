@@ -10,6 +10,7 @@ type PasswordFieldProps = {
   onTogglePassword: () => void;
   placeholder?: string;
   id?: string;
+  autoComplete?: string;
 };
 
 export function PasswordField({
@@ -20,10 +21,12 @@ export function PasswordField({
   onTogglePassword,
   placeholder = "Digite sua senha",
   id,
+  autoComplete,
 }: PasswordFieldProps) {
   return (
     <Input
       id={id}
+      autoComplete={autoComplete}
       label={label}
       error={error}
       placeholder={placeholder}

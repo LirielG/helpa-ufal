@@ -1,8 +1,11 @@
 import type {
+  ForgotPasswordRequest,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
+  ResetPasswordRequest,
+  VerifyResetCodeRequest,
 } from "../types";
 import type { UserProfile } from "../types/profile";
 import { api } from "./api";
@@ -23,6 +26,18 @@ export const authService = {
 
   logout(): Promise<void> {
     return api.post<void>("/auth/logout", undefined, AUTH_REQUEST);
+  },
+
+  requestPasswordReset(data: ForgotPasswordRequest): Promise<void> {
+    return api.post<void>("/auth/forgot-password", data, AUTH_REQUEST);
+  },
+
+  verifyPasswordResetCode(data: VerifyResetCodeRequest): Promise<void> {
+    return api.post<void>("/auth/forgot-password/verify", data, AUTH_REQUEST);
+  },
+
+  resetPassword(data: ResetPasswordRequest): Promise<void> {
+    return api.post<void>("/auth/reset-password", data, AUTH_REQUEST);
   },
 
   // Unlike the routes above, a 401 here does mean the session ended, so it

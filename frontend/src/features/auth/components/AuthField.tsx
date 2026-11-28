@@ -9,6 +9,11 @@ type AuthFieldProps = {
   labelIcon?: React.ReactNode;
   type?: React.HTMLInputTypeAttribute;
   placeholder?: string;
+  autoComplete?: string;
+  autoCapitalize?: string;
+  spellCheck?: boolean;
+  maxLength?: number;
+  className?: string;
 };
 
 export function AuthField({
@@ -19,6 +24,11 @@ export function AuthField({
   labelIcon,
   type = "text",
   placeholder,
+  autoComplete,
+  autoCapitalize,
+  spellCheck,
+  maxLength,
+  className,
 }: AuthFieldProps) {
   return (
     <Input
@@ -28,6 +38,11 @@ export function AuthField({
       labelIcon={labelIcon}
       type={type}
       placeholder={placeholder}
+      autoComplete={autoComplete}
+      autoCapitalize={autoCapitalize}
+      spellCheck={spellCheck}
+      maxLength={maxLength}
+      className={className}
       {...registration}
     />
   );

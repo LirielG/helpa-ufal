@@ -14,6 +14,7 @@ import {
   within,
 } from "@/test";
 import { GuestRoute } from "@/routes/GuestRoute";
+import { ForgotPassword } from "../ForgotPassword";
 import { Login } from "../Login";
 
 /**
@@ -243,6 +244,36 @@ describe("Login", () => {
     await user.click(screen.getByRole("button", { name: "Ocultar senha" }));
 
     expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  describe("forgot password link", () => {
+    it("shows the 'Esqueci minha senha' link pointing to /forgot-password", () => {
+      render(<Login />, { route: "/login" });
+
+      expect(
+        screen.getByRole("link", { name: "Esqueci minha senha" }),
+      ).toHaveAttribute("href", "/forgot-password");
+    });
+
+    it("carries the typed e-mail to /forgot-password when clicked", async () => {
+      const { user } = render(
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+        </Routes>,
+        { route: "/login" },
+      );
+
+      await user.type(screen.getByLabelText("Usuário"), "ana@ufal.br");
+      await user.click(
+        screen.getByRole("link", { name: "Esqueci minha senha" }),
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "Esqueci minha senha" }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("E-mail")).toHaveValue("ana@ufal.br");
+    });
   });
 
   describe("Helpa logo link", () => {

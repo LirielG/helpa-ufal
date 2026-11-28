@@ -18,3 +18,17 @@ export const REGISTER_FIELD_IN_USE_MESSAGES = {
   registrationCode: "Esta matrícula já está cadastrada.",
   cndb: "Esta CNDB já está cadastrada.",
 } as const;
+
+export const FORGOT_PASSWORD_SUCCESS_MESSAGE =
+  "Se houver uma conta com esse e-mail, enviamos um código válido por 30 minutos. Confira também a caixa de spam.";
+
+export const RESET_PASSWORD_SUCCESS_MESSAGE =
+  "Senha redefinida. Entre com a nova senha.";
+
+export const INVALID_RESET_CODE_MESSAGE = "Código inválido ou expirado.";
+
+export const TOO_MANY_REQUESTS_MESSAGE =
+  "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+
+export const PASSWORD_RESET_GENERIC_ERROR_MESSAGE =
+  "Não foi possível concluir. Tente novamente.";

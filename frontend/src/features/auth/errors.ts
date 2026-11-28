@@ -7,11 +7,14 @@ import {
 import type { RegisterFields } from "@/validators/auth";
 import {
   INVALID_CREDENTIALS_MESSAGE,
+  INVALID_RESET_CODE_MESSAGE,
   LOGIN_GENERIC_ERROR_MESSAGE,
+  PASSWORD_RESET_GENERIC_ERROR_MESSAGE,
   REGISTER_ALREADY_IN_USE_MESSAGE,
   REGISTER_FIELD_IN_USE_MESSAGES,
   REGISTER_GENERIC_ERROR_MESSAGE,
   REGISTER_INVALID_DATA_MESSAGE,
+  TOO_MANY_REQUESTS_MESSAGE,
 } from "./constants/messages";
 
 // The API's `message` is English text for debugging, so the screens pick their
@@ -68,4 +71,35 @@ export function handleRegisterApiErrors(
     default:
       return REGISTER_GENERIC_ERROR_MESSAGE;
   }
+}
+
+export function getForgotPasswordErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) return PASSWORD_RESET_GENERIC_ERROR_MESSAGE;
+  if (isConnectionFailure(error)) return CONNECTION_ERROR_MESSAGE;
+  if (error.status === 429) return TOO_MANY_REQUESTS_MESSAGE;
+
+  return PASSWORD_RESET_GENERIC_ERROR_MESSAGE;
+}
+
+export type ResetPasswordErrorResult =
+  { kind: "invalidCode"; message: string } | { kind: "alert"; message: string };
+
+function isInvalidResetCode(error: ApiError): boolean {
+  if (error.status === 422 && error.code === "INVALID_RESET_CODE") {
+    return true;
+  }
+
+  return (
+    error.status === 400 && error.errors.some((item) => item.field === "code")
+  );
+}
+
+export function getResetPasswordError(
+  error: unknown,
+): ResetPasswordErrorResult {
+  if (error instanceof ApiError && isInvalidResetCode(error)) {
+    return { kind: "invalidCode", message: INVALID_RESET_CODE_MESSAGE };
+  }
+
+  return { kind: "alert", message: getForgotPasswordErrorMessage(error) };
 }
