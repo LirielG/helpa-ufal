@@ -6,7 +6,7 @@ import type { FilterOptions } from "../types";
 const NO_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  status: "all",
+  status: "OPEN",
 };
 
 /** Serves one action under the page metadata given. */
@@ -33,21 +33,24 @@ function captureParams(): URLSearchParams[] {
 }
 
 describe("fetchActions", () => {
-  it("sends the chosen action type as the API enum", async () => {
+  it("sends no `status` when the default 'OPEN' filter is chosen", async () => {
     const requests = captureParams();
 
-    await fetchActions({ ...NO_FILTERS, actionType: "LECTURE" });
+    await fetchActions(NO_FILTERS);
 
-    expect(requests[0].get("type")).toBe("LECTURE");
+    expect(requests[0].has("status")).toBe(false);
   });
 
-  it("sends the chosen area as its own text", async () => {
-    const requests = captureParams();
+  it.each(["IN_PROGRESS", "COMPLETED", "CANCELLED", "ALL"] as const)(
+    "sends `status=%s` when a non-default status filter is chosen",
+    async (status) => {
+      const requests = captureParams();
 
-    await fetchActions({ ...NO_FILTERS, area: "Saúde" });
+      await fetchActions({ ...NO_FILTERS, status });
 
-    expect(requests[0].get("area")).toBe("Saúde");
-  });
+      expect(requests[0].get("status")).toBe(status);
+    },
+  );
 
   it("sends no `area` when every area is chosen", async () => {
     const requests = captureParams();

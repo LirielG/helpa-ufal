@@ -245,12 +245,12 @@ describe("session verification on load", () => {
 
     expect(querySessionLoader()).toBeInTheDocument();
     expect(queryLoginForm()).toBeNull();
-    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Situação" })).toBeNull();
 
     check.respond(unauthorized);
 
     expect(await screen.findByRole("button", { name: "Entrar" })).toBeVisible();
-    expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Situação" })).toBeNull();
   });
 
   // Criterion 8
@@ -287,7 +287,7 @@ describe("session verification on load", () => {
     await ui.click(screen.getByRole("button", { name: "detalhe" }));
     await screen.findByText("Oficina de Programação");
     await ui.click(screen.getByRole("button", { name: "painel" }));
-    await screen.findByRole("combobox", { name: "Status" });
+    await screen.findByRole("combobox", { name: "Situação" });
 
     expect(calls.count).toBe(2);
   });
@@ -298,7 +298,7 @@ describe("session verification on load", () => {
     render(<AppRoutes />, { route: "/dashboard" });
 
     expect(
-      await screen.findByRole("combobox", { name: "Status" }),
+      await screen.findByRole("combobox", { name: "Situação" }),
     ).toBeInTheDocument();
     expect(calls.count).toBe(0);
     expect(useAuthStore.getState().isSessionVerified).toBe(true);

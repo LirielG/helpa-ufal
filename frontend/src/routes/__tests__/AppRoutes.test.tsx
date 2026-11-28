@@ -42,7 +42,7 @@ function findHome() {
 }
 
 function findDashboard() {
-  return screen.findByRole("combobox", { name: "Status" });
+  return screen.findByRole("combobox", { name: "Situação" });
 }
 
 async function submitLogin(user: TestUser) {

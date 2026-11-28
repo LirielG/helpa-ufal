@@ -4,6 +4,7 @@ import type { FilterOptions } from "../types";
 import { ActionGrid } from "./ActionGrid";
 import { FilterBar } from "./FilterBar";
 import { FeedFallback } from "../../../components/FeedFallback";
+import { DEFAULT_STATUS_FILTER } from "../constants";
 
 interface HelpaFeedProps {
   actions: ActivityListItem[];
@@ -58,7 +59,7 @@ export function HelpaFeed({
     Boolean(search) ||
     filters.area !== "all" ||
     filters.actionType !== "all" ||
-    filters.status !== "all";
+    filters.status !== DEFAULT_STATUS_FILTER;
 
   const emptyCopy = hasActiveFilters
     ? HELPA_FEED_COPY.emptyFiltered

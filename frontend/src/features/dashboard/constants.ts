@@ -4,9 +4,10 @@ import type {
   ActivityType,
   ActivityStatus,
 } from "@/services/contracts/activity";
+import type { StatusFilterValue } from "./types";
 
 /*** `area` is free text in the API and is rendered as-is on the action detail,
- * so the stored value is the label itself.
+- so the stored value is the label itself.
  */
 export const ACTION_TYPE_LABELS: Record<ActivityType, string> = {
   EXTENSION: "Ação de extensão",
@@ -39,6 +40,29 @@ export const ACTION_STATUS_LABELS: Record<ActivityStatus, string> = {
   CANCELLED: "Cancelada",
 };
 
+export const DEFAULT_STATUS_FILTER: StatusFilterValue = "OPEN";
+
+export const ACTION_STATUS_OPTIONS: Array<{
+  value: StatusFilterValue;
+  label: string;
+}> = [
+  { value: "OPEN", label: "Inscrições abertas" },
+  { value: "IN_PROGRESS", label: "Em andamento" },
+  { value: "COMPLETED", label: "Concluídas" },
+  { value: "CANCELLED", label: "Canceladas" },
+  { value: "ALL", label: "Todas" },
+];
+
+const VALID_STATUS_FILTERS = new Set<string>(
+  ACTION_STATUS_OPTIONS.map((option) => option.value),
+);
+
+export function isStatusFilterValue(
+  value: string | null,
+): value is StatusFilterValue {
+  return value !== null && VALID_STATUS_FILTERS.has(value);
+}
+
 export const ACTION_TYPE_OPTIONS = (
   Object.keys(ACTION_TYPE_LABELS) as ActivityType[]
 ).map((value) => ({ value, label: ACTION_TYPE_LABELS[value] }));
@@ -50,14 +74,6 @@ export const ACTION_FORMAT_OPTIONS = (
 export const ACTION_CAMPUS_OPTIONS = (
   Object.keys(ACTION_CAMPUS_LABELS) as CampusLocation[]
 ).map((value) => ({ value, label: ACTION_CAMPUS_LABELS[value] }));
-
-export const ACTION_STATUS_OPTIONS = [
-  { value: "all", label: "Todos os status" },
-  ...(Object.keys(ACTION_STATUS_LABELS) as ActivityStatus[]).map((value) => ({
-    value,
-    label: ACTION_STATUS_LABELS[value],
-  })),
-];
 
 export const FILTER_OPTIONS = {
   actionTypes: [

@@ -12,10 +12,10 @@ import { FILTER_OPTIONS } from "../../constants";
 import type { FilterOptions } from "../../types";
 import { FilterBar } from "../FilterBar";
 
-const ALL_FILTERS: FilterOptions = {
+const DEFAULT_FILTERS: FilterOptions = {
   area: "all",
   actionType: "all",
-  status: "all",
+  status: "OPEN",
   search: "",
 };
 
@@ -23,7 +23,7 @@ function renderFilterBar(filters: Partial<FilterOptions> = {}) {
   const onFilterChange = vi.fn();
   const view = render(
     <FilterBar
-      filters={{ ...ALL_FILTERS, ...filters }}
+      filters={{ ...DEFAULT_FILTERS, ...filters }}
       onFilterChange={onFilterChange}
     />,
   );
@@ -32,7 +32,7 @@ function renderFilterBar(filters: Partial<FilterOptions> = {}) {
 }
 
 describe("FilterBar", () => {
-  it("starts with every filter showing its 'all' option", () => {
+  it("starts with every filter showing its default option", () => {
     renderFilterBar();
 
     expect(
@@ -41,17 +41,19 @@ describe("FilterBar", () => {
     expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
       "all",
     );
-    expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("all");
+    expect(screen.getByRole("combobox", { name: "Situação" })).toHaveValue(
+      "OPEN",
+    );
   });
 
   it("shows the filters it is given as the selected options", () => {
-    renderFilterBar({ actionType: "LECTURE", status: "OPEN" });
+    renderFilterBar({ actionType: "LECTURE", status: "COMPLETED" });
 
     expect(screen.getByRole("combobox", { name: "Tipos de ação" })).toHaveValue(
       "LECTURE",
     );
-    expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue(
-      "OPEN",
+    expect(screen.getByRole("combobox", { name: "Situação" })).toHaveValue(
+      "COMPLETED",
     );
   });
 
@@ -59,11 +61,14 @@ describe("FilterBar", () => {
     const { user, onFilterChange } = renderFilterBar();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Status" }),
-      "OPEN",
+      screen.getByRole("combobox", { name: "Situação" }),
+      "COMPLETED",
     );
 
-    expect(onFilterChange).toHaveBeenCalledExactlyOnceWith("status", "OPEN");
+    expect(onFilterChange).toHaveBeenCalledExactlyOnceWith(
+      "status",
+      "COMPLETED",
+    );
   });
 
   it("reports the chosen action type to the parent", async () => {
@@ -181,7 +186,7 @@ describe("FilterBar", () => {
     expect(optionLabels("Tipos de ação")).toEqual(
       FILTER_OPTIONS.actionTypes.map((option) => option.label),
     );
-    expect(optionLabels("Status")).toEqual(
+    expect(optionLabels("Situação")).toEqual(
       FILTER_OPTIONS.status.map((option) => option.label),
     );
   });
