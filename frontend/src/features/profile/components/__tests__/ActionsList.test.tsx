@@ -62,6 +62,11 @@ async function openSubTab(filter: UserActivityFilter) {
   return render(<ActionsList />, { route: `/my-activities?filter=${filter}` });
 }
 
+function SearchProbe() {
+  const [searchParams] = useSearchParams();
+  return <output data-testid="search">{searchParams.toString()}</output>;
+}
+
 function cardWithTitle(title: string) {
   // Cards have no named container for scoping their repeated controls.
   return screen
@@ -366,6 +371,109 @@ describe("ActionsList sub-tabs", () => {
     callback?.();
 
     expect(await screen.findByText("Nova Ação Criada")).toBeInTheDocument();
+  });
+});
+
+describe("ActionsList of certificates", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
+  it("asks for filter=certified and shows each action with its certificate download, leaving the URL alone", async () => {
+    signIn();
+    const requested: string[] = [];
+    server.use(
+      http.get(`${API}/users/me/activities`, ({ request }) => {
+        requested.push(new URL(request.url).searchParams.get("filter")!);
+        return HttpResponse.json(
+          page([
+            makeUserActivityItem({
+              title: "Mutirão certificado",
+              status: "COMPLETED",
+              certificate: {
+                id: "cert-1",
+                validationCode: "7KQ4MX9T2R",
+                issuedAt: "2026-06-11T10:30:00.000Z",
+              },
+            }),
+          ]),
+        );
+      }),
+    );
+
+    render(
+      <>
+        <ActionsList list="certified" />
+        <SearchProbe />
+      </>,
+      { route: "/my-certificates" },
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Mutirão certificado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Meus certificados" }),
+    ).toBeInTheDocument();
+    expect(
+      within(cardWithTitle("Mutirão certificado")).getByRole("button", {
+        name: /Baixar certificado/i,
+      }),
+    ).toBeInTheDocument();
+    expect(new Set(requested)).toEqual(new Set(["certified"]));
+    expect(screen.getByTestId("search")).toHaveTextContent("");
+  });
+
+  it("lists an action with pending attendance under Concluídas but not under certificates", async () => {
+    signIn();
+    serveByFilter({
+      completed: [makeUserActivityItem({ title: "Presença pendente" })],
+      certified: [],
+    });
+
+    const { unmount } = await openSubTab("completed");
+    expect(
+      await screen.findByRole("heading", { name: "Presença pendente" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(<ActionsList list="certified" />, { route: "/my-certificates" });
+
+    expect(
+      await screen.findByText("Você ainda não tem certificados emitidos."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Presença pendente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("navigates to /dashboard from the empty state's Explorar ações", async () => {
+    signIn();
+    serveByFilter({});
+
+    const { user } = render(<ActionsList list="certified" />, {
+      route: "/my-certificates",
+    });
+
+    await user.click(
+      await screen.findByRole("button", { name: "Explorar ações" }),
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("keeps ?filter=certified on /my-activities out of the sub-tabs", async () => {
+    signIn();
+    serveByFilter({ enrolled: [makeUserActivityItem({ title: "Inscrita" })] });
+
+    await openSubTab("certified" as UserActivityFilter);
+
+    expect(
+      await screen.findByRole("heading", { name: "Inscrita" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Atividades Inscritas" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -1161,6 +1269,42 @@ describe("ActionsList certificates", () => {
     expect(screen.getByText(PENDING_TITLE)).toBeInTheDocument();
     expect(screen.getByText("20 horas")).toBeInTheDocument();
   });
+
+  it.each([
+    {
+      state: "filled",
+      completed: [
+        makeUserActivityItem({ title: PENDING_TITLE, status: "COMPLETED" }),
+      ],
+      waitFor: PENDING_TITLE,
+    },
+    {
+      state: "empty",
+      completed: [],
+      waitFor: "Você ainda não concluiu nenhuma ação.",
+    },
+  ])(
+    "shows the certificate guidance with a link to Como Funciona when the list is $state",
+    async ({ completed, waitFor }) => {
+      signIn();
+      serveByFilter({ completed });
+
+      await openSubTab("completed");
+
+      expect(await screen.findByText(waitFor)).toBeInTheDocument();
+      const notice = screen.getByRole("note", {
+        name: "Sobre os seus certificados",
+      });
+      expect(
+        within(notice).getByText(
+          /o certificado aparece no card para download depois que o responsável homologa sua presença e suas horas/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(notice).getByRole("link", { name: "Como funciona" }),
+      ).toHaveAttribute("href", "/how-it-works");
+    },
+  );
 
   it.each(["enrolled", "managed"] as const)(
     "shows nothing about certificates on the %s sub-tab",

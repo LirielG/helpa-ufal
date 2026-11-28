@@ -20,7 +20,7 @@
     "test:db:down": "docker compose stop postgres-test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/tsconfig.json"
   },
   "keywords": [],
   "author": "",

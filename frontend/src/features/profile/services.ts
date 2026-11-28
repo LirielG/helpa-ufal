@@ -2,7 +2,7 @@ import { api, authService } from "../../services";
 import type { UpdateProfileRequest } from "../../types";
 import { formatDate } from "../../utils/date";
 import type {
-  ActivityStatus,
+  UserActivityList,
   ActivityStatusTransition,
   UpdateActivityStatusRequest,
   UserActivity,
@@ -29,7 +29,7 @@ export async function updateProfile(
 const LIST_LIMIT = 20;
 
 export async function fetchUserActivities(
-  filter: ActivityStatus,
+  filter: UserActivityList,
   page: number,
 ): Promise<Paginated<UserActivity>> {
   const params = new URLSearchParams({

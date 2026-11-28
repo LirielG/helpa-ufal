@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { DashboardShell } from "../features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
-import { Footer } from "../components/Footer";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
 import { ActionHero } from "../features/action-detail/components/ActionHero";
@@ -183,7 +180,7 @@ function ActionDetailView({ id }: { id: string | undefined }) {
   );
 
   return (
-    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+    <>
       <PageTitle
         title={isRemoved ? "Ação removida" : (action?.title ?? "Ação")}
       />
@@ -336,6 +333,6 @@ function ActionDetailView({ id }: { id: string | undefined }) {
           />
         </>
       )}
-    </DashboardShell>
+    </>
   );
 }

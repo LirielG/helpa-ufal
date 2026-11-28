@@ -3,10 +3,21 @@ import type { User } from "@/types";
 import { makeUser } from "./factories";
 
 /**
- * Puts a signed-in user into the auth store and returns it, so assertions can
- * reference the same object. `setup.ts` resets the store after every test, so this never leaks.
+ * Puts a signed-in user into the auth store, with the session already
+ * confirmed as after a login, and returns it, so assertions can reference the
+ * same object. `setup.ts` resets the store after every test, so this never leaks.
  */
 export function signIn(overrides: Partial<User> = {}): User {
+  const user = makeUser(overrides);
+  useAuthStore.setState({ user, isSessionVerified: true });
+  return user;
+}
+
+/**
+ * Puts a user into the auth store as a page reload restores it from
+ * localStorage: not yet confirmed by the session check.
+ */
+export function restoreSession(overrides: Partial<User> = {}): User {
   const user = makeUser(overrides);
   useAuthStore.getState().setUser(user);
   return user;

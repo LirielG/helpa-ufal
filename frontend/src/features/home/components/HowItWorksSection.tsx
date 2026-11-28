@@ -1,6 +1,11 @@
+import { Link } from "react-router";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import mockupHelpa from "../../../assets/mockup-helpa.png";
 import mockupSigaa from "../../../assets/mockup-sigaa.png";
+import {
+  HELPA_JOURNEY_STEPS,
+  HELPA_JOURNEY_TITLE,
+} from "../constants/howItWorks";
 
 interface HowItWorksSectionProps {
   onExploreActions?: () => void;
@@ -126,8 +131,9 @@ export function HowItWorksSection({
                     <li className="flex items-start gap-2.5">
                       <CheckCircle2 className="size-5 text-[#1D4ED8] shrink-0 mt-0.5" />
                       <span>
-                        Validação e emissão de certificados após conclusão da
-                        ação.
+                        Emissão automática do certificado após a conclusão da
+                        ação e a homologação de presença e carga horária pelo
+                        criador ou gestor.
                       </span>
                     </li>
                   </ul>
@@ -231,9 +237,11 @@ export function HowItWorksSection({
                   <div className="bg-[#ECEEF0] p-4 sm:p-3 rounded-lg flex items-start gap-3">
                     <AlertCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
                     <p className="text-xs text-gray-800 font-medium leading-relaxed">
-                      <strong>Importante:</strong> As inscrições nos eventos
-                      desta aba são operadas externamente pelos servidores do
-                      SIGAA. O Helpa atua como agregador inteligente de
+                      <strong>Importante:</strong> As inscrições, o
+                      acompanhamento e a documentação ou certificação dos
+                      eventos desta aba ocorrem externamente pelo SIGAA. A
+                      jornada de certificados do Helpa não se aplica às ações do
+                      SIGAA; o Helpa atua como agregador inteligente de
                       descoberta.
                     </p>
                   </div>
@@ -246,54 +254,69 @@ export function HowItWorksSection({
 
       <section className="bg-[#F2F4F6] py-12 sm:py-16 px-4 sm:px-6 md:px-12">
         <div className="max-w-[1200px] mx-auto flex flex-col items-center gap-10 sm:gap-12 text-center">
-          <div className="max-w-[672px] flex flex-col items-center gap-2">
+          <div className="max-w-[768px] flex flex-col items-center gap-2">
             <span className="text-xs font-semibold text-[#1D4ED8] uppercase tracking-wider">
-              Passo a Passo Rápido
+              Jornada nas Ações Nativas do Helpa
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#002147]">
-              Como se envolver em 3 etapas
+              {HELPA_JOURNEY_TITLE}
             </h2>
             <p className="text-gray-600 text-sm sm:text-base px-4">
-              Do login à contabilização de suas horas complementares sem
-              burocracia.
+              Acompanhe o caminho completo da inscrição ao download em PDF.
+              Apenas se inscrever ou concluir a ação não gera certificado sem a
+              homologação de presença pelo responsável.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full text-left">
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow">
-              <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
-                01
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 w-full text-left">
+            {HELPA_JOURNEY_STEPS.map((step, index) => (
+              <div
+                key={step.number}
+                className={`bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow ${
+                  index < 3 ? "md:col-span-2" : "md:col-span-3"
+                }`}
+              >
+                <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
+                  {step.number.padStart(2, "0")}
+                </div>
+                <h3 className="text-xl font-semibold">{step.title}</h3>
+                <p className="text-sm text-gray-200 leading-relaxed">
+                  {step.description}
+                </p>
               </div>
-              <h3 className="text-xl font-semibold">
-                Explore o Feed Unificado
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full text-left">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-2">
+              <h3 className="text-base sm:text-lg font-bold text-[#002147]">
+                Carga horária homologada e emissão automática
               </h3>
-              <p className="text-sm text-gray-200 leading-relaxed">
-                Navegue entre as abas Helpa e SIGAA. Utilize os filtros por área
-                de atuação, tipo de ação e status.
+              <p className="text-sm text-gray-700 leading-relaxed">
+                O certificado utiliza as horas homologadas pelo criador ou
+                gestor, que podem ser diferentes da carga horária prevista na
+                ação. Não é necessário solicitar a emissão nem aguardar
+                processamento posterior após a homologação. Ações concluídas sem
+                homologação de presença não geram certificado.
               </p>
             </div>
 
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow">
-              <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
-                02
-              </div>
-              <h3 className="text-xl font-semibold">Inscreva-se ou Crie</h3>
-              <p className="text-sm text-gray-200 leading-relaxed">
-                Candidate-se a vagas voluntárias com confirmação instantânea no
-                Helpa, ou clique em cadastrar ação para liderar uma equipe
-                acadêmica comunitária.
-              </p>
-            </div>
-
-            <div className="bg-[#002147] text-white p-6 sm:p-8 rounded-2xl shadow-md flex flex-col gap-4 transition-shadow sm:col-span-2 md:col-span-1">
-              <div className="w-12 h-12 rounded-lg bg-[#00579A] flex items-center justify-center font-bold text-xl shrink-0">
-                03
-              </div>
-              <h3 className="text-xl font-semibold">Conquiste Certificados</h3>
-              <p className="text-sm text-gray-200 leading-relaxed">
-                Finalize sua participação, receba o feedback do coordenador da
-                ação e emita seu comprovante digital autenticado para validação
-                na coordenação.
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-2">
+              <h3 className="text-base sm:text-lg font-bold text-[#002147]">
+                Download pelo titular e validação pública
+              </h3>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                O atalho <strong>Meus certificados</strong> no menu leva
+                diretamente para <strong>Atividades Concluídas</strong>, onde o
+                titular baixa o PDF no card da ação. Já a verificação pública de
+                autenticidade por código é feita em{" "}
+                <Link
+                  to="/validate"
+                  className="font-semibold text-[#00579A] underline hover:text-[#002147]"
+                >
+                  Validar certificado
+                </Link>
+                .
               </p>
             </div>
           </div>

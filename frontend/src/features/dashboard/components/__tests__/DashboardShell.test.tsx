@@ -18,8 +18,6 @@ import {
   signIn,
 } from "@/test";
 import { useActionRegisterStore } from "@/stores/actionRegisterStore";
-import { DashboardShell } from "../DashboardShell";
-import { DashboardHeader } from "../DashboardHeader";
 import { Dashboard } from "@/pages/Dashboard";
 
 function LocationTracker() {
@@ -35,12 +33,10 @@ function LocationTracker() {
 
 function DummyPage({ title }: { title: string }) {
   return (
-    <DashboardShell header={<DashboardHeader />}>
-      <div>
-        <h1>{title}</h1>
-        <LocationTracker />
-      </div>
-    </DashboardShell>
+    <div>
+      <h1>{title}</h1>
+      <LocationTracker />
+    </div>
   );
 }
 
@@ -134,6 +130,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Perfil" />, {
       route: "/profile",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -153,6 +150,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Detalhes da Ação" />, {
       route: "/activity/action-123",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -172,6 +170,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Edição" />, {
       route: "/activity/action-123/edit",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -191,6 +190,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Dashboard" />, {
       route: "/dashboard",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -210,6 +210,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Perfil" />, {
       route: "/profile",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -233,15 +234,14 @@ describe("DashboardShell", () => {
 
   it("preserves ongoing action edit state when opening or closing the modal", async () => {
     const { user } = render(
-      <DashboardShell header={<DashboardHeader />}>
-        <div>
-          <input data-testid="edit-input" defaultValue="Texto em edição" />
-          <LocationTracker />
-        </div>
-      </DashboardShell>,
+      <div>
+        <input data-testid="edit-input" defaultValue="Texto em edição" />
+        <LocationTracker />
+      </div>,
       {
         route: "/activity/action-123/edit",
         path: "*",
+        shell: true,
       },
     );
 
@@ -275,6 +275,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DummyPage title="Perfil" />, {
       route: "/profile",
       path: "*",
+      shell: true,
     });
 
     const createButton = screen.getByRole("button", {
@@ -323,6 +324,7 @@ describe("DashboardShell", () => {
     const { user } = render(<DashboardWithLocation />, {
       route: "/dashboard",
       path: "*",
+      shell: true,
     });
 
     await waitFor(() => expect(getActivitiesCount).toBe(1));
@@ -359,15 +361,11 @@ describe("DashboardShell", () => {
       useActionRegisterStore.setState({ isOpen: true });
     });
 
-    const { unmount } = render(
-      <DashboardShell header={<DashboardHeader />}>
-        <div>Dashboard Content</div>
-      </DashboardShell>,
-      {
-        route: "/dashboard",
-        path: "*",
-      },
-    );
+    const { unmount } = render(<div>Dashboard Content</div>, {
+      route: "/dashboard",
+      path: "*",
+      shell: true,
+    });
 
     expect(
       screen.getByRole("dialog", { name: "Criar uma ação" }),
