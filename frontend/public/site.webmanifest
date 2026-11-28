@@ -1,0 +1,22 @@
+{
+  "name": "Helpa",
+  "short_name": "Helpa",
+  "start_url": "/",
+  "display": "browser",
+  "theme_color": "#042448",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
