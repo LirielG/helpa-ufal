@@ -62,12 +62,15 @@ function applyValidationErrors<T extends FieldValues>(
   return assigned;
 }
 
+export const ACTION_UPDATE_ERROR_MESSAGE =
+  "Ocorreu um erro ao atualizar a ação. Tente novamente.";
+
 export function handleActionApiErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   setGeneralError: (message: string | null) => void,
 ): void {
-  const GENERIC_ERROR = "Ocorreu um erro ao atualizar a ação. Tente novamente.";
+  const GENERIC_ERROR = ACTION_UPDATE_ERROR_MESSAGE;
 
   if (!(error instanceof ApiError)) {
     setGeneralError(GENERIC_ERROR);

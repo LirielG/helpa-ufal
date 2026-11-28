@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   Clock,
@@ -34,6 +34,10 @@ const ACTION_SUB_ITEMS: Array<{ id: ActionSubTab; label: string }> = [
   { id: "managed", label: SIDEBAR_LABELS.managedActivities },
 ];
 
+// Each page mounts its own DashboardShell, so the sidebar is rebuilt on every
+// navigation; the scroll of its desktop list is kept here to survive that.
+let desktopScrollTop = 0;
+
 export function DashboardSidebar({
   isOpenMobile = false,
   onCloseMobile,
@@ -45,6 +49,13 @@ export function DashboardSidebar({
   const location = useLocation();
   const { user, logout } = useAuth();
   const [actionsExpanded, setActionsExpanded] = useState(true);
+  const desktopScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (desktopScrollRef.current) {
+      desktopScrollRef.current.scrollTop = desktopScrollTop;
+    }
+  }, []);
 
   const fullName = user?.fullName || profile?.fullName || "Usuário";
   const email = user?.email || profile?.email || "";
@@ -69,7 +80,7 @@ export function DashboardSidebar({
 
   const isModerationActive = location.pathname === "/moderation";
 
-  const isHelpActive = location.pathname === "/como-funciona";
+  const isHelpActive = location.pathname === "/how-it-works";
 
   const handleNavigate = (path: string) => {
     onCloseMobile?.();
@@ -100,10 +111,26 @@ export function DashboardSidebar({
       className={`w-[260px] sm:w-[280px] lg:w-[300px] xl:w-[340px] max-w-[82vw] shrink-0 bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] flex flex-col justify-between select-none z-20 ${
         isMobileDrawer
           ? "h-dvh max-h-dvh overflow-y-auto overscroll-contain"
-          : "min-h-full"
+          : ""
       }`}
     >
-      <div className="flex flex-col">
+      {/* On desktop only the upper block scrolls, so Ajuda and Sair stay on
+          screen even when the expanded Ações submenu doesn't fit. */}
+      <div
+        ref={isMobileDrawer ? undefined : desktopScrollRef}
+        onScroll={
+          isMobileDrawer
+            ? undefined
+            : (event) => {
+                desktopScrollTop = event.currentTarget.scrollTop;
+              }
+        }
+        className={`flex flex-col ${
+          isMobileDrawer
+            ? ""
+            : "flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        }`}
+      >
         <div className="bg-[#F2F4F6] p-4 sm:p-5 lg:p-6 flex flex-col gap-3 lg:gap-4">
           <div className="flex items-center justify-between gap-2.5 pt-0.5 lg:pt-1">
             <Link
@@ -299,7 +326,7 @@ export function DashboardSidebar({
       <div className="p-3 sm:p-3.5 lg:p-4 bg-white border-t border-gray-100 flex flex-col gap-1 shrink-0">
         <button
           type="button"
-          onClick={() => handleNavigate("/como-funciona")}
+          onClick={() => handleNavigate("/how-it-works")}
           aria-current={isHelpActive ? "page" : undefined}
           className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
             isHelpActive ? activeMainItemClass : inactiveMainItemClass
@@ -326,7 +353,9 @@ export function DashboardSidebar({
     <>
       <aside
         aria-label="Menu lateral do usuário"
-        className="hidden lg:flex shrink-0"
+        // Pinned below the header, which is h-20 from md up. A cap rather
+        // than a fixed height, so a short page still fits with its footer.
+        className="hidden lg:flex shrink-0 sticky top-20 max-h-[calc(100dvh-5rem)]"
       >
         {renderSidebarBody(false)}
       </aside>

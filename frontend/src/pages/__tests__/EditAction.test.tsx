@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { Link, Route, Routes, useNavigate } from "react-router";
+import { Link, Route, Routes, useLocation, useNavigate } from "react-router";
 import {
   API,
+  act,
   HttpResponse,
   delay,
   fireEvent,
@@ -1874,5 +1876,240 @@ describe("EditAction deletion", () => {
     await user.dblClick(screen.getByRole("button", { name: "Sim" }));
 
     await waitFor(() => expect(requests).toHaveLength(1));
+  });
+});
+
+describe("EditAction leaving the screen with a request pending", () => {
+  let leaveTo: (path: string) => void = () => {};
+
+  function NavigationProbe() {
+    const navigate = useNavigate();
+    useEffect(() => {
+      leaveTo = (path) => navigate(path);
+    }, [navigate]);
+    return <div data-testid="location">{useLocation().pathname}</div>;
+  }
+
+  function renderLeavableEditAction() {
+    return render(
+      <>
+        <NavigationProbe />
+        <Routes>
+          <Route path="/activity/:id/edit" element={<EditAction />} />
+          <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+          <Route path="/dashboard" element={<h1>Dashboard</h1>} />
+          <Route path="/outra-tela" element={<h1>Outra tela</h1>} />
+        </Routes>
+      </>,
+      { route: `/activity/${ACTION_ID}/edit` },
+    );
+  }
+
+  /** A response the test releases after it has left the screen. */
+  function heldResponse() {
+    let release: () => void = () => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { released, release };
+  }
+
+  async function leaveScreen() {
+    act(() => leaveTo("/outra-tela"));
+    expect(
+      await screen.findByRole("heading", { name: "Outra tela" }),
+    ).toBeInTheDocument();
+  }
+
+  async function startSave(user: ReturnType<typeof render>["user"]) {
+    await findTitleField();
+    const slots = screen.getByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+  }
+
+  async function startDelete(user: ReturnType<typeof render>["user"]) {
+    await findTitleField();
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+  }
+
+  it("stays on the current route when a save finishes after the user left", async () => {
+    mockAction();
+    const { released, release } = heldResponse();
+    const onUpdate = spyOnUpdate(() => released);
+    const { user } = renderLeavableEditAction();
+
+    await startSave(user);
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    await leaveScreen();
+    release();
+
+    await delay(50);
+    expect(screen.getByTestId("location")).toHaveTextContent("/outra-tela");
+    expect(screen.queryByText("Detalhe da ação")).not.toBeInTheDocument();
+  });
+
+  it("stays on the current route and still confirms when a deletion finishes after the user left", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    const { released, release } = heldResponse();
+    const requests = recordDeletes(async () => {
+      await released;
+      return new HttpResponse(null, { status: 204 });
+    });
+    const { user } = renderLeavableEditAction();
+
+    await startDelete(user);
+    await waitFor(() => expect(requests).toHaveLength(1));
+    await leaveScreen();
+    release();
+
+    expect(await screen.findByText("Ação excluída.")).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/outra-tela");
+  });
+
+  it("shows a save error that arrives after the user left as a toast", async () => {
+    mockAction();
+    const { released, release } = heldResponse();
+    server.use(
+      http.patch(`${API}/activities/:id`, async () => {
+        await released;
+        return HttpResponse.json({ message: "Conflict" }, { status: 409 });
+      }),
+    );
+    const { user } = renderLeavableEditAction();
+
+    await startSave(user);
+    await leaveScreen();
+    release();
+
+    expect(
+      await screen.findByText(
+        "Ações concluídas ou canceladas não podem ser editadas.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/outra-tela");
+  });
+
+  it("shows a field validation error that arrives after the user left as a generic toast", async () => {
+    mockAction();
+    const { released, release } = heldResponse();
+    server.use(
+      http.patch(`${API}/activities/:id`, async () => {
+        await released;
+        return HttpResponse.json(
+          {
+            message: "Validation failed",
+            errors: [{ field: "slots", message: "Invalid" }],
+          },
+          { status: 400 },
+        );
+      }),
+    );
+    const { user } = renderLeavableEditAction();
+
+    await startSave(user);
+    await leaveScreen();
+    release();
+
+    expect(
+      await screen.findByText(
+        "Ocorreu um erro ao atualizar a ação. Tente novamente.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a deletion error that arrives after the user left as a toast", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    const { released, release } = heldResponse();
+    recordDeletes(async () => {
+      await released;
+      return HttpResponse.json({ message: "Forbidden" }, { status: 403 });
+    });
+    const { user } = renderLeavableEditAction();
+
+    await startDelete(user);
+    await leaveScreen();
+    release();
+
+    expect(
+      await screen.findByText("Você não tem permissão para excluir esta ação."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/outra-tela");
+  });
+});
+
+describe("EditAction of an action removed by moderation", () => {
+  const REMOVED_MESSAGE = "Esta ação foi removida pela moderação.";
+  const removedBody = {
+    status: 410,
+    code: "ACTIVITY_REMOVED",
+    message: "This activity was removed by moderation.",
+  };
+
+  it("sends the author to the detail instead of a form when the action loads removed", async () => {
+    mockAction(
+      editableAction(
+        {},
+        {
+          moderation: {
+            removedAt: "2026-09-10T15:00:00.000Z",
+            justification: "Ação viola as diretrizes.",
+          },
+        },
+      ),
+    );
+    renderEditAction();
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Título")).not.toBeInTheDocument();
+  });
+
+  it("sends the user to the detail instead of a connection error when loading answers 410", async () => {
+    server.use(
+      http.get(`${API}/activities/${ACTION_ID}`, () =>
+        HttpResponse.json(removedBody, { status: 410 }),
+      ),
+    );
+    renderEditAction();
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tentar novamente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the toast and goes to the detail when saving answers 410", async () => {
+    mockAction();
+    failUpdate(410, removedBody);
+    const { user } = renderEditAction();
+
+    await findTitleField();
+    const slots = screen.getByLabelText("Número de vagas");
+    await user.clear(slots);
+    await user.type(slots, "45");
+    await user.click(getSaveButton());
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
+  });
+
+  it("shows the toast and goes to the detail when deleting answers 410", async () => {
+    mockAction(editableAction({}, { authorId: "user-123" }));
+    signIn(makeUser({ id: "user-123", isManager: false }));
+    recordDeletes(() => HttpResponse.json(removedBody, { status: 410 }));
+    const { user } = renderEditAction();
+
+    await findTitleField();
+    await user.click(screen.getByRole("button", { name: "Excluir ação" }));
+    await user.click(screen.getByRole("button", { name: "Sim" }));
+
+    expect(await screen.findByText("Detalhe da ação")).toBeInTheDocument();
+    expect(await screen.findByText(REMOVED_MESSAGE)).toBeInTheDocument();
   });
 });

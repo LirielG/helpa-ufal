@@ -19,7 +19,8 @@
     "test:db:up": "docker compose up -d postgres-test",
     "test:db:down": "docker compose stop postgres-test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "keywords": [],
   "author": "",

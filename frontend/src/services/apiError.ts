@@ -43,3 +43,18 @@ export function isConnectionFailure(error: unknown): boolean {
       (error.status >= 500 && error.status < 600))
   );
 }
+
+export const ACTIVITY_REMOVED_MESSAGE =
+  "Esta ação foi removida pela moderação.";
+
+/**
+ * The API's answer for an activity moderation removed: the detail gives it to
+ * anyone but the author and managers, and every write gives it to everyone.
+ */
+export function isActivityRemoved(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 410 &&
+    error.code === "ACTIVITY_REMOVED"
+  );
+}

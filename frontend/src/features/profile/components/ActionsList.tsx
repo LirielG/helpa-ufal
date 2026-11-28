@@ -13,8 +13,8 @@ import {
 import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
+import { PageTitle } from "../../../components/PageTitle";
 import { CompletedCertificatesNotice } from "./CompletedCertificatesNotice";
-import { CertificateFlowModal } from "./CertificateFlowModal";
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -31,7 +31,6 @@ export function ActionsList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
-  const [isCertificateFlowOpen, setIsCertificateFlowOpen] = useState(false);
 
   useEffect(() => {
     if (!filterParam || !isActivityStatus(filterParam)) {
@@ -58,7 +57,6 @@ export function ActionsList() {
     setActivities([]);
     setError(null);
     setIsLoading(true);
-    setIsCertificateFlowOpen(false);
   }
 
   const reloadActivities = useCallback(() => {
@@ -128,6 +126,7 @@ export function ActionsList() {
 
   return (
     <div className="space-y-6">
+      <PageTitle title={ACTIVITY_LIST_TITLES[activeSubTab]} />
       <h1 className="text-xl sm:text-2xl font-bold text-[#000A1E]">
         {ACTIVITY_LIST_TITLES[activeSubTab]}
       </h1>
@@ -188,6 +187,7 @@ export function ActionsList() {
                       onEdit={handleEdit}
                       onManageEnrollments={handleManageEnrollments}
                       onDelete={reloadActivities}
+                      onActivityRemoved={reloadActivities}
                     />
                   );
                 }
@@ -209,18 +209,9 @@ export function ActionsList() {
             onPageChange={selectPage}
           />
 
-          {activeSubTab === "completed" && (
-            <CompletedCertificatesNotice
-              onOpenHowItWorks={() => setIsCertificateFlowOpen(true)}
-            />
-          )}
+          {activeSubTab === "completed" && <CompletedCertificatesNotice />}
         </>
       )}
-
-      <CertificateFlowModal
-        open={activeSubTab === "completed" && isCertificateFlowOpen}
-        onClose={() => setIsCertificateFlowOpen(false)}
-      />
     </div>
   );
 }

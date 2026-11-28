@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router";
 import { Layout } from "../components/Layout";
 import { Button } from "../components/Button";
+import { PageTitle } from "../components/PageTitle";
 
 export function NotFound() {
   const navigate = useNavigate();
 
   return (
     <Layout>
+      <PageTitle title="Página não encontrada" />
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
         <div className="text-center">
           <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>

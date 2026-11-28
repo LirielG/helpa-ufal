@@ -30,7 +30,7 @@ export const HELPA_JOURNEY_STEPS: readonly JourneyStep[] = [
     number: "4",
     title: "Emissão Automática do Certificado",
     description:
-      "Assim que a sua presença é homologada como presente, o certificado é gerado automaticamente pelo sistema com a carga horária homologada.",
+      "Assim que a sua presença é homologada, o certificado é gerado automaticamente pelo sistema com a carga horária homologada.",
   },
   {
     number: "5",

@@ -1,6 +1,7 @@
 import { Calendar, MapPin, Clock, Check, X, Play } from "lucide-react";
 import type { ActivityStatusTransition, UserActivity } from "../../types";
 import { formatWorkloadHours } from "@/utils";
+import { Button } from "@/components/Button";
 
 const STATUS_MODAL_COPY: Record<
   ActivityStatusTransition,
@@ -111,22 +112,20 @@ export function ConfirmStatusModal({
           <button
             type="button"
             onClick={onCancel}
-            className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors cursor-pointer"
+            className="border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-medium px-3 py-2 rounded-lg text-sm flex-1 transition-colors cursor-pointer"
           >
             {copy.backOut}
           </button>
-          <button
+          <Button
             type="button"
+            variant={pendingStatus === "CANCELLED" ? "danger" : "primary"}
+            size="sm"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`${
-              pendingStatus === "CANCELLED"
-                ? "bg-[#C81A17] hover:bg-red-700"
-                : "bg-[#0066FF] hover:bg-blue-700"
-            } text-white font-medium py-2.5 px-4 rounded-xl text-xs flex-1 transition-colors disabled:opacity-50 cursor-pointer`}
+            className="flex-1"
           >
             {copy.title}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

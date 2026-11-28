@@ -6,7 +6,11 @@ import { Alert } from "../../../components/Alert";
 import { enrollInAction } from "../services";
 import { getEnrollmentErrorMessage } from "../errors";
 import type { Activity } from "@/services/contracts/activity";
-import { ApiError } from "../../../services/apiError";
+import {
+  ACTIVITY_REMOVED_MESSAGE,
+  ApiError,
+  isActivityRemoved,
+} from "../../../services/apiError";
 import { useDialog } from "../../../hooks/useDialog";
 import { toast } from "react-toastify";
 
@@ -16,6 +20,8 @@ interface EnrollmentModalProps {
   action: Activity;
   onClose: () => void;
   onSuccess?: () => void;
+  /** The API refused with 410: the toast is shown; the caller reloads its data. */
+  onRemovedByModeration?: () => void;
   getFallbackFocus?: () => HTMLElement | null;
 }
 
@@ -23,6 +29,7 @@ export function EnrollmentModal({
   action,
   onClose,
   onSuccess,
+  onRemovedByModeration,
   getFallbackFocus,
 }: EnrollmentModalProps) {
   const titleId = useId();
@@ -43,6 +50,13 @@ export function EnrollmentModal({
     try {
       await enrollInAction(action.id);
     } catch (err) {
+      if (isActivityRemoved(err)) {
+        toast.error(ACTIVITY_REMOVED_MESSAGE);
+        onRemovedByModeration?.();
+        onClose();
+        return;
+      }
+
       let message: string | null = null;
 
       if (err instanceof ApiError) {

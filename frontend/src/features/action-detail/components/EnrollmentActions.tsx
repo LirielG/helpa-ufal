@@ -41,7 +41,7 @@ export function EnrollmentActions({
         {isOpen ? (
           <Button
             ref={cancelButtonRef}
-            variant="danger"
+            variant="secondary"
             size="lg"
             onClick={onCancel}
             className="rounded-xl"

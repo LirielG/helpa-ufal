@@ -18,6 +18,7 @@ import { handleRegisterApiErrors } from "../features/auth/errors";
 import { PROFILE_OPTIONS } from "../features/auth/constants/profileOptions";
 import type { ProfileType } from "../features/auth/types";
 import type { ReturnToState } from "../routes/GuestRoute";
+import { PageTitle } from "../components/PageTitle";
 
 const defaultFields = {
   fullName: "",
@@ -122,6 +123,7 @@ export function Register() {
           />
         }
       >
+        <PageTitle title="Cadastrar-se" />
         <ProfileSelector selectedType={selectedType} onSelect={selectProfile} />
       </AuthShell>
     );
@@ -151,6 +153,7 @@ export function Register() {
         />
       }
     >
+      <PageTitle title="Cadastrar-se" />
       <div className="flex items-center gap-4 mb-8">
         <div
           className={`size-14 rounded-full flex items-center justify-center ${

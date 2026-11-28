@@ -1,6 +1,7 @@
 import {
   ApiError,
   CONNECTION_ERROR_MESSAGE,
+  isActivityRemoved,
   isConnectionFailure,
 } from "@/services/apiError";
 
@@ -51,6 +52,7 @@ export function getEnrollmentErrorMessage(error: ApiError): string | null {
 export type CancellationErrorResolution =
   | { kind: "alreadyCancelled" }
   | { kind: "activityRemoved" }
+  | { kind: "removedByModeration" }
   | { kind: "sessionExpired" }
   /** The page's copy still says OPEN; the caller should refetch it. */
   | { kind: "activityClosed"; text: string }
@@ -70,6 +72,10 @@ export function resolveCancellationError(
   // The HTTP client already notified the session handler.
   if (error.status === 401) {
     return { kind: "sessionExpired" };
+  }
+
+  if (isActivityRemoved(error)) {
+    return { kind: "removedByModeration" };
   }
 
   if (isConnectionFailure(error)) {

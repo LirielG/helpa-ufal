@@ -4,7 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, X } from "lucide-react";
 import { Alert, Button, Textarea } from "../../components";
-import { ApiError } from "../../services/apiError";
+import {
+  ACTIVITY_REMOVED_MESSAGE,
+  ApiError,
+  isActivityRemoved,
+} from "../../services/apiError";
+import { toast } from "react-toastify";
 import { useDialog } from "../../hooks/useDialog";
 import { REPORT_REASONS } from "./constants/reportReasons";
 import {
@@ -21,6 +26,8 @@ type ReportActionModalProps = {
   onClose: () => void;
   /** Called once the API holds a report from this user: on 201, and on 409. */
   onReported?: () => void;
+  /** The API refused with 410: the toast is shown; the caller reloads its data. */
+  onRemovedByModeration?: () => void;
 };
 
 type SubmitError = {
@@ -43,6 +50,7 @@ function ReportActionDialog({
   actionId,
   onClose,
   onReported,
+  onRemovedByModeration,
 }: Omit<ReportActionModalProps, "open">) {
   const [step, setStep] = useState<"form" | "success">("form");
   const [submitError, setSubmitError] = useState<SubmitError | null>(null);
@@ -82,6 +90,13 @@ function ReportActionDialog({
     } catch (error) {
       if (!(error instanceof ApiError)) {
         setSubmitError({ message: UNEXPECTED_ERROR_MESSAGE, canRetry: true });
+        return;
+      }
+
+      if (isActivityRemoved(error)) {
+        toast.error(ACTIVITY_REMOVED_MESSAGE);
+        onRemovedByModeration?.();
+        onClose();
         return;
       }
 

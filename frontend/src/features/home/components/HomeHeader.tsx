@@ -1,23 +1,17 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { Menu, X } from "lucide-react";
 import helpaBlueLogo from "../../../assets/helpa-logo-blue-text.svg";
 
-export type HomeTabId = "about" | "how-it-works" | "actions";
+const NAV_TABS = [
+  { path: "/", label: "Sobre o Projeto" },
+  { path: "/how-it-works", label: "Como Funciona" },
+  { path: "/dashboard", label: "Ações" },
+] as const;
 
-interface HomeHeaderProps {
-  activeTab: HomeTabId;
-  onSelectTab: (tab: HomeTabId) => void;
-}
-
-const NAV_TABS: Array<{ id: HomeTabId; label: string }> = [
-  { id: "about", label: "Sobre o Projeto" },
-  { id: "how-it-works", label: "Como Funciona" },
-  { id: "actions", label: "Ações" },
-];
-
-export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
+export function HomeHeader() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -43,9 +37,16 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  const handleTabClick = (tab: HomeTabId) => {
+  const handleTabClick = (path: string) => {
     setIsMobileMenuOpen(false);
-    onSelectTab(tab);
+
+    // Another page opens at the top on its own; the one already open is
+    // brought back up, as the tabs did before they had routes.
+    if (path === pathname) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    navigate(path);
   };
 
   return (
@@ -53,7 +54,7 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
       <div className="max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-12 h-16 md:h-[80px] flex items-center justify-between gap-4">
         <button
           type="button"
-          onClick={() => handleTabClick("about")}
+          onClick={() => handleTabClick("/")}
           className="shrink-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-2"
           aria-label="Ir para o início"
         >
@@ -69,13 +70,13 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
           className="hidden md:flex items-center gap-6 lg:gap-8 xl:gap-10"
         >
           {NAV_TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
+            const isActive = pathname === tab.path;
 
             return (
               <button
-                key={tab.id}
+                key={tab.path}
                 type="button"
-                onClick={() => handleTabClick(tab.id)}
+                onClick={() => handleTabClick(tab.path)}
                 aria-current={isActive ? "page" : undefined}
                 className={`py-1 text-sm lg:text-[15px] xl:text-[16px] leading-[17px] tracking-[0.5px] font-medium rounded transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] focus-visible:ring-offset-4 ${
                   isActive
@@ -137,13 +138,13 @@ export function HomeHeader({ activeTab, onSelectTab }: HomeHeaderProps) {
             className="flex flex-col gap-1"
           >
             {NAV_TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
+              const isActive = pathname === tab.path;
 
               return (
                 <button
-                  key={tab.id}
+                  key={tab.path}
                   type="button"
-                  onClick={() => handleTabClick(tab.id)}
+                  onClick={() => handleTabClick(tab.path)}
                   aria-current={isActive ? "page" : undefined}
                   className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                     isActive

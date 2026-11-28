@@ -224,7 +224,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
     );
 
     const hideCancelStyle = document.createElement("style");
-    hideCancelStyle.textContent = "button.bg-red-800 { display: none; }";
+    hideCancelStyle.textContent = "button.bg-gray-200 { display: none; }";
     document.head.appendChild(hideCancelStyle);
 
     try {
@@ -281,7 +281,7 @@ describe("ActionDetail focus restoration after enrollment modal closure", () => 
     );
 
     const hideCancelStyle = document.createElement("style");
-    hideCancelStyle.textContent = "button.bg-red-800 { display: none; }";
+    hideCancelStyle.textContent = "button.bg-gray-200 { display: none; }";
     document.head.appendChild(hideCancelStyle);
 
     try {

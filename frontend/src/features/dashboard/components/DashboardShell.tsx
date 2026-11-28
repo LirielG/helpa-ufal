@@ -105,7 +105,7 @@ export function DashboardShell({
       inflightProfilePromise = null;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null);
-       
+
       setProfileError(false);
       return;
     }
@@ -142,27 +142,31 @@ export function DashboardShell({
           />
         )}
 
-        <main className="flex-1 flex flex-col min-w-0 w-full relative">
-          {children}
+        {/* The footer sits in this column, beside the sidebar, so the sticky
+            sidebar keeps its place down to the end of the page. */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <main className="flex-1 flex flex-col min-w-0 w-full relative">
+            {children}
 
-          {isAuthenticated && showCreateAction && (
-            <button
-              type="button"
-              onClick={openRegisterModal}
-              aria-label="Criar uma ação"
-              title="Criar uma ação"
-              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
-            >
-              <Plus className="size-7 md:size-5 lg:size-6 stroke-[2.5]" />
-              <span className="hidden md:inline font-semibold text-sm lg:text-base tracking-wide whitespace-nowrap">
-                Criar uma ação
-              </span>
-            </button>
-          )}
-        </main>
+            {isAuthenticated && showCreateAction && (
+              <button
+                type="button"
+                onClick={openRegisterModal}
+                aria-label="Criar uma ação"
+                title="Criar uma ação"
+                className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 h-14 w-14 md:h-auto md:w-auto md:px-4 md:py-2.5 lg:px-5 lg:py-3 md:rounded-xl rounded-full bg-[#00579A] text-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:bg-[#004884] transition-all flex items-center justify-center gap-1.5 lg:gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1B75BB]/50"
+              >
+                <Plus className="size-7 md:size-5 lg:size-6 stroke-[2.5]" />
+                <span className="hidden md:inline font-semibold text-sm lg:text-base tracking-wide whitespace-nowrap">
+                  Criar uma ação
+                </span>
+              </button>
+            )}
+          </main>
+
+          {footer && <footer>{footer}</footer>}
+        </div>
       </div>
-
-      {footer && <footer>{footer}</footer>}
 
       <ActionRegister
         isOpen={isOpen}

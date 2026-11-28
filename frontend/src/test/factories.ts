@@ -54,7 +54,7 @@ const ACTION_START = "2026-03-10T14:00:00.000Z";
 const ACTION_END = "2026-03-17T18:00:00.000Z";
 
 /** Private defaults both activity factories build on, so the two stay independent. */
-function makeActivityHeader(): Omit<Activity, "details"> {
+function makeActivityHeader(): Omit<Activity, "details" | "moderation"> {
   return {
     id: unique("action"),
     authorId: unique("author"),
@@ -97,6 +97,7 @@ export function makeAction(
 export function makeActionDetail(overrides: Partial<Activity> = {}): Activity {
   return {
     ...makeActivityHeader(),
+    moderation: null,
     details: {
       description: "Descrição da ação de teste.",
       area: "robotica",
