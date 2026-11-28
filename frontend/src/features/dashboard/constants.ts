@@ -77,6 +77,7 @@ export const HEADER_LABELS = {
   homeAriaLabel: "Ir para a página inicial do Helpa",
   openProfileAriaLabel: "Abrir perfil",
   openSidebarAriaLabel: "Abrir menu lateral",
+  collapseSidebarAriaLabel: "Recolher menu lateral",
   login: "Entrar",
   register: "Cadastrar-se",
 } as const;

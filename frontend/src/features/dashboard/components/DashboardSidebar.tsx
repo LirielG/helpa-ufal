@@ -22,6 +22,8 @@ export type ActionSubTab = "enrolled" | "completed" | "managed";
 
 interface DashboardSidebarProps {
   isOpenMobile?: boolean;
+  /** Leaves the desktop sidebar out entirely; the mobile drawer is unaffected. */
+  collapsedDesktop?: boolean;
   onCloseMobile?: () => void;
   profile?: UserProfile | null;
   profileError?: boolean;
@@ -36,6 +38,7 @@ const ACTION_SUB_ITEMS: Array<{ id: ActionSubTab; label: string }> = [
 
 export function DashboardSidebar({
   isOpenMobile = false,
+  collapsedDesktop = false,
   onCloseMobile,
   profile = null,
   profileError = false,
@@ -337,14 +340,16 @@ export function DashboardSidebar({
 
   return (
     <>
-      <aside
-        aria-label="Menu lateral do usuário"
-        // Pinned below the header, which is h-20 from md up. A cap rather
-        // than a fixed height, so a short page still fits with its footer.
-        className="hidden lg:flex shrink-0 sticky top-20 max-h-[calc(100dvh-5rem)]"
-      >
-        {renderSidebarBody(false)}
-      </aside>
+      {!collapsedDesktop && (
+        <aside
+          aria-label="Menu lateral do usuário"
+          // Pinned below the header, which is h-20 from md up. A cap rather
+          // than a fixed height, so a short page still fits with its footer.
+          className="hidden lg:flex shrink-0 sticky top-20 max-h-[calc(100dvh-5rem)]"
+        >
+          {renderSidebarBody(false)}
+        </aside>
+      )}
       {isOpenMobile && (
         <div
           role="dialog"

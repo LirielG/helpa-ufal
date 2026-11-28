@@ -243,6 +243,93 @@ describe("DashboardShell as a layout route", () => {
     });
   });
 
+  describe("collapsing the sidebar on desktop", () => {
+    // The desktop ☰ is the one with aria-expanded; the mobile one only opens
+    // the drawer.
+    const desktopToggle = (name: string, expanded: boolean) =>
+      screen.getByRole("button", { name, expanded });
+    const mobileToggle = () =>
+      screen
+        .getAllByRole("button", { name: "Abrir menu lateral" })
+        .find((button) => !button.hasAttribute("aria-expanded"))!;
+    const desktopSidebar = () =>
+      screen.queryByRole("complementary", { name: "Menu lateral do usuário" });
+
+    function throwOnSidebarKeys() {
+      const getItem = Storage.prototype.getItem;
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (
+        this: Storage,
+        key,
+      ) {
+        if (key.startsWith("helpa.")) throw new Error("SecurityError");
+        return getItem.call(this, key);
+      });
+    }
+
+    it("starts open, then collapses and reopens with the header ☰", async () => {
+      signIn();
+      const { user } = renderShell();
+
+      expect(desktopSidebar()).toBeInTheDocument();
+
+      await user.click(desktopToggle("Recolher menu lateral", true));
+
+      expect(desktopSidebar()).not.toBeInTheDocument();
+      expect(localStorage.getItem("helpa.sidebarCollapsed")).toBe("true");
+
+      await user.click(desktopToggle("Abrir menu lateral", false));
+
+      expect(desktopSidebar()).toBeInTheDocument();
+      expect(localStorage.getItem("helpa.sidebarCollapsed")).toBe("false");
+    });
+
+    it("stays collapsed on another page and after a reload", async () => {
+      signIn();
+      const { user, unmount } = renderShell();
+
+      await user.click(desktopToggle("Recolher menu lateral", true));
+      await user.click(screen.getByRole("link", { name: "ir para /profile" }));
+      await screen.findByRole("heading", { name: "Perfil" });
+
+      expect(desktopSidebar()).not.toBeInTheDocument();
+
+      unmount();
+      renderShell("/profile");
+
+      expect(desktopSidebar()).not.toBeInTheDocument();
+      expect(desktopToggle("Abrir menu lateral", false)).toBeInTheDocument();
+    });
+
+    it("starts open, without an error, when localStorage throws", () => {
+      throwOnSidebarKeys();
+      signIn();
+      renderShell();
+
+      expect(desktopSidebar()).toBeInTheDocument();
+      expect(desktopToggle("Recolher menu lateral", true)).toBeInTheDocument();
+    });
+
+    it("still opens the mobile drawer, which closes on a destination, with the sidebar saved as collapsed", async () => {
+      localStorage.setItem("helpa.sidebarCollapsed", "true");
+      signIn();
+      const { user } = renderShell();
+
+      await user.click(mobileToggle());
+      const drawer = screen.getByRole("dialog", {
+        name: "Menu lateral do usuário",
+      });
+
+      await user.click(
+        within(drawer).getByRole("button", { name: "Dados Pessoais" }),
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "Perfil" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
   describe("page options", () => {
     it("drops Criar uma ação and applies the background only while the page that asks is open", async () => {
       signIn();

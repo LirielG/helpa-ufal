@@ -134,6 +134,7 @@ describe("DashboardHeader", () => {
     render(<p>Feed</p>, { shell: true });
 
     const verifyingLayout = layoutOfHeader();
+    expect(verifyingLayout.slots).toHaveLength(2);
 
     act(() => {
       useAuthStore.setState({ user: makeUser(), isSessionVerified: true });
@@ -147,19 +148,22 @@ describe("DashboardHeader", () => {
 });
 
 // What decides where the logo is drawn: the row's width and padding, the group holding the logo,
-// the size of the slot before it (the menu button below lg), and the logo's own size.
+// the slots before it (the menu buttons: one below lg, one from lg up), and the logo's own size.
 function layoutOfHeader() {
   const row = screen.getByRole("banner").firstElementChild;
   const group = row?.firstElementChild;
-  const slot = group?.children.length === 2 ? group.firstElementChild : null;
+  const slots = Array.from(group?.children ?? []).slice(0, -1);
   return {
     row: row?.className,
     group: group?.className,
-    slot: slot && {
+    slots: slots.map((slot) => ({
       hiddenFromLg: slot.classList.contains("lg:hidden"),
+      shownFromLg:
+        slot.classList.contains("hidden") &&
+        slot.classList.contains("lg:inline-flex"),
       padding: slot.classList.contains("p-2"),
       icon: slot.firstElementChild?.classList.contains("size-6"),
-    },
+    })),
     logo: within(screen.getByRole("banner")).getByAltText("helpa").className,
   };
 }

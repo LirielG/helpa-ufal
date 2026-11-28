@@ -11,6 +11,7 @@ import {
 } from "./DashboardShellContext";
 import { Footer } from "../../../components/Footer";
 import { useAuth } from "../../../hooks/useAuth";
+import { usePersistedFlag } from "../../../hooks/usePersistedFlag";
 import { useAuthStore } from "../../../stores/authStore";
 import { SessionLoader } from "../../../routes/SessionLoader";
 import { getProfile } from "../../profile/services";
@@ -39,6 +40,10 @@ export function DashboardShell() {
   const userId = isCheckingStoredSession ? null : (user?.id ?? null);
   const isHowItWorks = useMatch("/how-it-works") !== null;
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Per browser, not per account. Read only from lg up: below it, the drawer
+  // starts closed regardless.
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] =
+    usePersistedFlag("helpa.sidebarCollapsed", false);
   const [options, setOptions] = useState<DashboardShellOptions>({});
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [profileReloads, setProfileReloads] = useState(0);
@@ -140,12 +145,19 @@ export function DashboardShell() {
             : undefined
         }
       >
-        <DashboardHeader onToggleSidebar={() => setMobileSidebarOpen(true)} />
+        <DashboardHeader
+          onToggleSidebar={() => setMobileSidebarOpen(true)}
+          onToggleDesktopSidebar={() =>
+            setDesktopSidebarCollapsed((collapsed) => !collapsed)
+          }
+          desktopSidebarCollapsed={desktopSidebarCollapsed}
+        />
 
         <div className="flex-1 flex w-full">
           {isAuthenticated && (
             <DashboardSidebar
               isOpenMobile={mobileSidebarOpen}
+              collapsedDesktop={desktopSidebarCollapsed}
               onCloseMobile={() => setMobileSidebarOpen(false)}
               profile={ownProfileState?.data ?? null}
               profileError={ownProfileState?.failed ?? false}

@@ -8,10 +8,18 @@ import type { ReturnToState } from "../../../routes/GuestRoute";
 import { HEADER_LABELS, HEADER_NAV_ITEMS } from "../constants";
 
 interface DashboardHeaderProps {
+  /** Opens the drawer, below lg. */
   onToggleSidebar?: () => void;
+  /** Collapses or reopens the sidebar, from lg up. */
+  onToggleDesktopSidebar?: () => void;
+  desktopSidebarCollapsed?: boolean;
 }
 
-export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
+export function DashboardHeader({
+  onToggleSidebar,
+  onToggleDesktopSidebar,
+  desktopSidebarCollapsed = false,
+}: DashboardHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
@@ -31,7 +39,10 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
       ? location.pathname === "/"
       : location.pathname.startsWith(itemPath);
 
-  const isVerifyingInitialSession = !isSessionVerified && user === null && localStorage.getItem("help_auth_token") !== null;
+  const isVerifyingInitialSession =
+    !isSessionVerified &&
+    user === null &&
+    localStorage.getItem("help_auth_token") !== null;
 
   if (isVerifyingInitialSession) {
     return (
@@ -39,9 +50,14 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
         {/* Same row as the signed-in header below, so the logo stays put when the check confirms the session. */}
         <div className="w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {/* Holds the menu button's space below lg, where the signed-in header shows it before the logo. */}
+            {/* Hold the menu buttons' space, where the signed-in header shows them before the logo. */}
             {onToggleSidebar && (
               <span aria-hidden="true" className="lg:hidden p-2">
+                <span className="block size-6" />
+              </span>
+            )}
+            {onToggleDesktopSidebar && (
+              <span aria-hidden="true" className="hidden lg:inline-flex p-2">
                 <span className="block size-6" />
               </span>
             )}
@@ -72,6 +88,25 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
                 onClick={onToggleSidebar}
                 className="lg:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
                 aria-label={HEADER_LABELS.openSidebarAriaLabel}
+              >
+                <Menu className="size-6" />
+              </button>
+            )}
+
+            {/* A separate button from lg up: there it collapses the sidebar
+                instead of opening the drawer, and CSS alone decides which one
+                shows. */}
+            {onToggleDesktopSidebar && (
+              <button
+                type="button"
+                onClick={onToggleDesktopSidebar}
+                className="hidden lg:inline-flex p-2 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
+                aria-expanded={!desktopSidebarCollapsed}
+                aria-label={
+                  desktopSidebarCollapsed
+                    ? HEADER_LABELS.openSidebarAriaLabel
+                    : HEADER_LABELS.collapseSidebarAriaLabel
+                }
               >
                 <Menu className="size-6" />
               </button>
