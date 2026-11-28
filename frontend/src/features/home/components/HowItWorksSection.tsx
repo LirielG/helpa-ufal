@@ -334,7 +334,7 @@ export function HowItWorksSection({
           <button
             type="button"
             onClick={onExploreActions}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-[#1D4ED8] text-white font-semibold shadow-md hover:bg-blue-700 hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-primary text-white font-semibold shadow-md hover:bg-primary-hover hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
           >
             <span>Ir para o Feed de Ações</span>
           </button>

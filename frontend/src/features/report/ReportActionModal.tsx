@@ -165,7 +165,7 @@ function ReportActionDialog({
             </div>
             <Button
               type="button"
-              variant="navy"
+              variant="primary"
               size="lg"
               className="rounded-full px-8 py-3"
               onClick={onClose}
@@ -232,7 +232,7 @@ function ReportActionDialog({
 
               <Button
                 type="submit"
-                variant="navy"
+                variant="primary"
                 size="lg"
                 className="flex-1 rounded-full px-8 py-3"
                 isLoading={isSubmitting}

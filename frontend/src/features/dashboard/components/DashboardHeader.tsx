@@ -186,7 +186,7 @@ export function DashboardHeader({
           <button
             type="button"
             onClick={goToRegister}
-            className="px-5 py-2.5 text-sm lg:text-[15px] font-semibold text-white bg-[#002147] rounded-lg hover:bg-[#00336b] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
+            className="px-5 py-2.5 text-sm lg:text-[15px] font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A]"
           >
             {HEADER_LABELS.register}
           </button>
@@ -243,7 +243,7 @@ export function DashboardHeader({
             <button
               type="button"
               onClick={goToRegister}
-              className="flex-1 py-2 text-sm font-semibold text-white bg-[#002147] rounded-lg"
+              className="flex-1 py-2 text-sm font-semibold text-white bg-primary rounded-lg"
             >
               {HEADER_LABELS.register}
             </button>

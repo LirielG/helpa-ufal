@@ -31,14 +31,14 @@ describe("ConfirmStatusModal", () => {
       "Iniciar ação",
       "Voltar",
       "A ação passa a constar como em andamento. Novas inscrições deixam de ser aceitas.",
-      "bg-blue-600",
+      "bg-primary",
     ],
     [
       "COMPLETED",
       "Concluir ação",
       "Voltar",
       "Depois de concluída, a ação não poderá voltar a ficar em andamento.",
-      "bg-blue-600",
+      "bg-primary",
     ],
     [
       "CANCELLED",

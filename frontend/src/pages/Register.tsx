@@ -255,7 +255,7 @@ export function Register() {
           
         </div>
 
-        <Button type="submit" size="lg" isLoading={isLoading}variant="navy">          
+        <Button type="submit" size="lg" isLoading={isLoading}variant="primary">          
           Criar conta
         </Button>
       </form>

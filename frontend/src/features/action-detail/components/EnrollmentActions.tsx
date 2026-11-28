@@ -64,7 +64,7 @@ export function EnrollmentActions({
   }
 
   return (
-    <Button variant="navy" size="lg" onClick={onEnroll} className="rounded-xl">
+    <Button variant="primary" size="lg" onClick={onEnroll} className="rounded-xl">
       Inscrever-se
     </Button>
   );

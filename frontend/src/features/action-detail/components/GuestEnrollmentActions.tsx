@@ -29,7 +29,7 @@ export function GuestEnrollmentActions({
   return (
     <div className="flex flex-col gap-3">
       <Button
-        variant="navy"
+        variant="primary"
         size="lg"
         onClick={() => navigate("/login", { state: returnTo })}
         className="rounded-xl"

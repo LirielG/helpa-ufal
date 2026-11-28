@@ -104,7 +104,7 @@ export function Login() {
           onTogglePassword={() => setShowPassword((current) => !current)}
         />
 
-        <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
+        <Button type="submit" size="lg" isLoading={isLoading} variant="primary">
           Entrar
         </Button>
       </form>

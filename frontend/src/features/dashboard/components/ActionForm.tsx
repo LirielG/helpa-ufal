@@ -746,7 +746,7 @@ export function ActionRegister({
                 <Button
                   key="next"
                   type="button"
-                  variant="navy"
+                  variant="primary"
                   size="sm"
                   rounded
                   onClick={handleStep1Next}
@@ -792,7 +792,7 @@ export function ActionRegister({
             <div className="flex flex-col gap-3 w-full">
               <Button
                 type="button"
-                variant="navy"
+                variant="primary"
                 size="md"
                 onClick={() => setShowCancelConfirm(false)}
                 className="w-full"

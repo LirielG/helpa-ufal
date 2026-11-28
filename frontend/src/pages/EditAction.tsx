@@ -732,7 +732,7 @@ function EditActionForm({ id }: { id: string | undefined }) {
                 type="submit"
                 size="sm"
                 rounded
-                variant="navy"
+                variant="primary"
                 className="rounded-full px-8 py-2.5 font-medium"
                 isLoading={isSubmitting || isConfirming}
                 disabled={isSubmitting || isConfirming}

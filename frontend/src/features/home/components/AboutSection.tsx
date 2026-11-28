@@ -97,7 +97,7 @@ export function AboutSection() {
             <button
               type="button"
               onClick={scrollToOrigin}
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-lg bg-[#002147] text-white text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-md hover:bg-[#001630] hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-lg bg-primary text-white text-[14px] leading-[17px] font-semibold tracking-[0.7px] shadow-md hover:bg-primary-hover hover:shadow-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <span>Conhecer o Projeto</span>
               <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
