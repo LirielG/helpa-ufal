@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Mail } from "lucide-react";
 import { Button, Alert, HomeLogoLink } from "../components";
 import { useAuth } from "../hooks";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { LoginSchema } from "../validators/auth";
 import helpaBlueLogo from "../assets/helpa-logo-blue.svg";
 import { AuthField } from "../features/auth/components/AuthField";
@@ -41,11 +41,14 @@ export function Login() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<LoginFields>({
     resolver: zodResolver(LoginSchema),
     mode: "onSubmit",
   });
+
+  const email = useWatch({ control, name: "email", defaultValue: "" });
 
   const onSubmit = async (data: LoginFields) => {
     await login(data);
@@ -96,13 +99,25 @@ export function Login() {
           registration={register("email")}
         />
 
-        <PasswordField
-          label="Senha"
-          error={errors.password?.message}
-          registration={register("password")}
-          showPassword={showPassword}
-          onTogglePassword={() => setShowPassword((current) => !current)}
-        />
+        <div className="space-y-2">
+          <PasswordField
+            label="Senha"
+            error={errors.password?.message}
+            registration={register("password")}
+            showPassword={showPassword}
+            onTogglePassword={() => setShowPassword((current) => !current)}
+          />
+
+          <div className="flex justify-end">
+            <Link
+              to="/forgot-password"
+              state={{ ...returnTo, email }}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              Esqueci minha senha
+            </Link>
+          </div>
+        </div>
 
         <Button type="submit" size="lg" isLoading={isLoading} variant="navy">
           Entrar
