@@ -1162,6 +1162,42 @@ describe("ActionsList certificates", () => {
     expect(screen.getByText("20 horas")).toBeInTheDocument();
   });
 
+  it.each([
+    {
+      state: "filled",
+      completed: [
+        makeUserActivityItem({ title: PENDING_TITLE, status: "COMPLETED" }),
+      ],
+      waitFor: PENDING_TITLE,
+    },
+    {
+      state: "empty",
+      completed: [],
+      waitFor: "Você ainda não concluiu nenhuma ação.",
+    },
+  ])(
+    "shows the certificate guidance with a link to Como Funciona when the list is $state",
+    async ({ completed, waitFor }) => {
+      signIn();
+      serveByFilter({ completed });
+
+      await openSubTab("completed");
+
+      expect(await screen.findByText(waitFor)).toBeInTheDocument();
+      const notice = screen.getByRole("note", {
+        name: "Sobre os seus certificados",
+      });
+      expect(
+        within(notice).getByText(
+          /o certificado aparece no card para download depois que o responsável homologa sua presença e suas horas/i,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(notice).getByRole("link", { name: "Como funciona" }),
+      ).toHaveAttribute("href", "/how-it-works");
+    },
+  );
+
   it.each(["enrolled", "managed"] as const)(
     "shows nothing about certificates on the %s sub-tab",
     async (filter) => {

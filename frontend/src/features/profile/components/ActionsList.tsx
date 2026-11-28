@@ -14,6 +14,7 @@ import { useActionRegister } from "../../../hooks/useActionRegister";
 import { EmptyActionsList } from "./EmptyActionsList";
 import { Pagination } from "../../../components/Pagination";
 import { PageTitle } from "../../../components/PageTitle";
+import { CompletedCertificatesNotice } from "./CompletedCertificatesNotice";
 
 export function ActionsList() {
   const navigate = useNavigate();
@@ -207,6 +208,8 @@ export function ActionsList() {
             totalPages={totalPages}
             onPageChange={selectPage}
           />
+
+          {activeSubTab === "completed" && <CompletedCertificatesNotice />}
         </>
       )}
     </div>
