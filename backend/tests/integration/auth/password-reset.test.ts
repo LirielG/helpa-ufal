@@ -523,3 +523,75 @@ describe("POST /auth/reset-password", () => {
     ]);
   });
 });
+
+describe("pending reset code and PATCH /users/me", () => {
+  let user: User;
+  let token: string;
+  let code: string;
+
+  beforeEach(async () => {
+    ({ user, token } = await createStudent());
+    code = await requestCode(user.email);
+  });
+
+  function patchMe(body: Record<string, unknown>) {
+    return request(app)
+      .patch("/users/me")
+      .set(...authCookie(token))
+      .send(body);
+  }
+
+  function verify() {
+    return request(app).post(verifyUrl).send({ email: user.email, code });
+  }
+
+  it("invalidates the pending code when the password changes", async () => {
+    await patchMe({
+      currentPassword: DEFAULT_PASSWORD,
+      newPassword: OTHER_PASSWORD,
+    }).expect(200);
+
+    const response = await verify();
+
+    expect(response.status).toBe(422);
+    expect(response.body).toEqual(INVALID_CODE_BODY);
+  });
+
+  it("keeps the pending code when only fullName changes", async () => {
+    await patchMe({ fullName: "Ana Souza" }).expect(200);
+
+    await verify().expect(204);
+  });
+
+  it("keeps the pending code when the password change fails with 403", async () => {
+    await patchMe({
+      currentPassword: "Errada@123",
+      newPassword: OTHER_PASSWORD,
+    }).expect(403);
+
+    await verify().expect(204);
+  });
+
+  it("does not delete codes of other types when the password changes", async () => {
+    await prisma.userCode.create({
+      data: {
+        userId: user.id,
+        type: "EMAIL_VERIFICATION",
+        tokenHash: hashUserCode("AAAAAAAA"),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await patchMe({
+      currentPassword: DEFAULT_PASSWORD,
+      newPassword: OTHER_PASSWORD,
+    }).expect(200);
+
+    expect(
+      await prisma.userCode.findMany({
+        where: { userId: user.id },
+        select: { type: true },
+      }),
+    ).toEqual([{ type: "EMAIL_VERIFICATION" }]);
+  });
+});
