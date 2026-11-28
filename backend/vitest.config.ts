@@ -30,6 +30,8 @@ export default defineConfig({
           root: rootDir,
           environment: "node",
           include: ["src/**/__tests__/**/*.test.ts"],
+          // The rate-limit unit tests use supertest too.
+          setupFiles: ["tests/setup/supertestLoopback.ts"],
           env: unitEnv,
         },
       },
