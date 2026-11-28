@@ -3,6 +3,7 @@ import type {
   ListActivitiesResponse,
   ActivityListItem,
 } from "../../services/contracts/activity";
+import { DEFAULT_STATUS_FILTER } from "./constants";
 import type { FilterOptions } from "./types";
 
 export async function fetchActions(
@@ -23,7 +24,7 @@ export async function fetchActions(
     apiParams.area = filters.area;
   }
 
-  if (filters.status !== "all") {
+  if (filters.status !== DEFAULT_STATUS_FILTER) {
     apiParams.status = filters.status;
   }
 

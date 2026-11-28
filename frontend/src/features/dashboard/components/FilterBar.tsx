@@ -24,7 +24,7 @@ const FIELDS: Array<{
   },
   {
     key: "status",
-    label: "Status",
+    label: "Situação",
     options: FILTER_OPTIONS.status,
   },
 ];

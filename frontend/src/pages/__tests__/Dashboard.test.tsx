@@ -384,8 +384,8 @@ describe("Dashboard", () => {
     const afterFirstLoad = requests;
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Status" }),
-      "OPEN",
+      screen.getByRole("combobox", { name: "Situação" }),
+      "COMPLETED",
     );
 
     expect(requests).toBe(afterFirstLoad + 1);
@@ -536,7 +536,7 @@ describe("Dashboard", () => {
 
   it("counts the pages of a filtered cut from its own total", async () => {
     serveActivities((params) =>
-      params.get("status") === "OPEN" ? catalogue.slice(0, 25) : catalogue,
+      params.get("status") === "COMPLETED" ? catalogue.slice(0, 25) : catalogue,
     );
 
     const { user } = render(<Dashboard />);
@@ -546,8 +546,8 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
 
     await user.selectOptions(
-      screen.getByRole("combobox", { name: "Status" }),
-      "OPEN",
+      screen.getByRole("combobox", { name: "Situação" }),
+      "COMPLETED",
     );
 
     await waitFor(() => {
@@ -609,12 +609,12 @@ describe("Dashboard", () => {
         "LECTURE",
       );
       await user.selectOptions(
-        screen.getByRole("combobox", { name: "Status" }),
-        "OPEN",
+        screen.getByRole("combobox", { name: "Situação" }),
+        "COMPLETED",
       );
 
       await waitFor(() => {
-        expect(requests.at(-1)?.get("status")).toBe("OPEN");
+        expect(requests.at(-1)?.get("status")).toBe("COMPLETED");
       });
       expect(requests.at(-1)?.get("area")).toBe("Educação");
       expect(requests.at(-1)?.get("type")).toBe("LECTURE");
@@ -722,153 +722,154 @@ describe("Dashboard", () => {
     });
   });
 
-  describe("status filter", () => {
-    /** One action per status, so every cut the API makes is told apart. */
-    const actionsByStatus = (
-      ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const
-    ).map((status) => ({
-      ...mockApiActivities.items[0],
-      id: `action-${status}`,
-      title: `Ação ${status}`,
-      status,
-    }));
+describe("status filter", () => {
+  /** One action per status, so every cut the API makes is told apart. */
+  const actionsByStatus = (
+    ["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const
+  ).map((status) => ({
+    ...mockApiActivities.items[0],
+    id: `action-${status}`,
+    title: `Ação ${status}`,
+    status,
+  }));
 
-    function serveByStatus(): URLSearchParams[] {
-      return serveActivities((params) => {
-        const status = params.get("status");
-        return status
-          ? actionsByStatus.filter((action) => action.status === status)
-          : actionsByStatus;
+  function serveByStatus(): URLSearchParams[] {
+    return serveActivities((params) => {
+      const status = params.get("status");
+      if (status === "ALL") return actionsByStatus;
+      const effectiveStatus = status ?? "OPEN";
+      return actionsByStatus.filter(
+        (action) => action.status === effectiveStatus,
+      );
+    });
+  }
+
+  function statusSelect() {
+    return screen.getByRole("combobox", { name: "Situação" });
+  }
+
+  function cardTitles() {
+    return screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+  }
+
+  it.each([
+    ["Em andamento", "Em Andamento", "IN_PROGRESS"],
+    ["Concluídas", "Finalizada", "COMPLETED"],
+    ["Canceladas", "Cancelada", "CANCELLED"],
+  ] as const)(
+    "asks the API for the %s cut and badges its cards with %s",
+    async (optionLabel, badgeLabel, status) => {
+      const requests = serveByStatus();
+      const { user } = renderDashboard();
+
+      await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
+
+      await user.selectOptions(statusSelect(), optionLabel);
+
+      await waitFor(() => {
+        expect(cardTitles()).toEqual([`Ação ${status}`]);
       });
-    }
+      expect(requests.at(-1)?.get("status")).toBe(status);
+      expect(screen.getByText(badgeLabel, { selector: "span" })).toBeVisible();
+    },
+  );
 
-    function statusSelect() {
-      return screen.getByRole("combobox", { name: "Status" });
-    }
+  it("sends the status and the action type in the same request", async () => {
+    const requests = serveByStatus();
+    const { user } = renderDashboard();
 
-    function cardTitles() {
-      return screen
-        .getAllByRole("heading", { level: 3 })
-        .map((heading) => heading.textContent);
-    }
+    await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
 
-    it.each([
-      ["Inscrições Abertas", "OPEN"],
-      ["Em Andamento", "IN_PROGRESS"],
-      ["Finalizada", "COMPLETED"],
-      ["Cancelada", "CANCELLED"],
-    ] as const)(
-      "asks the API for the %s cut and badges its cards with the same label",
-      async (label, status) => {
-        const requests = serveByStatus();
-        const { user } = renderDashboard();
-
-        await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
-
-        await user.selectOptions(statusSelect(), label);
-
-        await waitFor(() => {
-          expect(cardTitles()).toEqual([`Ação ${status}`]);
-        });
-        expect(requests.at(-1)?.get("status")).toBe(status);
-        // The option shares the text, so only the badge counts here.
-        expect(screen.getByText(label, { selector: "span" })).toBeVisible();
-      },
+    await user.selectOptions(statusSelect(), "IN_PROGRESS");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Tipos de ação" }),
+      "LECTURE",
     );
 
-    it("sends the status and the action type in the same request", async () => {
-      const requests = serveByStatus();
-      const { user } = renderDashboard();
+    await waitFor(() => {
+      expect(requests.at(-1)?.get("type")).toBe("LECTURE");
+    });
+    expect(requests.at(-1)?.get("status")).toBe("IN_PROGRESS");
+  });
 
-      await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
+  it("sends status=ALL when 'Todas' is chosen and drops `status` when returning to 'Inscrições abertas'", async () => {
+    const requests = serveByStatus();
+    const { user } = renderDashboard();
 
-      await user.selectOptions(statusSelect(), "IN_PROGRESS");
-      await user.selectOptions(
-        screen.getByRole("combobox", { name: "Tipos de ação" }),
-        "LECTURE",
-      );
+    await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
 
-      await waitFor(() => {
-        expect(requests.at(-1)?.get("type")).toBe("LECTURE");
-      });
-      expect(requests.at(-1)?.get("status")).toBe("IN_PROGRESS");
+    await user.selectOptions(statusSelect(), "Todas");
+    await waitFor(() => {
+      expect(cardTitles()).toHaveLength(actionsByStatus.length);
+    });
+    expect(requests.at(-1)?.get("status")).toBe("ALL");
+
+    await user.selectOptions(statusSelect(), "Inscrições abertas");
+
+    await waitFor(() => {
+      expect(cardTitles()).toEqual(["Ação OPEN"]);
+    });
+    expect(requests.at(-1)?.has("status")).toBe(false);
+  });
+
+  it("restarts the pagination at page 1 when the status changes", async () => {
+    const requests = serveActivities(() => catalogue);
+    const { user } = renderDashboard();
+
+    await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+
+    await user.click(screen.getByRole("button", { name: "Próxima página" }));
+    await waitFor(() => {
+      expect(requests.at(-1)?.get("page")).toBe("2");
     });
 
-    it("drops `status` from the request when every status is chosen again", async () => {
-      const requests = serveByStatus();
-      const { user } = renderDashboard();
+    await user.selectOptions(statusSelect(), "COMPLETED");
 
-      await screen.findByRole("heading", { level: 3, name: "Ação OPEN" });
-
-      await user.selectOptions(statusSelect(), "CANCELLED");
-      await waitFor(() => {
-        expect(cardTitles()).toEqual(["Ação CANCELLED"]);
-      });
-
-      await user.selectOptions(statusSelect(), "Todos os status");
-
-      await waitFor(() => {
-        expect(cardTitles()).toHaveLength(actionsByStatus.length);
-      });
-      expect(requests.at(-1)?.has("status")).toBe(false);
+    await waitFor(() => {
+      expect(requests.at(-1)?.get("status")).toBe("COMPLETED");
     });
+    expect(requests.at(-1)?.get("page")).toBe("1");
+  });
 
-    it("restarts the pagination at page 1 when the status changes", async () => {
-      const requests = serveActivities(() => catalogue);
-      const { user } = renderDashboard();
+  it("shows the filtered empty state when no action has the status", async () => {
+    serveActivities((params) => (params.has("status") ? [] : catalogue));
+    const { user } = renderDashboard();
 
-      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+    await screen.findByRole("heading", { level: 3, name: "Ação 1" });
 
-      await user.click(screen.getByRole("button", { name: "Próxima página" }));
-      await waitFor(() => {
-        expect(requests.at(-1)?.get("page")).toBe("2");
-      });
+    await user.selectOptions(statusSelect(), "CANCELLED");
 
-      await user.selectOptions(statusSelect(), "OPEN");
+    expect(
+      await screen.findByText("Nenhuma ação corresponde a esses filtros."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Limpar filtros" }),
+    ).toBeInTheDocument();
+  });
 
-      await waitFor(() => {
-        expect(requests.at(-1)?.get("status")).toBe("OPEN");
-      });
-      expect(requests.at(-1)?.get("page")).toBe("1");
-    });
+  it("shows the error state when the status request fails", async () => {
+    server.use(
+      http.get("*/activities", ({ request }) =>
+        new URL(request.url).searchParams.has("status")
+          ? new HttpResponse(null, { status: 500 })
+          : HttpResponse.json(mockApiActivities),
+      ),
+    );
+    const { user } = renderDashboard();
 
-    it("shows the filtered empty state when no action has the status", async () => {
-      serveActivities((params) => (params.has("status") ? [] : catalogue));
-      const { user } = renderDashboard();
+    await screen.findAllByRole("heading", { name: "Oficina de React" });
 
-      await screen.findByRole("heading", { level: 3, name: "Ação 1" });
+    await user.selectOptions(statusSelect(), "COMPLETED");
 
-      await user.selectOptions(statusSelect(), "CANCELLED");
-
-      expect(
-        await screen.findByText("Nenhuma ação corresponde a esses filtros."),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Limpar filtros" }),
-      ).toBeInTheDocument();
-    });
-
-    it("shows the error state when the status request fails", async () => {
-      server.use(
-        http.get("*/activities", ({ request }) =>
-          new URL(request.url).searchParams.has("status")
-            ? new HttpResponse(null, { status: 500 })
-            : HttpResponse.json(mockApiActivities),
-        ),
-      );
-      const { user } = renderDashboard();
-
-      await screen.findAllByRole("heading", { name: "Oficina de React" });
-
-      await user.selectOptions(statusSelect(), "OPEN");
-
-      expect(
-        await screen.findByText("Não foi possível carregar as ações"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Tentar de novo" }),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByText("Não foi possível carregar as ações"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Tentar de novo" }),
+    ).toBeInTheDocument();
+  });
   });
 });
 

@@ -8,13 +8,13 @@ import bgFeed from "../../../assets/bg.svg";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { fetchActions } from "../services";
 import type { ActivityListItem } from "@/services/contracts/activity";
-import type { FilterOptions } from "../types";
+import { DEFAULT_STATUS_FILTER, isStatusFilterValue } from "../constants";
+import type { FilterOptions, StatusFilterValue } from "../types";
 import { useActionRegister } from "../../../hooks/useActionRegister";
 
-const INITIAL_FILTERS: FilterOptions = {
+const INITIAL_LOCAL_FILTERS: Omit<FilterOptions, "status"> = {
   area: "all",
   actionType: "all",
-  status: "all",
   search: "",
 };
 
@@ -35,6 +35,11 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const feed: FeedKey =
     searchParams.get("feed") === "sigaa" ? "sigaa" : "helpa";
 
+  const statusParam = searchParams.get("status");
+  const status: StatusFilterValue = isStatusFilterValue(statusParam)
+    ? statusParam
+    : DEFAULT_STATUS_FILTER;
+
   const [actions, setActions] = useState<ActivityListItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -43,23 +48,50 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
   const [sigaaHasError, setSigaaHasError] = useState(false);
   const [heroRefreshKey, setHeroRefreshKey] = useState(0);
 
-  const [filters, setFilters] = useState<FilterOptions>(INITIAL_FILTERS);
+  const [localFilters, setLocalFilters] = useState<
+    Omit<FilterOptions, "status">
+  >(INITIAL_LOCAL_FILTERS);
 
-  const handleFilterChange = (key: keyof FilterOptions, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
-  };
+  const filters = useMemo<FilterOptions>(
+    () => ({ ...localFilters, status }),
+    [localFilters, status],
+  );
+
+  const handleFilterChange = useCallback(
+    (key: keyof FilterOptions, value: string) => {
+      if (key === "status") {
+        const nextStatus = isStatusFilterValue(value)
+          ? value
+          : DEFAULT_STATUS_FILTER;
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          if (nextStatus === DEFAULT_STATUS_FILTER) {
+            next.delete("status");
+          } else {
+            next.set("status", nextStatus);
+          }
+          return next;
+        });
+      } else {
+        setLocalFilters((prev) => ({ ...prev, [key]: value }));
+      }
+      setPage(1);
+    },
+    [setSearchParams],
+  );
 
   const handleResetFilters = useCallback(() => {
-    setFilters(INITIAL_FILTERS);
+    setLocalFilters(INITIAL_LOCAL_FILTERS);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("status");
+      return next;
+    });
     setPage(1);
-  }, []);
+  }, [setSearchParams]);
 
-  // The field stays controlled by what was typed while the request trails it.
-  // Debouncing `filters` as a whole would delay the selects too, which filter
-  // on the spot.
-  const { area, actionType, status } = filters;
-  const search = useDebouncedValue(filters.search ?? "", debounceMs);
+  const { area, actionType } = localFilters;
+  const search = useDebouncedValue(localFilters.search ?? "", debounceMs);
 
   const requestFilters = useMemo<FilterOptions>(
     () => ({ area, actionType, status, search }),
@@ -76,9 +108,6 @@ export function FeedSection({ debounceMs = 400 }: FeedSectionProps) {
 
   const showHelpaFeed = useCallback(() => changeFeed("helpa"), [changeFeed]);
 
-  // Typing fires a request per debounce window, and those can settle out of
-  // order. Only the newest one is allowed to touch the screen, so an abandoned
-  // response can neither bring back a stale list nor erase a fresher error.
   const latestRequest = useRef(0);
 
   const loadActions = useCallback(() => {
