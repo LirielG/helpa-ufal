@@ -80,6 +80,14 @@ class UserRepository implements IUserRepository {
         });
       }
 
+      // A reset code requested before the change would still let whoever
+      // reads the old inbox replace the new password.
+      if (data.passwordHash !== undefined) {
+        await tx.userCode.deleteMany({
+          where: { userId: id, type: "PASSWORD_RESET" },
+        });
+      }
+
       if (data.course !== undefined) {
         await tx.teacher.update({
           where: { userId: id },

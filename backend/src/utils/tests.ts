@@ -58,10 +58,12 @@ export async function expectCustomError(
   promise: Promise<unknown>,
   status: number,
   message?: string,
+  code?: string,
 ): Promise<void> {
   const error = await catchError(promise);
   expect(error).toBeInstanceOf(CustomError);
   expect(error).not.toBeInstanceOf(ValidationError);
   expect((error as CustomError).statusCode).toBe(status);
   if (message) expect((error as CustomError).message).toBe(message);
+  if (code) expect((error as CustomError).code).toBe(code);
 }
