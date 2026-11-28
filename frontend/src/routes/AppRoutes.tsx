@@ -12,6 +12,7 @@ import {
   CertificateValidation,
   ModerationPage,
   MyActivities,
+  MyCertificates,
   HowItWorks,
 } from "../pages";
 
@@ -21,6 +22,7 @@ import { PublicRoute } from "./PublicRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { GuestRoute } from "./GuestRoute";
 import { ScrollToTop } from "./ScrollToTop";
+import { DashboardShell } from "../features/dashboard/components/DashboardShell";
 
 export function AppRoutes() {
   useSessionExpiry();
@@ -48,65 +50,87 @@ export function AppRoutes() {
             </GuestRoute>
           }
         />
-        <Route
-          path="/dashboard"
-          element={
-            <PublicRoute>
-              <Dashboard />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/activity/:id"
-          element={
-            <PublicRoute>
-              <ActionDetail />
-            </PublicRoute>
-          }
-        />
+        {/* One shell for every page with the dashboard header, so the sidebar
+            stays mounted, with its state, while the user moves between them. */}
+        <Route element={<DashboardShell />}>
+          <Route
+            path="/dashboard"
+            element={
+              <PublicRoute>
+                <Dashboard />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/activity/:id"
+            element={
+              <PublicRoute>
+                <ActionDetail />
+              </PublicRoute>
+            }
+          />
 
-        <Route
-          path="/activity/:id/edit"
-          element={
-            <ProtectedRoute>
-              <EditAction />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/activity/:id/edit"
+            element={
+              <ProtectedRoute>
+                <EditAction />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/activity/:id/enrollments"
-          element={
-            <ProtectedRoute>
-              <EnrollmentsPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/activity/:id/enrollments"
+            element={
+              <ProtectedRoute>
+                <EnrollmentsPage />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/my-activities"
-          element={
-            <ProtectedRoute>
-              <MyActivities />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/moderation"
-          element={
-            <ProtectedRoute>
-              <ModerationPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-activities"
+            element={
+              <ProtectedRoute>
+                <MyActivities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-certificates"
+            element={
+              <ProtectedRoute>
+                <MyCertificates />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/moderation"
+            element={
+              <ProtectedRoute>
+                <ModerationPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Unlike /, open to a signed-in user too: the sidebar's Ajuda
+              leads here. */}
+          <Route
+            path="/how-it-works"
+            element={
+              <PublicRoute>
+                <HowItWorks />
+              </PublicRoute>
+            }
+          />
+        </Route>
         {/* Both paths are printed on issued certificates: never rename them. */}
         <Route
           path="/validate"
@@ -121,16 +145,6 @@ export function AppRoutes() {
           element={
             <PublicRoute>
               <CertificateValidation />
-            </PublicRoute>
-          }
-        />
-        {/* Unlike /, open to a signed-in user too: the sidebar's Ajuda
-            leads here. */}
-        <Route
-          path="/how-it-works"
-          element={
-            <PublicRoute>
-              <HowItWorks />
             </PublicRoute>
           }
         />

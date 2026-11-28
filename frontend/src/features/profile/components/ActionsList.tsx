@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import type { ActivityStatus, UserActivity } from "../types";
+import type { UserActivity, UserActivityList } from "../types";
 import { EnrolledCard } from "./cards/EnrolledCard";
 import { CompletedCard } from "./cards/CompletedCard";
 import { ManagedCard } from "./cards/ManagedCard";
@@ -16,14 +16,22 @@ import { Pagination } from "../../../components/Pagination";
 import { PageTitle } from "../../../components/PageTitle";
 import { CompletedCertificatesNotice } from "./CompletedCertificatesNotice";
 
-export function ActionsList() {
+interface ActionsListProps {
+  /**
+   * A list of its own page, such as /my-certificates. Without it, the list is
+   * the /my-activities sub-tab named by ?filter=.
+   */
+  list?: "certified";
+}
+
+export function ActionsList({ list }: ActionsListProps = {}) {
   const navigate = useNavigate();
   const { openRegisterModal, setOnSuccessCallback } = useActionRegister();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("filter");
-  const activeSubTab: ActivityStatus = isActivityStatus(filterParam)
-    ? filterParam
-    : DEFAULT_ACTIVITY_STATUS;
+  const activeSubTab: UserActivityList =
+    list ??
+    (isActivityStatus(filterParam) ? filterParam : DEFAULT_ACTIVITY_STATUS);
   const [activities, setActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +41,8 @@ export function ActionsList() {
   const [pagedSubTab, setPagedSubTab] = useState(activeSubTab);
 
   useEffect(() => {
+    if (list) return;
+
     if (!filterParam || !isActivityStatus(filterParam)) {
       setSearchParams(
         (previous) => {
@@ -43,7 +53,7 @@ export function ActionsList() {
         { replace: true },
       );
     }
-  }, [filterParam, setSearchParams]);
+  }, [list, filterParam, setSearchParams]);
 
   // The sub-tab lives in the URL, so it changes one render after the click
   // (or with no click at all, on browser Back). Resetting while rendering, not
@@ -170,7 +180,10 @@ export function ActionsList() {
               }
             >
               {activities.map((activity) => {
-                if (activeSubTab === "completed") {
+                if (
+                  activeSubTab === "completed" ||
+                  activeSubTab === "certified"
+                ) {
                   return (
                     <CompletedCard
                       key={activity.action.id}

@@ -1,8 +1,5 @@
 import { useId, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
-import { Footer } from "@/components/Footer";
 import { Alert } from "@/components/Alert";
 import { Button } from "@/components/Button";
 import { Pagination } from "@/components/Pagination";
@@ -78,7 +75,7 @@ export function ModerationPage() {
       : "Nenhuma denúncia resolvida.";
 
   return (
-    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+    <>
       <PageTitle title="Denúncias" />
       <div
         className="w-full flex-1"
@@ -89,10 +86,7 @@ export function ModerationPage() {
           backgroundSize: "cover",
         }}
       >
-        <div
-          ref={containerRef}
-          className="page-container py-8"
-        >
+        <div ref={containerRef} className="page-container py-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Moderação de denúncias
@@ -190,6 +184,6 @@ export function ModerationPage() {
           onNotFound={handleNotFound}
         />
       )}
-    </DashboardShell>
+    </>
   );
 }

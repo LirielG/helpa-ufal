@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { Route, Routes, useLocation } from "react-router";
 import { screen } from "@testing-library/react";
 import { GuestRoute } from "@/routes/GuestRoute";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 import { Login } from "@/pages/Login";
 import { Register } from "@/pages/Register";
 import type { LoginRequest } from "@/types";
@@ -19,16 +20,24 @@ export function CurrentUrl() {
 /**
  * Mounts a page next to the real login and sign-up screens, both behind
  * GuestRoute as in AppRoutes, so a visitor's round trip through them ends
- * wherever GuestRoute decides.
+ * wherever GuestRoute decides. With `shell`, the page sits under the
+ * DashboardShell layout route, as in AppRoutes.
  */
 export function renderWithAuthPages(
   path: string,
   page: ReactElement,
   route: string,
+  { shell = false }: { shell?: boolean } = {},
 ): RenderWithProvidersResult {
+  const pageRoute = <Route path={path} element={page} />;
+
   return renderWithProviders(
     <Routes>
-      <Route path={path} element={page} />
+      {shell ? (
+        <Route element={<DashboardShell />}>{pageRoute}</Route>
+      ) : (
+        pageRoute
+      )}
       <Route
         path="/login"
         element={

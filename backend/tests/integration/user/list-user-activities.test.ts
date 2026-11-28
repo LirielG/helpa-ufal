@@ -20,7 +20,8 @@ import { daysFromNow } from "../../helpers/dates.js";
 
 const activitiesUrl = "/users/me/activities";
 const FILTERS = ["enrolled", "completed", "managed"] as const;
-const FILTER_MESSAGE = "filter must be one of: enrolled, completed, managed.";
+const FILTER_MESSAGE =
+  "filter must be one of: enrolled, completed, managed, certified.";
 const INVALID_QUERY_MESSAGE = "Invalid query parameters.";
 
 function listActivities(token: string, query = "") {
@@ -533,6 +534,181 @@ describe("GET /users/me/activities", () => {
 
       expect(first.body).toMatchObject({ total: 3, totalPages: 2 });
       expect(idsOf(second)).toEqual([activity.id]);
+    });
+  });
+
+  describe("filter=certified", () => {
+    async function createCertifiedActivity(
+      authorId: string,
+      userId: string,
+      overrides: Parameters<typeof createActivity>[1] = {},
+    ) {
+      const activity = await createActivity(authorId, {
+        status: "COMPLETED",
+        ...overrides,
+      });
+      const enrollment = await createEnrollment(userId, activity.id, {
+        attendanceConfirmed: true,
+        confirmedWorkloadHours: 8,
+      });
+      const certificate = await createCertificate(enrollment.id);
+
+      return { activity, certificate };
+    }
+
+    it("returns a completed activity that issued the user a certificate, with the certificate", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const { activity, certificate } = await createCertifiedActivity(
+        author.user.id,
+        user.user.id,
+      );
+
+      const response = await listActivities(user.token, "?filter=certified");
+
+      expect(response.status).toBe(200);
+      expect(idsOf(response)).toEqual([activity.id]);
+      expect(response.body.items[0]).toMatchObject({
+        certificate: {
+          id: certificate.id,
+          validationCode: certificate.validationCode,
+          issuedAt: certificate.issuedAt.toISOString(),
+        },
+      });
+    });
+
+    it("keeps a deleted activity that issued the user a certificate", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const { activity, deletedAt } = await createDeletedWithCertificate(
+        author.user.id,
+        user.user.id,
+      );
+
+      const response = await listActivities(user.token, "?filter=certified");
+
+      expect(response.status).toBe(200);
+      expect(idsOf(response)).toEqual([activity.id]);
+      expect(response.body.items[0].deletedAt).toBe(deletedAt.toISOString());
+    });
+
+    it("keeps a moderation-removed activity that issued the user a certificate, without the justification", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const manager = await createManager();
+      const removedAt = new Date("2026-09-10T15:00:00.000Z");
+      const { activity } = await createCertifiedActivity(
+        author.user.id,
+        user.user.id,
+        { removedByModerationAt: removedAt },
+      );
+      await createModerationDecision(activity.id, manager.user.id, {
+        verdict: "UPHELD",
+        justification: "Irregularidade posterior.",
+      });
+
+      const response = await listActivities(user.token, "?filter=certified");
+
+      expect(response.status).toBe(200);
+      expect(idsOf(response)).toEqual([activity.id]);
+      expect(response.body.items[0].moderation).toEqual({
+        removedAt: removedAt.toISOString(),
+        justification: null,
+      });
+    });
+
+    it.each([
+      ["not homologated", null],
+      ["absent", false],
+    ])(
+      "leaves out a completed activity where the user's presence is %s",
+      async (_label, attendanceConfirmed) => {
+        const user = await createStudent();
+        const author = await createTeacher();
+        const activity = await createActivity(author.user.id, {
+          status: "COMPLETED",
+        });
+        await createEnrollment(user.user.id, activity.id, {
+          attendanceConfirmed,
+        });
+
+        const response = await listActivities(user.token, "?filter=certified");
+
+        expect(response.status).toBe(200);
+        expect(response.body.items).toEqual([]);
+      },
+    );
+
+    it("leaves out an activity where only another user has a certificate", async () => {
+      const user = await createStudent();
+      const other = await createStudent();
+      const author = await createTeacher();
+      const { activity } = await createCertifiedActivity(
+        author.user.id,
+        other.user.id,
+      );
+      await createEnrollment(user.user.id, activity.id, {
+        attendanceConfirmed: null,
+      });
+
+      const response = await listActivities(user.token, "?filter=certified");
+
+      expect(response.status).toBe(200);
+      expect(response.body.items).toEqual([]);
+    });
+
+    it("leaves out activities that are not completed", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      await createCertifiedActivity(author.user.id, user.user.id, {
+        status: "IN_PROGRESS",
+      });
+
+      const response = await listActivities(user.token, "?filter=certified");
+
+      expect(response.status).toBe(200);
+      expect(response.body.items).toEqual([]);
+    });
+
+    it("paginates with the same envelope and order as filter=completed", async () => {
+      const user = await createStudent();
+      const author = await createTeacher();
+      const created = [];
+      for (const day of [3, 2, 1]) {
+        const { activity } = await createCertifiedActivity(
+          author.user.id,
+          user.user.id,
+          { startDate: daysFromNow(day) },
+        );
+        created.push(activity.id);
+      }
+
+      const first = await listActivities(
+        user.token,
+        "?filter=certified&limit=2",
+      );
+      const second = await listActivities(
+        user.token,
+        "?filter=certified&page=2&limit=2",
+      );
+      const completed = await listActivities(
+        user.token,
+        "?filter=completed&limit=2",
+      );
+
+      expect(first.status).toBe(200);
+      expect(first.body).toMatchObject({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+      expect(Object.keys(first.body).sort()).toEqual(
+        Object.keys(completed.body).sort(),
+      );
+      expect(idsOf(first)).toEqual(created.slice(0, 2));
+      expect(idsOf(second)).toEqual([created[2]]);
+      expect(idsOf(completed)).toEqual(idsOf(first));
     });
   });
 

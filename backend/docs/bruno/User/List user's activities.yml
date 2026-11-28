@@ -10,7 +10,7 @@ http:
     - name: filter
       value: enrolled
       type: query
-      description: enrolled | completed | managed (required)
+      description: enrolled | completed | managed | certified (required)
     - name: page
       value: "1"
       type: query
@@ -79,6 +79,65 @@ examples:
 
   - name: 200 filter=completed
     description: Approved enrollment in a COMPLETED activity, with attendance confirmed (true) or not homologated yet (null). A registered absence (false) does not appear. A homologated presence (true) carries its certificate; a not homologated one (null) has certificate null.
+
+    response:
+      status: 200
+      body: |-
+        {
+          "items": [
+            {
+              "id": "a1b2c3d4-0000-4000-8000-000000000032",
+              "authorId": "a1b2c3d4-0000-4000-8000-000000000099",
+              "title": "Academic Writing Lecture",
+              "type": "LECTURE",
+              "campus": "ARAPIRACA",
+              "startDate": "2026-06-10T13:00:00.000Z",
+              "endDate": "2026-06-10T17:00:00.000Z",
+              "slots": 80,
+              "availableSlots": 3,
+              "status": "COMPLETED",
+              "details": {
+                "description": "Lecture on scientific writing.",
+                "area": "Educação",
+                "format": "IN_PERSON",
+                "url": null,
+                "workloadHours": 4,
+                "address": {
+                  "id": "a1b2c3d4-0000-4000-8000-000000000041",
+                  "addressLine": "Av. Manoel Severino Barbosa, s/n",
+                  "district": "Bom Sucesso",
+                  "zipCode": "57309005",
+                  "city": "Arapiraca",
+                  "state": "AL"
+                }
+              },
+              "moderation": null,
+              "deletedAt": null,
+              "enrollment": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "activityId": "a1b2c3d4-0000-4000-8000-000000000032",
+                "userId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "status": "APPROVED",
+                "attendanceConfirmed": true,
+                "confirmedWorkloadHours": 4,
+                "createdAt": "2026-05-28T09:00:00.000Z",
+                "updatedAt": "2026-06-11T10:30:00.000Z"
+              },
+              "certificate": {
+                "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "validationCode": "7KQ4MX9T2R",
+                "issuedAt": "2026-06-11T10:30:00.000Z"
+              }
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "limit": 20,
+          "totalPages": 1
+        }
+
+  - name: 200 filter=certified
+    description: Only the COMPLETED activities where the user's presence was homologated (true) and a certificate was issued, including deleted or moderation-removed ones. A not homologated presence (null) or a registered absence (false) does not appear. Same pagination and order as completed.
 
     response:
       status: 200
@@ -253,7 +312,7 @@ examples:
           "status": 400,
           "message": "Invalid query parameters.",
           "errors": [
-            { "field": "filter", "message": "filter must be one of: enrolled, completed, managed." },
+            { "field": "filter", "message": "filter must be one of: enrolled, completed, managed, certified." },
             { "field": "page", "message": "page must be a positive integer." },
             { "field": "limit", "message": "limit must be at most 100." },
             { "field": "foo", "code": "UNKNOWN_PARAMETER", "message": "foo is not a supported query parameter." }
@@ -296,7 +355,7 @@ docs: |-
   ## Query params
   | Param  | Type | Required | Description |
   |--------|------|----------|-------------|
-  | filter | enum | yes      | `enrolled` \| `completed` \| `managed` |
+  | filter | enum | yes      | `enrolled` \| `completed` \| `managed` \| `certified` |
   | page   | int  | no       | Conventional pagination |
   | limit  | int  | no       | Conventional pagination |
 
@@ -308,6 +367,7 @@ docs: |-
   | `enrolled`  | `Activity.deletedAt IS NULL` AND `Activity.removedByModerationAt IS NULL` AND `Enrollment.status = APPROVED` for the user AND `Activity.status` in (`OPEN`, `IN_PROGRESS`) |
   | `completed` | `Enrollment.status = APPROVED` AND `Activity.status = COMPLETED` AND either (`Activity.deletedAt IS NULL` AND `Activity.removedByModerationAt IS NULL` with `Enrollment.attendanceConfirmed` `true` or `null`), or a deleted or moderation-removed activity whose enrollment has a `Certificate` (see below) |
   | `managed`   | `Activity.deletedAt IS NULL` (includes activities with `removedByModerationAt != null`) AND `Activity.authorId = userId`, in any `Activity.status` (including `CANCELLED` and `COMPLETED`). Moderators (`Enrollment.isModerator`) are not included unless they are the author |
+  | `certified` | `Enrollment.status = APPROVED` AND `Activity.status = COMPLETED` AND `Enrollment.attendanceConfirmed = true` AND the enrollment has a `Certificate`, whether or not the activity was deleted or removed by moderation. A subset of `completed`: only the activities where the user already has a certificate |
 
   `Enrollment.attendanceConfirmed` is tri-state (`null` = not homologated yet, `true` =
   present, `false` = absent). Only a registered absence leaves `completed`: someone whose
@@ -326,8 +386,8 @@ docs: |-
   | Field        | Description |
   |--------------|-------------|
   | `moderation` | `{ removedAt, justification }` when the activity was removed by moderation (`UPHELD`), or `null` otherwise; `justification` is `null` unless the user is the activity's author |
-  | `deletedAt`  | When the activity was deleted, or `null`. Always present, in every filter. Only `completed` can bring a non-null value |
-  | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled` and `completed`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
+  | `deletedAt`  | When the activity was deleted, or `null`. Always present, in every filter. Only `completed` and `certified` can bring a non-null value |
+  | `enrollment` | The token owner's enrollment in its canonical form, as `PUT /enrollments/:enrollmentId/attendance` returns it. Always present in `enrolled`, `completed` and `certified`. In `managed`, the author's own enrollment in whatever status, or `null` when they never enrolled |
   | `certificate` | The certificate of that enrollment: `{ id, validationCode, issuedAt }`, or `null` when there is none. Always present, in every filter. A certificate exists exactly when `enrollment.attendanceConfirmed` is `true` |
 
   The detail route's `enrollmentStatus` is not repeated: `enrollment.status` carries it.

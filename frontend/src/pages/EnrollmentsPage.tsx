@@ -1,8 +1,5 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "@/features/dashboard/components/DashboardHeader";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { Alert } from "@/components/Alert";
 import { Pagination } from "@/components/Pagination";
@@ -64,7 +61,7 @@ export function EnrollmentsPage() {
   };
 
   return (
-    <DashboardShell header={<DashboardHeader />} footer={<Footer />}>
+    <>
       <PageTitle title="Inscritos" />
       <div className="page-container py-10 space-y-6">
         <div className="flex items-center gap-4">
@@ -142,6 +139,6 @@ export function EnrollmentsPage() {
           onStale={handleStale}
         />
       )}
-    </DashboardShell>
+    </>
   );
 }

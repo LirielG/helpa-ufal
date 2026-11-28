@@ -13,6 +13,7 @@ import {
 } from "@/test";
 import { useAuthStore } from "@/stores/authStore";
 import { MyActivities } from "../MyActivities";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 
 function LocationProbe() {
   const location = useLocation();
@@ -57,7 +58,9 @@ function renderMyActivities(route = "/my-activities") {
   return render(
     <>
       <Routes>
-        <Route path="/my-activities" element={<MyActivities />} />
+        <Route element={<DashboardShell />}>
+          <Route path="/my-activities" element={<MyActivities />} />
+        </Route>
       </Routes>
       <LocationProbe />
     </>,
@@ -164,8 +167,10 @@ describe("MyActivities page", () => {
     const { user: userEvent } = render(
       <>
         <Routes>
-          <Route path="/my-activities" element={<MyActivities />} />
-          <Route path="/activity/:id" element={<DetailStub />} />
+          <Route element={<DashboardShell />}>
+            <Route path="/my-activities" element={<MyActivities />} />
+            <Route path="/activity/:id" element={<DetailStub />} />
+          </Route>
         </Routes>
         <LocationProbe />
       </>,

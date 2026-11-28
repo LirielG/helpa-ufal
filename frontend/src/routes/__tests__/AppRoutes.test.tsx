@@ -8,6 +8,7 @@ import {
   render,
   screen,
   server,
+  restoreSession,
   signIn,
   userEvent,
   waitFor,
@@ -57,9 +58,7 @@ describe("AppRoutes", () => {
     it("sends a guest from /profile to the login screen without rendering the profile", async () => {
       render(<AppRoutes />, { route: "/profile" });
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
       // Profile paints "Carregando..." on mount, so its absence proves the
       // screen never mounted, rather than merely not having finished loading.
       expect(screen.queryByText("Carregando...")).toBeNull();
@@ -68,38 +67,65 @@ describe("AppRoutes", () => {
     it("sends a guest from /my-activities to the login screen", async () => {
       render(<AppRoutes />, { route: "/my-activities" });
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
     });
 
     it("sends a guest from the action edit screen to the login screen", async () => {
       render(<AppRoutes />, { route: "/activity/1/edit" });
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
       expect(screen.queryByText("Carregando...")).toBeNull();
     });
 
     it("sends a guest from /moderation to the login screen without rendering moderation", async () => {
       render(<AppRoutes />, { route: "/moderation" });
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
       expect(screen.queryByText("Moderação de denúncias")).toBeNull();
     });
 
     it("returns the user to the route they tried to reach after logging in", async () => {
       const { user } = render(<AppRoutes />, { route: "/profile" });
 
-      await screen.findByRole("button", { name: "Entrar" });
+      await screen.findByLabelText("Usuário");
       await submitLogin(user);
 
       expect(
         await screen.findByRole("heading", { name: "Dados Pessoais" }),
       ).toBeInTheDocument();
+    });
+
+    it("returns a guest to /my-certificates after logging in", async () => {
+      const { user } = render(<AppRoutes />, { route: "/my-certificates" });
+
+      await screen.findByLabelText("Usuário");
+      await submitLogin(user);
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Meus certificados",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("opens /my-certificates directly, with only its sidebar item active", async () => {
+      signIn();
+
+      render(<AppRoutes />, { route: "/my-certificates" });
+
+      expect(
+        await screen.findByRole("heading", {
+          level: 1,
+          name: "Meus certificados",
+        }),
+      ).toBeInTheDocument();
+      const aside = screen.getByRole("complementary", {
+        name: "Menu lateral do usuário",
+      });
+      expect(
+        within(aside).getByRole("button", { name: /Certificados/i }),
+      ).toHaveAttribute("aria-current", "page");
     });
 
     it("lets a signed-in user reach /profile", async () => {
@@ -118,9 +144,7 @@ describe("AppRoutes", () => {
 
       await user.click(await screen.findByRole("button", { name: /sair/i }));
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
     });
   });
 
@@ -361,12 +385,12 @@ describe("AppRoutes", () => {
           () => new HttpResponse(null, { status: 401 }),
         ),
       );
-      signIn();
+      restoreSession();
       render(<AppRoutes />, { route: "/my-activities" });
 
-      expect(
-        await screen.findByRole("button", { name: "Entrar" }),
-      ).toBeInTheDocument();
+      // The login form's own field: the shell's header also offers an Entrar
+      // button for the moment between the 401 and the redirect.
+      expect(await screen.findByLabelText("Usuário")).toBeInTheDocument();
       expect(useAuthStore.getState().user).toBeNull();
     });
   });
@@ -402,7 +426,7 @@ describe("AppRoutes", () => {
           () => new HttpResponse(null, { status: 401 }),
         ),
       );
-      signIn();
+      restoreSession();
 
       render(<AppRoutes />, { route: "/validate/7KQ4MX9T2R" });
 

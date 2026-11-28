@@ -10,9 +10,9 @@ import {
   screen,
   signIn,
   submitLoginForm,
+  within,
 } from "@/test";
 import { DashboardShell } from "../DashboardShell";
-import { DashboardHeader } from "../DashboardHeader";
 
 function LoginProbe() {
   const location = useLocation();
@@ -24,14 +24,9 @@ function LoginProbe() {
 function renderHeaderAt(route: string) {
   return render(
     <Routes>
-      <Route
-        path="/activity/:id"
-        element={
-          <DashboardShell header={<DashboardHeader />}>
-            <p>Detalhe</p>
-          </DashboardShell>
-        }
-      />
+      <Route element={<DashboardShell />}>
+        <Route path="/activity/:id" element={<p>Detalhe</p>} />
+      </Route>
       <Route path="/login" element={<LoginProbe />} />
     </Routes>,
     { route },
@@ -89,10 +84,9 @@ describe("DashboardHeader", () => {
   it("brings a visitor who signs in from Entrar back to the same page, query string included", async () => {
     const { user } = renderWithAuthPages(
       "/activity/:id",
-      <DashboardShell header={<DashboardHeader />}>
-        <CurrentUrl />
-      </DashboardShell>,
+      <CurrentUrl />,
       "/activity/act-1?origem=compartilhado",
+      { shell: true },
     );
 
     await user.click(screen.getByRole("button", { name: "Entrar" }));
@@ -137,13 +131,10 @@ describe("DashboardHeader", () => {
   it("keeps the logo in place when the initial session check finishes", () => {
     localStorage.setItem("help_auth_token", "token");
     // Through the shell, which passes onToggleSidebar: the signed-in header then puts the menu button before the logo.
-    render(
-      <DashboardShell header={<DashboardHeader />}>
-        <p>Feed</p>
-      </DashboardShell>,
-    );
+    render(<p>Feed</p>, { shell: true });
 
     const verifyingLayout = layoutOfHeader();
+    expect(verifyingLayout.slots).toHaveLength(2);
 
     act(() => {
       useAuthStore.setState({ user: makeUser(), isSessionVerified: true });
@@ -157,19 +148,22 @@ describe("DashboardHeader", () => {
 });
 
 // What decides where the logo is drawn: the row's width and padding, the group holding the logo,
-// the size of the slot before it (the menu button below lg), and the logo's own size.
+// the slots before it (the menu buttons: one below lg, one from lg up), and the logo's own size.
 function layoutOfHeader() {
   const row = screen.getByRole("banner").firstElementChild;
   const group = row?.firstElementChild;
-  const slot = group?.children.length === 2 ? group.firstElementChild : null;
+  const slots = Array.from(group?.children ?? []).slice(0, -1);
   return {
     row: row?.className,
     group: group?.className,
-    slot: slot && {
+    slots: slots.map((slot) => ({
       hiddenFromLg: slot.classList.contains("lg:hidden"),
+      shownFromLg:
+        slot.classList.contains("hidden") &&
+        slot.classList.contains("lg:inline-flex"),
       padding: slot.classList.contains("p-2"),
       icon: slot.firstElementChild?.classList.contains("size-6"),
-    },
-    logo: screen.getByAltText("helpa").className,
+    })),
+    logo: within(screen.getByRole("banner")).getByAltText("helpa").className,
   };
 }

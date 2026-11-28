@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   Clock,
@@ -14,14 +13,17 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
+import { usePersistedFlag } from "../../../hooks/usePersistedFlag";
 import { getInitials } from "../../../utils/helpers";
 import type { UserProfile } from "../../../types/profile";
-import { SIDEBAR_LABELS } from "../constants";
+import { DESKTOP_SIDEBAR_ID, SIDEBAR_LABELS } from "../constants";
 
 export type ActionSubTab = "enrolled" | "completed" | "managed";
 
 interface DashboardSidebarProps {
   isOpenMobile?: boolean;
+  /** Hides the desktop sidebar entirely; the mobile drawer is unaffected. */
+  collapsedDesktop?: boolean;
   onCloseMobile?: () => void;
   profile?: UserProfile | null;
   profileError?: boolean;
@@ -34,12 +36,9 @@ const ACTION_SUB_ITEMS: Array<{ id: ActionSubTab; label: string }> = [
   { id: "managed", label: SIDEBAR_LABELS.managedActivities },
 ];
 
-// Each page mounts its own DashboardShell, so the sidebar is rebuilt on every
-// navigation; the scroll of its desktop list is kept here to survive that.
-let desktopScrollTop = 0;
-
 export function DashboardSidebar({
   isOpenMobile = false,
+  collapsedDesktop = false,
   onCloseMobile,
   profile = null,
   profileError = false,
@@ -48,14 +47,12 @@ export function DashboardSidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [actionsExpanded, setActionsExpanded] = useState(true);
-  const desktopScrollRef = useRef<HTMLDivElement | null>(null);
-
-  useLayoutEffect(() => {
-    if (desktopScrollRef.current) {
-      desktopScrollRef.current.scrollTop = desktopScrollTop;
-    }
-  }, []);
+  // Shared by the desktop sidebar and the mobile drawer: same submenu.
+  const [actionsCollapsed, setActionsCollapsed] = usePersistedFlag(
+    "helpa.sidebarActionsCollapsed",
+    false,
+  );
+  const actionsExpanded = !actionsCollapsed;
 
   const fullName = user?.fullName || profile?.fullName || "Usuário";
   const email = user?.email || profile?.email || "";
@@ -77,6 +74,8 @@ export function DashboardSidebar({
   const isHomeActive = location.pathname === "/dashboard";
 
   const isPersonalDataActive = location.pathname === "/profile";
+
+  const isCertificatesActive = location.pathname === "/my-certificates";
 
   const isModerationActive = location.pathname === "/moderation";
 
@@ -117,14 +116,6 @@ export function DashboardSidebar({
       {/* On desktop only the upper block scrolls, so Ajuda and Sair stay on
           screen even when the expanded Ações submenu doesn't fit. */}
       <div
-        ref={isMobileDrawer ? undefined : desktopScrollRef}
-        onScroll={
-          isMobileDrawer
-            ? undefined
-            : (event) => {
-                desktopScrollTop = event.currentTarget.scrollTop;
-              }
-        }
         className={`flex flex-col ${
           isMobileDrawer
             ? ""
@@ -232,7 +223,7 @@ export function DashboardSidebar({
             <div className="flex flex-col">
               <button
                 type="button"
-                onClick={() => setActionsExpanded((prev) => !prev)}
+                onClick={() => setActionsCollapsed((collapsed) => !collapsed)}
                 aria-expanded={actionsExpanded}
                 className={`w-full flex items-center justify-between px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
                   isMyActivities ? activeMainItemClass : inactiveMainItemClass
@@ -297,8 +288,13 @@ export function DashboardSidebar({
 
             <button
               type="button"
-              onClick={() => handleActionSubNavigate("completed")}
-              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${inactiveMainItemClass}`}
+              onClick={() => handleNavigate("/my-certificates")}
+              aria-current={isCertificatesActive ? "page" : undefined}
+              className={`w-full flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-lg text-[13px] lg:text-sm leading-[17px] tracking-[0.5px] lg:tracking-[0.7px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00579A] ${
+                isCertificatesActive
+                  ? activeMainItemClass
+                  : inactiveMainItemClass
+              }`}
             >
               <BadgeCheck className="size-4 lg:size-5 shrink-0" />
               <span>{SIDEBAR_LABELS.certificates}</span>
@@ -352,7 +348,12 @@ export function DashboardSidebar({
   return (
     <>
       <aside
+        id={DESKTOP_SIDEBAR_ID}
         aria-label="Menu lateral do usuário"
+        // Kept mounted, so the header toggle's aria-controls always points
+        // somewhere and the scroll survives collapsing. `hidden` wins over
+        // lg:flex: Tailwind's preflight makes it display: none !important.
+        hidden={collapsedDesktop}
         // Pinned below the header, which is h-20 from md up. A cap rather
         // than a fixed height, so a short page still fits with its footer.
         className="hidden lg:flex shrink-0 sticky top-20 max-h-[calc(100dvh-5rem)]"

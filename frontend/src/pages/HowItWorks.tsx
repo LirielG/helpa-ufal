@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router";
 import { HomeHeader } from "../features/home/components/HomeHeader";
 import { HowItWorksSection } from "../features/home/components/HowItWorksSection";
-import { DashboardShell } from "../features/dashboard/components/DashboardShell";
-import { DashboardHeader } from "../features/dashboard/components/DashboardHeader";
+import { useDashboardShellOptions } from "../features/dashboard/components/DashboardShellContext";
 import { Footer } from "../components/Footer";
 import { useAuth } from "../hooks/useAuth";
 import { PageTitle } from "../components/PageTitle";
@@ -10,23 +9,22 @@ import { PageTitle } from "../components/PageTitle";
 export function HowItWorks() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  // The page only explains, so it has no shortcut to create an action.
+  useDashboardShellOptions({ showCreateAction: false });
 
   const section = (
     <HowItWorksSection onExploreActions={() => navigate("/dashboard")} />
   );
 
-  // A signed-in user reaches this page from Ajuda and keeps the sidebar; the
-  // page only explains, so it has no shortcut to create an action.
+  // A signed-in user reaches this page from Ajuda, inside the dashboard
+  // shell; a visitor gets the institutional layout, which the shell leaves to
+  // the page.
   if (isAuthenticated) {
     return (
-      <DashboardShell
-        header={<DashboardHeader />}
-        footer={<Footer />}
-        showCreateAction={false}
-      >
+      <>
         <PageTitle title="Como Funciona" />
         {section}
-      </DashboardShell>
+      </>
     );
   }
 

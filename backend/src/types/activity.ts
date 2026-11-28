@@ -66,7 +66,11 @@ export type ActivityFullResponse = ActivityResponse & {
   reportedByMe?: boolean;
 };
 
-export type UserActivityFilter = "enrolled" | "completed" | "managed";
+export type UserActivityFilter =
+  | "enrolled"
+  | "completed"
+  | "managed"
+  | "certified";
 
 /** validationCode is in its stored form; the hyphenated display is the client's job. */
 export type UserActivityCertificate = {

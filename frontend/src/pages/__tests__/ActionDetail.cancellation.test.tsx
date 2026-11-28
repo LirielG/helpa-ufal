@@ -18,6 +18,7 @@ import {
 import type { Activity } from "@/services/contracts/activity";
 import { useSessionExpiry } from "@/hooks/useSessionExpiry";
 import { ActionDetail } from "../ActionDetail";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 
 const ACTION_ID = "act-cancellation";
 
@@ -32,7 +33,9 @@ function renderPage() {
     <>
       <SessionExpiry />
       <Routes>
-        <Route path="/activity/:id" element={<ActionDetail />} />
+        <Route element={<DashboardShell />}>
+          <Route path="/activity/:id" element={<ActionDetail />} />
+        </Route>
         <Route path="/login" element={<h1>Entrar</h1>} />
       </Routes>
     </>,
@@ -45,6 +48,7 @@ function renderPageWithAuthPages() {
     "/activity/:id",
     <ActionDetail />,
     `/activity/${ACTION_ID}`,
+    { shell: true },
   );
 }
 

@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { Profile } from "../Profile";
 import { MyActivities } from "../MyActivities";
+import { DashboardShell } from "@/features/dashboard/components/DashboardShell";
 
 function LocationProbe() {
   const location = useLocation();
@@ -71,8 +72,10 @@ function renderWithRoutes(route: string) {
   return render(
     <>
       <Routes>
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/my-activities" element={<MyActivities />} />
+        <Route element={<DashboardShell />}>
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/my-activities" element={<MyActivities />} />
+        </Route>
         <Route path="/other" element={<p>outra página</p>} />
       </Routes>
       <LocationProbe />
