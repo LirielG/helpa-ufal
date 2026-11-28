@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { Link, Route, Routes } from "react-router";
 import {
   API,
   delay,
@@ -458,6 +459,82 @@ describe("EnrollmentsPage", () => {
           screen.queryByText(/Carregando inscritos/),
         ).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe("back link", () => {
+    it("falls back to the action detail when opened directly", async () => {
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, () =>
+          HttpResponse.json({
+            items: [],
+            total: 0,
+            totalPages: 1,
+            page: 1,
+            limit: 20,
+            totalPresent: 0,
+          }),
+        ),
+      );
+
+      const { user } = render(
+        <Routes>
+          <Route
+            path="/activity/:id/enrollments"
+            element={<EnrollmentsPage />}
+          />
+          <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+        </Routes>,
+        { route: "/activity/act-1/enrollments" },
+      );
+
+      const backLink = screen.getByRole("link", { name: "← Voltar" });
+      expect(backLink).toHaveAttribute("href", "/activity/act-1");
+
+      await user.click(backLink);
+
+      expect(
+        screen.getByRole("heading", { name: "Detalhe da ação" }),
+      ).toBeInTheDocument();
+    });
+
+    it("returns to the previous page when navigated internally", async () => {
+      server.use(
+        http.get(`${API}/activities/:id/enrollments`, () =>
+          HttpResponse.json({
+            items: [],
+            total: 0,
+            totalPages: 1,
+            page: 1,
+            limit: 20,
+            totalPresent: 0,
+          }),
+        ),
+      );
+
+      const { user } = render(
+        <Routes>
+          <Route
+            path="/my-activities"
+            element={
+              <Link to="/activity/act-1/enrollments">Ver inscritos</Link>
+            }
+          />
+          <Route
+            path="/activity/:id/enrollments"
+            element={<EnrollmentsPage />}
+          />
+          <Route path="/activity/:id" element={<h1>Detalhe da ação</h1>} />
+        </Routes>,
+        { route: "/my-activities" },
+      );
+
+      await user.click(screen.getByRole("link", { name: "Ver inscritos" }));
+      await user.click(screen.getByRole("link", { name: "← Voltar" }));
+
+      expect(
+        screen.getByRole("link", { name: "Ver inscritos" }),
+      ).toBeInTheDocument();
     });
   });
 });
